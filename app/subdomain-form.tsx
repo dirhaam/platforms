@@ -22,12 +22,22 @@ import {
 } from '@/components/ui/emoji-picker';
 import { createSubdomainAction } from '@/app/actions';
 import { rootDomain } from '@/lib/utils';
+import { BUSINESS_CATEGORIES, type BusinessCategory } from '@/lib/subdomains';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 type CreateState = {
   error?: string;
   success?: boolean;
   subdomain?: string;
   icon?: string;
+  businessName?: string;
+  ownerName?: string;
+  email?: string;
+  phone?: string;
+  businessCategory?: string;
+  businessDescription?: string;
+  address?: string;
 };
 
 function SubdomainInput({ defaultValue }: { defaultValue?: string }) {
@@ -126,6 +136,7 @@ function IconPicker({
 
 export function SubdomainForm() {
   const [icon, setIcon] = useState('');
+  const [businessCategory, setBusinessCategory] = useState<string>('');
 
   const [state, action, isPending] = useActionState<CreateState, FormData>(
     createSubdomainAction,
@@ -138,12 +149,107 @@ export function SubdomainForm() {
 
       <IconPicker icon={icon} setIcon={setIcon} defaultValue={state?.icon} />
 
+      {/* Business Information Section */}
+      <div className="space-y-4 pt-4 border-t">
+        <h3 className="text-lg font-medium">Business Information</h3>
+        
+        <div className="space-y-2">
+          <Label htmlFor="businessName">Business Name *</Label>
+          <Input
+            id="businessName"
+            name="businessName"
+            placeholder="Your Business Name"
+            defaultValue={state?.businessName}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ownerName">Owner Name *</Label>
+          <Input
+            id="ownerName"
+            name="ownerName"
+            placeholder="Your Full Name"
+            defaultValue={state?.ownerName}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="your@email.com"
+              defaultValue={state?.email}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone *</Label>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="+60123456789"
+              defaultValue={state?.phone}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="businessCategory">Business Category *</Label>
+          <Select name="businessCategory" value={businessCategory} onValueChange={setBusinessCategory} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Select your business category" />
+            </SelectTrigger>
+            <SelectContent>
+              {BUSINESS_CATEGORIES.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="businessDescription">Business Description</Label>
+          <Textarea
+            id="businessDescription"
+            name="businessDescription"
+            placeholder="Briefly describe your business and services..."
+            defaultValue={state?.businessDescription}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address">Business Address</Label>
+          <Textarea
+            id="address"
+            name="address"
+            placeholder="Your business address..."
+            defaultValue={state?.address}
+            rows={2}
+          />
+        </div>
+      </div>
+
       {state?.error && (
         <div className="text-sm text-red-500">{state.error}</div>
       )}
 
-      <Button type="submit" className="w-full" disabled={isPending || !icon}>
-        {isPending ? 'Creating...' : 'Create Subdomain'}
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={isPending || !icon || !businessCategory}
+      >
+        {isPending ? 'Creating...' : 'Create Business Subdomain'}
       </Button>
     </form>
   );

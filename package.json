@@ -3,12 +3,21 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "migrate:tenants": "tsx scripts/migrate-tenants.ts",
+    "migrate:tenants:dry-run": "tsx scripts/migrate-tenants.ts --dry-run",
+    "migrate:tenants:check": "tsx scripts/migrate-tenants.ts --check"
   },
   "dependencies": {
+    "@prisma/client": "^6.17.0",
     "@radix-ui/react-dialog": "^1.1.13",
     "@radix-ui/react-label": "^2.1.6",
     "@radix-ui/react-popover": "^1.1.13",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.2",
     "@upstash/redis": "^1.34.9",
     "@vercel/analytics": "^1.5.0",
@@ -18,6 +27,7 @@
     "frimousse": "^0.2.0",
     "lucide-react": "^0.510.0",
     "next": "15.3.2",
+    "prisma": "^6.17.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^3.3.0"
@@ -28,6 +38,7 @@
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
     "tailwindcss": "^4.1.6",
+    "tsx": "^4.20.6",
     "tw-animate-css": "^1.2.9",
     "typescript": "^5.8.3"
   },

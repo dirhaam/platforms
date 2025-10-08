@@ -9,8 +9,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: 'Platforms Starter Kit',
-  description: 'Next.js template for building a multi-tenant SaaS.'
+  title: 'Booqing - Professional Booking Platform for Indonesian Businesses',
+  description: 'Create a professional booking system for your business with WhatsApp integration, home visit management, and powerful analytics. Start free today.'
 };
 
 export default function RootLayout({
