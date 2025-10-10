@@ -3,10 +3,10 @@ import { ExportService, ExportOptions } from '@/lib/analytics/export-service';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     const { dataType, format, dateRange, includeFields } = await request.json();
 
     if (!dataType || !format || !dateRange) {

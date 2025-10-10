@@ -4,10 +4,10 @@ import { WhatsAppEndpoint } from '@/types/whatsapp';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     
     if (!tenantId) {
       return NextResponse.json(
@@ -37,10 +37,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     
     if (!tenantId) {
       return NextResponse.json(

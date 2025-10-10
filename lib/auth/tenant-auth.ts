@@ -104,6 +104,23 @@ export class TenantAuth {
     cookieStore.delete('tenant-auth');
   }
 
+  // Get session from cookies (for server components)
+  static async getSession(): Promise<TenantSession | null> {
+    try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get('tenant-auth')?.value;
+      
+      if (!token) {
+        return null;
+      }
+
+      return await this.verifyToken(token);
+    } catch (error) {
+      console.error('Failed to get session from cookies:', error);
+      return null;
+    }
+  }
+
   // Hash password
   static async hashPassword(password: string): Promise<string> {
     return await SecurityService.hashPassword(password);
@@ -697,3 +714,38 @@ export const PERMISSIONS = {
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+
+// Helper functions for API routes
+export async function getTenantFromRequest(request: NextRequest): Promise<{ id: string; name: string } | null> {
+  try {
+    const session = await TenantAuth.getSessionFromRequest(request);
+    if (!session) {
+      return null;
+    }
+
+    // For superadmin, we might need to get tenant from URL params or headers
+    if (session.isSuperAdmin) {
+      // Extract tenant ID from URL or headers if needed
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const tenantIdIndex = pathParts.findIndex(part => part === 'tenant') + 1;
+      if (tenantIdIndex > 0 && pathParts[tenantIdIndex]) {
+        return { id: pathParts[tenantIdIndex], name: 'Platform Admin Access' };
+      }
+    }
+
+    return { id: session.tenantId, name: session.name };
+  } catch (error) {
+    console.error('Error getting tenant from request:', error);
+    return null;
+  }
+}
+
+export async function getTenantSession(request?: NextRequest): Promise<TenantSession | null> {
+  if (request) {
+    return await TenantAuth.getSessionFromRequest(request);
+  } else {
+    // For server components, get session from cookies
+    return await TenantAuth.getSession();
+  }
+}

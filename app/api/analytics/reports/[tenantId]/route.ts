@@ -3,10 +3,10 @@ import { ExportService, ReportConfig } from '@/lib/analytics/export-service';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     const reportConfig: ReportConfig = await request.json();
 
     if (!reportConfig.title || !reportConfig.dateRange || !reportConfig.sections) {

@@ -3,10 +3,10 @@ import { AnalyticsService } from '@/lib/analytics/analytics-service';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     const { startDate, endDate } = await request.json();
 
     if (!startDate || !endDate) {
@@ -34,10 +34,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     
     // Default to last 30 days
     const endDate = new Date();

@@ -4,10 +4,10 @@ import { AnalyticsFilters } from '@/types/analytics';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     const filters: AnalyticsFilters = await request.json();
 
     // Validate date range
@@ -44,10 +44,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     const { searchParams } = new URL(request.url);
     
     // Default to last 30 days
