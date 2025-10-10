@@ -5,15 +5,16 @@ import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const invoice = await InvoiceService.getInvoiceById(tenant.id, params.id);
+    const invoice = await InvoiceService.getInvoiceById(tenant.id, id);
     
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
@@ -31,9 +32,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -41,7 +43,7 @@ export async function PUT(
 
     const data: UpdateInvoiceRequest = await request.json();
     
-    const invoice = await InvoiceService.updateInvoice(tenant.id, params.id, data);
+    const invoice = await InvoiceService.updateInvoice(tenant.id, id, data);
     
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
@@ -59,15 +61,16 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const success = await InvoiceService.deleteInvoice(tenant.id, params.id);
+    const success = await InvoiceService.deleteInvoice(tenant.id, id);
     
     if (!success) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });

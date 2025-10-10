@@ -4,15 +4,16 @@ import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { bookingId: string } }
+  context: { params: Promise<{ bookingId: string }> }
 ) {
   try {
+    const { bookingId } = await context.params;
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const invoice = await InvoiceService.createInvoiceFromBooking(tenant.id, params.bookingId);
+    const invoice = await InvoiceService.createInvoiceFromBooking(tenant.id, bookingId);
     
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {

@@ -5,15 +5,16 @@ import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const invoice = await InvoiceService.getInvoiceById(tenant.id, params.id);
+    const invoice = await InvoiceService.getInvoiceById(tenant.id, id);
     
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
