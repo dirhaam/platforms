@@ -5,9 +5,10 @@ import { UpdateServiceAreaRequest } from '@/types/location';
 // GET /api/service-areas/[id] - Get a specific service area
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
 
@@ -18,7 +19,7 @@ export async function GET(
       );
     }
 
-    const serviceArea = await ServiceAreaService.getServiceArea(tenantId, params.id);
+    const serviceArea = await ServiceAreaService.getServiceArea(tenantId, id);
 
     if (!serviceArea) {
       return NextResponse.json(
@@ -40,9 +41,10 @@ export async function GET(
 // PUT /api/service-areas/[id] - Update a service area
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
 
@@ -54,8 +56,8 @@ export async function PUT(
     }
 
     const body: UpdateServiceAreaRequest = await request.json();
-    
-    const result = await ServiceAreaService.updateServiceArea(tenantId, params.id, body);
+
+    const result = await ServiceAreaService.updateServiceArea(tenantId, id, body);
     
     if (result.error) {
       return NextResponse.json(
@@ -77,9 +79,10 @@ export async function PUT(
 // DELETE /api/service-areas/[id] - Delete a service area
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
 
@@ -90,7 +93,7 @@ export async function DELETE(
       );
     }
 
-    const result = await ServiceAreaService.deleteServiceArea(tenantId, params.id);
+    const result = await ServiceAreaService.deleteServiceArea(tenantId, id);
     
     if (!result.success) {
       return NextResponse.json(

@@ -3,10 +3,10 @@ import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { tenantId: string; endpointId: string } }
+  context: { params: Promise<{ tenantId: string; endpointId: string }> }
 ) {
   try {
-    const { tenantId, endpointId } = params;
+    const { tenantId, endpointId } = await context.params;
     
     if (!tenantId || !endpointId) {
       return NextResponse.json(
@@ -46,10 +46,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { tenantId: string; endpointId: string } }
+  context: { params: Promise<{ tenantId: string; endpointId: string }> }
 ) {
   try {
-    const { tenantId, endpointId } = params;
+    const { tenantId, endpointId } = await context.params;
     
     if (!tenantId || !endpointId) {
       return NextResponse.json(
@@ -81,10 +81,10 @@ export async function DELETE(
 // Test endpoint health
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantId: string; endpointId: string } }
+  context: { params: Promise<{ tenantId: string; endpointId: string }> }
 ) {
   try {
-    const { tenantId, endpointId } = params;
+    const { tenantId, endpointId } = await context.params;
     
     if (!tenantId || !endpointId) {
       return NextResponse.json(

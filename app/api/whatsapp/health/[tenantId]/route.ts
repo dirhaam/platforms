@@ -3,10 +3,10 @@ import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = params;
+    const { tenantId } = await context.params;
     
     if (!tenantId) {
       return NextResponse.json(

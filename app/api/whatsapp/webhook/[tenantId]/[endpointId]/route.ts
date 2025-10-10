@@ -3,10 +3,10 @@ import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantId: string; endpointId: string } }
+  context: { params: Promise<{ tenantId: string; endpointId: string }> }
 ) {
   try {
-    const { tenantId, endpointId } = params;
+    const { tenantId, endpointId } = await context.params;
     
     if (!tenantId || !endpointId) {
       return NextResponse.json(
@@ -50,7 +50,7 @@ export async function POST(
 // Handle webhook verification (GET request)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tenantId: string; endpointId: string } }
+  context: { params: Promise<{ tenantId: string; endpointId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -61,7 +61,7 @@ export async function GET(
     // Verify webhook subscription (common pattern for webhook verification)
     if (mode === 'subscribe' && token && challenge) {
       // In production, you'd verify the token against stored configuration
-      const { tenantId, endpointId } = params;
+      const { tenantId, endpointId } = await context.params;
       const config = await whatsappService.getTenantConfiguration(tenantId);
       
       if (config) {

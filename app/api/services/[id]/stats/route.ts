@@ -4,9 +4,10 @@ import { ServiceService } from '@/lib/booking/service-service';
 // GET /api/services/[id]/stats - Get statistics for a specific service
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const tenantId = request.headers.get('x-tenant-id');
     
     if (!tenantId) {
@@ -14,12 +15,12 @@ export async function GET(
     }
     
     // Verify service exists and belongs to tenant
-    const service = await ServiceService.getService(tenantId, params.id);
+    const service = await ServiceService.getService(tenantId, id);
     if (!service) {
       return NextResponse.json({ error: 'Service not found' }, { status: 404 });
     }
     
-    const stats = await ServiceService.getServiceStats(tenantId, params.id);
+    const stats = await ServiceService.getServiceStats(tenantId, id);
     
     return NextResponse.json({ stats });
   } catch (error) {

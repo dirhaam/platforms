@@ -3,10 +3,10 @@ import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { deviceId: string } }
+  context: { params: Promise<{ deviceId: string }> }
 ) {
   try {
-    const { deviceId } = params;
+    const { deviceId } = await context.params;
     
     if (!deviceId) {
       return NextResponse.json(
@@ -36,10 +36,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { deviceId: string } }
+  context: { params: Promise<{ deviceId: string }> }
 ) {
   try {
-    const { deviceId } = params;
+    const { deviceId } = await context.params;
     
     if (!deviceId) {
       return NextResponse.json(
@@ -72,10 +72,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { deviceId: string } }
+  context: { params: Promise<{ deviceId: string }> }
 ) {
   try {
-    const { deviceId } = params;
+    const { deviceId } = await context.params;
     
     if (!deviceId) {
       return NextResponse.json(
@@ -98,10 +98,10 @@ export async function DELETE(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { deviceId: string } }
+  context: { params: Promise<{ deviceId: string }> }
 ) {
   try {
-    const { deviceId } = params;
+    const { deviceId } = await context.params;
     
     if (!deviceId) {
       return NextResponse.json(
