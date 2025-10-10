@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, FileText, Download, Settings } from 'lucide-react';
-import { format } from 'date-fns';
+import { format as formatDate } from 'date-fns';
 
 interface ReportGeneratorProps {
   tenantId: string;
@@ -231,7 +231,7 @@ export function ReportGenerator({ tenantId, isAdmin = false }: ReportGeneratorPr
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(reportConfig.dateRange.startDate, 'MMM dd, yyyy')}
+                    {formatDate(reportConfig.dateRange.startDate, 'MMM dd, yyyy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -255,7 +255,7 @@ export function ReportGenerator({ tenantId, isAdmin = false }: ReportGeneratorPr
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(reportConfig.dateRange.endDate, 'MMM dd, yyyy')}
+                    {formatDate(reportConfig.dateRange.endDate, 'MMM dd, yyyy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Download, FileText, FileSpreadsheet, FileImage } from 'lucide-react';
-import { format } from 'date-fns';
+import { format as formatDate } from 'date-fns';
 
 interface ExportDialogProps {
   tenantId: string;
@@ -189,7 +189,7 @@ export function ExportDialog({ tenantId, trigger, defaultDataType = 'bookings' }
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(dateRange.startDate, 'MMM dd, yyyy')}
+                    {formatDate(dateRange.startDate, 'MMM dd, yyyy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -210,7 +210,7 @@ export function ExportDialog({ tenantId, trigger, defaultDataType = 'bookings' }
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(dateRange.endDate, 'MMM dd, yyyy')}
+                    {formatDate(dateRange.endDate, 'MMM dd, yyyy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -257,7 +257,7 @@ export function ExportDialog({ tenantId, trigger, defaultDataType = 'bookings' }
             <div className="text-sm text-gray-600 space-y-1">
               <p><strong>Data:</strong> {dataTypes.find(t => t.value === dataType)?.label}</p>
               <p><strong>Format:</strong> {formats.find(f => f.value === format)?.label}</p>
-              <p><strong>Period:</strong> {format(dateRange.startDate, 'MMM dd')} - {format(dateRange.endDate, 'MMM dd, yyyy')}</p>
+              <p><strong>Period:</strong> {formatDate(dateRange.startDate, 'MMM dd')} - {formatDate(dateRange.endDate, 'MMM dd, yyyy')}</p>
               <p><strong>Fields:</strong> {includeFields.length > 0 ? `${includeFields.length} selected` : 'All fields'}</p>
             </div>
           </div>

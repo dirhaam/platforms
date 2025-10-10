@@ -6,7 +6,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { format as formatDate } from 'date-fns';
 
 interface DateRangePickerProps {
   value: {
@@ -82,7 +82,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
   };
 
   const formatDateRange = () => {
-    return `${format(value.startDate, 'MMM dd')} - ${format(value.endDate, 'MMM dd, yyyy')}`;
+    return `${formatDate(value.startDate, 'MMM dd')} - ${formatDate(value.endDate, 'MMM dd, yyyy')}`;
   };
 
   return (

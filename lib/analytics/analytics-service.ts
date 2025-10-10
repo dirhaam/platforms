@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { prisma } from '@/lib/database';
 import { 
   AnalyticsDashboardData, 
   BookingMetrics, 
@@ -76,13 +76,13 @@ export class AnalyticsService {
     };
 
     const [bookings, totalRevenue] = await Promise.all([
-      db.booking.findMany({
+      prisma.booking.findMany({
         where: whereClause,
         include: {
           service: true
         }
       }),
-      db.booking.aggregate({
+      prisma.booking.aggregate({
         where: {
           ...whereClause,
           status: { in: ['completed', 'confirmed'] }
@@ -101,7 +101,7 @@ export class AnalyticsService {
     
     const conversionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
     const averageBookingValue = completedBookings > 0 ? 
-      (totalRevenue._sum.totalAmount || 0) / completedBookings : 0;
+      Number(totalRevenue._sum.totalAmount || 0) / completedBookings : 0;
 
     return {
       totalBookings,
@@ -111,7 +111,7 @@ export class AnalyticsService {
       noShowBookings,
       conversionRate,
       averageBookingValue,
-      totalRevenue: totalRevenue._sum.totalAmount || 0
+      totalRevenue: Number(totalRevenue._sum.totalAmount || 0)
     };
   }
 
@@ -121,10 +121,10 @@ export class AnalyticsService {
     endDate: Date
   ): Promise<CustomerMetrics> {
     const [customers, newCustomers, bookingStats, topCustomers] = await Promise.all([
-      db.customer.count({
+      prisma.customer.count({
         where: { tenantId }
       }),
-      db.customer.count({
+      prisma.customer.count({
         where: {
           tenantId,
           createdAt: {
@@ -133,7 +133,7 @@ export class AnalyticsService {
           }
         }
       }),
-      db.booking.groupBy({
+      prisma.booking.groupBy({
         by: ['customerId'],
         where: {
           tenantId,
@@ -150,7 +150,7 @@ export class AnalyticsService {
           totalAmount: true
         }
       }),
-      db.customer.findMany({
+      prisma.customer.findMany({
         where: { tenantId },
         include: {
           bookings: {
@@ -170,7 +170,7 @@ export class AnalyticsService {
     const returningCustomers = bookingStats.filter(stat => stat._count.id > 1).length;
     const customerRetentionRate = customers > 0 ? (returningCustomers / customers) * 100 : 0;
     
-    const totalRevenue = bookingStats.reduce((sum, stat) => sum + (stat._sum.totalAmount || 0), 0);
+    const totalRevenue = bookingStats.reduce((sum, stat) => sum + Number(stat._sum.totalAmount || 0), 0);
     const averageCustomerLifetimeValue = customers > 0 ? totalRevenue / customers : 0;
 
     const topCustomersData = topCustomers
@@ -178,7 +178,7 @@ export class AnalyticsService {
         id: customer.id,
         name: customer.name,
         totalBookings: customer.bookings.length,
-        totalSpent: customer.bookings.reduce((sum, booking) => sum + booking.totalAmount, 0)
+        totalSpent: customer.bookings.reduce((sum, booking) => sum + Number(booking.totalAmount), 0)
       }))
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, 5);
@@ -199,10 +199,10 @@ export class AnalyticsService {
     endDate: Date
   ): Promise<ServiceMetrics> {
     const [services, serviceStats] = await Promise.all([
-      db.service.findMany({
+      prisma.service.findMany({
         where: { tenantId }
       }),
-      db.booking.groupBy({
+      prisma.booking.groupBy({
         by: ['serviceId'],
         where: {
           tenantId,
@@ -230,7 +230,7 @@ export class AnalyticsService {
           id: stat.serviceId,
           name: service?.name || 'Unknown Service',
           bookingCount: stat._count.id,
-          revenue: stat._sum.totalAmount || 0
+          revenue: Number(stat._sum.totalAmount || 0)
         };
       })
       .sort((a, b) => b.revenue - a.revenue)
@@ -242,7 +242,7 @@ export class AnalyticsService {
         serviceId: stat.serviceId,
         serviceName: service?.name || 'Unknown Service',
         bookings: stat._count.id,
-        revenue: stat._sum.totalAmount || 0
+        revenue: Number(stat._sum.totalAmount || 0)
       };
     });
 
@@ -259,7 +259,7 @@ export class AnalyticsService {
     startDate: Date, 
     endDate: Date
   ): Promise<TimeBasedMetrics> {
-    const bookings = await db.booking.findMany({
+    const bookings = await prisma.booking.findMany({
       where: {
         tenantId,
         createdAt: {
@@ -299,7 +299,7 @@ export class AnalyticsService {
       const current = dailyMap.get(dayName) || { bookings: 0, revenue: 0 };
       dailyMap.set(dayName, {
         bookings: current.bookings + 1,
-        revenue: current.revenue + booking.totalAmount
+        revenue: current.revenue + Number(booking.totalAmount)
       });
     });
 
@@ -316,7 +316,7 @@ export class AnalyticsService {
       const monthKey = booking.scheduledAt.toISOString().substring(0, 7); // YYYY-MM
       const current = monthlyMap.get(monthKey) || { bookings: 0, revenue: 0, customers: new Set() };
       current.bookings += 1;
-      current.revenue += booking.totalAmount;
+      current.revenue += Number(booking.totalAmount);
       current.customers.add(booking.customerId);
       monthlyMap.set(monthKey, current);
     });
@@ -361,13 +361,13 @@ export class AnalyticsService {
 
     // Get customer growth rate
     const [currentCustomers, previousCustomers] = await Promise.all([
-      db.customer.count({
+      prisma.customer.count({
         where: {
           tenantId,
           createdAt: { lte: endDate }
         }
       }),
-      db.customer.count({
+      prisma.customer.count({
         where: {
           tenantId,
           createdAt: { lte: prevEndDate }
@@ -435,7 +435,7 @@ export class AnalyticsService {
   ): Promise<ConversionMetrics> {
     // This would integrate with website analytics
     // For now, we'll use booking data as a proxy
-    const bookings = await db.booking.findMany({
+    const bookings = await prisma.booking.findMany({
       where: {
         tenantId,
         createdAt: {
@@ -469,7 +469,7 @@ export class AnalyticsService {
     endDate: Date
   ): Promise<PlatformAnalytics> {
     const [tenants, bookings, tenantGrowth] = await Promise.all([
-      db.tenant.findMany({
+      prisma.tenant.findMany({
         include: {
           bookings: {
             where: {
@@ -482,7 +482,7 @@ export class AnalyticsService {
           }
         }
       }),
-      db.booking.findMany({
+      prisma.booking.findMany({
         where: {
           createdAt: {
             gte: startDate,
@@ -491,7 +491,7 @@ export class AnalyticsService {
           status: { in: ['completed', 'confirmed'] }
         }
       }),
-      db.tenant.groupBy({
+      prisma.tenant.groupBy({
         by: ['createdAt'],
         _count: {
           id: true
@@ -505,7 +505,7 @@ export class AnalyticsService {
     const totalTenants = tenants.length;
     const activeTenants = tenants.filter(t => t.bookings.length > 0).length;
     const totalBookings = bookings.length;
-    const totalRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
+    const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
 
     // Top performing tenants
     const topPerformingTenants = tenants
@@ -513,7 +513,7 @@ export class AnalyticsService {
         tenantId: tenant.id,
         businessName: tenant.businessName,
         bookings: tenant.bookings.length,
-        revenue: tenant.bookings.reduce((sum, b) => sum + b.totalAmount, 0)
+        revenue: tenant.bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0)
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);

@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
-import { PlatformAnalyticsDashboard } from '@/components/analytics/PlatformAnalyticsDashboard';
 
-export default async function PlatformAnalyticsPage() {
+
+export default async function TenantsPage() {
   const session = await getServerSession();
 
   // Redirect if not authenticated or not superadmin
@@ -13,13 +13,17 @@ export default async function PlatformAnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Platform Analytics</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Tenant Management</h1>
         <p className="text-gray-600">
-          Analytics and insights across all tenants on the platform
+          Manage all tenants on the platform
         </p>
       </div>
       
-      <PlatformAnalyticsDashboard />
+      <div className="text-center py-8 text-gray-500">
+        Tenant management interface will be implemented here.
+        <br />
+        This will include tenant creation, editing, and management features.
+      </div>
     </div>
   );
 }

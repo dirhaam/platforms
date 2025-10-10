@@ -44,7 +44,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   {
-    name: 'Dashboard',
+    name: 'Platform Dashboard',
     href: '/admin',
     icon: Shield,
   },
@@ -52,6 +52,11 @@ const navigation: NavigationItem[] = [
     name: 'Tenant Management',
     href: '/admin/tenants',
     icon: Building2,
+  },
+  {
+    name: 'SuperAdmin Management',
+    href: '/admin/superadmins',
+    icon: Users,
   },
   {
     name: 'Platform Analytics',
@@ -77,11 +82,6 @@ const navigation: NavigationItem[] = [
     name: 'Platform Settings',
     href: '/admin/settings',
     icon: Settings,
-  },
-  {
-    name: 'SuperAdmin Management',
-    href: '/admin/superadmins',
-    icon: Users,
   },
 ];
 

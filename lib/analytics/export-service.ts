@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { prisma } from '@/lib/database';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -32,7 +32,7 @@ export interface ReportSection {
 export class ExportService {
   // Export bookings data
   static async exportBookings(tenantId: string, options: ExportOptions): Promise<Buffer> {
-    const bookings = await db.booking.findMany({
+    const bookings = await prisma.booking.findMany({
       where: {
         tenantId,
         createdAt: {
@@ -73,7 +73,7 @@ export class ExportService {
 
   // Export customers data
   static async exportCustomers(tenantId: string, options: ExportOptions): Promise<Buffer> {
-    const customers = await db.customer.findMany({
+    const customers = await prisma.customer.findMany({
       where: {
         tenantId,
         createdAt: {
@@ -100,7 +100,7 @@ export class ExportService {
       'Email': customer.email || '',
       'Address': customer.address || '',
       'Total Bookings': customer.totalBookings,
-      'Total Spent': customer.bookings.reduce((sum, booking) => sum + booking.totalAmount, 0),
+      'Total Spent': customer.bookings.reduce((sum, booking) => sum + Number(booking.totalAmount), 0),
       'Last Booking': customer.lastBookingAt?.toLocaleDateString() || 'Never',
       'WhatsApp Number': customer.whatsappNumber || '',
       'Notes': customer.notes || '',
@@ -113,7 +113,7 @@ export class ExportService {
 
   // Export services data
   static async exportServices(tenantId: string, options: ExportOptions): Promise<Buffer> {
-    const services = await db.service.findMany({
+    const services = await prisma.service.findMany({
       where: {
         tenantId
       },
@@ -144,7 +144,7 @@ export class ExportService {
       'Home Visit Available': service.homeVisitAvailable ? 'Yes' : 'No',
       'Home Visit Surcharge': service.homeVisitSurcharge || 0,
       'Total Bookings (Period)': service.bookings.length,
-      'Total Revenue (Period)': service.bookings.reduce((sum, booking) => sum + booking.totalAmount, 0),
+      'Total Revenue (Period)': service.bookings.reduce((sum, booking) => sum + Number(booking.totalAmount), 0),
       'Created Date': service.createdAt.toLocaleDateString(),
       'Updated Date': service.updatedAt.toLocaleDateString()
     }));
@@ -154,7 +154,7 @@ export class ExportService {
 
   // Export financial data
   static async exportFinancialData(tenantId: string, options: ExportOptions): Promise<Buffer> {
-    const bookings = await db.booking.findMany({
+    const bookings = await prisma.booking.findMany({
       where: {
         tenantId,
         createdAt: {
@@ -177,12 +177,12 @@ export class ExportService {
       'Booking ID': booking.id,
       'Customer': booking.customer.name,
       'Service': booking.service.name,
-      'Amount': booking.totalAmount,
+      'Amount': Number(booking.totalAmount),
       'Payment Status': booking.paymentStatus,
       'Status': booking.status,
       'Payment Method': 'Manual', // Placeholder for future payment integration
-      'Tax Amount': booking.totalAmount * 0.1, // Assuming 10% tax
-      'Net Amount': booking.totalAmount * 0.9,
+      'Tax Amount': Number(booking.totalAmount) * 0.1, // Assuming 10% tax
+      'Net Amount': Number(booking.totalAmount) * 0.9,
       'Month': booking.scheduledAt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     }));
 
@@ -195,20 +195,20 @@ export class ExportService {
 
     // Fetch all necessary data
     const [bookings, customers, services] = await Promise.all([
-      db.booking.findMany({
+      prisma.booking.findMany({
         where: {
           tenantId,
           createdAt: { gte: startDate, lte: endDate }
         },
         include: { customer: true, service: true }
       }),
-      db.customer.findMany({
+      prisma.customer.findMany({
         where: {
           tenantId,
           createdAt: { gte: startDate, lte: endDate }
         }
       }),
-      db.service.findMany({
+      prisma.service.findMany({
         where: { tenantId },
         include: {
           bookings: {
@@ -226,7 +226,7 @@ export class ExportService {
     const completedBookings = bookings.filter(b => b.status === 'completed').length;
     const totalRevenue = bookings
       .filter(b => ['completed', 'confirmed'].includes(b.status))
-      .reduce((sum, b) => sum + b.totalAmount, 0);
+      .reduce((sum, b) => sum + Number(b.totalAmount), 0);
     const averageBookingValue = completedBookings > 0 ? totalRevenue / completedBookings : 0;
 
     // Create PDF report
@@ -280,7 +280,7 @@ export class ExportService {
       .map(service => ({
         name: service.name,
         bookings: service.bookings.length,
-        revenue: service.bookings.reduce((sum, b) => sum + b.totalAmount, 0)
+        revenue: service.bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0)
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
@@ -306,7 +306,7 @@ export class ExportService {
     const { startDate, endDate } = config.dateRange;
 
     const [tenants, allBookings] = await Promise.all([
-      db.tenant.findMany({
+      prisma.tenant.findMany({
         include: {
           bookings: {
             where: {
@@ -316,7 +316,7 @@ export class ExportService {
           }
         }
       }),
-      db.booking.findMany({
+      prisma.booking.findMany({
         where: {
           createdAt: { gte: startDate, lte: endDate },
           status: { in: ['completed', 'confirmed'] }
@@ -341,7 +341,7 @@ export class ExportService {
     doc.text('Platform Overview', 20, yPosition);
     yPosition += 10;
 
-    const totalRevenue = allBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+    const totalRevenue = allBookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
     const activeTenants = tenants.filter(t => t.bookings.length > 0).length;
 
     const platformData = [
@@ -375,7 +375,7 @@ export class ExportService {
       .map(tenant => ({
         businessName: tenant.businessName,
         bookings: tenant.bookings.length,
-        revenue: tenant.bookings.reduce((sum, b) => sum + b.totalAmount, 0)
+        revenue: tenant.bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0)
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
