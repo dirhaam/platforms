@@ -3,13 +3,10 @@ import { InvoiceService } from '@/lib/invoice/invoice-service';
 import { InvoicePDFGenerator } from '@/lib/invoice/pdf-generator';
 import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {

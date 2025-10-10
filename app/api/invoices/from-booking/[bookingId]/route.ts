@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { InvoiceService } from '@/lib/invoice/invoice-service';
 import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
-interface RouteParams {
-  params: {
-    bookingId: string;
-  };
-}
-
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { bookingId: string } }
+) {
   try {
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {

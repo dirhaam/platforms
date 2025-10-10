@@ -3,13 +3,10 @@ import { InvoiceService } from '@/lib/invoice/invoice-service';
 import { UpdateInvoiceRequest } from '@/types/invoice';
 import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
@@ -32,7 +29,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
@@ -57,7 +57,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
