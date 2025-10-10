@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getSubdomainData } from '@/lib/subdomains';
-import { protocol, rootDomain } from '@/lib/utils';
+import { TenantService } from '@/lib/subdomain/tenant-service';
+import TenantLandingPage from '@/components/subdomain/TenantLandingPage';
+import ModernTemplate from '@/components/subdomain/templates/ModernTemplate';
 
 export async function generateMetadata({
   params
@@ -10,17 +10,24 @@ export async function generateMetadata({
   params: Promise<{ subdomain: string }>;
 }): Promise<Metadata> {
   const { subdomain } = await params;
-  const subdomainData = await getSubdomainData(subdomain);
+  const tenantData = await TenantService.getTenantLandingData(subdomain);
 
-  if (!subdomainData) {
+  if (!tenantData) {
     return {
-      title: rootDomain
+      title: 'Page Not Found'
     };
   }
 
   return {
-    title: `${subdomain}.${rootDomain}`,
-    description: `Subdomain page for ${subdomain}.${rootDomain}`
+    title: `${tenantData.businessName} - Professional ${tenantData.businessCategory}`,
+    description: tenantData.businessDescription || `${tenantData.businessName} - Professional ${tenantData.businessCategory} services. Book your appointment today.`,
+    keywords: `${tenantData.businessCategory}, ${tenantData.businessName}, booking, appointment, ${subdomain}`,
+    openGraph: {
+      title: tenantData.businessName,
+      description: tenantData.businessDescription || `Professional ${tenantData.businessCategory} services`,
+      type: 'website',
+      locale: 'en_US',
+    },
   };
 }
 
@@ -30,34 +37,48 @@ export default async function SubdomainPage({
   params: Promise<{ subdomain: string }>;
 }) {
   const { subdomain } = await params;
-  const subdomainData = await getSubdomainData(subdomain);
-
-  if (!subdomainData) {
+  
+  // Get tenant data
+  const tenantData = await TenantService.getTenantLandingData(subdomain);
+  
+  if (!tenantData) {
     notFound();
   }
 
-  return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-blue-50 to-white p-4">
-      <div className="absolute top-4 right-4">
-        <Link
-          href={`${protocol}://${rootDomain}`}
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          {rootDomain}
-        </Link>
-      </div>
+  // Get services and business hours
+  const [services, businessHours] = await Promise.all([
+    TenantService.getTenantServices(tenantData.id),
+    TenantService.getTenantBusinessHours(tenantData.id),
+  ]);
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-9xl mb-6">{subdomainData.emoji}</div>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-            Welcome to {subdomain}.{rootDomain}
-          </h1>
-          <p className="mt-3 text-lg text-gray-600">
-            This is your custom subdomain page
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  // Select template based on tenant preferences or business category
+  const templateId = tenantData.template.id;
+
+  // Render appropriate template
+  switch (templateId) {
+    case 'modern':
+      return (
+        <ModernTemplate
+          tenant={tenantData}
+          services={services}
+          businessHours={businessHours || undefined}
+        />
+      );
+    
+    case 'classic':
+    case 'minimal':
+    case 'beauty':
+    case 'healthcare':
+    default:
+      // For now, use the default TenantLandingPage for other templates
+      // Additional template components can be created later
+      return (
+        <TenantLandingPage
+          tenant={tenantData}
+          services={services}
+          businessHours={businessHours || undefined}
+          template={templateId as 'modern' | 'classic' | 'minimal'}
+        />
+      );
+  }
 }

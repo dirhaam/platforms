@@ -1,0 +1,699 @@
+import { SignJWT, jwtVerify } from 'jose';
+import { cookies } from 'next/headers';
+import { NextRequest } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/database';
+import { SecurityService } from '@/lib/security/security-service';
+import type { Staff, Tenant } from '@/types/database';
+
+// JWT configuration
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+);
+const JWT_EXPIRES_IN = '7d';
+
+// Session configuration
+export interface TenantSession {
+  userId: string;
+  tenantId: string;
+  role: 'superadmin' | 'owner' | 'admin' | 'staff';
+  permissions: string[];
+  email: string;
+  name: string;
+  isSuperAdmin?: boolean; // Flag for superadmin access
+  [key: string]: any; // Index signature for JWT compatibility
+}
+
+export interface AuthResult {
+  success: boolean;
+  session?: TenantSession;
+  error?: string;
+}
+
+export class TenantAuth {
+  // Create JWT token
+  static async createToken(session: TenantSession): Promise<string> {
+    return await new SignJWT(session)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(JWT_EXPIRES_IN)
+      .sign(JWT_SECRET);
+  }
+
+  // Verify JWT token
+  static async verifyToken(token: string): Promise<TenantSession | null> {
+    try {
+      const { payload } = await jwtVerify(token, JWT_SECRET);
+      return payload as unknown as TenantSession;
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      return null;
+    }
+  }
+
+  // Set authentication cookie
+  static async setAuthCookie(session: TenantSession): Promise<void> {
+    const token = await this.createToken(session);
+    const cookieStore = await cookies();
+    
+    cookieStore.set('tenant-auth', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+  }
+
+  // Get current session from cookies
+  static async getCurrentSession(): Promise<TenantSession | null> {
+    try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get('tenant-auth')?.value;
+      
+      if (!token) {
+        return null;
+      }
+
+      return await this.verifyToken(token);
+    } catch (error) {
+      console.error('Failed to get current session:', error);
+      return null;
+    }
+  }
+
+  // Get session from request (for middleware)
+  static async getSessionFromRequest(request: NextRequest): Promise<TenantSession | null> {
+    try {
+      const token = request.cookies.get('tenant-auth')?.value;
+      
+      if (!token) {
+        return null;
+      }
+
+      return await this.verifyToken(token);
+    } catch (error) {
+      console.error('Failed to get session from request:', error);
+      return null;
+    }
+  }
+
+  // Clear authentication cookie
+  static async clearAuthCookie(): Promise<void> {
+    const cookieStore = await cookies();
+    cookieStore.delete('tenant-auth');
+  }
+
+  // Hash password
+  static async hashPassword(password: string): Promise<string> {
+    return await SecurityService.hashPassword(password);
+  }
+
+  // Verify password
+  static async verifyPassword(password: string, hash: string): Promise<boolean> {
+    return await SecurityService.verifyPassword(password, hash);
+  }
+
+  // Authenticate tenant owner (email/password login)
+  static async authenticateOwner(
+    email: string, 
+    password: string, 
+    subdomain: string,
+    ipAddress: string = '',
+    userAgent: string = ''
+  ): Promise<AuthResult> {
+    try {
+      // Find tenant by subdomain and email
+      const tenant = await prisma.tenant.findFirst({
+        where: {
+          subdomain,
+          email,
+        },
+      });
+
+      if (!tenant) {
+        // Log failed attempt
+        await SecurityService.logSecurityEvent(
+          'unknown',
+          'unknown',
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'tenant_owner',
+          { email, subdomain, reason: 'tenant_not_found' }
+        );
+        return { success: false, error: 'Invalid credentials' };
+      }
+
+      // Check if account is locked
+      if (tenant.lockedUntil && tenant.lockedUntil > new Date()) {
+        await SecurityService.logSecurityEvent(
+          tenant.id,
+          tenant.id,
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'tenant_owner',
+          { email, reason: 'account_locked' }
+        );
+        return { success: false, error: 'Account is temporarily locked due to too many failed attempts' };
+      }
+
+      // Check for suspicious activity
+      const suspiciousCheck = await SecurityService.checkSuspiciousActivity(
+        tenant.id,
+        ipAddress,
+        'login'
+      );
+
+      if (suspiciousCheck.shouldBlock) {
+        await SecurityService.logSecurityEvent(
+          tenant.id,
+          tenant.id,
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'tenant_owner',
+          { email, reason: 'suspicious_activity', details: suspiciousCheck.reason }
+        );
+        return { success: false, error: 'Login blocked due to suspicious activity' };
+      }
+
+      let isValidPassword = false;
+
+      // Check if tenant has a password hash
+      if (tenant.passwordHash) {
+        isValidPassword = await this.verifyPassword(password, tenant.passwordHash);
+      } else {
+        // Fallback for development/migration - check against default password
+        if (process.env.NODE_ENV === 'development' && password === 'admin123') {
+          isValidPassword = true;
+          // Hash and store the password for future use
+          const hashedPassword = await this.hashPassword(password);
+          await prisma.tenant.update({
+            where: { id: tenant.id },
+            data: { passwordHash: hashedPassword },
+          });
+        }
+      }
+      
+      if (!isValidPassword) {
+        // Increment failed login attempts
+        const newAttempts = tenant.loginAttempts + 1;
+        const shouldLock = newAttempts >= 5;
+        
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            loginAttempts: newAttempts,
+            lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
+          },
+        });
+
+        await SecurityService.logSecurityEvent(
+          tenant.id,
+          tenant.id,
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'tenant_owner',
+          { email, attempts: newAttempts, locked: shouldLock }
+        );
+
+        return { success: false, error: 'Invalid credentials' };
+      }
+
+      // Reset login attempts on successful login
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: {
+          loginAttempts: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date(),
+        },
+      });
+
+      const session: TenantSession = {
+        userId: tenant.id,
+        tenantId: tenant.id,
+        role: 'owner',
+        permissions: ['*'], // Owner has all permissions
+        email: tenant.email,
+        name: tenant.ownerName,
+      };
+
+      await this.setAuthCookie(session);
+
+      // Log successful login
+      await SecurityService.logSecurityEvent(
+        tenant.id,
+        tenant.id,
+        'login',
+        true,
+        ipAddress,
+        userAgent,
+        'tenant_owner',
+        { email }
+      );
+
+      return { success: true, session };
+    } catch (error) {
+      console.error('Owner authentication failed:', error);
+      return { success: false, error: 'Authentication failed' };
+    }
+  }
+
+  // Authenticate staff member
+  static async authenticateStaff(
+    email: string, 
+    password: string, 
+    subdomain: string,
+    ipAddress: string = '',
+    userAgent: string = ''
+  ): Promise<AuthResult> {
+    try {
+      // Find tenant first
+      const tenant = await prisma.tenant.findUnique({
+        where: { subdomain },
+      });
+
+      if (!tenant) {
+        await SecurityService.logSecurityEvent(
+          'unknown',
+          'unknown',
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'staff',
+          { email, subdomain, reason: 'tenant_not_found' }
+        );
+        return { success: false, error: 'Invalid credentials' };
+      }
+
+      // Find staff member
+      const staff = await prisma.staff.findFirst({
+        where: {
+          tenantId: tenant.id,
+          email,
+          isActive: true,
+        },
+      });
+
+      if (!staff) {
+        await SecurityService.logSecurityEvent(
+          tenant.id,
+          'unknown',
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'staff',
+          { email, reason: 'staff_not_found' }
+        );
+        return { success: false, error: 'Invalid credentials' };
+      }
+
+      // Check if account is locked
+      if (staff.lockedUntil && staff.lockedUntil > new Date()) {
+        await SecurityService.logSecurityEvent(
+          tenant.id,
+          staff.id,
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'staff',
+          { email, reason: 'account_locked' }
+        );
+        return { success: false, error: 'Account is temporarily locked due to too many failed attempts' };
+      }
+
+      // Check for suspicious activity
+      const suspiciousCheck = await SecurityService.checkSuspiciousActivity(
+        staff.id,
+        ipAddress,
+        'login'
+      );
+
+      if (suspiciousCheck.shouldBlock) {
+        await SecurityService.logSecurityEvent(
+          tenant.id,
+          staff.id,
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'staff',
+          { email, reason: 'suspicious_activity', details: suspiciousCheck.reason }
+        );
+        return { success: false, error: 'Login blocked due to suspicious activity' };
+      }
+
+      let isValidPassword = false;
+
+      // Check if staff has a password hash
+      if (staff.passwordHash) {
+        isValidPassword = await this.verifyPassword(password, staff.passwordHash);
+      } else {
+        // Fallback for development/migration - check against default password
+        if (process.env.NODE_ENV === 'development' && password === 'staff123') {
+          isValidPassword = true;
+          // Hash and store the password for future use
+          const hashedPassword = await this.hashPassword(password);
+          await prisma.staff.update({
+            where: { id: staff.id },
+            data: { passwordHash: hashedPassword },
+          });
+        }
+      }
+      
+      if (!isValidPassword) {
+        // Increment failed login attempts
+        const newAttempts = staff.loginAttempts + 1;
+        const shouldLock = newAttempts >= 5;
+        
+        await prisma.staff.update({
+          where: { id: staff.id },
+          data: {
+            loginAttempts: newAttempts,
+            lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
+          },
+        });
+
+        await SecurityService.logSecurityEvent(
+          tenant.id,
+          staff.id,
+          'login',
+          false,
+          ipAddress,
+          userAgent,
+          'staff',
+          { email, attempts: newAttempts, locked: shouldLock }
+        );
+
+        return { success: false, error: 'Invalid credentials' };
+      }
+
+      // Reset login attempts on successful login
+      await prisma.staff.update({
+        where: { id: staff.id },
+        data: {
+          loginAttempts: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date(),
+        },
+      });
+
+      const session: TenantSession = {
+        userId: staff.id,
+        tenantId: tenant.id,
+        role: staff.role as 'admin' | 'staff',
+        permissions: staff.permissions,
+        email: staff.email,
+        name: staff.name,
+      };
+
+      await this.setAuthCookie(session);
+
+      // Log successful login
+      await SecurityService.logSecurityEvent(
+        tenant.id,
+        staff.id,
+        'login',
+        true,
+        ipAddress,
+        userAgent,
+        'staff',
+        { email }
+      );
+
+      return { success: true, session };
+    } catch (error) {
+      console.error('Staff authentication failed:', error);
+      return { success: false, error: 'Authentication failed' };
+    }
+  }
+
+  // Check if user has permission
+  static hasPermission(session: TenantSession, permission: string): boolean {
+    // Owner has all permissions
+    if (session.role === 'owner' || session.permissions.includes('*')) {
+      return true;
+    }
+
+    return session.permissions.includes(permission);
+  }
+
+  // Authenticate super admin (platform-wide access)
+  static async authenticateSuperAdmin(
+    email: string,
+    password: string,
+    ipAddress: string = '',
+    userAgent: string = ''
+  ): Promise<AuthResult> {
+    try {
+      // Import SuperAdminService
+      const { SuperAdminService } = await import('./superadmin-service');
+      
+      // Authenticate using SuperAdminService
+      const authResult = await SuperAdminService.authenticate(email, password);
+
+      if (!authResult.success) {
+        // Log failed attempt (disabled for now due to DB issues)
+        // await SecurityService.logSecurityEvent(
+        //   'platform',
+        //   'unknown',
+        //   'login',
+        //   false,
+        //   ipAddress,
+        //   userAgent,
+        //   'superadmin',
+        //   { email, reason: authResult.error }
+        // );
+        return { success: false, error: authResult.error };
+      }
+
+      const superAdmin = authResult.superAdmin!;
+
+      const session: TenantSession = {
+        userId: superAdmin.id,
+        tenantId: 'platform', // Special tenant ID for superadmin
+        role: 'superadmin',
+        permissions: ['*'], // All permissions across all tenants
+        email: superAdmin.email,
+        name: superAdmin.name,
+        isSuperAdmin: true,
+      };
+
+      await this.setAuthCookie(session);
+
+      // Log successful login (disabled for now due to DB issues)
+      // await SecurityService.logSecurityEvent(
+      //   'platform',
+      //   superAdmin.id,
+      //   'login',
+      //   true,
+      //   ipAddress,
+      //   userAgent,
+      //   'superadmin',
+      //   { email }
+      // );
+
+      return { success: true, session };
+    } catch (error) {
+      console.error('SuperAdmin authentication failed:', error);
+      return { success: false, error: 'Authentication failed' };
+    }
+  }
+
+  // Get user permissions based on role
+  static getDefaultPermissions(role: 'superadmin' | 'owner' | 'admin' | 'staff'): string[] {
+    switch (role) {
+      case 'superadmin':
+        return ['*']; // All permissions across all tenants
+      case 'owner':
+        return ['*']; // All permissions
+      case 'admin':
+        return [
+          'manage_bookings',
+          'manage_customers',
+          'manage_services',
+          'view_analytics',
+          'send_messages',
+          'manage_staff',
+          'export_data',
+        ];
+      case 'staff':
+        return [
+          'manage_bookings',
+          'view_customers',
+          'send_messages',
+        ];
+      default:
+        return [];
+    }
+  }
+
+  // Logout user
+  static async logout(
+    session?: TenantSession,
+    ipAddress: string = '',
+    userAgent: string = ''
+  ): Promise<void> {
+    if (session) {
+      // Log logout event
+      await SecurityService.logSecurityEvent(
+        session.tenantId,
+        session.userId,
+        'logout',
+        true,
+        ipAddress,
+        userAgent,
+        session.role
+      );
+    }
+    
+    await this.clearAuthCookie();
+  }
+
+  // Set password for tenant owner
+  static async setOwnerPassword(
+    tenantId: string,
+    newPassword: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Validate password strength
+      const validation = SecurityService.validatePassword(newPassword);
+      if (!validation.isValid) {
+        return { success: false, error: validation.errors.join(', ') };
+      }
+
+      // Hash password
+      const passwordHash = await this.hashPassword(newPassword);
+
+      // Update tenant
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { 
+          passwordHash,
+          loginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to set owner password:', error);
+      return { success: false, error: 'Failed to set password' };
+    }
+  }
+
+  // Set password for staff member
+  static async setStaffPassword(
+    staffId: string,
+    newPassword: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Validate password strength
+      const validation = SecurityService.validatePassword(newPassword);
+      if (!validation.isValid) {
+        return { success: false, error: validation.errors.join(', ') };
+      }
+
+      // Hash password
+      const passwordHash = await this.hashPassword(newPassword);
+
+      // Update staff
+      await prisma.staff.update({
+        where: { id: staffId },
+        data: { 
+          passwordHash,
+          loginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to set staff password:', error);
+      return { success: false, error: 'Failed to set password' };
+    }
+  }
+
+  // Generate password reset token
+  static async generatePasswordResetToken(
+    email: string,
+    subdomain: string,
+    userType: 'owner' | 'staff'
+  ): Promise<{ success: boolean; token?: string; error?: string }> {
+    try {
+      const { token, hashedToken, expiresAt } = SecurityService.generatePasswordResetToken();
+
+      if (userType === 'owner') {
+        const tenant = await prisma.tenant.findFirst({
+          where: { subdomain, email },
+        });
+
+        if (!tenant) {
+          return { success: false, error: 'User not found' };
+        }
+
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            passwordResetToken: hashedToken,
+            passwordResetExpires: expiresAt,
+          },
+        });
+      } else {
+        const tenant = await prisma.tenant.findUnique({
+          where: { subdomain },
+        });
+
+        if (!tenant) {
+          return { success: false, error: 'Tenant not found' };
+        }
+
+        const staff = await prisma.staff.findFirst({
+          where: { tenantId: tenant.id, email },
+        });
+
+        if (!staff) {
+          return { success: false, error: 'User not found' };
+        }
+
+        await prisma.staff.update({
+          where: { id: staff.id },
+          data: {
+            passwordResetToken: hashedToken,
+            passwordResetExpires: expiresAt,
+          },
+        });
+      }
+
+      return { success: true, token };
+    } catch (error) {
+      console.error('Failed to generate password reset token:', error);
+      return { success: false, error: 'Failed to generate reset token' };
+    }
+  }
+}
+
+// Permission constants
+export const PERMISSIONS = {
+  MANAGE_BOOKINGS: 'manage_bookings',
+  MANAGE_CUSTOMERS: 'manage_customers',
+  MANAGE_SERVICES: 'manage_services',
+  MANAGE_STAFF: 'manage_staff',
+  VIEW_ANALYTICS: 'view_analytics',
+  SEND_MESSAGES: 'send_messages',
+  MANAGE_SETTINGS: 'manage_settings',
+  EXPORT_DATA: 'export_data',
+} as const;
+
+export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];

@@ -49,6 +49,13 @@ export interface EnhancedTenant {
   businessDescription?: string;
   logo?: string;
   
+  // Brand colors
+  brandColors?: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+  
   // Feature flags (matching database schema)
   whatsappEnabled: boolean;
   homeVisitEnabled: boolean;
@@ -122,7 +129,8 @@ export async function getSubdomainData(subdomain: string): Promise<SubdomainData
     console.warn('Migration service unavailable, falling back to Redis:', error);
     
     // Fallback to direct Redis access
-    const data = await redis.get<SubdomainData | EnhancedTenant>(
+    const redisClient = redis();
+    const data = await redisClient.get<SubdomainData | EnhancedTenant>(
       `subdomain:${sanitizedSubdomain}`
     );
     return data;
@@ -200,13 +208,14 @@ export async function getAllSubdomains(): Promise<EnhancedTenant[]> {
   }
 
   // Fallback to Redis
-  const keys = await redis.keys('subdomain:*');
+  const redisClient = redis();
+  const keys = await redisClient.keys('subdomain:*');
 
   if (!keys.length) {
     return [];
   }
 
-  const values = await redis.mget<(SubdomainData | EnhancedTenant)[]>(...keys);
+  const values = await redisClient.mget<(SubdomainData | EnhancedTenant)[]>(...keys);
 
   return keys.map((key, index) => {
     const subdomain = key.replace('subdomain:', '');

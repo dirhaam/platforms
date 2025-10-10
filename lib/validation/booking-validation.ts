@@ -1,0 +1,152 @@
+import { z } from 'zod';
+import { BookingStatus, PaymentStatus } from '@/types/booking';
+
+// Booking validation schemas
+export const createBookingSchema = z.object({
+  customerId: z.string().min(1, 'Customer ID is required'),
+  serviceId: z.string().min(1, 'Service ID is required'),
+  scheduledAt: z.string().datetime('Invalid date format'),
+  isHomeVisit: z.boolean().optional().default(false),
+  homeVisitAddress: z.string().optional(),
+  homeVisitCoordinates: z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180)
+  }).optional(),
+  notes: z.string().optional()
+}).refine((data: any) => {
+  // If it's a home visit, address is required
+  if (data.isHomeVisit && !data.homeVisitAddress) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Home visit address is required for home visit bookings',
+  path: ['homeVisitAddress']
+});
+
+export const updateBookingSchema = z.object({
+  status: z.nativeEnum(BookingStatus).optional(),
+  scheduledAt: z.string().datetime('Invalid date format').optional(),
+  isHomeVisit: z.boolean().optional(),
+  homeVisitAddress: z.string().optional(),
+  homeVisitCoordinates: z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180)
+  }).optional(),
+  notes: z.string().optional(),
+  paymentStatus: z.nativeEnum(PaymentStatus).optional()
+});
+
+// Service validation schemas
+export const createServiceSchema = z.object({
+  name: z.string().min(1, 'Service name is required').max(100, 'Service name too long'),
+  description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
+  duration: z.number().min(15, 'Minimum duration is 15 minutes').max(480, 'Maximum duration is 8 hours'),
+  price: z.number().min(0, 'Price must be positive'),
+  category: z.string().min(1, 'Category is required'),
+  homeVisitAvailable: z.boolean().optional().default(false),
+  homeVisitSurcharge: z.number().min(0).optional(),
+  images: z.array(z.string().url()).optional().default([]),
+  requirements: z.array(z.string()).optional().default([])
+});
+
+export const updateServiceSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().min(1).max(500).optional(),
+  duration: z.number().min(15).max(480).optional(),
+  price: z.number().min(0).optional(),
+  category: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
+  homeVisitAvailable: z.boolean().optional(),
+  homeVisitSurcharge: z.number().min(0).optional(),
+  images: z.array(z.string().url()).optional(),
+  requirements: z.array(z.string()).optional()
+});
+
+// Customer validation schemas
+export const createCustomerSchema = z.object({
+  name: z.string().min(1, 'Customer name is required').max(100, 'Name too long'),
+  email: z.string().email('Invalid email format').optional(),
+  phone: z.string().min(10, 'Phone number too short').max(20, 'Phone number too long'),
+  address: z.string().max(200, 'Address too long').optional(),
+  notes: z.string().max(500, 'Notes too long').optional(),
+  whatsappNumber: z.string().min(10).max(20).optional()
+});
+
+export const updateCustomerSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().min(10).max(20).optional(),
+  address: z.string().max(200).optional(),
+  notes: z.string().max(500).optional(),
+  whatsappNumber: z.string().min(10).max(20).optional()
+});
+
+// Availability validation
+export const availabilityRequestSchema = z.object({
+  serviceId: z.string().min(1, 'Service ID is required'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  duration: z.number().min(15).max(480).optional()
+});
+
+// Validation helper functions
+export function validateBookingTime(scheduledAt: Date): { valid: boolean; message?: string } {
+  const now = new Date();
+  
+  // Check if booking is in the past
+  if (scheduledAt <= now) {
+    return { valid: false, message: 'Booking time must be in the future' };
+  }
+  
+  // Check if booking is too far in the future (e.g., 1 year)
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  
+  if (scheduledAt > oneYearFromNow) {
+    return { valid: false, message: 'Booking time cannot be more than 1 year in the future' };
+  }
+  
+  return { valid: true };
+}
+
+export function validateBusinessHours(
+  scheduledAt: Date,
+  businessHours: any
+): { valid: boolean; message?: string } {
+  if (!businessHours) {
+    return { valid: true }; // No business hours restriction
+  }
+  
+  const dayOfWeek = scheduledAt.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayName = dayNames[dayOfWeek];
+  
+  const daySchedule = businessHours.schedule?.[dayName];
+  
+  if (!daySchedule || !daySchedule.isOpen) {
+    return { valid: false, message: 'Business is closed on this day' };
+  }
+  
+  const bookingTime = scheduledAt.toTimeString().slice(0, 5); // HH:MM format
+  
+  if (bookingTime < daySchedule.openTime || bookingTime > daySchedule.closeTime) {
+    return { 
+      valid: false, 
+      message: `Business hours are ${daySchedule.openTime} - ${daySchedule.closeTime}` 
+    };
+  }
+  
+  // Check for breaks
+  if (daySchedule.breaks) {
+    for (const breakTime of daySchedule.breaks) {
+      if (bookingTime >= breakTime.startTime && bookingTime <= breakTime.endTime) {
+        return { 
+          valid: false, 
+          message: `Business is closed during break time ${breakTime.startTime} - ${breakTime.endTime}` 
+        };
+      }
+    }
+  }
+  
+  return { valid: true };
+}

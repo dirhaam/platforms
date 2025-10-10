@@ -146,6 +146,14 @@ export async function createSubdomainAction(
   // Store in Redis
   await redis.set(`subdomain:${sanitizedSubdomain}`, enhancedTenant);
 
+  // Log the tenant creation activity
+  try {
+    const { ActivityLogger } = await import('@/lib/admin/activity-logger');
+    await ActivityLogger.logTenantCreated(enhancedTenant.id, enhancedTenant.businessName);
+  } catch (error) {
+    console.warn('Failed to log tenant creation activity:', error);
+  }
+
   redirect(`${protocol}://${sanitizedSubdomain}.${rootDomain}`);
 }
 
