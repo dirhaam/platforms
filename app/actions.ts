@@ -110,7 +110,7 @@ export async function createSubdomainAction(
   }
 
   // Check if subdomain already exists
-  const subdomainAlreadyExists = await redis.get(`subdomain:${sanitizedSubdomain}`);
+  const subdomainAlreadyExists = await redis().get(`subdomain:${sanitizedSubdomain}`);
   if (subdomainAlreadyExists) {
     return {
       subdomain,
