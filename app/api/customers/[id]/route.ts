@@ -5,7 +5,7 @@ import { updateCustomerSchema } from '@/lib/validation/booking-validation';
 // GET /api/customers/[id] - Get a specific customer
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -14,7 +14,8 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
-    const customer = await CustomerService.getCustomer(tenantId, params.id);
+    const { id } = await context.params;
+    const customer = await CustomerService.getCustomer(tenantId, id);
     
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
@@ -30,7 +31,7 @@ export async function GET(
 // PUT /api/customers/[id] - Update a customer
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -46,11 +47,12 @@ export async function PUT(
     if (!validation.success) {
       return NextResponse.json({ 
         error: 'Validation failed', 
-        details: validation.error.errors 
+        details: validation.error.issues 
       }, { status: 400 });
     }
     
-    const result = await CustomerService.updateCustomer(tenantId, params.id, validation.data);
+    const { id } = await context.params;
+    const result = await CustomerService.updateCustomer(tenantId, id, validation.data);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -66,7 +68,7 @@ export async function PUT(
 // DELETE /api/customers/[id] - Delete a customer
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -75,7 +77,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
-    const result = await CustomerService.deleteCustomer(tenantId, params.id);
+    const { id } = await context.params;
+    const result = await CustomerService.deleteCustomer(tenantId, id);
     
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });

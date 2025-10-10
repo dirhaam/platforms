@@ -5,7 +5,7 @@ import { updateServiceSchema } from '@/lib/validation/booking-validation';
 // GET /api/services/[id] - Get a specific service
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -14,7 +14,8 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
-    const service = await ServiceService.getService(tenantId, params.id);
+    const { id } = await context.params;
+    const service = await ServiceService.getService(tenantId, id);
     
     if (!service) {
       return NextResponse.json({ error: 'Service not found' }, { status: 404 });
@@ -30,7 +31,7 @@ export async function GET(
 // PUT /api/services/[id] - Update a service
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -46,11 +47,12 @@ export async function PUT(
     if (!validation.success) {
       return NextResponse.json({ 
         error: 'Validation failed', 
-        details: validation.error.errors 
+        details: validation.error.issues 
       }, { status: 400 });
     }
     
-    const result = await ServiceService.updateService(tenantId, params.id, validation.data);
+    const { id } = await context.params;
+    const result = await ServiceService.updateService(tenantId, id, validation.data);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -66,7 +68,7 @@ export async function PUT(
 // DELETE /api/services/[id] - Delete a service
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -75,7 +77,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
-    const result = await ServiceService.deleteService(tenantId, params.id);
+    const { id } = await context.params;
+    const result = await ServiceService.deleteService(tenantId, id);
     
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });

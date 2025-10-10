@@ -5,7 +5,7 @@ import { updateBookingSchema } from '@/lib/validation/booking-validation';
 // GET /api/bookings/[id] - Get a specific booking
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -14,7 +14,8 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
-    const booking = await BookingService.getBooking(tenantId, params.id);
+    const { id } = await context.params;
+    const booking = await BookingService.getBooking(tenantId, id);
     
     if (!booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
@@ -30,7 +31,7 @@ export async function GET(
 // PUT /api/bookings/[id] - Update a booking
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -46,11 +47,12 @@ export async function PUT(
     if (!validation.success) {
       return NextResponse.json({ 
         error: 'Validation failed', 
-        details: validation.error.errors 
+        details: validation.error.issues 
       }, { status: 400 });
     }
     
-    const result = await BookingService.updateBooking(tenantId, params.id, validation.data);
+    const { id } = await context.params;
+    const result = await BookingService.updateBooking(tenantId, id, validation.data);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -66,7 +68,7 @@ export async function PUT(
 // DELETE /api/bookings/[id] - Delete a booking
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = request.headers.get('x-tenant-id');
@@ -75,7 +77,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
-    const result = await BookingService.deleteBooking(tenantId, params.id);
+    const { id } = await context.params;
+    const result = await BookingService.deleteBooking(tenantId, id);
     
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
