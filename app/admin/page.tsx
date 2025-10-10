@@ -307,6 +307,6 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-    </>)
+    </>
   );
 }
