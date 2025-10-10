@@ -26,43 +26,16 @@ export default async function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-blue-600" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Booqing Platform Admin</h1>
-                <p className="text-sm text-gray-600">Super Administrator Dashboard</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                <Shield className="w-3 h-3 mr-1" />
-                Super Admin
-              </Badge>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{session.name}</p>
-                <p className="text-xs text-gray-600">{session.email}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {session.name}!
-          </h2>
-          <p className="text-gray-600">
-            You have platform-wide access to all tenants and administrative features.
-          </p>
-        </div>
+    <>
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Welcome back, {session.name}!
+        </h2>
+        <p className="text-gray-600">
+          You have platform-wide access to all tenants and administrative features.
+        </p>
+      </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -334,7 +307,6 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>)
   );
 }

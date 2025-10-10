@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
 import TenantDashboardLayout from '@/components/dashboard/TenantDashboardLayout';
+import SuperAdminLayout from '@/components/admin/SuperAdminLayout';
 
 export default async function AdminLayout({
   children,
@@ -12,6 +13,15 @@ export default async function AdminLayout({
   
   if (!session) {
     redirect('/login');
+  }
+
+  // Use different layouts based on user role
+  if (session.role === 'superadmin' && session.isSuperAdmin) {
+    return (
+      <SuperAdminLayout session={session}>
+        {children}
+      </SuperAdminLayout>
+    );
   }
 
   return (
