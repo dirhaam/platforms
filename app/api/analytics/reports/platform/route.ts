@@ -32,11 +32,13 @@ export async function POST(request: NextRequest) {
     const contentType = 'application/pdf';
     const filename = `platform-${reportConfig.title.toLowerCase().replace(/\s+/g, '-')}.pdf`;
 
-    return new NextResponse(toArrayBuffer(reportBuffer), {
+    const arrayBuffer = toArrayBuffer(reportBuffer);
+
+    return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': reportBuffer.byteLength.toString()
+        'Content-Length': arrayBuffer.byteLength.toString()
       }
     });
   } catch (error) {

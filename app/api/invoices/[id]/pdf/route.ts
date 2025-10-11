@@ -32,10 +32,13 @@ export async function GET(
     const payload = new Uint8Array(pdfData);
 
     // Return PDF as response
-    return new NextResponse(toArrayBuffer(payload), {
+    const arrayBuffer = toArrayBuffer(payload);
+
+    return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`
+        'Content-Disposition': `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`,
+        'Content-Length': arrayBuffer.byteLength.toString()
       }
     });
   } catch (error) {

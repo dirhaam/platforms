@@ -74,11 +74,13 @@ export async function POST(
 
     const filename = `${dataType}-export.${format}`;
 
-    return new NextResponse(toArrayBuffer(exportBuffer), {
+    const arrayBuffer = toArrayBuffer(exportBuffer);
+
+    return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': exportBuffer.byteLength.toString()
+        'Content-Length': arrayBuffer.byteLength.toString()
       }
     });
   } catch (error) {
