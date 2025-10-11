@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': reportBuffer.length.toString()
+        'Content-Length': reportBuffer.byteLength.toString()
       }
     });
   } catch (error) {

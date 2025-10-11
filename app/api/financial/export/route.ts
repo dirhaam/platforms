@@ -13,21 +13,23 @@ export async function POST(request: NextRequest) {
     const options: InvoiceExportOptions = await request.json();
     
     if (options.format === 'xlsx') {
-      const buffer = await FinancialService.exportToExcel(tenant.id, options);
-      
-      return new NextResponse(buffer, {
+      const payload = await FinancialService.exportToExcel(tenant.id, options);
+
+      return new NextResponse(payload, {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.xlsx"`
+          'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.xlsx"`,
+          'Content-Length': payload.byteLength.toString()
         }
       });
     } else if (options.format === 'pdf') {
-      const buffer = await FinancialService.exportToPDF(tenant.id, options);
-      
-      return new NextResponse(buffer, {
+      const payload = await FinancialService.exportToPDF(tenant.id, options);
+
+      return new NextResponse(payload, {
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.pdf"`
+          'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.pdf"`,
+          'Content-Length': payload.byteLength.toString()
         }
       });
     } else {

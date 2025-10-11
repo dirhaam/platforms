@@ -304,7 +304,7 @@ export class FinancialService {
   /**
    * Export financial data to Excel
    */
-  static async exportToExcel(tenantId: string, options: InvoiceExportOptions): Promise<Buffer> {
+  static async exportToExcel(tenantId: string, options: InvoiceExportOptions): Promise<Uint8Array> {
     const workbook = XLSX.utils.book_new();
 
     // Get invoices based on filters
@@ -406,13 +406,14 @@ export class FinancialService {
     const metricsSheet = XLSX.utils.json_to_sheet(metricsData);
     XLSX.utils.book_append_sheet(workbook, metricsSheet, 'Financial Metrics');
 
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const arrayBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+    return new Uint8Array(arrayBuffer);
   }
 
   /**
    * Export financial data to PDF report
    */
-  static async exportToPDF(tenantId: string, options: InvoiceExportOptions): Promise<Buffer> {
+  static async exportToPDF(tenantId: string, options: InvoiceExportOptions): Promise<Uint8Array> {
     // Get financial metrics
     const metrics = await this.getFinancialMetrics(
       tenantId,
@@ -446,7 +447,8 @@ export class FinancialService {
       paymentStatus
     };
 
-    return Buffer.from(JSON.stringify(reportData, null, 2));
+    const jsonString = JSON.stringify(reportData, null, 2);
+    return new TextEncoder().encode(jsonString);
   }
 
   /**

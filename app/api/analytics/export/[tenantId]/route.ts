@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ExportService, ExportOptions } from '@/lib/analytics/export-service';
 
+function isValidFormat(value: unknown): value is ExportOptions['format'] {
+  return typeof value === 'string' && ['xlsx', 'csv', 'pdf'].includes(value);
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ tenantId: string }> }
@@ -16,6 +20,13 @@ export async function POST(
       );
     }
 
+    if (!isValidFormat(format)) {
+      return NextResponse.json(
+        { error: 'Invalid export format' },
+        { status: 400 }
+      );
+    }
+
     const options: ExportOptions = {
       format,
       dateRange: {
@@ -25,7 +36,7 @@ export async function POST(
       includeFields
     };
 
-    let exportBuffer: Buffer;
+    let exportBuffer: Uint8Array;
 
     switch (dataType) {
       case 'bookings':
@@ -47,11 +58,13 @@ export async function POST(
         );
     }
 
-    const contentType = {
+    const contentTypeMap: Record<ExportOptions['format'], string> = {
       xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       csv: 'text/csv',
       pdf: 'application/pdf'
-    }[format];
+    };
+
+    const contentType = contentTypeMap[format];
 
     const filename = `${dataType}-export.${format}`;
 
@@ -59,7 +72,7 @@ export async function POST(
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': exportBuffer.length.toString()
+        'Content-Length': exportBuffer.byteLength.toString()
       }
     });
   } catch (error) {

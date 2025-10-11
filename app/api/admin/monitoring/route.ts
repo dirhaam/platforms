@@ -53,11 +53,15 @@ export async function GET() {
 
     // Check main website
     const websiteStart = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'http://localhost:3000'}`, {
         method: 'HEAD',
-        timeout: 5000,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       healthChecks.push({
         service: 'Main Website',
         status: response.ok ? 'online' : 'degraded',
@@ -65,6 +69,7 @@ export async function GET() {
         lastChecked: new Date(),
       });
     } catch (error) {
+      clearTimeout(timeoutId);
       healthChecks.push({
         service: 'Main Website',
         status: 'offline',

@@ -31,7 +31,7 @@ export interface ReportSection {
 
 export class ExportService {
   // Export bookings data
-  static async exportBookings(tenantId: string, options: ExportOptions): Promise<Buffer> {
+  static async exportBookings(tenantId: string, options: ExportOptions): Promise<Uint8Array> {
     const bookings = await prisma.booking.findMany({
       where: {
         tenantId,
@@ -72,7 +72,7 @@ export class ExportService {
   }
 
   // Export customers data
-  static async exportCustomers(tenantId: string, options: ExportOptions): Promise<Buffer> {
+  static async exportCustomers(tenantId: string, options: ExportOptions): Promise<Uint8Array> {
     const customers = await prisma.customer.findMany({
       where: {
         tenantId,
@@ -112,7 +112,7 @@ export class ExportService {
   }
 
   // Export services data
-  static async exportServices(tenantId: string, options: ExportOptions): Promise<Buffer> {
+  static async exportServices(tenantId: string, options: ExportOptions): Promise<Uint8Array> {
     const services = await prisma.service.findMany({
       where: {
         tenantId
@@ -153,7 +153,7 @@ export class ExportService {
   }
 
   // Export financial data
-  static async exportFinancialData(tenantId: string, options: ExportOptions): Promise<Buffer> {
+  static async exportFinancialData(tenantId: string, options: ExportOptions): Promise<Uint8Array> {
     const bookings = await prisma.booking.findMany({
       where: {
         tenantId,
@@ -190,7 +190,7 @@ export class ExportService {
   }
 
   // Generate comprehensive business report
-  static async generateBusinessReport(tenantId: string, config: ReportConfig): Promise<Buffer> {
+  static async generateBusinessReport(tenantId: string, config: ReportConfig): Promise<Uint8Array> {
     const { startDate, endDate } = config.dateRange;
 
     // Fetch all necessary data
@@ -298,11 +298,12 @@ export class ExportService {
       theme: 'grid'
     });
 
-    return Buffer.from(doc.output('arraybuffer'));
+    const arrayBuffer = doc.output('arraybuffer') as ArrayBuffer;
+    return new Uint8Array(arrayBuffer);
   }
 
   // Generate platform-wide analytics report (for admin)
-  static async generatePlatformReport(config: ReportConfig): Promise<Buffer> {
+  static async generatePlatformReport(config: ReportConfig): Promise<Uint8Array> {
     const { startDate, endDate } = config.dateRange;
 
     const [tenants, allBookings] = await Promise.all([
@@ -393,11 +394,12 @@ export class ExportService {
       theme: 'grid'
     });
 
-    return Buffer.from(doc.output('arraybuffer'));
+    const arrayBuffer = doc.output('arraybuffer') as ArrayBuffer;
+    return new Uint8Array(arrayBuffer);
   }
 
   // Helper method to generate exports in different formats
-  private static generateExport(data: any[], format: string, filename: string): Buffer {
+  private static generateExport(data: any[], format: ExportOptions['format'], filename: string): Uint8Array {
     switch (format) {
       case 'xlsx':
         return this.generateXLSX(data, filename);
@@ -410,16 +412,17 @@ export class ExportService {
     }
   }
 
-  private static generateXLSX(data: any[], filename: string): Buffer {
+  private static generateXLSX(data: any[], filename: string): Uint8Array {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
-    
-    return Buffer.from(XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }));
+
+    const arrayBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+    return new Uint8Array(arrayBuffer);
   }
 
-  private static generateCSV(data: any[]): Buffer {
-    if (data.length === 0) return Buffer.from('');
+  private static generateCSV(data: any[]): Uint8Array {
+    if (data.length === 0) return new Uint8Array();
     
     const headers = Object.keys(data[0]);
     const csvContent = [
@@ -435,11 +438,11 @@ export class ExportService {
         }).join(',')
       )
     ].join('\n');
-    
-    return Buffer.from(csvContent, 'utf-8');
+
+    return new TextEncoder().encode(csvContent);
   }
 
-  private static generatePDF(data: any[], filename: string): Buffer {
+  private static generatePDF(data: any[], filename: string): Uint8Array {
     const doc = new jsPDF();
     
     doc.setFontSize(16);
@@ -457,7 +460,8 @@ export class ExportService {
         styles: { fontSize: 8 }
       });
     }
-    
-    return Buffer.from(doc.output('arraybuffer'));
+
+    const arrayBuffer = doc.output('arraybuffer') as ArrayBuffer;
+    return new Uint8Array(arrayBuffer);
   }
 }
