@@ -2,6 +2,7 @@ import { getSubdomainData, isEnhancedTenant } from '@/lib/subdomains';
 import { getRecommendedTemplate, type LandingPageTemplate } from '@/lib/templates/landing-page-templates';
 import { CacheService } from '@/lib/cache/cache-service';
 import { PerformanceMonitor } from '@/lib/performance/performance-monitor';
+import { Service } from '@/types/booking';
 
 export interface TenantLandingData {
   id: string;
@@ -21,17 +22,6 @@ export interface TenantLandingData {
     accent: string;
   };
   template: LandingPageTemplate;
-}
-
-export interface Service {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  category: string;
-  homeVisitAvailable: boolean;
-  homeVisitSurcharge?: number;
 }
 
 export interface BusinessHours {
@@ -112,8 +102,8 @@ export class TenantService {
       async () => {
         // Try to get from cache first
         const cached = await CacheService.getServicesByTenant(tenantId);
-        if (cached) {
-          return cached;
+        if (cached && Array.isArray(cached)) {
+          return cached as Service[];
         }
 
         try {
@@ -130,15 +120,21 @@ export class TenantService {
             },
           });
 
-          const formattedServices = services.map(service => ({
+          const formattedServices: Service[] = services.map(service => ({
             id: service.id,
+            tenantId: service.tenantId,
             name: service.name,
             description: service.description,
             duration: service.duration,
-            price: Number(service.price),
+            price: service.price,
             category: service.category,
+            isActive: service.isActive,
             homeVisitAvailable: service.homeVisitAvailable,
-            homeVisitSurcharge: service.homeVisitSurcharge ? Number(service.homeVisitSurcharge) : undefined,
+            homeVisitSurcharge: service.homeVisitSurcharge || undefined,
+            images: service.images,
+            requirements: service.requirements,
+            createdAt: service.createdAt,
+            updatedAt: service.updatedAt,
           }));
 
           // Cache the result
@@ -149,7 +145,7 @@ export class TenantService {
           console.warn('Could not fetch services from database:', error);
           
           // Return sample services for demo purposes
-          const sampleServices = this.getSampleServices();
+          const sampleServices = await this.getSampleServices();
           
           // Cache sample services with shorter TTL
           await CacheService.setServicesByTenant(tenantId, sampleServices);
@@ -167,8 +163,8 @@ export class TenantService {
       async () => {
         // Try to get from cache first
         const cached = await CacheService.getBusinessHours(tenantId);
-        if (cached) {
-          return cached;
+        if (cached && typeof cached === 'object') {
+          return cached as BusinessHours;
         }
 
         try {
@@ -209,36 +205,57 @@ export class TenantService {
     );
   }
 
-  private static getSampleServices(): Service[] {
+  private static async getSampleServices(): Promise<Service[]> {
+    const { Decimal } = await import('@prisma/client/runtime/library');
+    const now = new Date();
     return [
       {
         id: 'sample-1',
+        tenantId: 'sample-tenant',
         name: 'Consultation',
         description: 'Initial consultation to understand your needs',
         duration: 30,
-        price: 50,
+        price: new Decimal(50),
         category: 'Consultation',
+        isActive: true,
         homeVisitAvailable: false,
+        homeVisitSurcharge: undefined,
+        images: [],
+        requirements: [],
+        createdAt: now,
+        updatedAt: now,
       },
       {
         id: 'sample-2',
+        tenantId: 'sample-tenant',
         name: 'Standard Service',
         description: 'Our most popular service package',
         duration: 60,
-        price: 100,
+        price: new Decimal(100),
         category: 'Standard',
+        isActive: true,
         homeVisitAvailable: true,
-        homeVisitSurcharge: 25,
+        homeVisitSurcharge: new Decimal(25),
+        images: [],
+        requirements: [],
+        createdAt: now,
+        updatedAt: now,
       },
       {
         id: 'sample-3',
+        tenantId: 'sample-tenant',
         name: 'Premium Service',
         description: 'Comprehensive premium service with extras',
         duration: 90,
-        price: 150,
+        price: new Decimal(150),
         category: 'Premium',
+        isActive: true,
         homeVisitAvailable: true,
-        homeVisitSurcharge: 35,
+        homeVisitSurcharge: new Decimal(35),
+        images: [],
+        requirements: [],
+        createdAt: now,
+        updatedAt: now,
       },
     ];
   }
