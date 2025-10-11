@@ -26,8 +26,8 @@ function getRedisClient(): Redis {
   return redis;
 }
 
-// Export the getter function instead of direct instance
-export { getRedisClient as redis };
+// Export the Redis instance
+export const redis = getRedisClient();
 
 // Test Redis connection
 export async function testRedisConnection(): Promise<boolean> {
