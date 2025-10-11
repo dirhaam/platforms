@@ -37,7 +37,7 @@ export function AddressInput({
   const [validationStatus, setValidationStatus] = useState<'none' | 'valid' | 'invalid'>('none');
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
