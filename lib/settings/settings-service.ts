@@ -1,5 +1,13 @@
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
+import {
+  tenants,
+  services as servicesTable,
+  bookings,
+  businessHours as businessHoursTable,
+} from '@/lib/database/schema';
 import type { Tenant, Service, BusinessHours } from '@/types/database';
+import { asc, eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 export interface BusinessProfileData {
   businessName: string;
@@ -47,20 +55,21 @@ export class SettingsService {
   // Get business profile
   static async getBusinessProfile(tenantId: string): Promise<BusinessProfileData | null> {
     try {
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        select: {
-          businessName: true,
-          businessCategory: true,
-          ownerName: true,
-          email: true,
-          phone: true,
-          address: true,
-          businessDescription: true,
-          logo: true,
-          brandColors: true,
-        },
-      });
+      const [tenant] = await db
+        .select({
+          businessName: tenants.businessName,
+          businessCategory: tenants.businessCategory,
+          ownerName: tenants.ownerName,
+          email: tenants.email,
+          phone: tenants.phone,
+          address: tenants.address,
+          businessDescription: tenants.businessDescription,
+          logo: tenants.logo,
+          brandColors: tenants.brandColors,
+        })
+        .from(tenants)
+        .where(eq(tenants.id, tenantId))
+        .limit(1);
 
       if (!tenant) return null;
 
@@ -87,9 +96,9 @@ export class SettingsService {
     data: Partial<BusinessProfileData>
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: {
+      await db
+        .update(tenants)
+        .set({
           businessName: data.businessName,
           businessCategory: data.businessCategory,
           ownerName: data.ownerName,
@@ -98,10 +107,10 @@ export class SettingsService {
           address: data.address,
           businessDescription: data.businessDescription,
           logo: data.logo,
-          brandColors: data.brandColors,
+          brandColors: data.brandColors as Tenant['brandColors'],
           updatedAt: new Date(),
-        },
-      });
+        })
+        .where(eq(tenants.id, tenantId));
 
       return { success: true };
     } catch (error) {
@@ -113,12 +122,13 @@ export class SettingsService {
   // Get services
   static async getServices(tenantId: string): Promise<Service[]> {
     try {
-      const services = await prisma.service.findMany({
-        where: { tenantId },
-        orderBy: { name: 'asc' },
-      });
+      const results = await db
+        .select()
+        .from(servicesTable)
+        .where(eq(servicesTable.tenantId, tenantId))
+        .orderBy(asc(servicesTable.name));
 
-      return services;
+      return results as Service[];
     } catch (error) {
       console.error('Error fetching services:', error);
       return [];
@@ -141,22 +151,26 @@ export class SettingsService {
     }
   ): Promise<{ success: boolean; service?: Service; error?: string }> {
     try {
-      const service = await prisma.service.create({
-        data: {
+      const [service] = await db
+        .insert(servicesTable)
+        .values({
           tenantId,
           name: serviceData.name,
           description: serviceData.description,
           duration: serviceData.duration,
           price: serviceData.price,
           category: serviceData.category,
+          isActive: true,
           homeVisitAvailable: serviceData.homeVisitAvailable,
           homeVisitSurcharge: serviceData.homeVisitSurcharge,
           images: serviceData.images || [],
           requirements: serviceData.requirements || [],
-        },
-      });
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
 
-      return { success: true, service };
+      return { success: true, service: service as Service };
     } catch (error) {
       console.error('Error creating service:', error);
       return { success: false, error: 'Failed to create service' };
@@ -180,15 +194,16 @@ export class SettingsService {
     }>
   ): Promise<{ success: boolean; service?: Service; error?: string }> {
     try {
-      const service = await prisma.service.update({
-        where: { id: serviceId },
-        data: {
+      const [service] = await db
+        .update(servicesTable)
+        .set({
           ...serviceData,
           updatedAt: new Date(),
-        },
-      });
+        })
+        .where(eq(servicesTable.id, serviceId))
+        .returning();
 
-      return { success: true, service };
+      return { success: true, service: service as Service };
     } catch (error) {
       console.error('Error updating service:', error);
       return { success: false, error: 'Failed to update service' };
@@ -199,21 +214,20 @@ export class SettingsService {
   static async deleteService(serviceId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if service has any bookings
-      const bookingCount = await prisma.booking.count({
-        where: { serviceId },
-      });
+      const [{ count }] = await db
+        .select({ count: sql<number>`cast(count(${bookings.id}) as int)` })
+        .from(bookings)
+        .where(eq(bookings.serviceId, serviceId));
 
-      if (bookingCount > 0) {
+      if ((count ?? 0) > 0) {
         // Soft delete by deactivating instead of hard delete
-        await prisma.service.update({
-          where: { id: serviceId },
-          data: { isActive: false },
-        });
+        await db
+          .update(servicesTable)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(servicesTable.id, serviceId));
       } else {
         // Hard delete if no bookings
-        await prisma.service.delete({
-          where: { id: serviceId },
-        });
+        await db.delete(servicesTable).where(eq(servicesTable.id, serviceId));
       }
 
       return { success: true };
@@ -226,11 +240,13 @@ export class SettingsService {
   // Get business hours
   static async getBusinessHours(tenantId: string): Promise<BusinessHours | null> {
     try {
-      const businessHours = await prisma.businessHours.findUnique({
-        where: { tenantId },
-      });
+      const [record] = await db
+        .select()
+        .from(businessHoursTable)
+        .where(eq(businessHoursTable.tenantId, tenantId))
+        .limit(1);
 
-      return businessHours;
+      return (record as BusinessHours) ?? null;
     } catch (error) {
       console.error('Error fetching business hours:', error);
       return null;
@@ -244,19 +260,22 @@ export class SettingsService {
     timezone: string = 'Asia/Jakarta'
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      await prisma.businessHours.upsert({
-        where: { tenantId },
-        update: {
-          schedule,
-          timezone,
-          updatedAt: new Date(),
-        },
-        create: {
+      await db
+        .insert(businessHoursTable)
+        .values({
           tenantId,
           schedule,
           timezone,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: businessHoursTable.tenantId,
+          set: {
+            schedule,
+            timezone,
+            updatedAt: new Date(),
+          },
+        });
 
       return { success: true };
     } catch (error) {

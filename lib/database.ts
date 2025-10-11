@@ -1,38 +1,24 @@
-import { PrismaClient } from './generated/prisma';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
-}
-
-// Database configuration
-const databaseConfig = {
-  connectionLimit: 10,
-  connectionTimeoutMillis: 5000,
+// Create a connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 20, // Maximum number of connections in the pool
   idleTimeoutMillis: 30000,
-  maxUses: 7500,
-  allowExitOnIdle: true,
-};
-
-// Create Prisma client with connection pooling
-export const prisma = globalThis.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
+  connectionTimeoutMillis: 2000,
 });
 
-// Prevent multiple instances in development
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = prisma;
-}
+// Initialize Drizzle ORM
+export const db = drizzle(pool);
+
+// Export the pool for direct use if needed
+export { pool };
 
 // Connection health check
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await pool.query('SELECT 1');
     return true;
   } catch (error) {
     console.error('Database connection failed:', error);
@@ -40,19 +26,8 @@ export async function checkDatabaseConnection(): Promise<boolean> {
   }
 }
 
-// Graceful shutdown
-export async function disconnectDatabase(): Promise<void> {
-  await prisma.$disconnect();
-}
-
 // Database utilities
 export class DatabaseUtils {
-  static async executeInTransaction<T>(
-    callback: (prisma: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>) => Promise<T>
-  ): Promise<T> {
-    return await prisma.$transaction(callback);
-  }
-
   static async healthCheck(): Promise<{
     status: 'healthy' | 'unhealthy';
     timestamp: Date;
@@ -60,7 +35,7 @@ export class DatabaseUtils {
   }> {
     try {
       const start = Date.now();
-      await prisma.$queryRaw`SELECT 1`;
+      await pool.query('SELECT 1');
       const duration = Date.now() - start;
       
       return {
@@ -77,5 +52,3 @@ export class DatabaseUtils {
     }
   }
 }
-
-export default prisma;

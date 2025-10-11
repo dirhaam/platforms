@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TenantAuth, type TenantSession } from './tenant-auth';
-import { RBAC, type RouteProtection } from './rbac';
+import { RBAC, RouteGuard, type RouteProtection } from './rbac';
+import { db } from '@/lib/database';
+import { tenants } from '@/lib/database/schema';
+import { eq } from 'drizzle-orm';
 
 // Route protection configuration
 const PROTECTED_ROUTES: Record<string, RouteProtection> = {
@@ -88,7 +91,7 @@ export class AuthMiddleware {
 
     // Check route-specific permissions
     const protection = this.getRouteProtection(pathname);
-    if (protection && !RBAC.canAccessRoute(session, protection)) {
+    if (protection && !RouteGuard.canAccessRoute(session, protection)) {
       const unauthorizedUrl = new URL(`/unauthorized`, request.url);
       return NextResponse.redirect(unauthorizedUrl);
     }
@@ -113,13 +116,11 @@ export class AuthMiddleware {
         return true;
       }
 
-      // Import prisma here to avoid circular dependencies
-      const { prisma } = await import('@/lib/database');
-      
-      const tenant = await prisma.tenant.findUnique({
-        where: { subdomain },
-        select: { id: true },
-      });
+      const [tenant] = await db
+        .select({ id: tenants.id })
+        .from(tenants)
+        .where(eq(tenants.subdomain, subdomain))
+        .limit(1);
 
       return tenant?.id === session.tenantId;
     } catch (error) {

@@ -211,7 +211,7 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue.toNumber())}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue)}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-600" />
               </div>
@@ -223,7 +223,7 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Paid Revenue</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics.paidRevenue.toNumber())}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(metrics.paidRevenue)}</p>
                   <p className="text-sm text-green-600">
                     {metrics.paymentRate.toFixed(1)}% payment rate
                   </p>
@@ -238,7 +238,7 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Pending Revenue</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics.pendingRevenue.toNumber())}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(metrics.pendingRevenue)}</p>
                   <p className="text-sm text-muted-foreground">
                     {metrics.pendingInvoices} invoices
                   </p>
@@ -253,7 +253,7 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Overdue Revenue</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics.overdueRevenue.toNumber())}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(metrics.overdueRevenue)}</p>
                   <p className="text-sm text-red-600">
                     {metrics.overdueInvoices} overdue
                   </p>
@@ -281,7 +281,7 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
             <CardContent className="p-6">
               <div className="text-center">
                 <p className="text-sm font-medium text-muted-foreground">Average Invoice Value</p>
-                <p className="text-3xl font-bold">{formatCurrency(metrics.averageInvoiceValue.toNumber())}</p>
+                <p className="text-3xl font-bold">{formatCurrency(metrics.averageInvoiceValue)}</p>
               </div>
             </CardContent>
           </Card>
@@ -322,9 +322,9 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatCurrency(month.totalRevenue.toNumber())}</p>
+                      <p className="font-bold">{formatCurrency(month.totalRevenue)}</p>
                       <p className="text-sm text-green-600">
-                        {formatCurrency(month.paidRevenue.toNumber())} paid
+                        {formatCurrency(month.paidRevenue)} paid
                       </p>
                     </div>
                   </div>
@@ -350,14 +350,14 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatCurrency(customer.totalAmount.toNumber())}</p>
+                      <p className="font-bold">{formatCurrency(customer.totalAmount)}</p>
                       <div className="flex gap-2 text-sm">
                         <span className="text-green-600">
-                          {formatCurrency(customer.paidAmount.toNumber())} paid
+                          {formatCurrency(customer.paidAmount)} paid
                         </span>
-                        {customer.overdueAmount.toNumber() > 0 && (
+                        {customer.overdueAmount > 0 && (
                           <span className="text-red-600">
-                            {formatCurrency(customer.overdueAmount.toNumber())} overdue
+                            {formatCurrency(customer.overdueAmount)} overdue
                           </span>
                         )}
                       </div>
@@ -394,7 +394,7 @@ export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatCurrency(status.totalAmount.toNumber())}</p>
+                      <p className="font-bold">{formatCurrency(status.totalAmount)}</p>
                     </div>
                   </div>
                 ))}

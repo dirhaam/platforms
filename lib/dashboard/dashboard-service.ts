@@ -1,5 +1,45 @@
-import { prisma } from '@/lib/database';
-import type { Booking, Customer, Service } from '@/types/database';
+import { db } from '@/lib/database';
+import {
+  bookings as bookingsTable,
+  customers as customersTable,
+  services as servicesTable,
+} from '@/lib/database/schema';
+import { and, desc, eq, gte, lt, lte, inArray } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+
+const COMPLETED_STATUSES = ['confirmed', 'completed'] as const;
+
+function toNumber(value: unknown): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+async function countBookings(whereClause: any): Promise<number> {
+  const [{ count } = { count: 0 }] = await db
+    .select({ count: sql<number>`cast(count(${bookingsTable.id}) as int)` })
+    .from(bookingsTable)
+    .where(whereClause);
+
+  return count ?? 0;
+}
+
+async function sumBookings(whereClause: any): Promise<number> {
+  const [{ total } = { total: 0 }] = await db
+    .select({ total: sql<number>`coalesce(sum(${bookingsTable.totalAmount}), 0)` })
+    .from(bookingsTable)
+    .where(whereClause);
+
+  return toNumber(total);
+}
+
+async function countCustomers(whereClause: any): Promise<number> {
+  const [{ count } = { count: 0 }] = await db
+    .select({ count: sql<number>`cast(count(${customersTable.id}) as int)` })
+    .from(customersTable)
+    .where(whereClause);
+
+  return count ?? 0;
+}
 
 export interface DashboardStats {
   todayBookings: number;
@@ -62,99 +102,49 @@ export class DashboardService {
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     try {
-      // Today's bookings
-      const todayBookings = await prisma.booking.count({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: today,
-            lt: tomorrow,
-          },
-        },
-      });
+      const tenantCondition = eq(bookingsTable.tenantId, tenantId);
 
-      // Yesterday's bookings for comparison
-      const yesterdayBookings = await prisma.booking.count({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: yesterday,
-            lt: today,
-          },
-        },
-      });
+      const todayRange = and(
+        tenantCondition,
+        gte(bookingsTable.scheduledAt, today),
+        lt(bookingsTable.scheduledAt, tomorrow)
+      );
 
-      // Total customers
-      const totalCustomers = await prisma.customer.count({
-        where: { tenantId },
-      });
+      const yesterdayRange = and(
+        tenantCondition,
+        gte(bookingsTable.scheduledAt, yesterday),
+        lt(bookingsTable.scheduledAt, today)
+      );
 
-      // New customers this week
-      const newCustomersThisWeek = await prisma.customer.count({
-        where: {
-          tenantId,
-          createdAt: {
-            gte: weekAgo,
-          },
-        },
-      });
+      const weekRange = and(
+        tenantCondition,
+        gte(bookingsTable.scheduledAt, weekAgo)
+      );
 
-      // Today's revenue
-      const todayRevenueResult = await prisma.booking.aggregate({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: today,
-            lt: tomorrow,
-          },
-          status: {
-            in: ['confirmed', 'completed'],
-          },
-        },
-        _sum: {
-          totalAmount: true,
-        },
-      });
+      const statusesArray = Array.from(COMPLETED_STATUSES);
 
-      // Yesterday's revenue for comparison
-      const yesterdayRevenueResult = await prisma.booking.aggregate({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: yesterday,
-            lt: today,
-          },
-          status: {
-            in: ['confirmed', 'completed'],
-          },
-        },
-        _sum: {
-          totalAmount: true,
-        },
-      });
+      const revenueTodayCondition = and(
+        todayRange,
+        inArray(bookingsTable.status, statusesArray)
+      );
 
-      // Completion rate (this week)
-      const thisWeekBookings = await prisma.booking.count({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: weekAgo,
-          },
-        },
-      });
+      const revenueYesterdayCondition = and(
+        yesterdayRange,
+        inArray(bookingsTable.status, statusesArray)
+      );
 
-      const thisWeekCompleted = await prisma.booking.count({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: weekAgo,
-          },
-          status: 'completed',
-        },
-      });
-
-      const todayRevenue = Number(todayRevenueResult._sum.totalAmount || 0);
-      const yesterdayRevenue = Number(yesterdayRevenueResult._sum.totalAmount || 0);
+      const todayBookings = await countBookings(todayRange);
+      const yesterdayBookings = await countBookings(yesterdayRange);
+      const totalCustomers = await countCustomers(eq(customersTable.tenantId, tenantId));
+      const newCustomersThisWeek = await countCustomers(
+        and(eq(customersTable.tenantId, tenantId), gte(customersTable.createdAt, weekAgo))
+      );
+      const todayRevenue = await sumBookings(revenueTodayCondition);
+      const yesterdayRevenue = await sumBookings(revenueYesterdayCondition);
+      const thisWeekBookings = await countBookings(weekRange);
+      const thisWeekCompleted = await countBookings(
+        and(weekRange, eq(bookingsTable.status, 'completed'))
+      );
 
       const todayBookingsChange = yesterdayBookings > 0 
         ? Math.round(((todayBookings - yesterdayBookings) / yesterdayBookings) * 100)
@@ -194,36 +184,43 @@ export class DashboardService {
   // Get recent bookings
   static async getRecentBookings(tenantId: string, limit: number = 10): Promise<DashboardBooking[]> {
     try {
-      const bookings = await prisma.booking.findMany({
-        where: { tenantId },
-        include: {
+      const results = await db
+        .select({
+          id: bookingsTable.id,
+          scheduledAt: bookingsTable.scheduledAt,
+          status: bookingsTable.status,
+          totalAmount: bookingsTable.totalAmount,
           customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-            },
+            id: customersTable.id,
+            name: customersTable.name,
+            phone: customersTable.phone,
           },
           service: {
-            select: {
-              id: true,
-              name: true,
-            },
+            id: servicesTable.id,
+            name: servicesTable.name,
           },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit,
-      });
+        })
+        .from(bookingsTable)
+        .leftJoin(customersTable, eq(bookingsTable.customerId, customersTable.id))
+        .leftJoin(servicesTable, eq(bookingsTable.serviceId, servicesTable.id))
+        .where(eq(bookingsTable.tenantId, tenantId))
+        .orderBy(desc(bookingsTable.createdAt))
+        .limit(limit);
 
-      return bookings.map(booking => ({
-        id: booking.id,
-        scheduledAt: booking.scheduledAt,
-        status: booking.status,
-        totalAmount: Number(booking.totalAmount),
-        customer: booking.customer,
-        service: booking.service,
+      return results.map(row => ({
+        id: row.id,
+        scheduledAt: row.scheduledAt,
+        status: row.status,
+        totalAmount: toNumber(row.totalAmount),
+        customer: {
+          id: row.customer?.id || '',
+          name: row.customer?.name || 'Unknown',
+          phone: row.customer?.phone || '',
+        },
+        service: {
+          id: row.service?.id || '',
+          name: row.service?.name || 'Unknown',
+        },
       }));
     } catch (error) {
       console.error('Error fetching recent bookings:', error);
@@ -236,44 +233,49 @@ export class DashboardService {
     const now = new Date();
     
     try {
-      const bookings = await prisma.booking.findMany({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: now,
-          },
-          status: {
-            in: ['pending', 'confirmed'],
-          },
-        },
-        include: {
+      const results = await db
+        .select({
+          id: bookingsTable.id,
+          scheduledAt: bookingsTable.scheduledAt,
+          status: bookingsTable.status,
+          totalAmount: bookingsTable.totalAmount,
           customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-            },
+            id: customersTable.id,
+            name: customersTable.name,
+            phone: customersTable.phone,
           },
           service: {
-            select: {
-              id: true,
-              name: true,
-            },
+            id: servicesTable.id,
+            name: servicesTable.name,
           },
-        },
-        orderBy: {
-          scheduledAt: 'asc',
-        },
-        take: limit,
-      });
+        })
+        .from(bookingsTable)
+        .leftJoin(customersTable, eq(bookingsTable.customerId, customersTable.id))
+        .leftJoin(servicesTable, eq(bookingsTable.serviceId, servicesTable.id))
+        .where(
+          and(
+            eq(bookingsTable.tenantId, tenantId),
+            gte(bookingsTable.scheduledAt, now),
+            inArray(bookingsTable.status, ['pending', 'confirmed'])
+          )
+        )
+        .orderBy(bookingsTable.scheduledAt)
+        .limit(limit);
 
-      return bookings.map(booking => ({
-        id: booking.id,
-        scheduledAt: booking.scheduledAt,
-        status: booking.status,
-        totalAmount: Number(booking.totalAmount),
-        customer: booking.customer,
-        service: booking.service,
+      return results.map(row => ({
+        id: row.id,
+        scheduledAt: row.scheduledAt,
+        status: row.status,
+        totalAmount: toNumber(row.totalAmount),
+        customer: {
+          id: row.customer?.id || '',
+          name: row.customer?.name || 'Unknown',
+          phone: row.customer?.phone || '',
+        },
+        service: {
+          id: row.service?.id || '',
+          name: row.service?.name || 'Unknown',
+        },
       }));
     } catch (error) {
       console.error('Error fetching upcoming bookings:', error);
@@ -284,19 +286,24 @@ export class DashboardService {
   // Get recent customers
   static async getRecentCustomers(tenantId: string, limit: number = 10): Promise<DashboardCustomer[]> {
     try {
-      const customers = await prisma.customer.findMany({
-        where: { tenantId },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit,
-      });
+      const results = await db
+        .select({
+          id: customersTable.id,
+          name: customersTable.name,
+          phone: customersTable.phone,
+          totalBookings: customersTable.totalBookings,
+          lastBookingAt: customersTable.lastBookingAt,
+        })
+        .from(customersTable)
+        .where(eq(customersTable.tenantId, tenantId))
+        .orderBy(desc(customersTable.createdAt))
+        .limit(limit);
 
-      return customers.map(customer => ({
+      return results.map(customer => ({
         id: customer.id,
         name: customer.name,
         phone: customer.phone,
-        totalBookings: customer.totalBookings,
+        totalBookings: customer.totalBookings ?? 0,
         lastBookingAt: customer.lastBookingAt,
       }));
     } catch (error) {
@@ -313,15 +320,13 @@ export class DashboardService {
     try {
       // Pending booking confirmations (bookings created more than 1 hour ago but still pending)
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-      const pendingBookings = await prisma.booking.count({
-        where: {
-          tenantId,
-          status: 'pending',
-          createdAt: {
-            lt: oneHourAgo,
-          },
-        },
-      });
+      const pendingBookings = await countBookings(
+        and(
+          eq(bookingsTable.tenantId, tenantId),
+          eq(bookingsTable.status, 'pending'),
+          lt(bookingsTable.createdAt, oneHourAgo)
+        )
+      );
 
       if (pendingBookings > 0) {
         actions.push({
@@ -338,16 +343,14 @@ export class DashboardService {
 
       // Overdue payments (bookings completed but payment still pending after 24 hours)
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const overduePayments = await prisma.booking.count({
-        where: {
-          tenantId,
-          status: 'completed',
-          paymentStatus: 'pending',
-          updatedAt: {
-            lt: oneDayAgo,
-          },
-        },
-      });
+      const overduePayments = await countBookings(
+        and(
+          eq(bookingsTable.tenantId, tenantId),
+          eq(bookingsTable.status, 'completed'),
+          eq(bookingsTable.paymentStatus, 'pending'),
+          lt(bookingsTable.updatedAt, oneDayAgo)
+        )
+      );
 
       if (overduePayments > 0) {
         actions.push({
@@ -368,16 +371,14 @@ export class DashboardService {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const todayConfirmedBookings = await prisma.booking.count({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: today,
-            lt: tomorrow,
-          },
-          status: 'confirmed',
-        },
-      });
+      const todayConfirmedBookings = await countBookings(
+        and(
+          eq(bookingsTable.tenantId, tenantId),
+          gte(bookingsTable.scheduledAt, today),
+          lt(bookingsTable.scheduledAt, tomorrow),
+          eq(bookingsTable.status, 'confirmed')
+        )
+      );
 
       if (todayConfirmedBookings > 0) {
         actions.push({
@@ -418,54 +419,32 @@ export class DashboardService {
     completionRate: number;
   }> {
     try {
-      const [bookingsResult, revenueResult, customersCount] = await Promise.all([
-        prisma.booking.count({
-          where: {
-            tenantId,
-            scheduledAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-        }),
-        prisma.booking.aggregate({
-          where: {
-            tenantId,
-            scheduledAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-            status: {
-              in: ['confirmed', 'completed'],
-            },
-          },
-          _sum: {
-            totalAmount: true,
-          },
-        }),
-        prisma.customer.count({
-          where: {
-            tenantId,
-            createdAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-        }),
+      const baseBookingCondition = and(
+        eq(bookingsTable.tenantId, tenantId),
+        gte(bookingsTable.scheduledAt, startDate),
+        lte(bookingsTable.scheduledAt, endDate)
+      );
+
+      const completedStatuses = Array.from(COMPLETED_STATUSES);
+
+      const [bookingsResult, totalRevenue, customersCount, completedBookings] = await Promise.all([
+        countBookings(baseBookingCondition),
+        sumBookings(
+          and(
+            baseBookingCondition,
+            inArray(bookingsTable.status, completedStatuses)
+          )
+        ),
+        countCustomers(
+          and(
+            eq(customersTable.tenantId, tenantId),
+            gte(customersTable.createdAt, startDate),
+            lte(customersTable.createdAt, endDate)
+          )
+        ),
+        countBookings(and(baseBookingCondition, eq(bookingsTable.status, 'completed'))),
       ]);
 
-      const completedBookings = await prisma.booking.count({
-        where: {
-          tenantId,
-          scheduledAt: {
-            gte: startDate,
-            lte: endDate,
-          },
-          status: 'completed',
-        },
-      });
-
-      const totalRevenue = Number(revenueResult._sum.totalAmount || 0);
       const averageBookingValue = bookingsResult > 0 ? totalRevenue / bookingsResult : 0;
       const completionRate = bookingsResult > 0 ? (completedBookings / bookingsResult) * 100 : 0;
 

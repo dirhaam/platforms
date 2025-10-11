@@ -1,16 +1,17 @@
-// Database types based on Prisma schema
-import type { 
-  Tenant as PrismaTenant,
-  Service as PrismaService,
-  Customer as PrismaCustomer,
-  Booking as PrismaBooking,
-  Staff as PrismaStaff,
-  WhatsAppDevice as PrismaWhatsAppDevice,
-  Conversation as PrismaConversation,
-  Message as PrismaMessage,
-  MessageTemplate as PrismaMessageTemplate,
-  BusinessHours as PrismaBusinessHours,
-} from '../lib/generated/prisma';
+// Database types based on Drizzle schema
+import type { InferSelectModel } from 'drizzle-orm';
+import {
+  tenants as tenantsTable,
+  services as servicesTable,
+  customers as customersTable,
+  bookings as bookingsTable,
+  staff as staffTable,
+  whatsappDevices as whatsappDevicesTable,
+  conversations as conversationsTable,
+  messages as messagesTable,
+  messageTemplates as messageTemplatesTable,
+  businessHours as businessHoursTable,
+} from '@/lib/database/schema';
 
 // Enhanced Tenant type (migrated from Redis SubdomainData)
 export interface EnhancedTenant {
@@ -140,15 +141,13 @@ export interface TenantMigrationData {
 }
 
 // Re-export Prisma types for convenience
-export type {
-  PrismaTenant as Tenant,
-  PrismaService as Service,
-  PrismaCustomer as Customer,
-  PrismaBooking as Booking,
-  PrismaStaff as Staff,
-  PrismaWhatsAppDevice as WhatsAppDevice,
-  PrismaConversation as Conversation,
-  PrismaMessage as Message,
-  PrismaMessageTemplate as MessageTemplate,
-  PrismaBusinessHours as BusinessHours,
-};
+export type Tenant = InferSelectModel<typeof tenantsTable>;
+export type Service = InferSelectModel<typeof servicesTable>;
+export type Customer = InferSelectModel<typeof customersTable>;
+export type Booking = InferSelectModel<typeof bookingsTable>;
+export type Staff = InferSelectModel<typeof staffTable>;
+export type WhatsAppDevice = InferSelectModel<typeof whatsappDevicesTable>;
+export type Conversation = InferSelectModel<typeof conversationsTable>;
+export type Message = InferSelectModel<typeof messagesTable>;
+export type MessageTemplate = InferSelectModel<typeof messageTemplatesTable>;
+export type BusinessHours = InferSelectModel<typeof businessHoursTable>;

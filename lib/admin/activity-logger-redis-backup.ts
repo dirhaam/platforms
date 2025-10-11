@@ -1,7 +1,4 @@
-import { db } from '@/lib/database';
-import { activityLogs } from '@/lib/database/schema';
-import { desc, gte } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { redis } from '@/lib/redis';
 
 export interface ActivityLogEntry {
   id: string;
@@ -18,35 +15,29 @@ export interface ActivityLogEntry {
 }
 
 class ActivityLogger {
+  private static readonly ACTIVITY_LOG_KEY = 'admin:activity_log';
   private static readonly MAX_LOG_ENTRIES = 1000;
-  private static readonly RETENTION_DAYS = 30; // Keep logs for 30 days
 
   static async log(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): Promise<void> {
     try {
       const logEntry: ActivityLogEntry = {
         ...entry,
-        id: `activity_${uuidv4()}`,
+        id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date(),
       };
 
-      // Insert into database
-      await db.insert(activityLogs).values({
-        id: logEntry.id,
-        timestamp: logEntry.timestamp,
-        type: logEntry.type,
-        tenantId: logEntry.tenantId,
-        tenantName: logEntry.tenantName,
-        userId: logEntry.userId,
-        userName: logEntry.userName,
-        action: logEntry.action,
-        details: logEntry.details,
-        severity: logEntry.severity,
-        metadata: logEntry.metadata ? JSON.stringify(logEntry.metadata) : null,
-      });
-
-      // Cleanup old entries periodically
-      await this.cleanupOldEntries();
-
+      // Get existing log entries
+      const existingLogs = await this.getActivityLog();
+      
+      // Add new entry at the beginning
+      const updatedLogs = [logEntry, ...existingLogs];
+      
+      // Keep only the most recent entries
+      const trimmedLogs = updatedLogs.slice(0, this.MAX_LOG_ENTRIES);
+      
+      // Store back to Redis
+      await redis.set(this.ACTIVITY_LOG_KEY, trimmedLogs);
+      
       console.log(`Activity logged: ${entry.action} - ${entry.details}`);
     } catch (error) {
       console.error('Failed to log activity:', error);
@@ -55,23 +46,15 @@ class ActivityLogger {
 
   static async getActivityLog(limit?: number): Promise<ActivityLogEntry[]> {
     try {
-      // Get logs from database ordered by timestamp descending
-      const query = db.select().from(activityLogs).orderBy(desc(activityLogs.timestamp));
+      const logs = await redis.get<ActivityLogEntry[]>(this.ACTIVITY_LOG_KEY) || [];
       
-      if (limit) {
-        query.limit(limit);
-      }
-      
-      const logs = await query;
-      
-      // Parse metadata JSON strings back to objects
+      // Convert timestamp strings back to Date objects
       const parsedLogs = logs.map(log => ({
         ...log,
-        metadata: log.metadata ? JSON.parse(log.metadata as string) : undefined,
         timestamp: new Date(log.timestamp),
       }));
       
-      return parsedLogs;
+      return limit ? parsedLogs.slice(0, limit) : parsedLogs;
     } catch (error) {
       console.error('Failed to get activity log:', error);
       return [];
@@ -80,23 +63,10 @@ class ActivityLogger {
 
   static async clearActivityLog(): Promise<void> {
     try {
-      // Delete all entries
-      await db.delete(activityLogs);
+      await redis.del(this.ACTIVITY_LOG_KEY);
       console.log('Activity log cleared');
     } catch (error) {
       console.error('Failed to clear activity log:', error);
-    }
-  }
-
-  static async cleanupOldEntries(): Promise<void> {
-    try {
-      // Delete entries older than retention period
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - this.RETENTION_DAYS);
-      
-      await db.delete(activityLogs).where(gte(activityLogs.timestamp, cutoffDate));
-    } catch (error) {
-      console.error('Failed to cleanup old activity log entries:', error);
     }
   }
 

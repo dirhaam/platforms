@@ -1,5 +1,3 @@
-import { Decimal } from '@prisma/client/runtime/library';
-
 // Booking status enum
 export enum BookingStatus {
   PENDING = 'pending',
@@ -32,7 +30,7 @@ export interface Booking {
     lng: number;
   };
   notes?: string;
-  totalAmount: Decimal;
+  totalAmount: number;
   paymentStatus: PaymentStatus;
   remindersSent: Date[];
   createdAt: Date;
@@ -50,11 +48,11 @@ export interface Service {
   name: string;
   description: string;
   duration: number; // minutes
-  price: Decimal;
+  price: number;
   category: string;
   isActive: boolean;
   homeVisitAvailable: boolean;
-  homeVisitSurcharge?: Decimal;
+  homeVisitSurcharge?: number;
   images: string[];
   requirements: string[];
   createdAt: Date;

@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
+import { securityAuditLogs } from '@/lib/database/schema';
+import { eq, and, lt, gte, desc } from 'drizzle-orm';
 
 // Security configuration
 export const SECURITY_CONFIG = {
@@ -194,18 +196,17 @@ export class SecurityService {
     details?: Record<string, any>
   ): Promise<void> {
     try {
-      await prisma.securityAuditLog.create({
-        data: {
-          tenantId,
-          userId,
-          action,
-          resource,
-          ipAddress,
-          userAgent,
-          success,
-          details: details ? JSON.stringify(details) : null,
-          timestamp: new Date(),
-        },
+      await db.insert(securityAuditLogs).values({
+        id: crypto.randomUUID(),
+        tenantId,
+        userId,
+        action,
+        resource,
+        ipAddress,
+        userAgent,
+        success,
+        details: details ? JSON.stringify(details) : null,
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Failed to log security event:', error);
@@ -229,16 +230,16 @@ export class SecurityService {
 
       // Check failed login attempts
       if (action === 'login') {
-        const failedAttempts = await prisma.securityAuditLog.count({
-          where: {
-            userId,
-            action: 'login',
-            success: false,
-            timestamp: {
-              gte: windowStart,
-            },
-          },
-        });
+        const result = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
+          and(
+            eq(securityAuditLogs.userId, userId),
+            eq(securityAuditLogs.action, 'login'),
+            eq(securityAuditLogs.success, false),
+            gte(securityAuditLogs.timestamp, windowStart)
+          )
+        );
+        
+        const failedAttempts = result[0]?.count || 0;
 
         if (failedAttempts >= SECURITY_CONFIG.RATE_LIMITING.LOGIN_ATTEMPTS.MAX_ATTEMPTS) {
           return {
@@ -250,18 +251,14 @@ export class SecurityService {
       }
 
       // Check for multiple IP addresses
-      const recentIPs = await prisma.securityAuditLog.findMany({
-        where: {
-          userId,
-          timestamp: {
-            gte: new Date(now.getTime() - 24 * 60 * 60 * 1000), // Last 24 hours
-          },
-        },
-        select: {
-          ipAddress: true,
-        },
-        distinct: ['ipAddress'],
-      });
+      const result = await db.select({ ipAddress: securityAuditLogs.ipAddress }).from(securityAuditLogs).where(
+        and(
+          eq(securityAuditLogs.userId, userId),
+          gte(securityAuditLogs.timestamp, new Date(now.getTime() - 24 * 60 * 60 * 1000)) // Last 24 hours
+        )
+      ).groupBy(securityAuditLogs.ipAddress);
+      
+      const recentIPs = result;
 
       if (recentIPs.length > 5) {
         return {
@@ -309,22 +306,12 @@ export class SecurityService {
       const auditLogExpiry = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days
 
       // Clean up expired sessions (if you implement session storage)
-      // await prisma.session.deleteMany({
-      //   where: {
-      //     expiresAt: {
-      //       lt: sessionExpiry,
-      //     },
-      //   },
-      // });
+      // await db.delete(sessions).where(lt(sessions.expiresAt, sessionExpiry));
 
       // Clean up old audit logs
-      await prisma.securityAuditLog.deleteMany({
-        where: {
-          timestamp: {
-            lt: auditLogExpiry,
-          },
-        },
-      });
+      await db.delete(securityAuditLogs).where(
+        lt(securityAuditLogs.timestamp, auditLogExpiry)
+      );
 
       console.log('Expired security data cleaned up successfully');
     } catch (error) {
@@ -343,68 +330,67 @@ export class SecurityService {
     try {
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-      const [totalLogins, failedLogins, uniqueUsers, suspiciousActivities, topActions] = await Promise.all([
-        // Total login attempts
-        prisma.securityAuditLog.count({
-          where: {
-            tenantId,
-            action: 'login',
-            timestamp: { gte: since },
-          },
-        }),
+      // Total login attempts
+      const totalLoginsResult = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
+        and(
+          eq(securityAuditLogs.tenantId, tenantId),
+          eq(securityAuditLogs.action, 'login'),
+          gte(securityAuditLogs.timestamp, since)
+        )
+      );
+      const totalLogins = totalLoginsResult[0]?.count || 0;
 
-        // Failed login attempts
-        prisma.securityAuditLog.count({
-          where: {
-            tenantId,
-            action: 'login',
-            success: false,
-            timestamp: { gte: since },
-          },
-        }),
+      // Failed login attempts
+      const failedLoginsResult = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
+        and(
+          eq(securityAuditLogs.tenantId, tenantId),
+          eq(securityAuditLogs.action, 'login'),
+          eq(securityAuditLogs.success, false),
+          gte(securityAuditLogs.timestamp, since)
+        )
+      );
+      const failedLogins = failedLoginsResult[0]?.count || 0;
 
-        // Unique users
-        prisma.securityAuditLog.findMany({
-          where: {
-            tenantId,
-            timestamp: { gte: since },
-          },
-          select: { userId: true },
-          distinct: ['userId'],
-        }).then(users => users.length),
+      // Unique users - We'll count distinct userIds
+      const uniqueUsersResult = await db.select({ userId: securityAuditLogs.userId }).from(securityAuditLogs).where(
+        and(
+          eq(securityAuditLogs.tenantId, tenantId),
+          gte(securityAuditLogs.timestamp, since)
+        )
+      ).groupBy(securityAuditLogs.userId);
+      const uniqueUsers = uniqueUsersResult.length;
 
-        // Suspicious activities (failed logins + other security events)
-        prisma.securityAuditLog.count({
-          where: {
-            tenantId,
-            success: false,
-            timestamp: { gte: since },
-          },
-        }),
+      // Suspicious activities (failed logins + other security events)
+      const suspiciousActivitiesResult = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
+        and(
+          eq(securityAuditLogs.tenantId, tenantId),
+          eq(securityAuditLogs.success, false),
+          gte(securityAuditLogs.timestamp, since)
+        )
+      );
+      const suspiciousActivities = suspiciousActivitiesResult[0]?.count || 0;
 
-        // Top actions
-        prisma.securityAuditLog.groupBy({
-          by: ['action'],
-          where: {
-            tenantId,
-            timestamp: { gte: since },
-          },
-          _count: {
-            action: true,
-          },
-          orderBy: {
-            _count: {
-              action: 'desc',
-            },
-          },
-          take: 10,
-        }).then(results => 
-          results.map(r => ({
-            action: r.action,
-            count: r._count.action,
-          }))
-        ),
-      ]);
+      // Top actions - Group by action and count
+      const topActionsResult = await db
+        .select({
+          action: securityAuditLogs.action,
+          count: db.$count(),
+        })
+        .from(securityAuditLogs)
+        .where(
+          and(
+            eq(securityAuditLogs.tenantId, tenantId),
+            gte(securityAuditLogs.timestamp, since)
+          )
+        )
+        .groupBy(securityAuditLogs.action)
+        .orderBy(({ count }) => desc(count))
+        .limit(10);
+      
+      const topActions = topActionsResult.map(r => ({
+        action: r.action,
+        count: Number(r.count),
+      }));
 
       return {
         totalLogins,

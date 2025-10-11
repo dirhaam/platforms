@@ -1,5 +1,3 @@
-import { Decimal } from '@prisma/client/runtime/library';
-
 // Invoice status enum
 export enum InvoiceStatus {
   DRAFT = 'draft',
@@ -31,11 +29,11 @@ export interface Invoice {
   paidDate?: Date;
   
   // Financial details
-  subtotal: Decimal;
-  taxRate: Decimal;
-  taxAmount: Decimal;
-  discountAmount: Decimal;
-  totalAmount: Decimal;
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  discountAmount: number;
+  totalAmount: number;
   
   // Payment details
   paymentMethod?: PaymentMethod;
@@ -65,8 +63,8 @@ export interface InvoiceItem {
   invoiceId: string;
   description: string;
   quantity: number;
-  unitPrice: Decimal;
-  totalPrice: Decimal;
+  unitPrice: number;
+  totalPrice: number;
   serviceId?: string;
   
   // Relations
@@ -108,10 +106,10 @@ export interface UpdateInvoiceRequest {
 // Invoice summary for dashboard
 export interface InvoiceSummary {
   totalInvoices: number;
-  totalAmount: Decimal;
-  paidAmount: Decimal;
-  pendingAmount: Decimal;
-  overdueAmount: Decimal;
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  overdueAmount: number;
   overdueCount: number;
 }
 

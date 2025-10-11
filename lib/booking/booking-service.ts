@@ -1,4 +1,11 @@
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
+import { 
+  bookings,
+  services,
+  customers,
+  businessHours,
+  tenants
+} from '@/lib/database/schema';
 import { 
   Booking, 
   Service, 
@@ -14,6 +21,9 @@ import {
 import { validateBookingTime, validateBusinessHours } from '@/lib/validation/booking-validation';
 import { LocationService } from '@/lib/location/location-service';
 import { ServiceAreaService } from '@/lib/location/service-area-service';
+import { eq, and, ne, gte, lte, inArray, asc } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import crypto from 'crypto';
 
 export class BookingService {
   // Create a new booking
@@ -23,18 +33,29 @@ export class BookingService {
   ): Promise<{ booking?: Booking; error?: string }> {
     try {
       // Validate the service exists and belongs to tenant
-      const service = await prisma.service.findFirst({
-        where: { id: data.serviceId, tenantId, isActive: true }
-      });
+      const [serviceResult] = await db.select().from(services).where(
+        and(
+          eq(services.id, data.serviceId),
+          eq(services.tenantId, tenantId),
+          eq(services.isActive, true)
+        )
+      ).limit(1);
+      
+      const service = serviceResult || null;
       
       if (!service) {
         return { error: 'Service not found or inactive' };
       }
       
       // Validate the customer exists and belongs to tenant
-      const customer = await prisma.customer.findFirst({
-        where: { id: data.customerId, tenantId }
-      });
+      const [customerResult] = await db.select().from(customers).where(
+        and(
+          eq(customers.id, data.customerId),
+          eq(customers.tenantId, tenantId)
+        )
+      ).limit(1);
+      
+      const customer = customerResult || null;
       
       if (!customer) {
         return { error: 'Customer not found' };
@@ -49,9 +70,11 @@ export class BookingService {
       }
       
       // Get business hours for validation
-      const businessHours = await prisma.businessHours.findUnique({
-        where: { tenantId }
-      });
+      const [businessHoursResult] = await db.select().from(businessHours).where(
+        eq(businessHours.tenantId, tenantId)
+      ).limit(1);
+      
+      const businessHours = businessHoursResult || null;
       
       // Validate against business hours
       const hoursValidation = validateBusinessHours(scheduledAt, businessHours);
@@ -105,37 +128,77 @@ export class BookingService {
       }
       
       // Create the booking
-      const booking = await prisma.booking.create({
-        data: {
-          tenantId,
-          customerId: data.customerId,
-          serviceId: data.serviceId,
-          scheduledAt,
-          duration: service.duration,
-          isHomeVisit: data.isHomeVisit || false,
-          homeVisitAddress: data.homeVisitAddress,
-          homeVisitCoordinates: data.homeVisitCoordinates,
-          notes: data.notes,
-          totalAmount,
-          status: BookingStatus.PENDING,
-          remindersSent: []
+      const [newBooking] = await db.insert(bookings).values({
+        id: crypto.randomUUID(), // Assuming we need to generate an ID
+        tenantId,
+        customerId: data.customerId,
+        serviceId: data.serviceId,
+        scheduledAt,
+        duration: service.duration,
+        isHomeVisit: data.isHomeVisit || false,
+        homeVisitAddress: data.homeVisitAddress,
+        homeVisitCoordinates: data.homeVisitCoordinates,
+        notes: data.notes,
+        totalAmount,
+        status: BookingStatus.PENDING,
+        remindersSent: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      // Get the created booking with customer and service data
+      const booking = await db.select({
+        id: bookings.id,
+        tenantId: bookings.tenantId,
+        customerId: bookings.customerId,
+        serviceId: bookings.serviceId,
+        status: bookings.status,
+        scheduledAt: bookings.scheduledAt,
+        duration: bookings.duration,
+        isHomeVisit: bookings.isHomeVisit,
+        homeVisitAddress: bookings.homeVisitAddress,
+        homeVisitCoordinates: bookings.homeVisitCoordinates,
+        notes: bookings.notes,
+        totalAmount: bookings.totalAmount,
+        paymentStatus: bookings.paymentStatus,
+        remindersSent: bookings.remindersSent,
+        createdAt: bookings.createdAt,
+        updatedAt: bookings.updatedAt,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          email: customers.email,
+          phone: customers.phone,
+          address: customers.address,
+          notes: customers.notes,
+          totalBookings: customers.totalBookings,
+          lastBookingAt: customers.lastBookingAt,
+          whatsappNumber: customers.whatsappNumber,
+          createdAt: customers.createdAt,
+          updatedAt: customers.updatedAt
         },
-        include: {
-          customer: true,
-          service: true
+        service: {
+          id: services.id,
+          name: services.name,
+          description: services.description,
+          duration: services.duration,
+          price: services.price,
+          category: services.category,
+          isActive: services.isActive,
+          homeVisitAvailable: services.homeVisitAvailable,
+          homeVisitSurcharge: services.homeVisitSurcharge,
+          createdAt: services.createdAt,
+          updatedAt: services.updatedAt
         }
-      });
+      }).from(bookings).leftJoin(customers, eq(bookings.customerId, customers.id)).leftJoin(services, eq(bookings.serviceId, services.id)).where(eq(bookings.id, newBooking.id)).limit(1);
       
       // Update customer's total bookings count
-      await prisma.customer.update({
-        where: { id: data.customerId },
-        data: { 
-          totalBookings: { increment: 1 },
-          lastBookingAt: new Date()
-        }
-      });
+      await db.update(customers).set({
+        totalBookings: sql`${customers.totalBookings} + 1`,
+        lastBookingAt: new Date()
+      }).where(eq(customers.id, data.customerId));
       
-      return { booking: booking as Booking };
+      return { booking: booking[0] as Booking };
     } catch (error) {
       console.error('Error creating booking:', error);
       return { error: 'Failed to create booking' };
@@ -150,11 +213,50 @@ export class BookingService {
   ): Promise<{ booking?: Booking; error?: string }> {
     try {
       // Check if booking exists and belongs to tenant
-      const existingBooking = await prisma.booking.findFirst({
-        where: { id: bookingId, tenantId },
-        include: { service: true }
-      });
-      
+      const [existingBookingResult] = await db
+        .select({
+          booking: {
+            id: bookings.id,
+            tenantId: bookings.tenantId,
+            customerId: bookings.customerId,
+            serviceId: bookings.serviceId,
+            status: bookings.status,
+            scheduledAt: bookings.scheduledAt,
+            duration: bookings.duration,
+            isHomeVisit: bookings.isHomeVisit,
+            homeVisitAddress: bookings.homeVisitAddress,
+            homeVisitCoordinates: bookings.homeVisitCoordinates,
+            notes: bookings.notes,
+            totalAmount: bookings.totalAmount,
+            paymentStatus: bookings.paymentStatus,
+            remindersSent: bookings.remindersSent,
+            createdAt: bookings.createdAt,
+            updatedAt: bookings.updatedAt
+          },
+          service: {
+            id: services.id,
+            name: services.name,
+            description: services.description,
+            duration: services.duration,
+            price: services.price,
+            category: services.category,
+            isActive: services.isActive,
+            homeVisitAvailable: services.homeVisitAvailable,
+            homeVisitSurcharge: services.homeVisitSurcharge,
+            createdAt: services.createdAt,
+            updatedAt: services.updatedAt
+          }
+        })
+        .from(bookings)
+        .leftJoin(services, eq(bookings.serviceId, services.id))
+        .where(
+          and(eq(bookings.id, bookingId), eq(bookings.tenantId, tenantId))
+        )
+        .limit(1);
+
+      const existingBooking = existingBookingResult?.booking;
+      const existingService = existingBookingResult?.service;
+
       if (!existingBooking) {
         return { error: 'Booking not found' };
       }
@@ -197,23 +299,77 @@ export class BookingService {
       
       // Recalculate total amount if home visit status changed
       if (data.isHomeVisit !== undefined && data.isHomeVisit !== existingBooking.isHomeVisit) {
-        let totalAmount = existingBooking.service.price;
-        if (data.isHomeVisit && existingBooking.service.homeVisitSurcharge) {
-          totalAmount = totalAmount.add(existingBooking.service.homeVisitSurcharge);
+        if (existingService?.price) {
+          let totalAmount = existingService.price;
+          if (data.isHomeVisit && existingService.homeVisitSurcharge) {
+            const totalAmountValue = totalAmount as any;
+            if (typeof totalAmountValue?.add === 'function') {
+              totalAmount = totalAmountValue.add(existingService.homeVisitSurcharge);
+            } else {
+              const base = Number(totalAmount as unknown as string);
+              const surcharge = Number(existingService.homeVisitSurcharge as unknown as string);
+              if (!Number.isNaN(base) && !Number.isNaN(surcharge)) {
+                totalAmount = (base + surcharge).toString();
+              }
+            }
+          }
+          updateData.totalAmount = totalAmount;
         }
-        updateData.totalAmount = totalAmount;
       }
       
-      const booking = await prisma.booking.update({
-        where: { id: bookingId },
-        data: updateData,
-        include: {
-          customer: true,
-          service: true
-        }
-      });
+      // Update booking
+      await db.update(bookings).set({
+        ...updateData,
+        updatedAt: new Date()
+      }).where(eq(bookings.id, bookingId));
       
-      return { booking: booking as Booking };
+      // Get updated booking with customer and service data
+      const [updatedBooking] = await db.select({
+        id: bookings.id,
+        tenantId: bookings.tenantId,
+        customerId: bookings.customerId,
+        serviceId: bookings.serviceId,
+        status: bookings.status,
+        scheduledAt: bookings.scheduledAt,
+        duration: bookings.duration,
+        isHomeVisit: bookings.isHomeVisit,
+        homeVisitAddress: bookings.homeVisitAddress,
+        homeVisitCoordinates: bookings.homeVisitCoordinates,
+        notes: bookings.notes,
+        totalAmount: bookings.totalAmount,
+        paymentStatus: bookings.paymentStatus,
+        remindersSent: bookings.remindersSent,
+        createdAt: bookings.createdAt,
+        updatedAt: bookings.updatedAt,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          email: customers.email,
+          phone: customers.phone,
+          address: customers.address,
+          notes: customers.notes,
+          totalBookings: customers.totalBookings,
+          lastBookingAt: customers.lastBookingAt,
+          whatsappNumber: customers.whatsappNumber,
+          createdAt: customers.createdAt,
+          updatedAt: customers.updatedAt
+        },
+        service: {
+          id: services.id,
+          name: services.name,
+          description: services.description,
+          duration: services.duration,
+          price: services.price,
+          category: services.category,
+          isActive: services.isActive,
+          homeVisitAvailable: services.homeVisitAvailable,
+          homeVisitSurcharge: services.homeVisitSurcharge,
+          createdAt: services.createdAt,
+          updatedAt: services.updatedAt
+        }
+      }).from(bookings).leftJoin(customers, eq(bookings.customerId, customers.id)).leftJoin(services, eq(bookings.serviceId, services.id)).where(eq(bookings.id, bookingId)).limit(1);
+      
+      return { booking: updatedBooking as Booking };
     } catch (error) {
       console.error('Error updating booking:', error);
       return { error: 'Failed to update booking' };
@@ -234,30 +390,71 @@ export class BookingService {
     } = {}
   ): Promise<Booking[]> {
     try {
-      const where: any = { tenantId };
-      
-      if (options.status) where.status = options.status;
-      if (options.customerId) where.customerId = options.customerId;
-      if (options.serviceId) where.serviceId = options.serviceId;
+      let query = db.select({
+        id: bookings.id,
+        tenantId: bookings.tenantId,
+        customerId: bookings.customerId,
+        serviceId: bookings.serviceId,
+        status: bookings.status,
+        scheduledAt: bookings.scheduledAt,
+        duration: bookings.duration,
+        isHomeVisit: bookings.isHomeVisit,
+        homeVisitAddress: bookings.homeVisitAddress,
+        homeVisitCoordinates: bookings.homeVisitCoordinates,
+        notes: bookings.notes,
+        totalAmount: bookings.totalAmount,
+        paymentStatus: bookings.paymentStatus,
+        remindersSent: bookings.remindersSent,
+        createdAt: bookings.createdAt,
+        updatedAt: bookings.updatedAt,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          email: customers.email,
+          phone: customers.phone,
+          address: customers.address,
+          notes: customers.notes,
+          totalBookings: customers.totalBookings,
+          lastBookingAt: customers.lastBookingAt,
+          whatsappNumber: customers.whatsappNumber,
+          createdAt: customers.createdAt,
+          updatedAt: customers.updatedAt
+        },
+        service: {
+          id: services.id,
+          name: services.name,
+          description: services.description,
+          duration: services.duration,
+          price: services.price,
+          category: services.category,
+          isActive: services.isActive,
+          homeVisitAvailable: services.homeVisitAvailable,
+          homeVisitSurcharge: services.homeVisitSurcharge,
+          createdAt: services.createdAt,
+          updatedAt: services.updatedAt
+        }
+      }).from(bookings).leftJoin(customers, eq(bookings.customerId, customers.id)).leftJoin(services, eq(bookings.serviceId, services.id)).where(eq(bookings.tenantId, tenantId));
+
+      // Add filters if provided
+      if (options.status) query = query.where(eq(bookings.status, options.status));
+      if (options.customerId) query = query.where(eq(bookings.customerId, options.customerId));
+      if (options.serviceId) query = query.where(eq(bookings.serviceId, options.serviceId));
       
       if (options.startDate || options.endDate) {
-        where.scheduledAt = {};
-        if (options.startDate) where.scheduledAt.gte = options.startDate;
-        if (options.endDate) where.scheduledAt.lte = options.endDate;
+        let dateFilter = and();
+        if (options.startDate) dateFilter = and(dateFilter, gte(bookings.scheduledAt, options.startDate));
+        if (options.endDate) dateFilter = and(dateFilter, lte(bookings.scheduledAt, options.endDate));
+        query = query.where(dateFilter);
       }
+
+      // Add ordering and limits
+      query = query.orderBy(asc(bookings.scheduledAt));
+      if (options.limit) query = query.limit(options.limit);
+      if (options.offset) query = query.offset(options.offset);
       
-      const bookings = await prisma.booking.findMany({
-        where,
-        include: {
-          customer: true,
-          service: true
-        },
-        orderBy: { scheduledAt: 'asc' },
-        take: options.limit,
-        skip: options.offset
-      });
+      const bookingResults = await query;
       
-      return bookings as Booking[];
+      return bookingResults as Booking[];
     } catch (error) {
       console.error('Error fetching bookings:', error);
       return [];
@@ -267,15 +464,57 @@ export class BookingService {
   // Get a single booking
   static async getBooking(tenantId: string, bookingId: string): Promise<Booking | null> {
     try {
-      const booking = await prisma.booking.findFirst({
-        where: { id: bookingId, tenantId },
-        include: {
-          customer: true,
-          service: true
+      const [bookingResult] = await db.select({
+        id: bookings.id,
+        tenantId: bookings.tenantId,
+        customerId: bookings.customerId,
+        serviceId: bookings.serviceId,
+        status: bookings.status,
+        scheduledAt: bookings.scheduledAt,
+        duration: bookings.duration,
+        isHomeVisit: bookings.isHomeVisit,
+        homeVisitAddress: bookings.homeVisitAddress,
+        homeVisitCoordinates: bookings.homeVisitCoordinates,
+        notes: bookings.notes,
+        totalAmount: bookings.totalAmount,
+        paymentStatus: bookings.paymentStatus,
+        remindersSent: bookings.remindersSent,
+        createdAt: bookings.createdAt,
+        updatedAt: bookings.updatedAt,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          email: customers.email,
+          phone: customers.phone,
+          address: customers.address,
+          notes: customers.notes,
+          totalBookings: customers.totalBookings,
+          lastBookingAt: customers.lastBookingAt,
+          whatsappNumber: customers.whatsappNumber,
+          createdAt: customers.createdAt,
+          updatedAt: customers.updatedAt
+        },
+        service: {
+          id: services.id,
+          name: services.name,
+          description: services.description,
+          duration: services.duration,
+          price: services.price,
+          category: services.category,
+          isActive: services.isActive,
+          homeVisitAvailable: services.homeVisitAvailable,
+          homeVisitSurcharge: services.homeVisitSurcharge,
+          createdAt: services.createdAt,
+          updatedAt: services.updatedAt
         }
-      });
+      }).from(bookings).leftJoin(customers, eq(bookings.customerId, customers.id)).leftJoin(services, eq(bookings.serviceId, services.id)).where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.tenantId, tenantId)
+        )
+      ).limit(1);
       
-      return booking as Booking | null;
+      return bookingResult as Booking | null;
     } catch (error) {
       console.error('Error fetching booking:', error);
       return null;
@@ -285,23 +524,30 @@ export class BookingService {
   // Delete a booking
   static async deleteBooking(tenantId: string, bookingId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const booking = await prisma.booking.findFirst({
-        where: { id: bookingId, tenantId }
-      });
+      // Check if booking exists and belongs to tenant
+      const [bookingResult] = await db.select({
+        id: bookings.id,
+        customerId: bookings.customerId
+      }).from(bookings).where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.tenantId, tenantId)
+        )
+      ).limit(1);
+      
+      const booking = bookingResult || null;
       
       if (!booking) {
         return { success: false, error: 'Booking not found' };
       }
       
-      await prisma.booking.delete({
-        where: { id: bookingId }
-      });
+      // Delete the booking
+      await db.delete(bookings).where(eq(bookings.id, bookingId));
       
       // Update customer's total bookings count
-      await prisma.customer.update({
-        where: { id: booking.customerId },
-        data: { totalBookings: { decrement: 1 } }
-      });
+      await db.update(customers).set({
+        totalBookings: sql`${customers.totalBookings} - 1`
+      }).where(eq(customers.id, booking.customerId));
       
       return { success: true };
     } catch (error) {
@@ -320,31 +566,74 @@ export class BookingService {
   ): Promise<BookingConflict> {
     try {
       const endTime = new Date(scheduledAt.getTime() + duration * 60000);
-      
-      const where: any = {
-        tenantId,
-        status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
-        scheduledAt: {
-          gte: new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000), // Check within 24 hours
-          lte: new Date(scheduledAt.getTime() + 24 * 60 * 60 * 1000)
-        }
-      };
-      
+      const windowStart = new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000);
+      const windowEnd = new Date(scheduledAt.getTime() + 24 * 60 * 60 * 1000);
+
+      const conditions = [
+        eq(bookings.tenantId, tenantId),
+        inArray(bookings.status, [BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+        gte(bookings.scheduledAt, windowStart),
+        lte(bookings.scheduledAt, windowEnd)
+      ];
+
       if (excludeBookingId) {
-        where.id = { not: excludeBookingId };
+        conditions.push(ne(bookings.id, excludeBookingId));
       }
-      
-      const conflictingBookings = await prisma.booking.findMany({
-        where,
-        include: {
-          customer: true,
-          service: true
-        },
-        orderBy: { scheduledAt: 'asc' }
-      });
+
+      const conflictingBookings = await db
+        .select({
+          id: bookings.id,
+          tenantId: bookings.tenantId,
+          customerId: bookings.customerId,
+          serviceId: bookings.serviceId,
+          status: bookings.status,
+          scheduledAt: bookings.scheduledAt,
+          duration: bookings.duration,
+          isHomeVisit: bookings.isHomeVisit,
+          homeVisitAddress: bookings.homeVisitAddress,
+          homeVisitCoordinates: bookings.homeVisitCoordinates,
+          notes: bookings.notes,
+          totalAmount: bookings.totalAmount,
+          paymentStatus: bookings.paymentStatus,
+          remindersSent: bookings.remindersSent,
+          createdAt: bookings.createdAt,
+          updatedAt: bookings.updatedAt,
+          customer: {
+            id: customers.id,
+            name: customers.name,
+            email: customers.email,
+            phone: customers.phone,
+            address: customers.address,
+            notes: customers.notes,
+            totalBookings: customers.totalBookings,
+            lastBookingAt: customers.lastBookingAt,
+            whatsappNumber: customers.whatsappNumber,
+            createdAt: customers.createdAt,
+            updatedAt: customers.updatedAt
+          },
+          service: {
+            id: services.id,
+            name: services.name,
+            description: services.description,
+            duration: services.duration,
+            price: services.price,
+            category: services.category,
+            isActive: services.isActive,
+            homeVisitAvailable: services.homeVisitAvailable,
+            homeVisitSurcharge: services.homeVisitSurcharge,
+            createdAt: services.createdAt,
+            updatedAt: services.updatedAt
+          }
+        })
+        .from(bookings)
+        .leftJoin(customers, eq(bookings.customerId, customers.id))
+        .leftJoin(services, eq(bookings.serviceId, services.id))
+        .where(and(...conditions))
+        .orderBy(asc(bookings.scheduledAt));
       
       // Filter for actual time conflicts with travel buffer considerations
-      const actualConflicts = conflictingBookings.filter(booking => {
+      const bookingsWithRelations = conflictingBookings as unknown as Booking[];
+      const actualConflicts = bookingsWithRelations.filter(booking => {
         const bookingEnd = new Date(booking.scheduledAt.getTime() + booking.duration * 60000);
         
         // Basic time overlap check
@@ -376,7 +665,7 @@ export class BookingService {
       
       return {
         hasConflict: actualConflicts.length > 0,
-        conflictingBookings: actualConflicts as Booking[],
+        conflictingBookings: actualConflicts,
         message: actualConflicts.length > 0 ? 
           (isHomeVisit ? 'Time slot conflicts with existing booking or insufficient travel time' : 'Time slot conflicts with existing booking') 
           : undefined
@@ -398,18 +687,32 @@ export class BookingService {
   ): Promise<AvailabilityResponse | null> {
     try {
       // Get service details
-      const service = await prisma.service.findFirst({
-        where: { id: request.serviceId, tenantId, isActive: true }
-      });
-      
+      const [serviceResult] = await db
+        .select()
+        .from(services)
+        .where(
+          and(
+            eq(services.id, request.serviceId),
+            eq(services.tenantId, tenantId),
+            eq(services.isActive, true)
+          )
+        )
+        .limit(1);
+
+      const service = serviceResult || null;
+
       if (!service) {
         return null;
       }
       
       // Get business hours
-      const businessHours = await prisma.businessHours.findUnique({
-        where: { tenantId }
-      });
+      const [businessHoursResult] = await db
+        .select()
+        .from(businessHours)
+        .where(eq(businessHours.tenantId, tenantId))
+        .limit(1);
+
+      const businessHoursRecord = businessHoursResult || null;
       
       const requestDate = new Date(request.date);
       const dayOfWeek = requestDate.getDay();
@@ -418,8 +721,8 @@ export class BookingService {
       
       let businessHoursInfo = { isOpen: true, openTime: '09:00', closeTime: '17:00' };
       
-      if (businessHours?.schedule) {
-        const daySchedule = (businessHours.schedule as any)[dayName];
+      if (businessHoursRecord?.schedule) {
+        const daySchedule = (businessHoursRecord.schedule as any)[dayName];
         if (daySchedule) {
           businessHoursInfo = {
             isOpen: daySchedule.isOpen,

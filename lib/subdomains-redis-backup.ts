@@ -1,7 +1,4 @@
-import { db } from '@/lib/database';
-import { tenants } from '@/lib/database/schema';
-import { eq, desc } from 'drizzle-orm';
-import { getTenant, setTenant, deleteTenant } from '@/lib/d1';
+import { redis } from '@/lib/redis';
 
 export function isValidIcon(str: string) {
   if (str.length > 10) {
@@ -28,6 +25,11 @@ export function isValidIcon(str: string) {
   // This is less secure but better than no validation
   return str.length >= 1 && str.length <= 10;
 }
+
+type SubdomainData = {
+  emoji: string;
+  createdAt: number;
+};
 
 // Enhanced tenant data structure (compatible with database types)
 export interface EnhancedTenant {
@@ -115,99 +117,39 @@ export interface TenantRegistrationData {
   address?: string;
 }
 
-export async function getSubdomainData(subdomain: string): Promise<EnhancedTenant | null> {
+export async function getSubdomainData(subdomain: string): Promise<SubdomainData | EnhancedTenant | null> {
   const sanitizedSubdomain = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '');
   
+  // Try to get from migration service first (includes PostgreSQL fallback)
   try {
-    // Try to get from database first
-    const [tenantResult] = await db.select().from(tenants).where(
-      eq(tenants.subdomain, sanitizedSubdomain)
-    ).limit(1);
-    
-    if (tenantResult) {
-      // Convert database tenant to EnhancedTenant format
-      return convertDbToEnhancedTenant(tenantResult);
-    }
-    
-    // Fallback to D1 if not found in database
-    const d1Data = await getTenant(sanitizedSubdomain);
-    if (d1Data) {
-      return d1Data;
-    }
-    
-    return null;
+    const { getSubdomainDataWithFallback } = await import('./migration/tenant-migration');
+    const data = await getSubdomainDataWithFallback(sanitizedSubdomain);
+    return data;
   } catch (error) {
-    console.error('Error getting subdomain data:', error);
-    return null;
+    console.warn('Migration service unavailable, falling back to Redis:', error);
+    
+    // Fallback to direct Redis access
+    const data = await redis.get<SubdomainData | EnhancedTenant>(
+      `subdomain:${sanitizedSubdomain}`
+    );
+    return data;
   }
 }
 
-// Helper function to convert database tenant to EnhancedTenant
-function convertDbToEnhancedTenant(dbTenant: any): EnhancedTenant {
-  return {
-    // Basic info
-    subdomain: dbTenant.subdomain,
-    emoji: dbTenant.emoji || '🏢',
-    createdAt: dbTenant.createdAt ? dbTenant.createdAt.getTime() : Date.now(),
-    
-    // New fields from database
-    id: dbTenant.id,
-    businessName: dbTenant.businessName,
-    businessCategory: dbTenant.businessCategory,
-    ownerName: dbTenant.ownerName,
-    email: dbTenant.email,
-    phone: dbTenant.phone,
-    address: dbTenant.address,
-    businessDescription: dbTenant.businessDescription,
-    logo: dbTenant.logo,
-    
-    // Brand colors
-    brandColors: dbTenant.brandColors,
-    
-    // Feature flags
-    whatsappEnabled: dbTenant.whatsappEnabled,
-    homeVisitEnabled: dbTenant.homeVisitEnabled,
-    analyticsEnabled: dbTenant.analyticsEnabled,
-    customTemplatesEnabled: dbTenant.customTemplatesEnabled,
-    multiStaffEnabled: dbTenant.multiStaffEnabled,
-    
-    // Subscription info
-    subscriptionPlan: dbTenant.subscriptionPlan,
-    subscriptionStatus: dbTenant.subscriptionStatus,
-    subscriptionExpiresAt: dbTenant.subscriptionExpiresAt,
-    
-    updatedAt: dbTenant.updatedAt,
-    
-    // Computed properties for backward compatibility
-    features: {
-      whatsapp: dbTenant.whatsappEnabled,
-      homeVisit: dbTenant.homeVisitEnabled,
-      analytics: dbTenant.analyticsEnabled,
-      customTemplates: dbTenant.customTemplatesEnabled,
-      multiStaff: dbTenant.multiStaffEnabled,
-    },
-    subscription: {
-      plan: dbTenant.subscriptionPlan as 'basic' | 'premium' | 'enterprise',
-      status: dbTenant.subscriptionStatus as 'active' | 'suspended' | 'cancelled',
-      expiresAt: dbTenant.subscriptionExpiresAt,
-    },
-  };
-}
-
 // Helper function to check if data is enhanced tenant data
-export function isEnhancedTenant(data: any): data is EnhancedTenant {
+export function isEnhancedTenant(data: SubdomainData | EnhancedTenant): data is EnhancedTenant {
   return 'businessName' in data && 'ownerName' in data;
 }
 
 // Migration function to convert legacy data to enhanced format
-export function migrateFromLegacy(subdomain: string, legacyData: any): EnhancedTenant {
+export function migrateFromLegacy(subdomain: string, legacyData: SubdomainData): EnhancedTenant {
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
   
   return {
     // Legacy fields
     subdomain,
     emoji: legacyData.emoji,
-    createdAt: legacyData.createdAt || Date.now(),
+    createdAt: legacyData.createdAt,
     
     // New required fields with defaults
     id: `tenant_${subdomain}_${Date.now()}`,
@@ -249,15 +191,50 @@ export function migrateFromLegacy(subdomain: string, legacyData: any): EnhancedT
 
 export async function getAllSubdomains(): Promise<EnhancedTenant[]> {
   try {
-    // Get all tenants from database
-    const dbTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
+    // Try to get from PostgreSQL first
+    const { prisma } = await import('./database');
+    const { TenantMigrationService } = await import('./migration/tenant-migration');
     
-    // Convert database tenants to EnhancedTenant format
-    return dbTenants.map(convertDbToEnhancedTenant);
+    const pgTenants = await prisma.tenant.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (pgTenants.length > 0) {
+      return pgTenants.map(tenant => TenantMigrationService.convertPrismaToEnhanced(tenant));
+    }
   } catch (error) {
-    console.error('Error getting all subdomains from database:', error);
+    console.warn('PostgreSQL unavailable, falling back to Redis:', error);
+  }
+
+  // Fallback to Redis
+  const keys = await redis.keys('subdomain:*');
+
+  if (!keys.length) {
     return [];
   }
+
+  const values = await redis.mget<(SubdomainData | EnhancedTenant)[]>(...keys);
+
+  return keys.map((key, index) => {
+    const subdomain = key.replace('subdomain:', '');
+    const data = values[index];
+
+    if (!data) {
+      // Return minimal enhanced tenant for missing data
+      return migrateFromLegacy(subdomain, {
+        emoji: '❓',
+        createdAt: Date.now()
+      });
+    }
+
+    // If it's already enhanced data, return as is
+    if (isEnhancedTenant(data)) {
+      return { ...data, subdomain };
+    }
+
+    // If it's legacy data, migrate it
+    return migrateFromLegacy(subdomain, data);
+  });
 }
 
 // Function to create enhanced tenant data

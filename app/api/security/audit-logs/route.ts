@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthMiddleware } from '@/lib/auth/auth-middleware';
 import { RBAC } from '@/lib/auth/rbac';
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
+import { securityAuditLogs } from '@/lib/database/schema';
+import { and, desc, eq, gte } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,44 +41,49 @@ export async function GET(request: NextRequest) {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // Build where clause
-    const where: any = {
-      tenantId: session.tenantId,
-      timestamp: { gte: since },
-    };
+    const conditions = [
+      eq(securityAuditLogs.tenantId, session.tenantId),
+      gte(securityAuditLogs.timestamp, since),
+    ];
 
     if (action) {
-      where.action = action;
+      conditions.push(eq(securityAuditLogs.action, action));
     }
 
     if (userId) {
-      where.userId = userId;
+      conditions.push(eq(securityAuditLogs.userId, userId));
     }
 
     if (success !== null && success !== undefined) {
-      where.success = success === 'true';
+      conditions.push(eq(securityAuditLogs.success, success === 'true'));
     }
 
-    // Get audit logs
-    const [logs, total] = await Promise.all([
-      prisma.securityAuditLog.findMany({
-        where,
-        orderBy: { timestamp: 'desc' },
-        skip: offset,
-        take: limit,
-        select: {
-          id: true,
-          userId: true,
-          action: true,
-          resource: true,
-          ipAddress: true,
-          userAgent: true,
-          success: true,
-          details: true,
-          timestamp: true,
-        },
-      }),
-      prisma.securityAuditLog.count({ where }),
-    ]);
+    const whereClause = and(...conditions);
+
+    const logsQuery = db
+      .select({
+        id: securityAuditLogs.id,
+        userId: securityAuditLogs.userId,
+        action: securityAuditLogs.action,
+        resource: securityAuditLogs.resource,
+        ipAddress: securityAuditLogs.ipAddress,
+        userAgent: securityAuditLogs.userAgent,
+        success: securityAuditLogs.success,
+        details: securityAuditLogs.details,
+        timestamp: securityAuditLogs.timestamp,
+      })
+      .from(securityAuditLogs)
+      .where(whereClause)
+      .orderBy(desc(securityAuditLogs.timestamp))
+      .limit(limit)
+      .offset(offset);
+
+    const countQuery = db
+      .select({ count: sql<number>`cast(count(${securityAuditLogs.id}) as int)` })
+      .from(securityAuditLogs)
+      .where(whereClause);
+
+    const [logs, [{ count: total }]] = await Promise.all([logsQuery, countQuery]);
 
     // Parse details JSON
     const parsedLogs = logs.map(log => ({

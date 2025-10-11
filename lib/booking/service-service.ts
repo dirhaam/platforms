@@ -1,5 +1,8 @@
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
+import { services, bookings } from '@/lib/database/schema';
 import { Service, CreateServiceRequest, UpdateServiceRequest } from '@/types/booking';
+import { eq, and, ne, gte, lte, or, asc, desc, sql } from 'drizzle-orm';
+import crypto from 'crypto';
 
 export class ServiceService {
   // Create a new service
@@ -8,22 +11,24 @@ export class ServiceService {
     data: CreateServiceRequest
   ): Promise<{ service?: Service; error?: string }> {
     try {
-      const service = await prisma.service.create({
-        data: {
-          tenantId,
-          name: data.name,
-          description: data.description,
-          duration: data.duration,
-          price: data.price,
-          category: data.category,
-          homeVisitAvailable: data.homeVisitAvailable || false,
-          homeVisitSurcharge: data.homeVisitSurcharge,
-          images: data.images || [],
-          requirements: data.requirements || []
-        }
-      });
+      const [newService] = await db.insert(services).values({
+        id: crypto.randomUUID(),
+        tenantId,
+        name: data.name,
+        description: data.description,
+        duration: data.duration,
+        price: data.price,
+        category: data.category,
+        isActive: true, // Default to active
+        homeVisitAvailable: data.homeVisitAvailable || false,
+        homeVisitSurcharge: data.homeVisitSurcharge,
+        images: data.images || [],
+        requirements: data.requirements || [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
       
-      return { service: service as Service };
+      return { service: newService as Service };
     } catch (error) {
       console.error('Error creating service:', error);
       return { error: 'Failed to create service' };
@@ -38,31 +43,35 @@ export class ServiceService {
   ): Promise<{ service?: Service; error?: string }> {
     try {
       // Check if service exists and belongs to tenant
-      const existingService = await prisma.service.findFirst({
-        where: { id: serviceId, tenantId }
-      });
+      const [existingService] = await db.select().from(services).where(
+        and(
+          eq(services.id, serviceId),
+          eq(services.tenantId, tenantId)
+        )
+      ).limit(1);
       
       if (!existingService) {
         return { error: 'Service not found' };
       }
       
-      const service = await prisma.service.update({
-        where: { id: serviceId },
-        data: {
-          ...(data.name !== undefined && { name: data.name }),
-          ...(data.description !== undefined && { description: data.description }),
-          ...(data.duration !== undefined && { duration: data.duration }),
-          ...(data.price !== undefined && { price: data.price }),
-          ...(data.category !== undefined && { category: data.category }),
-          ...(data.isActive !== undefined && { isActive: data.isActive }),
-          ...(data.homeVisitAvailable !== undefined && { homeVisitAvailable: data.homeVisitAvailable }),
-          ...(data.homeVisitSurcharge !== undefined && { homeVisitSurcharge: data.homeVisitSurcharge }),
-          ...(data.images !== undefined && { images: data.images }),
-          ...(data.requirements !== undefined && { requirements: data.requirements })
-        }
-      });
+      // Build update object
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.duration !== undefined) updateData.duration = data.duration;
+      if (data.price !== undefined) updateData.price = data.price;
+      if (data.category !== undefined) updateData.category = data.category;
+      if (data.isActive !== undefined) updateData.isActive = data.isActive;
+      if (data.homeVisitAvailable !== undefined) updateData.homeVisitAvailable = data.homeVisitAvailable;
+      if (data.homeVisitSurcharge !== undefined) updateData.homeVisitSurcharge = data.homeVisitSurcharge;
+      if (data.images !== undefined) updateData.images = data.images;
+      if (data.requirements !== undefined) updateData.requirements = data.requirements;
       
-      return { service: service as Service };
+      updateData.updatedAt = new Date();
+      
+      const [updatedService] = await db.update(services).set(updateData).where(eq(services.id, serviceId)).returning();
+      
+      return { service: updatedService as Service };
     } catch (error) {
       console.error('Error updating service:', error);
       return { error: 'Failed to update service' };
@@ -81,20 +90,24 @@ export class ServiceService {
     } = {}
   ): Promise<Service[]> {
     try {
-      const where: any = { tenantId };
+      let query = db.select().from(services).where(eq(services.tenantId, tenantId));
       
-      if (options.category) where.category = options.category;
-      if (options.isActive !== undefined) where.isActive = options.isActive;
-      if (options.homeVisitAvailable !== undefined) where.homeVisitAvailable = options.homeVisitAvailable;
+      if (options.category) query = query.where(and(eq(services.tenantId, tenantId), eq(services.category, options.category)));
+      if (options.isActive !== undefined) query = query.where(and(eq(services.tenantId, tenantId), eq(services.isActive, options.isActive)));
+      if (options.homeVisitAvailable !== undefined) query = query.where(and(eq(services.tenantId, tenantId), eq(services.homeVisitAvailable, options.homeVisitAvailable)));
       
-      const services = await prisma.service.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: options.limit,
-        skip: options.offset
-      });
+      // Apply filters one by one
+      if (options.category) query = query.where(eq(services.category, options.category));
+      if (options.isActive !== undefined) query = query.where(eq(services.isActive, options.isActive));
+      if (options.homeVisitAvailable !== undefined) query = query.where(eq(services.homeVisitAvailable, options.homeVisitAvailable));
       
-      return services as Service[];
+      query = query.orderBy(desc(services.createdAt));
+      if (options.limit) query = query.limit(options.limit);
+      if (options.offset) query = query.offset(options.offset);
+      
+      const serviceResults = await query;
+      
+      return serviceResults as Service[];
     } catch (error) {
       console.error('Error fetching services:', error);
       return [];
@@ -104,11 +117,14 @@ export class ServiceService {
   // Get a single service
   static async getService(tenantId: string, serviceId: string): Promise<Service | null> {
     try {
-      const service = await prisma.service.findFirst({
-        where: { id: serviceId, tenantId }
-      });
+      const [serviceResult] = await db.select().from(services).where(
+        and(
+          eq(services.id, serviceId),
+          eq(services.tenantId, tenantId)
+        )
+      ).limit(1);
       
-      return service as Service | null;
+      return serviceResult as Service | null;
     } catch (error) {
       console.error('Error fetching service:', error);
       return null;
@@ -119,12 +135,16 @@ export class ServiceService {
   static async deleteService(tenantId: string, serviceId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if service has active bookings
-      const activeBookings = await prisma.booking.count({
-        where: {
-          serviceId,
-          status: { in: ['pending', 'confirmed'] }
-        }
-      });
+      const activeBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(
+        and(
+          eq(bookings.serviceId, serviceId),
+          or(
+            eq(bookings.status, 'pending'),
+            eq(bookings.status, 'confirmed')
+          )
+        )
+      );
+      const activeBookings = activeBookingsResult[0]?.count || 0;
       
       if (activeBookings > 0) {
         return { 
@@ -133,17 +153,18 @@ export class ServiceService {
         };
       }
       
-      const service = await prisma.service.findFirst({
-        where: { id: serviceId, tenantId }
-      });
+      const [service] = await db.select().from(services).where(
+        and(
+          eq(services.id, serviceId),
+          eq(services.tenantId, tenantId)
+        )
+      ).limit(1);
       
       if (!service) {
         return { success: false, error: 'Service not found' };
       }
       
-      await prisma.service.delete({
-        where: { id: serviceId }
-      });
+      await db.delete(services).where(eq(services.id, serviceId));
       
       return { success: true };
     } catch (error) {
@@ -155,13 +176,12 @@ export class ServiceService {
   // Get service categories for a tenant
   static async getServiceCategories(tenantId: string): Promise<string[]> {
     try {
-      const categories = await prisma.service.findMany({
-        where: { tenantId, isActive: true },
-        select: { category: true },
-        distinct: ['category']
-      });
-      
-      return categories.map(c => c.category);
+      const categoryResults = await db
+        .selectDistinct({ category: services.category })
+        .from(services)
+        .where(and(eq(services.tenantId, tenantId), eq(services.isActive, true)));
+
+      return categoryResults.map(c => c.category).filter(Boolean);
     } catch (error) {
       console.error('Error fetching service categories:', error);
       return [];
@@ -177,24 +197,36 @@ export class ServiceService {
     averageRating?: number;
   }> {
     try {
-      const where: any = { tenantId };
-      if (serviceId) where.serviceId = serviceId;
+      let baseWhere = eq(bookings.tenantId, tenantId);
+      if (serviceId) {
+        baseWhere = and(baseWhere, eq(bookings.serviceId, serviceId));
+      }
       
-      const [totalBookings, completedBookings, cancelledBookings, revenueResult] = await Promise.all([
-        prisma.booking.count({ where }),
-        prisma.booking.count({ where: { ...where, status: 'completed' } }),
-        prisma.booking.count({ where: { ...where, status: 'cancelled' } }),
-        prisma.booking.aggregate({
-          where: { ...where, status: 'completed', paymentStatus: 'paid' },
-          _sum: { totalAmount: true }
-        })
-      ]);
+      // Get counts using separate queries
+      const totalBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(baseWhere);
+      const completedBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(
+        and(baseWhere, eq(bookings.status, 'completed'))
+      );
+      const cancelledBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(
+        and(baseWhere, eq(bookings.status, 'cancelled'))
+      );
+      
+      // Get total revenue for completed and paid bookings
+      const revenueResult = await db.select({
+        total: sql<number>`SUM(${bookings.totalAmount})`
+      }).from(bookings).where(
+        and(
+          baseWhere,
+          eq(bookings.status, 'completed'),
+          eq(bookings.paymentStatus, 'paid')
+        )
+      );
       
       return {
-        totalBookings,
-        completedBookings,
-        cancelledBookings,
-        totalRevenue: Number(revenueResult._sum.totalAmount || 0)
+        totalBookings: totalBookingsResult[0]?.count || 0,
+        completedBookings: completedBookingsResult[0]?.count || 0,
+        cancelledBookings: cancelledBookingsResult[0]?.count || 0,
+        totalRevenue: Number(revenueResult[0]?.total || 0)
       };
     } catch (error) {
       console.error('Error fetching service stats:', error);

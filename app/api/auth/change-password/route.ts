@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TenantAuth } from '@/lib/auth/tenant-auth';
 import { SecurityService } from '@/lib/security/security-service';
+import { db } from '@/lib/database';
+import { tenants, staff } from '@/lib/database/schema';
+import { eq } from 'drizzle-orm';
 
 interface ChangePasswordRequest {
   currentPassword: string;
@@ -39,11 +42,11 @@ export async function POST(request: NextRequest) {
     let currentPasswordValid = false;
     
     if (session.role === 'owner') {
-      const { prisma } = await import('@/lib/database');
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: session.tenantId },
-        select: { passwordHash: true },
-      });
+      const [tenant] = await db
+        .select({ passwordHash: tenants.passwordHash })
+        .from(tenants)
+        .where(eq(tenants.id, session.tenantId))
+        .limit(1);
 
       if (tenant?.passwordHash) {
         currentPasswordValid = await TenantAuth.verifyPassword(currentPassword, tenant.passwordHash);
@@ -51,14 +54,14 @@ export async function POST(request: NextRequest) {
         currentPasswordValid = true;
       }
     } else {
-      const { prisma } = await import('@/lib/database');
-      const staff = await prisma.staff.findUnique({
-        where: { id: session.userId },
-        select: { passwordHash: true },
-      });
+      const [staffMember] = await db
+        .select({ passwordHash: staff.passwordHash })
+        .from(staff)
+        .where(eq(staff.id, session.userId))
+        .limit(1);
 
-      if (staff?.passwordHash) {
-        currentPasswordValid = await TenantAuth.verifyPassword(currentPassword, staff.passwordHash);
+      if (staffMember?.passwordHash) {
+        currentPasswordValid = await TenantAuth.verifyPassword(currentPassword, staffMember.passwordHash);
       } else if (process.env.NODE_ENV === 'development' && currentPassword === 'staff123') {
         currentPasswordValid = true;
       }

@@ -1,15 +1,57 @@
-import { prisma } from '@/lib/database';
-import { 
-  Invoice, 
-  InvoiceStatus, 
+import { db } from '@/lib/database';
+import {
+  invoices,
+  invoiceItems,
+  customers,
+  bookings,
+  services,
+  tenants,
+} from '@/lib/database/schema';
+import {
+  Invoice,
+  InvoiceStatus,
   PaymentMethod,
-  CreateInvoiceRequest, 
+  CreateInvoiceRequest,
   UpdateInvoiceRequest,
   InvoiceSummary,
   InvoiceFilters,
-  QRCodePaymentData
+  QRCodePaymentData,
+  type Service,
+  type Customer,
+  type Booking,
+  type Tenant,
 } from '@/types/invoice';
-import { Decimal } from '@prisma/client/runtime/library';
+import { alias } from 'drizzle-orm/pg-core';
+import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from 'drizzle-orm';
+import Decimal from 'decimal.js';
+import crypto from 'crypto';
+
+type InvoiceRecord = typeof invoices.$inferSelect;
+type InvoiceItemRecord = typeof invoiceItems.$inferSelect;
+type CustomerRecord = typeof customers.$inferSelect;
+type BookingRecord = typeof bookings.$inferSelect;
+type ServiceRecord = typeof services.$inferSelect;
+type TenantRecord = typeof tenants.$inferSelect;
+
+type InvoiceQueryRow = {
+  invoice: InvoiceRecord;
+  customer: CustomerRecord | null;
+  booking: BookingRecord | null;
+  bookingService: ServiceRecord | null;
+  tenant: TenantRecord | null;
+};
+
+type InvoiceItemQueryRow = {
+  item: InvoiceItemRecord;
+  service: ServiceRecord | null;
+};
+
+function parseDecimal(value: string | number | null | undefined): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export class InvoiceService {
   /**
@@ -21,16 +63,21 @@ export class InvoiceService {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     
     // Get the count of invoices for this tenant in current month
-    const count = await prisma.invoice.count({
-      where: {
-        tenantId,
-        createdAt: {
-          gte: new Date(year, now.getMonth(), 1),
-          lt: new Date(year, now.getMonth() + 1, 1)
-        }
-      }
-    });
+    const startOfMonth = new Date(year, now.getMonth(), 1);
+    const endOfMonth = new Date(year, now.getMonth() + 1, 1);
     
+    const countResult = await db
+      .select({ count: sql<number>`cast(count(${invoices.id}) as int)` })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          gte(invoices.createdAt, startOfMonth),
+          lt(invoices.createdAt, endOfMonth)
+        )
+      );
+
+    const count = Number(countResult[0]?.count ?? 0);
     const sequence = String(count + 1).padStart(4, '0');
     return `INV-${year}${month}-${sequence}`;
   }
@@ -40,6 +87,7 @@ export class InvoiceService {
    */
   static async createInvoice(tenantId: string, data: CreateInvoiceRequest): Promise<Invoice> {
     const invoiceNumber = await this.generateInvoiceNumber(tenantId);
+    const invoiceId = crypto.randomUUID();
     
     // Calculate totals
     let subtotal = new Decimal(0);
@@ -47,8 +95,11 @@ export class InvoiceService {
       const itemTotal = new Decimal(item.unitPrice).mul(item.quantity);
       subtotal = subtotal.add(itemTotal);
       return {
-        ...item,
-        totalPrice: itemTotal
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice),
+        totalPrice: itemTotal.toNumber(),
+        serviceId: item.serviceId,
       };
     });
     
@@ -56,155 +107,139 @@ export class InvoiceService {
     const taxAmount = subtotal.mul(taxRate);
     const discountAmount = new Decimal(data.discountAmount || 0);
     const totalAmount = subtotal.add(taxAmount).sub(discountAmount);
-    
-    // Generate QR code data for payment
+    const [tenantRow] = await db
+      .select({ businessName: tenants.businessName })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
     const qrCodeData = await this.generateQRCodeData({
-      invoiceId: '', // Will be set after creation
+      invoiceId,
       amount: totalAmount.toNumber(),
       currency: 'IDR',
       reference: data.paymentReference || invoiceNumber,
       dueDate: data.dueDate,
       merchantInfo: {
-        name: '', // Will be populated from tenant data
-        account: data.paymentReference || ''
-      }
-    });
-
-    const invoice = await prisma.invoice.create({
-      data: {
-        tenantId,
-        customerId: data.customerId,
-        bookingId: data.bookingId,
-        invoiceNumber,
-        dueDate: new Date(data.dueDate),
-        subtotal,
-        taxRate,
-        taxAmount,
-        discountAmount,
-        totalAmount,
-        notes: data.notes,
-        terms: data.terms,
-        qrCodeData: JSON.stringify(qrCodeData),
-        items: {
-          create: items.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: new Decimal(item.unitPrice),
-            totalPrice: item.totalPrice,
-            serviceId: item.serviceId
-          }))
-        }
+        name: tenantRow?.businessName || '',
+        account: data.paymentReference || '',
       },
-      include: {
-        customer: true,
-        booking: {
-          include: {
-            service: true
-          }
-        },
-        items: {
-          include: {
-            service: true
-          }
-        },
-        tenant: true
-      }
     });
 
-    return this.mapPrismaToInvoice(invoice);
+    // Create the invoice first
+    await db.insert(invoices).values({
+      id: invoiceId,
+      tenantId,
+      customerId: data.customerId,
+      bookingId: data.bookingId,
+      invoiceNumber,
+      status: InvoiceStatus.DRAFT,
+      issueDate: new Date(),
+      dueDate: new Date(data.dueDate),
+      subtotal: subtotal.toNumber(),
+      taxRate: taxRate.toNumber(),
+      taxAmount: taxAmount.toNumber(),
+      discountAmount: discountAmount.toNumber(),
+      totalAmount: totalAmount.toNumber(),
+      notes: data.notes,
+      terms: data.terms,
+      qrCodeData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    // Create invoice items
+    const itemPromises = items.map(item => 
+      db.insert(invoiceItems).values({
+        id: crypto.randomUUID(),
+        invoiceId,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        serviceId: item.serviceId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning()
+    );
+    
+    await Promise.all(itemPromises);
+
+    const [invoice] = await this.queryInvoices(
+      and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
+      { limit: 1 }
+    );
+
+    if (!invoice) {
+      throw new Error('Failed to load created invoice');
+    }
+
+    return invoice;
   }
 
   /**
    * Get invoice by ID
    */
   static async getInvoiceById(tenantId: string, invoiceId: string): Promise<Invoice | null> {
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: invoiceId,
-        tenantId
-      },
-      include: {
-        customer: true,
-        booking: {
-          include: {
-            service: true
-          }
-        },
-        items: {
-          include: {
-            service: true
-          }
-        },
-        tenant: true
-      }
-    });
+    const [invoice] = await this.queryInvoices(
+      and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
+      { limit: 1 }
+    );
 
-    return invoice ? this.mapPrismaToInvoice(invoice) : null;
+    return invoice ?? null;
   }
 
   /**
    * Get invoices with filters
    */
   static async getInvoices(tenantId: string, filters?: InvoiceFilters, page = 1, limit = 20) {
-    const where: any = { tenantId };
+    const conditions = [eq(invoices.tenantId, tenantId)];
 
     if (filters?.status?.length) {
-      where.status = { in: filters.status };
+      conditions.push(inArray(invoices.status, filters.status));
     }
 
     if (filters?.customerId) {
-      where.customerId = filters.customerId;
+      conditions.push(eq(invoices.customerId, filters.customerId));
     }
 
-    if (filters?.dateFrom || filters?.dateTo) {
-      where.issueDate = {};
-      if (filters.dateFrom) {
-        where.issueDate.gte = new Date(filters.dateFrom);
-      }
-      if (filters.dateTo) {
-        where.issueDate.lte = new Date(filters.dateTo);
-      }
+    if (filters?.dateFrom) {
+      conditions.push(gte(invoices.issueDate, new Date(filters.dateFrom)));
     }
 
-    if (filters?.amountMin !== undefined || filters?.amountMax !== undefined) {
-      where.totalAmount = {};
-      if (filters.amountMin !== undefined) {
-        where.totalAmount.gte = new Decimal(filters.amountMin);
-      }
-      if (filters.amountMax !== undefined) {
-        where.totalAmount.lte = new Decimal(filters.amountMax);
-      }
+    if (filters?.dateTo) {
+      conditions.push(lte(invoices.issueDate, new Date(filters.dateTo)));
     }
 
-    const [invoices, total] = await Promise.all([
-      prisma.invoice.findMany({
-        where,
-        include: {
-          customer: true,
-          booking: {
-            include: {
-              service: true
-            }
-          },
-          items: {
-            include: {
-              service: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit
-      }),
-      prisma.invoice.count({ where })
-    ]);
+    if (filters?.amountMin !== undefined) {
+      conditions.push(gte(invoices.totalAmount, new Decimal(filters.amountMin).toFixed(2)));
+    }
+
+    if (filters?.amountMax !== undefined) {
+      conditions.push(lte(invoices.totalAmount, new Decimal(filters.amountMax).toFixed(2)));
+    }
+
+    const whereClause = and(...conditions);
+    const safePage = Math.max(page, 1);
+    const offset = (safePage - 1) * limit;
+
+    const [{ count: totalCount }] = await db
+      .select({ count: sql<number>`cast(count(${invoices.id}) as int)` })
+      .from(invoices)
+      .where(whereClause);
+
+    const results = await this.queryInvoices(whereClause, {
+      limit,
+      offset,
+    });
+
+    const total = Number(totalCount ?? 0);
 
     return {
-      invoices: invoices.map(this.mapPrismaToInvoice),
+      invoices: results,
       total,
-      page,
+      page: safePage,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -212,7 +247,7 @@ export class InvoiceService {
    * Update invoice
    */
   static async updateInvoice(tenantId: string, invoiceId: string, data: UpdateInvoiceRequest): Promise<Invoice | null> {
-    const updateData: any = {};
+    const updateData: Partial<typeof invoices.$inferInsert> = {};
 
     if (data.status) {
       updateData.status = data.status;
@@ -221,6 +256,10 @@ export class InvoiceService {
       if (data.status === InvoiceStatus.PAID && data.paidDate) {
         updateData.paidDate = new Date(data.paidDate);
       }
+    }
+
+    if (data.paidDate && data.status !== InvoiceStatus.PAID) {
+      updateData.paidDate = new Date(data.paidDate);
     }
 
     if (data.dueDate) {
@@ -243,29 +282,19 @@ export class InvoiceService {
       updateData.terms = data.terms;
     }
 
-    const invoice = await prisma.invoice.update({
-      where: {
-        id: invoiceId,
-        tenantId
-      },
-      data: updateData,
-      include: {
-        customer: true,
-        booking: {
-          include: {
-            service: true
-          }
-        },
-        items: {
-          include: {
-            service: true
-          }
-        },
-        tenant: true
-      }
-    });
+    if (Object.keys(updateData).length === 0) {
+      return this.getInvoiceById(tenantId, invoiceId);
+    }
 
-    return this.mapPrismaToInvoice(invoice);
+    await db
+      .update(invoices)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)));
+
+    return this.getInvoiceById(tenantId, invoiceId);
   }
 
   /**
@@ -273,13 +302,12 @@ export class InvoiceService {
    */
   static async deleteInvoice(tenantId: string, invoiceId: string): Promise<boolean> {
     try {
-      await prisma.invoice.delete({
-        where: {
-          id: invoiceId,
-          tenantId
-        }
-      });
-      return true;
+      const deleted = await db
+        .delete(invoices)
+        .where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)))
+        .returning({ id: invoices.id });
+
+      return deleted.length > 0;
     } catch (error) {
       return false;
     }
@@ -289,52 +317,46 @@ export class InvoiceService {
    * Get invoice summary for dashboard
    */
   static async getInvoiceSummary(tenantId: string): Promise<InvoiceSummary> {
-    const [invoices, overdueInvoices] = await Promise.all([
-      prisma.invoice.findMany({
-        where: { tenantId },
-        select: {
-          status: true,
-          totalAmount: true,
-          dueDate: true
-        }
-      }),
-      prisma.invoice.count({
-        where: {
-          tenantId,
-          status: InvoiceStatus.OVERDUE
-        }
-      })
-    ]);
+    const invoiceRows = await db
+      .select({ status: invoices.status, totalAmount: invoices.totalAmount })
+      .from(invoices)
+      .where(eq(invoices.tenantId, tenantId));
+
+    const [{ count: overdueCount }] = await db
+      .select({ count: sql<number>`cast(count(${invoices.id}) as int)` })
+      .from(invoices)
+      .where(and(eq(invoices.tenantId, tenantId), eq(invoices.status, InvoiceStatus.OVERDUE)));
 
     let totalAmount = new Decimal(0);
     let paidAmount = new Decimal(0);
     let pendingAmount = new Decimal(0);
     let overdueAmount = new Decimal(0);
 
-    invoices.forEach(invoice => {
-      totalAmount = totalAmount.add(invoice.totalAmount);
-      
-      switch (invoice.status) {
+    for (const row of invoiceRows) {
+      const amount = new Decimal(row.totalAmount || 0);
+      totalAmount = totalAmount.add(amount);
+
+      switch (row.status as InvoiceStatus) {
         case InvoiceStatus.PAID:
-          paidAmount = paidAmount.add(invoice.totalAmount);
+          paidAmount = paidAmount.add(amount);
           break;
         case InvoiceStatus.OVERDUE:
-          overdueAmount = overdueAmount.add(invoice.totalAmount);
+          overdueAmount = overdueAmount.add(amount);
           break;
         case InvoiceStatus.SENT:
         case InvoiceStatus.DRAFT:
-          pendingAmount = pendingAmount.add(invoice.totalAmount);
+          pendingAmount = pendingAmount.add(amount);
           break;
       }
-    });
+    }
 
     return {
-      totalInvoices: invoices.length,
-      totalAmount,
-      paidAmount,
-      pendingAmount,
-      overdueAmount,
-      overdueCount: overdueInvoices
+      totalInvoices: invoiceRows.length,
+      totalAmount: totalAmount.toNumber(),
+      paidAmount: paidAmount.toNumber(),
+      pendingAmount: pendingAmount.toNumber(),
+      overdueAmount: overdueAmount.toNumber(),
+      overdueCount: Number(overdueCount ?? 0),
     };
   }
 
@@ -342,32 +364,38 @@ export class InvoiceService {
    * Create invoice from booking
    */
   static async createInvoiceFromBooking(tenantId: string, bookingId: string): Promise<Invoice> {
-    const booking = await prisma.booking.findFirst({
-      where: {
-        id: bookingId,
-        tenantId
-      },
-      include: {
-        service: true,
-        customer: true
-      }
-    });
+    const bookingServiceAlias = alias(services, 'booking_service_for_invoice');
 
-    if (!booking) {
+    const [bookingRow] = await db
+      .select({
+        booking: bookings,
+        service: bookingServiceAlias,
+      })
+      .from(bookings)
+      .leftJoin(bookingServiceAlias, eq(bookings.serviceId, bookingServiceAlias.id))
+      .where(and(eq(bookings.id, bookingId), eq(bookings.tenantId, tenantId)))
+      .limit(1);
+
+    if (!bookingRow?.booking) {
       throw new Error('Booking not found');
     }
 
+    const booking = bookingRow.booking;
+
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 7); // Due in 7 days
+
+    const serviceName = bookingRow.service?.name ?? 'Service';
+    const bookingTotal = parseDecimal(booking.totalAmount);
 
     const invoiceData: CreateInvoiceRequest = {
       customerId: booking.customerId,
       bookingId: booking.id,
       dueDate: dueDate.toISOString(),
       items: [{
-        description: booking.service.name,
+        description: serviceName,
         quantity: 1,
-        unitPrice: booking.totalAmount.toNumber(),
+        unitPrice: bookingTotal,
         serviceId: booking.serviceId
       }],
       notes: `Invoice for booking on ${booking.scheduledAt.toLocaleDateString()}`
@@ -381,18 +409,11 @@ export class InvoiceService {
    */
   static async markOverdueInvoices(): Promise<void> {
     const now = new Date();
-    
-    await prisma.invoice.updateMany({
-      where: {
-        status: InvoiceStatus.SENT,
-        dueDate: {
-          lt: now
-        }
-      },
-      data: {
-        status: InvoiceStatus.OVERDUE
-      }
-    });
+
+    await db
+      .update(invoices)
+      .set({ status: InvoiceStatus.OVERDUE, updatedAt: new Date() })
+      .where(and(eq(invoices.status, InvoiceStatus.SENT), lt(invoices.dueDate, now)));
   }
 
   /**
@@ -414,45 +435,145 @@ export class InvoiceService {
   }
 
   /**
-   * Map Prisma result to Invoice interface
+   * Query invoices with related entities
    */
-  private static mapPrismaToInvoice(prismaInvoice: any): Invoice {
+  private static async queryInvoices(whereClause: any, options: { limit?: number; offset?: number } = {}): Promise<Invoice[]> {
+    const bookingServices = alias(services, 'booking_services');
+    const itemServices = alias(services, 'invoice_item_services');
+
+    const baseRows = await db
+      .select({
+        invoice: invoices,
+        customer: customers,
+        booking: bookings,
+        bookingService: bookingServices,
+        tenant: tenants,
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(bookings, eq(invoices.bookingId, bookings.id))
+      .leftJoin(bookingServices, eq(bookings.serviceId, bookingServices.id))
+      .leftJoin(tenants, eq(invoices.tenantId, tenants.id))
+      .where(whereClause)
+      .orderBy(desc(invoices.createdAt))
+      .limit(options.limit ?? undefined)
+      .offset(options.offset ?? undefined);
+
+    const invoiceIds = baseRows.map(row => row.invoice.id);
+    if (invoiceIds.length === 0) {
+      return [];
+    }
+
+    const itemRows = await db
+      .select({
+        item: invoiceItems,
+        service: itemServices,
+      })
+      .from(invoiceItems)
+      .leftJoin(itemServices, eq(invoiceItems.serviceId, itemServices.id))
+      .where(inArray(invoiceItems.invoiceId, invoiceIds))
+      .orderBy(asc(invoiceItems.createdAt));
+
+    const itemsByInvoice = new Map<string, InvoiceItemQueryRow[]>();
+    for (const row of itemRows) {
+      const list = itemsByInvoice.get(row.item.invoiceId) ?? [];
+      list.push(row);
+      itemsByInvoice.set(row.item.invoiceId, list);
+    }
+
+    return baseRows.map(row => this.mapInvoiceRow(row, itemsByInvoice.get(row.invoice.id) ?? []));
+  }
+
+  private static mapInvoiceRow(row: InvoiceQueryRow, itemRows: InvoiceItemQueryRow[]): Invoice {
+    const invoice = row.invoice;
+
     return {
-      id: prismaInvoice.id,
-      tenantId: prismaInvoice.tenantId,
-      customerId: prismaInvoice.customerId,
-      bookingId: prismaInvoice.bookingId,
-      invoiceNumber: prismaInvoice.invoiceNumber,
-      status: prismaInvoice.status as InvoiceStatus,
-      issueDate: prismaInvoice.issueDate,
-      dueDate: prismaInvoice.dueDate,
-      paidDate: prismaInvoice.paidDate,
-      subtotal: prismaInvoice.subtotal,
-      taxRate: prismaInvoice.taxRate,
-      taxAmount: prismaInvoice.taxAmount,
-      discountAmount: prismaInvoice.discountAmount,
-      totalAmount: prismaInvoice.totalAmount,
-      paymentMethod: prismaInvoice.paymentMethod as PaymentMethod,
-      paymentReference: prismaInvoice.paymentReference,
-      items: prismaInvoice.items?.map((item: any) => ({
-        id: item.id,
-        invoiceId: item.invoiceId,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        serviceId: item.serviceId,
-        service: item.service
-      })) || [],
-      notes: prismaInvoice.notes,
-      terms: prismaInvoice.terms,
-      qrCodeData: prismaInvoice.qrCodeData,
-      qrCodeUrl: prismaInvoice.qrCodeUrl,
-      createdAt: prismaInvoice.createdAt,
-      updatedAt: prismaInvoice.updatedAt,
-      customer: prismaInvoice.customer,
-      booking: prismaInvoice.booking,
-      tenant: prismaInvoice.tenant
+      id: invoice.id,
+      tenantId: invoice.tenantId,
+      customerId: invoice.customerId,
+      bookingId: invoice.bookingId ?? undefined,
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status as InvoiceStatus,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      paidDate: invoice.paidDate ?? undefined,
+      subtotal: parseDecimal(invoice.subtotal),
+      taxRate: parseDecimal(invoice.taxRate),
+      taxAmount: parseDecimal(invoice.taxAmount),
+      discountAmount: parseDecimal(invoice.discountAmount),
+      totalAmount: parseDecimal(invoice.totalAmount),
+      paymentMethod: (invoice.paymentMethod as PaymentMethod) ?? undefined,
+      paymentReference: invoice.paymentReference ?? undefined,
+      items: itemRows.map(rowItem => this.mapInvoiceItem(rowItem)),
+      notes: invoice.notes ?? undefined,
+      terms: invoice.terms ?? undefined,
+      qrCodeData: invoice.qrCodeData ?? undefined,
+      qrCodeUrl: invoice.qrCodeUrl ?? undefined,
+      createdAt: invoice.createdAt,
+      updatedAt: invoice.updatedAt,
+      customer: this.mapCustomerRow(row.customer),
+      booking: this.mapBookingRow(row.booking, row.bookingService),
+      tenant: this.mapTenantRow(row.tenant),
     };
+  }
+
+  private static mapInvoiceItem(row: InvoiceItemQueryRow): Invoice['items'][number] {
+    const item = row.item;
+    return {
+      id: item.id,
+      invoiceId: item.invoiceId,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: parseDecimal(item.unitPrice),
+      totalPrice: parseDecimal(item.totalPrice),
+      serviceId: item.serviceId ?? undefined,
+      service: this.mapServiceRow(row.service),
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+  }
+
+  private static mapCustomerRow(customer: CustomerRecord | null): Customer | undefined {
+    if (!customer) {
+      return undefined;
+    }
+
+    return {
+      ...customer,
+      totalBookings: customer.totalBookings ?? 0,
+    } as Customer;
+  }
+
+  private static mapBookingRow(booking: BookingRecord | null, service: ServiceRecord | null): Booking | undefined {
+    if (!booking) {
+      return undefined;
+    }
+
+    return {
+      ...booking,
+      totalAmount: parseDecimal(booking.totalAmount),
+      service: this.mapServiceRow(service),
+    } as Booking;
+  }
+
+  private static mapServiceRow(service: ServiceRecord | null): Service | undefined {
+    if (!service) {
+      return undefined;
+    }
+
+    const { price, homeVisitSurcharge, ...rest } = service;
+
+    return {
+      ...rest,
+      price: parseDecimal(price),
+      homeVisitSurcharge:
+        homeVisitSurcharge !== null && homeVisitSurcharge !== undefined
+          ? parseDecimal(homeVisitSurcharge)
+          : undefined,
+    } as Service;
+  }
+
+  private static mapTenantRow(tenant: TenantRecord | null): Tenant | undefined {
+    return tenant ? (tenant as Tenant) : undefined;
   }
 }

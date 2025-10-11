@@ -1,4 +1,5 @@
 import type { TenantSession, Permission } from './tenant-auth';
+import * as React from 'react';
 
 // Role definitions
 export interface Role {
@@ -206,6 +207,7 @@ export class RBAC {
       'send_messages': 'Send messages to customers via WhatsApp or other channels',
       'manage_settings': 'Modify business settings and configuration',
       'export_data': 'Export business data and generate reports',
+      '*': 'All permissions (wildcard access)',
     };
 
     return descriptions[permission] || 'Unknown permission';
@@ -268,7 +270,7 @@ export function withPermission<T extends object>(
   return function PermissionWrapper(props: T) {
     // This would be used in React components
     // Implementation would depend on how you manage session state
-    return component(props);
+    return React.createElement(component, props);
   };
 }
 

@@ -100,7 +100,7 @@ export function OverdueTracker({ tenantId }: OverdueTrackerProps) {
   }
 
   const totalOverdueAmount = overdueInvoices.reduce(
-    (sum, invoice) => sum + invoice.totalAmount.toNumber(), 
+    (sum, invoice) => sum + invoice.totalAmount,
     0
   );
 
@@ -158,7 +158,7 @@ export function OverdueTracker({ tenantId }: OverdueTrackerProps) {
                           Due: {invoice.dueDate.toLocaleDateString()}
                         </p>
                         <p className="text-sm font-medium">
-                          {formatCurrency(invoice.totalAmount.toNumber())}
+                          {formatCurrency(invoice.totalAmount)}
                         </p>
                       </div>
                       <div>
@@ -243,9 +243,9 @@ export function OverdueTracker({ tenantId }: OverdueTrackerProps) {
                           <p className="text-sm">
                             Due: {invoice.dueDate.toLocaleDateString()}
                           </p>
-                          <p className="text-sm font-medium">
-                            {formatCurrency(invoice.totalAmount.toNumber())}
-                          </p>
+                        <p className="text-sm font-medium">
+                          {formatCurrency(invoice.totalAmount)}
+                        </p>
                         </div>
                         <div>
                           <Badge variant={daysUntilDue <= 2 ? "destructive" : "secondary"}>

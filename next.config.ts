@@ -1,14 +1,27 @@
 import type { NextConfig } from "next";
 
-process.env.TAILWIND_DISABLE_LIGHTNING = process.env.TAILWIND_DISABLE_LIGHTNING ?? "1";
+// Disable Tailwind lightning mode di Windows/CI
+process.env.TAILWIND_DISABLE_LIGHTNING =
+  process.env.TAILWIND_DISABLE_LIGHTNING ?? "1";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   experimental: {
-    // Enable experimental features if needed
     useLightningcss: false,
   },
-  // Ensure proper handling of Vercel Analytics and Speed Insights
+
+  // Exclude folder Windows yang sering bikin EPERM error
+  outputFileTracingExcludes: {
+    "*": [
+      "C:\\Users\\*\\Application Data/**",
+      "C:\\Users\\*\\AppData/**",
+      "C:\\Users\\*\\Cookies/**",
+      "C:\\Users\\*\\Local Settings/**",
+      "C:\\Users\\*\\NTUSER.*",
+      "C:\\Users\\*\\OneDrive/**",
+    ],
+  },
+
+  // Jika butuh header vercel speed-insights
   // headers: async () => {
   //   return [
   //     {

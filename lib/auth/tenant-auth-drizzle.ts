@@ -4,32 +4,15 @@ import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/database';
 import { SecurityService } from '@/lib/security/security-service';
-import { tenants, staff } from '@/lib/database/schema';
+import { tenants, staff, securityAuditLogs } from '@/lib/database/schema';
 import { eq, and } from 'drizzle-orm';
+import type { TenantSession, AuthResult } from './types'; // Sesuaikan dengan interface yang ada
 
 // JWT configuration
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 );
 const JWT_EXPIRES_IN = '7d';
-
-// Session configuration
-export interface TenantSession {
-  userId: string;
-  tenantId: string;
-  role: 'superadmin' | 'owner' | 'admin' | 'staff';
-  permissions: string[];
-  email: string;
-  name: string;
-  isSuperAdmin?: boolean; // Flag for superadmin access
-  [key: string]: any; // Index signature for JWT compatibility
-}
-
-export interface AuthResult {
-  success: boolean;
-  session?: TenantSession;
-  error?: string;
-}
 
 export class TenantAuth {
   // Create JWT token

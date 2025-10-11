@@ -1,0 +1,68 @@
+{
+  "version": "5",
+  "dialect": "postgresql",
+  "id": "add_tenant_subdomains",
+  "prevId": "init_schema",
+  "tables": {
+    "tenant_subdomains": {
+      "name": "tenant_subdomains",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "subdomain": {
+          "name": "subdomain",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_data": {
+          "name": "tenant_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "NOW()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "NOW()"
+        }
+      },
+      "indexes": {
+        "idx_tenant_subdomains_subdomain": {
+          "name": "idx_tenant_subdomains_subdomain",
+          "columns": ["subdomain"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tenant_subdomains_subdomain_unique": {
+          "name": "tenant_subdomains_subdomain_unique",
+          "columns": ["subdomain"]
+        }
+      }
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

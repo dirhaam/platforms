@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkDatabaseConnection, db } from '@/lib/database';
-import { DatabaseUtils } from '@/lib/database';
+import { checkDatabaseConnection } from '@/lib/database';
 
 interface SystemHealthCheck {
   service: string;
@@ -13,42 +12,43 @@ export async function GET() {
   try {
     const healthChecks: SystemHealthCheck[] = [];
 
-    // Check database connection
-    const dbStart = Date.now();
+    // Check D1 connection (using database connection as proxy since D1 is accessed through Cloudflare Workers)
+    const d1Start = Date.now();
     try {
+      // In a real Cloudflare Workers environment, D1 would be tested differently
+      // For now, we'll test database connection as a proxy
       const dbOk = await checkDatabaseConnection();
       healthChecks.push({
-        service: 'PostgreSQL Database',
+        service: 'Database',
         status: dbOk ? 'online' : 'offline',
-        responseTime: Date.now() - dbStart,
+        responseTime: Date.now() - d1Start,
         lastChecked: new Date(),
       });
     } catch (error) {
       healthChecks.push({
-        service: 'PostgreSQL Database',
+        service: 'Database',
         status: 'offline',
-        responseTime: Date.now() - dbStart,
+        responseTime: Date.now() - d1Start,
         lastChecked: new Date(),
       });
     }
 
-    // Check D1 connection if available (this would be specific to Cloudflare Workers environment)
-    const d1Start = Date.now();
+    // Check PostgreSQL connection
+    const dbStart = Date.now();
     try {
-      // In Cloudflare Workers environment, you'd check D1 connection here
-      // For now, we'll simulate a check
-      const d1Ok = true; // Placeholder: in real environment this could check D1
+      const { db } = await import('@/lib/database');
+      await db.execute('SELECT 1');
       healthChecks.push({
-        service: 'Cloudflare D1',
-        status: d1Ok ? 'online' : 'offline',
-        responseTime: Date.now() - d1Start,
+        service: 'PostgreSQL Database',
+        status: 'online',
+        responseTime: Date.now() - dbStart,
         lastChecked: new Date(),
       });
     } catch (error) {
       healthChecks.push({
-        service: 'Cloudflare D1',
+        service: 'PostgreSQL Database',
         status: 'offline',
-        responseTime: Date.now() - d1Start,
+        responseTime: Date.now() - dbStart,
         lastChecked: new Date(),
       });
     }
@@ -76,24 +76,6 @@ export async function GET() {
         service: 'Main Website',
         status: 'offline',
         responseTime: Date.now() - websiteStart,
-        lastChecked: new Date(),
-      });
-    }
-
-    // Get more detailed database health
-    try {
-      const dbHealth = await DatabaseUtils.healthCheck();
-      healthChecks.push({
-        service: 'Database Health',
-        status: dbHealth.status,
-        responseTime: parseInt(dbHealth.details?.split(' ')[2] || '0'),
-        lastChecked: new Date(),
-      });
-    } catch (error) {
-      healthChecks.push({
-        service: 'Database Health',
-        status: 'offline',
-        responseTime: 0,
         lastChecked: new Date(),
       });
     }
@@ -154,7 +136,6 @@ export async function POST(request: NextRequest) {
         // In D1, we might clear specific cache entries instead of flushall
         // This would depend on your specific implementation
         console.log('Clearing cache entries');
-        // Here you might call a function to clear D1 cache tables
         return NextResponse.json({ success: true, message: 'Cache cleared successfully' });
 
       case 'run_health_check':
