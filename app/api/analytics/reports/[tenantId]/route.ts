@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ExportService, ReportConfig } from '@/lib/analytics/export-service';
 
 function toArrayBuffer(view: Uint8Array): ArrayBuffer {
-  if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength && view.buffer instanceof ArrayBuffer) {
-    return view.buffer;
-  }
-
-  const arrayBuffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
-  return arrayBuffer instanceof ArrayBuffer ? arrayBuffer : view.slice().buffer;
+  const buffer = new ArrayBuffer(view.byteLength);
+  new Uint8Array(buffer).set(view);
+  return buffer;
 }
 
 export async function POST(
