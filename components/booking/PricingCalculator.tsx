@@ -75,7 +75,7 @@ export function PricingCalculator({
 
         if (response.ok) {
           travelInfo = await response.json();
-          travelSurcharge = travelInfo.surcharge;
+          travelSurcharge = travelInfo?.surcharge || 0;
         }
       } catch (error) {
         console.error('Error calculating travel surcharge:', error);

@@ -20,17 +20,7 @@ import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare } from 'lucid
 import { AddressInput } from '@/components/location/AddressInput';
 import { PricingCalculator } from '@/components/booking/PricingCalculator';
 import { Address } from '@/types/location';
-
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  category: string;
-  homeVisitAvailable: boolean;
-  homeVisitSurcharge?: number;
-}
+import { Service } from '@/types/booking';
 
 interface TenantData {
   id: string;
@@ -81,7 +71,7 @@ export default function BookingDialog({
     homeVisitCoordinates: undefined,
     notes: '',
   });
-  const [calculatedPrice, setCalculatedPrice] = useState<number>(selectedService?.price || 0);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(selectedService ? Number(selectedService.price) : 0);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
   const handleInputChange = (field: keyof BookingFormData, value: string | boolean) => {
@@ -117,7 +107,7 @@ export default function BookingDialog({
       homeVisitCoordinates: undefined,
       notes: '',
     });
-    setCalculatedPrice(selectedService?.price || 0);
+    setCalculatedPrice(selectedService ? Number(selectedService.price) : 0);
     setSelectedAddress(null);
   };
 
@@ -164,12 +154,12 @@ export default function BookingDialog({
                       <span>{selectedService.duration} minutes</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-lg">${selectedService.price}</span>
+                      <span className="font-bold text-lg">${Number(selectedService.price)}</span>
                     </div>
                     {selectedService.homeVisitAvailable && (
                       <div className="col-span-2 flex items-center space-x-2 text-green-600">
                         <MapPin className="h-4 w-4" />
-                        <span>Home visit available (+${selectedService.homeVisitSurcharge || 0})</span>
+                        <span>Home visit available (+${selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge) : 0})</span>
                       </div>
                     )}
                   </div>
@@ -206,7 +196,7 @@ export default function BookingDialog({
                     <p className="font-bold">${calculateTotal()}</p>
                     {formData.isHomeVisit && selectedService.homeVisitSurcharge && (
                       <p className="text-xs text-gray-500">
-                        Includes home visit (+${selectedService.homeVisitSurcharge})
+                        Includes home visit (+${Number(selectedService.homeVisitSurcharge)})
                       </p>
                     )}
                   </div>
@@ -302,7 +292,7 @@ export default function BookingDialog({
                   />
                   <Label htmlFor="homeVisit" className="flex items-center">
                     <MapPin className="h-4 w-4 mr-1" />
-                    Request home visit (+${selectedService.homeVisitSurcharge || 0})
+                    Request home visit (+${selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge) : 0})
                   </Label>
                 </div>
                 
@@ -341,7 +331,7 @@ export default function BookingDialog({
               <PricingCalculator
                 service={selectedService}
                 isHomeVisit={formData.isHomeVisit}
-                homeVisitAddress={selectedAddress}
+                homeVisitAddress={selectedAddress || undefined}
                 tenantId={tenant.id}
                 businessLocation={tenant.address}
                 onPriceCalculated={(totalPrice) => setCalculatedPrice(totalPrice)}

@@ -9,17 +9,7 @@ import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
-
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  category: string;
-  homeVisitAvailable: boolean;
-  homeVisitSurcharge?: number;
-}
+import { Service } from '@/types/booking';
 
 interface BusinessHours {
   [key: string]: {
@@ -198,7 +188,7 @@ export default function TenantLandingPage({
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">Price:</span>
                         <span className="font-bold text-lg" style={{ color: primaryColor }}>
-                          ${service.price}
+                          ${Number(service.price)}
                         </span>
                       </div>
                       {service.homeVisitAvailable && (
@@ -207,7 +197,7 @@ export default function TenantLandingPage({
                           <span>Home visit available</span>
                           {service.homeVisitSurcharge && (
                             <span className="text-gray-500">
-                              (+${service.homeVisitSurcharge})
+                              (+${Number(service.homeVisitSurcharge)})
                             </span>
                           )}
                         </div>

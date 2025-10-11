@@ -9,17 +9,7 @@ import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
-
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  category: string;
-  homeVisitAvailable: boolean;
-  homeVisitSurcharge?: number;
-}
+import { Service } from '@/types/booking';
 
 interface BusinessHours {
   [key: string]: {
@@ -222,7 +212,7 @@ export default function ModernTemplate({
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">Price:</span>
                         <span className="font-bold text-2xl text-blue-600">
-                          ${service.price}
+                          ${Number(service.price)}
                         </span>
                       </div>
                       {service.homeVisitAvailable && (
@@ -231,7 +221,7 @@ export default function ModernTemplate({
                           <span>Home visit available</span>
                           {service.homeVisitSurcharge && (
                             <span className="text-gray-500">
-                              (+${service.homeVisitSurcharge})
+                              (+${Number(service.homeVisitSurcharge)})
                             </span>
                           )}
                         </div>

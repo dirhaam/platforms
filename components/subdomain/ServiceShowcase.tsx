@@ -3,17 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, MapPin, Star, ArrowRight } from 'lucide-react';
-
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  category: string;
-  homeVisitAvailable: boolean;
-  homeVisitSurcharge?: number;
-}
+import { Service } from '@/types/booking';
 
 interface ServiceShowcaseProps {
   services: Service[];
@@ -66,11 +56,11 @@ export default function ServiceShowcase({
                   {showPricing && (
                     <div className="mb-4">
                       <span className="text-2xl font-bold" style={{ color: primaryColor }}>
-                        ${service.price}
+                        ${Number(service.price)}
                       </span>
                       {service.homeVisitAvailable && service.homeVisitSurcharge && (
                         <p className="text-sm text-gray-500">
-                          +${service.homeVisitSurcharge} home visit
+                          +${Number(service.homeVisitSurcharge)} home visit
                         </p>
                       )}
                     </div>
@@ -115,7 +105,7 @@ export default function ServiceShowcase({
                   </div>
                   {showPricing && (
                     <span className="font-bold text-lg" style={{ color: primaryColor }}>
-                      ${service.price}
+                      ${Number(service.price)}
                     </span>
                   )}
                 </div>
@@ -126,7 +116,7 @@ export default function ServiceShowcase({
                     <span>Home visit available</span>
                     {service.homeVisitSurcharge && (
                       <span className="text-gray-500">
-                        (+${service.homeVisitSurcharge})
+                        (+${Number(service.homeVisitSurcharge)})
                       </span>
                     )}
                   </div>
@@ -170,7 +160,7 @@ export default function ServiceShowcase({
                 </div>
                 {showPricing && (
                   <span className="font-bold text-xl" style={{ color: primaryColor }}>
-                    ${service.price}
+                    ${Number(service.price)}
                   </span>
                 )}
               </div>
@@ -181,7 +171,7 @@ export default function ServiceShowcase({
                   <span>Home visit available</span>
                   {service.homeVisitSurcharge && (
                     <span className="text-gray-500">
-                      (+${service.homeVisitSurcharge})
+                      (+${Number(service.homeVisitSurcharge)})
                     </span>
                   )}
                 </div>
