@@ -1,20 +1,20 @@
 import { Redis } from '@upstash/redis';
 
 // Initialize Redis client with Upstash (server-side only)
-let redis: Redis | null = null;
+let redisInstance: Redis | null = null;
 
 function getRedisClient(): Redis {
-  if (!redis) {
+  if (!redisInstance) {
     // Only initialize on server-side
     if (typeof window === 'undefined') {
       const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
       const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-      
+
       if (!url || !token) {
         throw new Error('Redis configuration missing: KV_REST_API_URL and KV_REST_API_TOKEN are required');
       }
-      
-      redis = new Redis({
+
+      redisInstance = new Redis({
         url,
         token,
       });
@@ -22,8 +22,8 @@ function getRedisClient(): Redis {
       throw new Error('Redis client can only be used on server-side');
     }
   }
-  
-  return redis;
+
+  return redisInstance;
 }
 
 // Export the Redis instance

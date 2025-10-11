@@ -67,15 +67,14 @@ export class SuperAdminService {
       const emailKey = `${this.SUPERADMIN_EMAIL_INDEX}${email}`;
       console.log('Email key:', emailKey);
       
-      const redisClient = redis();
-      const superAdminId = await redisClient.get(emailKey);
+      const superAdminId = await redis.get(emailKey);
       
       if (!superAdminId) {
         return null;
       }
 
       const dataKey = `${this.SUPERADMIN_PREFIX}${superAdminId}`;
-      const data = await redisClient.get(dataKey);
+      const data = await redis.get(dataKey);
       
       if (!data) {
         return null;
@@ -109,8 +108,7 @@ export class SuperAdminService {
   // Find SuperAdmin by ID
   static async findById(id: string): Promise<SuperAdmin | null> {
     try {
-      const redisClient = redis();
-      const data = await redisClient.get(`${this.SUPERADMIN_PREFIX}${id}`);
+      const data = await redis.get(`${this.SUPERADMIN_PREFIX}${id}`);
       if (!data) {
         return null;
       }
@@ -156,24 +154,22 @@ export class SuperAdminService {
 
   // Save SuperAdmin to Redis
   private static async save(superAdmin: SuperAdmin): Promise<void> {
-    const redisClient = redis();
     const serialized = this.serialize(superAdmin);
     
     // Store SuperAdmin data
-    await redisClient.set(`${this.SUPERADMIN_PREFIX}${superAdmin.id}`, serialized);
-    
+    await redis.set(`${this.SUPERADMIN_PREFIX}${superAdmin.id}`, serialized);
+
     // Store email index
-    await redisClient.set(`${this.SUPERADMIN_EMAIL_INDEX}${superAdmin.email}`, superAdmin.id);
-    
+    await redis.set(`${this.SUPERADMIN_EMAIL_INDEX}${superAdmin.email}`, superAdmin.id);
+
     // Add to list
-    await redisClient.sadd(this.SUPERADMIN_LIST, superAdmin.id);
+    await redis.sadd(this.SUPERADMIN_LIST, superAdmin.id);
   }
 
   // List all SuperAdmins
   static async list(): Promise<SuperAdmin[]> {
     try {
-      const redisClient = redis();
-      const ids = await redisClient.smembers(this.SUPERADMIN_LIST);
+      const ids = await redis.smembers(this.SUPERADMIN_LIST);
       const superAdmins: SuperAdmin[] = [];
 
       for (const id of ids) {
@@ -197,11 +193,10 @@ export class SuperAdminService {
       throw new Error('SuperAdmin not found');
     }
 
-    const redisClient = redis();
     // Remove from Redis
-    await redisClient.del(`${this.SUPERADMIN_PREFIX}${id}`);
-    await redisClient.del(`${this.SUPERADMIN_EMAIL_INDEX}${existing.email}`);
-    await redisClient.srem(this.SUPERADMIN_LIST, id);
+    await redis.del(`${this.SUPERADMIN_PREFIX}${id}`);
+    await redis.del(`${this.SUPERADMIN_EMAIL_INDEX}${existing.email}`);
+    await redis.srem(this.SUPERADMIN_LIST, id);
   }
 
   // Authenticate SuperAdmin
@@ -301,8 +296,7 @@ export class SuperAdminService {
   // Check if any SuperAdmin exists
   static async hasAnySuperAdmin(): Promise<boolean> {
     try {
-      const redisClient = redis();
-      const count = await redisClient.scard(this.SUPERADMIN_LIST);
+      const count = await redis.scard(this.SUPERADMIN_LIST);
       return count > 0;
     } catch (error) {
       console.error('Error checking SuperAdmin existence:', error);
