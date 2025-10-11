@@ -144,7 +144,7 @@ export async function createSubdomainAction(
   const enhancedTenant = await createEnhancedTenant(registrationData);
 
   // Store in Redis
-  await redis.set(`subdomain:${sanitizedSubdomain}`, enhancedTenant);
+  await redis().set(`subdomain:${sanitizedSubdomain}`, enhancedTenant);
 
   // Log the tenant creation activity
   try {
@@ -162,7 +162,7 @@ export async function deleteSubdomainAction(
   formData: FormData
 ) {
   const subdomain = formData.get('subdomain');
-  await redis.del(`subdomain:${subdomain}`);
+  await redis().del(`subdomain:${subdomain}`);
   revalidatePath('/admin');
   return { success: 'Domain deleted successfully' };
 }
