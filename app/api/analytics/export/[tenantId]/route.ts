@@ -5,6 +5,15 @@ function isValidFormat(value: unknown): value is ExportOptions['format'] {
   return typeof value === 'string' && ['xlsx', 'csv', 'pdf'].includes(value);
 }
 
+function toArrayBuffer(view: Uint8Array): ArrayBuffer {
+  if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength && view.buffer instanceof ArrayBuffer) {
+    return view.buffer;
+  }
+
+  const arrayBuffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  return arrayBuffer instanceof ArrayBuffer ? arrayBuffer : view.slice().buffer;
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ tenantId: string }> }
@@ -68,12 +77,7 @@ export async function POST(
 
     const filename = `${dataType}-export.${format}`;
 
-    const arrayBuffer = exportBuffer.buffer.slice(
-      exportBuffer.byteOffset,
-      exportBuffer.byteOffset + exportBuffer.byteLength
-    );
-
-    return new NextResponse(arrayBuffer, {
+    return new NextResponse(toArrayBuffer(exportBuffer), {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,

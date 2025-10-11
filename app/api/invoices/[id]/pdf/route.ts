@@ -3,6 +3,15 @@ import { InvoiceService } from '@/lib/invoice/invoice-service';
 import { InvoicePDFGenerator } from '@/lib/invoice/pdf-generator';
 import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
+function toArrayBuffer(view: Uint8Array): ArrayBuffer {
+  if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength && view.buffer instanceof ArrayBuffer) {
+    return view.buffer;
+  }
+
+  const arrayBuffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  return arrayBuffer instanceof ArrayBuffer ? arrayBuffer : view.slice().buffer;
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -25,13 +34,8 @@ export async function GET(
     const pdfData = await pdfGenerator.generateInvoicePDF(invoice);
     const payload = new Uint8Array(pdfData);
 
-    const arrayBuffer = payload.buffer.slice(
-      payload.byteOffset,
-      payload.byteOffset + payload.byteLength
-    );
-
     // Return PDF as response
-    return new NextResponse(arrayBuffer, {
+    return new NextResponse(toArrayBuffer(payload), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`

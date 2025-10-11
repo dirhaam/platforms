@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ExportService, ReportConfig } from '@/lib/analytics/export-service';
 
+function toArrayBuffer(view: Uint8Array): ArrayBuffer {
+  if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength && view.buffer instanceof ArrayBuffer) {
+    return view.buffer;
+  }
+
+  const arrayBuffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  return arrayBuffer instanceof ArrayBuffer ? arrayBuffer : view.slice().buffer;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const reportConfig: ReportConfig = await request.json();
@@ -26,12 +35,7 @@ export async function POST(request: NextRequest) {
     const contentType = 'application/pdf';
     const filename = `platform-${reportConfig.title.toLowerCase().replace(/\s+/g, '-')}.pdf`;
 
-    const arrayBuffer = reportBuffer.buffer.slice(
-      reportBuffer.byteOffset,
-      reportBuffer.byteOffset + reportBuffer.byteLength
-    );
-
-    return new NextResponse(arrayBuffer, {
+    return new NextResponse(toArrayBuffer(reportBuffer), {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,

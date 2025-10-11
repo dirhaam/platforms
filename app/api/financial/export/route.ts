@@ -3,6 +3,15 @@ import { FinancialService } from '@/lib/invoice/financial-service';
 import { InvoiceExportOptions } from '@/types/invoice';
 import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
+function toArrayBuffer(view: Uint8Array): ArrayBuffer {
+  if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength && view.buffer instanceof ArrayBuffer) {
+    return view.buffer;
+  }
+
+  const arrayBuffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  return arrayBuffer instanceof ArrayBuffer ? arrayBuffer : view.slice().buffer;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const tenant = await getTenantFromRequest(request);
@@ -15,12 +24,7 @@ export async function POST(request: NextRequest) {
     if (options.format === 'xlsx') {
       const payload = await FinancialService.exportToExcel(tenant.id, options);
 
-      const arrayBuffer = payload.buffer.slice(
-        payload.byteOffset,
-        payload.byteOffset + payload.byteLength
-      );
-
-      return new NextResponse(arrayBuffer, {
+      return new NextResponse(toArrayBuffer(payload), {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.xlsx"`,
@@ -29,13 +33,8 @@ export async function POST(request: NextRequest) {
       });
     } else if (options.format === 'pdf') {
       const payload = await FinancialService.exportToPDF(tenant.id, options);
-
-      const arrayBuffer = payload.buffer.slice(
-        payload.byteOffset,
-        payload.byteOffset + payload.byteLength
-      );
-
-      return new NextResponse(arrayBuffer, {
+      
+      return new NextResponse(toArrayBuffer(payload), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.pdf"`,
