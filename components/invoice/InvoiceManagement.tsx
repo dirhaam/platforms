@@ -134,7 +134,7 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     } as const;
 
     return (
-      <Badge variant={variants[status] as any}>
+      <Badge variant={variants[status]}>
         {status.replace('_', ' ').toUpperCase()}
       </Badge>
     );
