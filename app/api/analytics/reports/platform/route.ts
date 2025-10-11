@@ -26,7 +26,12 @@ export async function POST(request: NextRequest) {
     const contentType = 'application/pdf';
     const filename = `platform-${reportConfig.title.toLowerCase().replace(/\s+/g, '-')}.pdf`;
 
-    return new NextResponse(reportBuffer, {
+    const arrayBuffer = reportBuffer.buffer.slice(
+      reportBuffer.byteOffset,
+      reportBuffer.byteOffset + reportBuffer.byteLength
+    );
+
+    return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,

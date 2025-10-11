@@ -68,7 +68,12 @@ export async function POST(
 
     const filename = `${dataType}-export.${format}`;
 
-    return new NextResponse(exportBuffer, {
+    const arrayBuffer = exportBuffer.buffer.slice(
+      exportBuffer.byteOffset,
+      exportBuffer.byteOffset + exportBuffer.byteLength
+    );
+
+    return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,

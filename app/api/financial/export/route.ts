@@ -15,7 +15,12 @@ export async function POST(request: NextRequest) {
     if (options.format === 'xlsx') {
       const payload = await FinancialService.exportToExcel(tenant.id, options);
 
-      return new NextResponse(payload, {
+      const arrayBuffer = payload.buffer.slice(
+        payload.byteOffset,
+        payload.byteOffset + payload.byteLength
+      );
+
+      return new NextResponse(arrayBuffer, {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.xlsx"`,
@@ -25,7 +30,12 @@ export async function POST(request: NextRequest) {
     } else if (options.format === 'pdf') {
       const payload = await FinancialService.exportToPDF(tenant.id, options);
 
-      return new NextResponse(payload, {
+      const arrayBuffer = payload.buffer.slice(
+        payload.byteOffset,
+        payload.byteOffset + payload.byteLength
+      );
+
+      return new NextResponse(arrayBuffer, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="financial-report-${new Date().toISOString().split('T')[0]}.pdf"`,
