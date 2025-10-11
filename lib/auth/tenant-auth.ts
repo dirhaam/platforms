@@ -696,8 +696,6 @@ export class TenantAuth {
       return { success: true, token };
     } catch (error) {
       console.error('Failed to generate password reset token:', error);
-      return { success: false, error: 'Failed to generate reset token' };
-    }
   }
 }
 
@@ -705,6 +703,7 @@ export class TenantAuth {
 export const PERMISSIONS = {
   MANAGE_BOOKINGS: 'manage_bookings',
   MANAGE_CUSTOMERS: 'manage_customers',
+  VIEW_CUSTOMERS: 'view_customers',
   MANAGE_SERVICES: 'manage_services',
   MANAGE_STAFF: 'manage_staff',
   VIEW_ANALYTICS: 'view_analytics',
@@ -713,7 +712,16 @@ export const PERMISSIONS = {
   EXPORT_DATA: 'export_data',
 } as const;
 
-export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+export type Permission =
+  | 'manage_bookings'
+  | 'manage_customers'
+  | 'view_customers'
+  | 'manage_services'
+  | 'manage_staff'
+  | 'view_analytics'
+  | 'send_messages'
+  | 'manage_settings'
+  | 'export_data';
 
 // Helper functions for API routes
 export async function getTenantFromRequest(request: NextRequest): Promise<{ id: string; name: string } | null> {
