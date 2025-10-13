@@ -19,7 +19,7 @@ import {
   Clock,
   RefreshCw
 } from 'lucide-react';
-import type { EnhancedTenant } from '@/lib/subdomains';
+import type { EnhancedTenant } from '@/lib/subdomain-constants';
 
 interface PlatformAnalyticsProps {
   tenants: EnhancedTenant[];

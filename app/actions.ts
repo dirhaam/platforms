@@ -1,7 +1,9 @@
 'use server';
 
-import { redis } from '@/lib/redis';
-import { isValidIcon, createEnhancedTenant, type TenantRegistrationData, type BusinessCategory, BUSINESS_CATEGORIES } from '@/lib/subdomains';
+import { setTenant, getTenant } from '@/lib/d1';
+
+import { isValidIcon, type TenantRegistrationData, type BusinessCategory, BUSINESS_CATEGORIES } from '@/lib/subdomain-constants';
+import { createEnhancedTenant } from '@/lib/subdomains';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { rootDomain, protocol } from '@/lib/utils';
@@ -110,7 +112,7 @@ export async function createSubdomainAction(
   }
 
   // Check if subdomain already exists
-  const subdomainAlreadyExists = await redis.get(`subdomain:${sanitizedSubdomain}`);
+  const subdomainAlreadyExists = await getTenant(sanitizedSubdomain);
   if (subdomainAlreadyExists) {
     return {
       subdomain,
@@ -143,8 +145,8 @@ export async function createSubdomainAction(
   // Create enhanced tenant data
   const enhancedTenant = await createEnhancedTenant(registrationData);
 
-  // Store in Redis
-  await redis.set(`subdomain:${sanitizedSubdomain}`, enhancedTenant);
+  // Store in D1
+  await setTenant(sanitizedSubdomain, enhancedTenant);
 
   // Log the tenant creation activity
   try {
@@ -157,12 +159,14 @@ export async function createSubdomainAction(
   redirect(`${protocol}://${sanitizedSubdomain}.${rootDomain}`);
 }
 
+import { deleteTenant } from '@/lib/d1';
+
 export async function deleteSubdomainAction(
   prevState: any,
   formData: FormData
 ) {
   const subdomain = formData.get('subdomain');
-  await redis.del(`subdomain:${subdomain}`);
+  await deleteTenant(subdomain as string);
   revalidatePath('/admin');
   return { success: 'Domain deleted successfully' };
 }

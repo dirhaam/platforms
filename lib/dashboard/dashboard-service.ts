@@ -209,8 +209,8 @@ export class DashboardService {
 
       return results.map(row => ({
         id: row.id,
-        scheduledAt: row.scheduledAt,
-        status: row.status,
+        scheduledAt: row.scheduledAt ?? new Date(),
+        status: row.status ?? 'pending',
         totalAmount: toNumber(row.totalAmount),
         customer: {
           id: row.customer?.id || '',
@@ -264,8 +264,8 @@ export class DashboardService {
 
       return results.map(row => ({
         id: row.id,
-        scheduledAt: row.scheduledAt,
-        status: row.status,
+        scheduledAt: row.scheduledAt ?? new Date(),
+        status: row.status ?? 'pending',
         totalAmount: toNumber(row.totalAmount),
         customer: {
           id: row.customer?.id || '',

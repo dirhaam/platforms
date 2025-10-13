@@ -29,7 +29,7 @@ import {
   Lock,
   Globe,
 } from 'lucide-react';
-import type { TenantSession } from '@/lib/auth/tenant-auth';
+import type { TenantSession } from '@/lib/auth/types';
 
 interface SuperAdminLayoutProps {
   children: React.ReactNode;

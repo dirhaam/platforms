@@ -27,7 +27,7 @@ import {
   Shield,
   Briefcase,
 } from 'lucide-react';
-import type { TenantSession } from '@/lib/auth/tenant-auth';
+import type { TenantSession } from '@/lib/auth/types';
 import { RBAC } from '@/lib/auth/rbac';
 
 interface TenantDashboardLayoutProps {

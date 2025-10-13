@@ -47,8 +47,8 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
         setFormData({
           customerId: invoice.customerId,
           dueDate: invoice.dueDate.toISOString().split('T')[0],
-          taxRate: invoice.taxRate.toNumber(),
-          discountAmount: invoice.discountAmount.toNumber(),
+          taxRate: Number(invoice.taxRate ?? 0),
+          discountAmount: Number(invoice.discountAmount ?? 0),
           notes: invoice.notes || '',
           terms: invoice.terms || '',
           paymentReference: invoice.paymentReference || '',
@@ -60,7 +60,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
         setItems(invoice.items.map(item => ({
           description: item.description,
           quantity: item.quantity,
-          unitPrice: item.unitPrice.toNumber(),
+          unitPrice: Number(item.unitPrice ?? 0),
           serviceId: item.serviceId
         })));
       } else {

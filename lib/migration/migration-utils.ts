@@ -1,10 +1,12 @@
 import { redis } from '@/lib/redis';
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
 import type { 
   LegacySubdomainData, 
   EnhancedTenant,
   MigrationResult 
 } from '@/types/database';
+import { tenants } from '@/lib/database/schema';
+import { count, eq } from 'drizzle-orm';
 
 /**
  * Migration utilities for tenant data
@@ -27,14 +29,16 @@ export class MigrationUtils {
       const redisCount = redisKeys.length;
       
       // Count PostgreSQL entries
-      const postgresCount = await prisma.tenant.count();
+      const [{ count: postgresCount }] = await db.select({ count: count() }).from(tenants);
       
       // Count legacy vs enhanced in Redis
       let legacyCount = 0;
       let enhancedCount = 0;
       
       if (redisKeys.length > 0) {
-        const values = await redis.mget<(LegacySubdomainData | EnhancedTenant)[]>(...redisKeys);
+        const values = (await redis.mget(...redisKeys)) as Array<
+          LegacySubdomainData | EnhancedTenant | null
+        >;
         
         for (const data of values) {
           if (data) {
@@ -76,7 +80,7 @@ export class MigrationUtils {
         return { success: true, backupData: {} };
       }
       
-      const values = await redis.mget<(LegacySubdomainData | EnhancedTenant)[]>(...keys);
+      const values = (await redis.mget(...keys)) as Array<LegacySubdomainData | EnhancedTenant | null>;
       const backupData: Record<string, any> = {};
       
       for (let i = 0; i < keys.length; i++) {
@@ -139,7 +143,7 @@ export class MigrationUtils {
         return result;
       }
       
-      const values = await redis.mget<(LegacySubdomainData | EnhancedTenant)[]>(...keys);
+      const values = (await redis.mget(...keys)) as Array<LegacySubdomainData | EnhancedTenant | null>;
       
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -198,9 +202,7 @@ export class MigrationUtils {
         const subdomain = key.replace('subdomain:', '');
         
         // Check if tenant exists in PostgreSQL
-        const pgTenant = await prisma.tenant.findUnique({
-          where: { subdomain },
-        });
+        const [pgTenant] = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain)).limit(1);
         
         if (pgTenant) {
           // Tenant exists in PostgreSQL, safe to remove from Redis

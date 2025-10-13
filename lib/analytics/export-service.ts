@@ -66,7 +66,7 @@ async function fetchBookingsWithRelations(
   ];
 
   if (options.statusFilter && options.statusFilter.length > 0) {
-    conditions.push(inArray(bookings.status, options.statusFilter));
+    conditions.push(inArray(bookings.status, options.statusFilter as any));
   }
 
   const rows = await db
@@ -148,7 +148,7 @@ async function fetchCustomersWithBookings(
   tenantId: string,
   dateRange: { startDate: Date; endDate: Date }
 ): Promise<CustomerWithBookings[]> {
-  const customerRows = await db
+  const customerRowsRaw = await db
     .select({
       id: customers.id,
       tenantId: customers.tenantId,
@@ -173,13 +173,19 @@ async function fetchCustomersWithBookings(
     )
     .orderBy(desc(customers.createdAt));
 
+  const customerRows = customerRowsRaw.map(row => ({
+    ...row,
+    createdAt: row.createdAt ?? new Date(),
+    updatedAt: row.updatedAt ?? new Date(),
+  }));
+
   if (customerRows.length === 0) {
     return [];
   }
 
   const customerIds = customerRows.map(c => c.id);
 
-  const bookingRows = await db
+  const bookingRowsRaw = await db
     .select({
       id: bookings.id,
       customerId: bookings.customerId,
@@ -197,13 +203,18 @@ async function fetchCustomersWithBookings(
       )
     );
 
+  const bookingRows = bookingRowsRaw.map(row => ({
+    ...row,
+    scheduledAt: row.scheduledAt ?? new Date(),
+  }));
+
   const bookingsByCustomer = new Map<string, CustomerWithBookings['bookings']>();
   for (const booking of bookingRows) {
     const list = bookingsByCustomer.get(booking.customerId) || [];
     list.push({
       id: booking.id,
       totalAmount: booking.totalAmount,
-      status: booking.status,
+      status: booking.status ?? 'pending',
       scheduledAt: booking.scheduledAt,
     });
     bookingsByCustomer.set(booking.customerId, list);
@@ -254,7 +265,7 @@ async function fetchServicesWithBookings(
   dateRange: { startDate: Date; endDate: Date },
   options: { statusFilter?: string[] } = {}
 ): Promise<ServiceWithBookings[]> {
-  const serviceRows = await db
+  const serviceRowsRaw = await db
     .select({
       id: services.id,
       tenantId: services.tenantId,
@@ -273,6 +284,12 @@ async function fetchServicesWithBookings(
     .where(eq(services.tenantId, tenantId))
     .orderBy(desc(services.createdAt));
 
+  const serviceRows = serviceRowsRaw.map(row => ({
+    ...row,
+    createdAt: row.createdAt ?? new Date(),
+    updatedAt: row.updatedAt ?? new Date(),
+  }));
+
   if (serviceRows.length === 0) {
     return [];
   }
@@ -287,10 +304,10 @@ async function fetchServicesWithBookings(
   ];
 
   if (options.statusFilter && options.statusFilter.length > 0) {
-    conditions.push(inArray(bookings.status, options.statusFilter));
+    conditions.push(inArray(bookings.status, options.statusFilter as any));
   }
 
-  const bookingRows = await db
+  const bookingRowsRaw = await db
     .select({
       id: bookings.id,
       serviceId: bookings.serviceId,
@@ -300,6 +317,10 @@ async function fetchServicesWithBookings(
     })
     .from(bookings)
     .where(and(...conditions));
+  const bookingRows = bookingRowsRaw.map(row => ({
+    ...row,
+    createdAt: row.createdAt ?? new Date(),
+  }));
 
   const bookingsByService = new Map<string, ServiceWithBookings['bookings']>();
   for (const booking of bookingRows) {
@@ -308,7 +329,7 @@ async function fetchServicesWithBookings(
       id: booking.id,
       totalAmount: booking.totalAmount,
       createdAt: booking.createdAt,
-      status: booking.status,
+      status: booking.status ?? 'pending',
     });
     bookingsByService.set(booking.serviceId, list);
   }
@@ -321,8 +342,8 @@ async function fetchServicesWithBookings(
       duration: service.duration,
       price: service.price,
       category: service.category,
-      isActive: service.isActive,
-      homeVisitAvailable: service.homeVisitAvailable,
+      isActive: service.isActive ?? false,
+      homeVisitAvailable: service.homeVisitAvailable ?? false,
       homeVisitSurcharge: service.homeVisitSurcharge,
       createdAt: service.createdAt,
       updatedAt: service.updatedAt,

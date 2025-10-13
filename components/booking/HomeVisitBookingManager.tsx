@@ -10,7 +10,6 @@ import { Booking, Service } from '@/types/booking';
 import { TravelCalculation } from '@/types/location';
 import { TravelCalculator } from '@/components/location/TravelCalculator';
 import { toast } from 'sonner';
-import { Decimal } from '@prisma/client/runtime/library';
 
 interface HomeVisitBookingManagerProps {
   tenantId: string;
@@ -140,7 +139,7 @@ export function HomeVisitBookingManager({
           const newTotal = baseAmount + homeVisitSurcharge + calculation.surcharge;
 
           if (Math.abs(newTotal - currentAmount) > 0.01) {
-            onBookingUpdate(booking.id, { totalAmount: new Decimal(newTotal) });
+            onBookingUpdate(booking.id, { totalAmount: newTotal });
           }
         }
       } else {

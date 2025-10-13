@@ -7,7 +7,53 @@ import {
 import { WhatsAppDeviceManager } from './device-manager';
 import { WhatsAppEndpointManager } from './endpoint-manager';
 import { redis } from '@/lib/redis';
-import crypto from 'crypto';
+
+const ensureCrypto = () => {
+  if (typeof globalThis.crypto === 'undefined') {
+    throw new Error('Web Crypto API is not available in this environment');
+  }
+  return globalThis.crypto;
+};
+
+const encoder = new TextEncoder();
+
+const arrayBufferToHex = (buffer: ArrayBuffer | Uint8Array) => {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const hexToUint8Array = (hex: string) => {
+  const length = hex.length / 2;
+  const result = new Uint8Array(length);
+  for (let i = 0; i < length; i++) {
+    result[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return result;
+};
+
+const timingSafeEqual = (a: Uint8Array, b: Uint8Array) => {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a[i] ^ b[i];
+  }
+  return diff === 0;
+};
+
+const computeHmacSha256Hex = async (secret: string, payload: string) => {
+  const cryptoObj = ensureCrypto();
+  const key = await cryptoObj.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await cryptoObj.subtle.sign('HMAC', key, encoder.encode(payload));
+  return arrayBufferToHex(signature);
+};
 
 export class WhatsAppWebhookHandler {
   private static instance: WhatsAppWebhookHandler;
@@ -288,15 +334,15 @@ export class WhatsAppWebhookHandler {
         return false;
       }
 
-      const expectedSignature = crypto
-        .createHmac('sha256', endpoint.webhookSecret)
-        .update(JSON.stringify(payload))
-        .digest('hex');
-
-      return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(`sha256=${expectedSignature}`)
-      );
+      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      const expectedSignatureHex = await computeHmacSha256Hex(endpoint.webhookSecret, payloadString);
+      const expectedHeaderValue = `sha256=${expectedSignatureHex}`;
+      const providedBytes = encoder.encode(signature);
+      const expectedBytes = encoder.encode(expectedHeaderValue);
+      if (providedBytes.length !== expectedBytes.length) {
+        return false;
+      }
+      return timingSafeEqual(providedBytes, expectedBytes);
     } catch (error) {
       console.error('Error verifying webhook signature:', error);
       return false;
@@ -467,7 +513,7 @@ export class WhatsAppWebhookHandler {
       const eventKey = `whatsapp:events:${tenantId}`;
       const eventStrings = await redis.lrange(eventKey, 0, limit - 1);
       
-      return eventStrings.map(eventStr => {
+      return eventStrings.map((eventStr: string) => {
         const event = JSON.parse(eventStr);
         return {
           ...event,

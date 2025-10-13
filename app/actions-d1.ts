@@ -5,7 +5,8 @@ import {
   setTenant, 
   deleteTenant 
 } from '@/lib/d1';
-import { isValidIcon, createEnhancedTenant, type TenantRegistrationData, type BusinessCategory, BUSINESS_CATEGORIES } from '@/lib/subdomains';
+import { isValidIcon, type TenantRegistrationData, type BusinessCategory, BUSINESS_CATEGORIES } from '@/lib/subdomain-constants';
+import { createEnhancedTenant } from '@/lib/subdomains';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { rootDomain, protocol } from '@/lib/utils';

@@ -1,0 +1,18 @@
+{
+  "name": "boq-platforms-workers",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "next": "15.3.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0",
+    "@cloudflare/next-on-pages": "^1.0.0"
+  }
+}

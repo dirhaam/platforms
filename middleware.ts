@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { rootDomain } from '@/lib/utils';
-import { AuthMiddleware } from '@/lib/auth/auth-middleware';
+import { EdgeAuthMiddleware } from '@/lib/auth/edge-auth-middleware';
 
 function extractSubdomain(request: NextRequest): string | null {
   const url = request.url;
@@ -49,10 +49,10 @@ export async function middleware(request: NextRequest) {
     // Block access to platform admin page from subdomains (unless superadmin)
     if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
       // Check if user is superadmin
-      const authResponse = await AuthMiddleware.authenticate(request, subdomain);
+      const authResponse = await EdgeAuthMiddleware.authenticate(request, subdomain);
       if (authResponse) {
         // Check if this is a superadmin trying to access platform admin
-        const session = await AuthMiddleware.getSessionFromRequest(request);
+        const session = await EdgeAuthMiddleware.getSessionFromRequest(request);
         if (session?.isSuperAdmin && pathname.startsWith('/admin')) {
           // Allow superadmin to access platform admin from any domain
           return NextResponse.next();
@@ -67,14 +67,14 @@ export async function middleware(request: NextRequest) {
     }
 
     // For other subdomain paths, continue with authentication if needed
-    const authResponse = await AuthMiddleware.authenticate(request, subdomain);
+    const authResponse = await EdgeAuthMiddleware.authenticate(request, subdomain);
     if (authResponse) {
       return authResponse;
     }
   } else {
     // On root domain - handle platform admin access
     if (pathname.startsWith('/admin')) {
-      const authResponse = await AuthMiddleware.authenticatePlatformAdmin(request);
+      const authResponse = await EdgeAuthMiddleware.authenticatePlatformAdmin(request);
       if (authResponse) {
         return authResponse;
       }

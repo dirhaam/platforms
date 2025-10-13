@@ -3,6 +3,9 @@ import { getRecommendedTemplate, type LandingPageTemplate } from '@/lib/template
 import { CacheService } from '@/lib/cache/cache-service';
 import { PerformanceMonitor } from '@/lib/performance/performance-monitor';
 import { Service } from '@/types/booking';
+import { db } from '@/lib/database';
+import { services as servicesTable, businessHours as businessHoursTable } from '@/lib/database/schema';
+import { and, eq, desc } from 'drizzle-orm';
 
 export interface TenantLandingData {
   id: string;
@@ -107,35 +110,35 @@ export class TenantService {
         }
 
         try {
-          // Try to get services from PostgreSQL
-          const { prisma } = await import('@/lib/database');
-          
-          const services = await prisma.service.findMany({
-            where: {
-              tenantId,
-              isActive: true,
-            },
-            orderBy: {
-              createdAt: 'desc',
-            },
-          });
+          const services = await db
+            .select()
+            .from(servicesTable)
+            .where(and(eq(servicesTable.tenantId, tenantId), eq(servicesTable.isActive, true)))
+            .orderBy(desc(servicesTable.createdAt));
 
-          const formattedServices: Service[] = services.map(service => ({
-            id: service.id,
-            tenantId: service.tenantId,
-            name: service.name,
-            description: service.description,
-            duration: service.duration,
-            price: service.price,
-            category: service.category,
-            isActive: service.isActive,
-            homeVisitAvailable: service.homeVisitAvailable,
-            homeVisitSurcharge: service.homeVisitSurcharge || undefined,
-            images: service.images,
-            requirements: service.requirements,
-            createdAt: service.createdAt,
-            updatedAt: service.updatedAt,
-          }));
+          const formattedServices: Service[] = services.map(service => {
+            const createdAt = service.createdAt ?? new Date();
+            const updatedAt = service.updatedAt ?? new Date();
+
+            return {
+              id: service.id,
+              tenantId: service.tenantId,
+              name: service.name,
+              description: service.description,
+              duration: service.duration,
+              price: Number(service.price ?? 0),
+              category: service.category,
+              isActive: service.isActive ?? true,
+              homeVisitAvailable: service.homeVisitAvailable ?? false,
+              homeVisitSurcharge: service.homeVisitSurcharge !== null && service.homeVisitSurcharge !== undefined
+                ? Number(service.homeVisitSurcharge)
+                : undefined,
+              images: service.images ?? [],
+              requirements: service.requirements ?? [],
+              createdAt,
+              updatedAt,
+            };
+          });
 
           // Cache the result
           await CacheService.setServicesByTenant(tenantId, formattedServices);
@@ -168,24 +171,16 @@ export class TenantService {
         }
 
         try {
-          // Try to get business hours from PostgreSQL
-          const { prisma } = await import('@/lib/database');
-          
-          const businessHours = await prisma.businessHours.findUnique({
-            where: {
-              tenantId,
-            },
-          });
+          const [record] = await db
+            .select()
+            .from(businessHoursTable)
+            .where(eq(businessHoursTable.tenantId, tenantId))
+            .limit(1);
 
-          let result: BusinessHours;
-          
-          if (businessHours && businessHours.schedule) {
-            result = businessHours.schedule as BusinessHours;
-          } else {
-            result = this.getDefaultBusinessHours();
-          }
+          const result: BusinessHours = record?.schedule
+            ? (record.schedule as BusinessHours)
+            : this.getDefaultBusinessHours();
 
-          // Cache the result
           await CacheService.setBusinessHours(tenantId, result);
 
           return result;
@@ -206,7 +201,6 @@ export class TenantService {
   }
 
   private static async getSampleServices(): Promise<Service[]> {
-    const { Decimal } = await import('@prisma/client/runtime/library');
     const now = new Date();
     return [
       {
@@ -215,7 +209,7 @@ export class TenantService {
         name: 'Consultation',
         description: 'Initial consultation to understand your needs',
         duration: 30,
-        price: new Decimal(50),
+        price: 50,
         category: 'Consultation',
         isActive: true,
         homeVisitAvailable: false,
@@ -231,11 +225,11 @@ export class TenantService {
         name: 'Standard Service',
         description: 'Our most popular service package',
         duration: 60,
-        price: new Decimal(100),
+        price: 100,
         category: 'Standard',
         isActive: true,
         homeVisitAvailable: true,
-        homeVisitSurcharge: new Decimal(25),
+        homeVisitSurcharge: 25,
         images: [],
         requirements: [],
         createdAt: now,
@@ -247,11 +241,11 @@ export class TenantService {
         name: 'Premium Service',
         description: 'Comprehensive premium service with extras',
         duration: 90,
-        price: new Decimal(150),
+        price: 150,
         category: 'Premium',
         isActive: true,
         homeVisitAvailable: true,
-        homeVisitSurcharge: new Decimal(35),
+        homeVisitSurcharge: 35,
         images: [],
         requirements: [],
         createdAt: now,

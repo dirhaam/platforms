@@ -1,16 +1,22 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
+import * as schema from './schema';
+import { createDrizzleD1Database } from './d1-client';
 
-// Create a connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of connections in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+type DatabaseInstance = DrizzleD1Database<typeof schema>;
 
-// Initialize Drizzle ORM
-export const db = drizzle(pool);
+let cachedDb: DatabaseInstance | null = null;
 
-// Export the pool for direct use if needed
-export { pool };
+export function getDb(env?: any): DatabaseInstance {
+  if (env) {
+    return drizzle(createDrizzleD1Database(env), { schema });
+  }
+
+  if (!cachedDb) {
+    const database = createDrizzleD1Database();
+    cachedDb = drizzle(database, { schema });
+  }
+
+  return cachedDb;
+}
+
+export const db = getDb();

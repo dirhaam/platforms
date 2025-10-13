@@ -21,10 +21,16 @@ import {
   type Booking,
   type Tenant,
 } from '@/types/invoice';
-import { alias } from 'drizzle-orm/pg-core';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from 'drizzle-orm';
 import Decimal from 'decimal.js';
-import crypto from 'crypto';
+
+const randomUUID = () => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+};
 
 type InvoiceRecord = typeof invoices.$inferSelect;
 type InvoiceItemRecord = typeof invoiceItems.$inferSelect;
@@ -87,7 +93,7 @@ export class InvoiceService {
    */
   static async createInvoice(tenantId: string, data: CreateInvoiceRequest): Promise<Invoice> {
     const invoiceNumber = await this.generateInvoiceNumber(tenantId);
-    const invoiceId = crypto.randomUUID();
+    const invoiceId = randomUUID();
     
     // Calculate totals
     let subtotal = new Decimal(0);
@@ -145,12 +151,12 @@ export class InvoiceService {
       qrCodeData,
       createdAt: new Date(),
       updatedAt: new Date()
-    });
+    } as any);
 
     // Create invoice items
     const itemPromises = items.map(item => 
       db.insert(invoiceItems).values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         invoiceId,
         description: item.description,
         quantity: item.quantity,
@@ -159,7 +165,7 @@ export class InvoiceService {
         serviceId: item.serviceId,
         createdAt: new Date(),
         updatedAt: new Date()
-      }).returning()
+      } as any).returning()
     );
     
     await Promise.all(itemPromises);
@@ -211,11 +217,17 @@ export class InvoiceService {
     }
 
     if (filters?.amountMin !== undefined) {
-      conditions.push(gte(invoices.totalAmount, new Decimal(filters.amountMin).toFixed(2)));
+      const minValue = Number(filters.amountMin);
+      if (!Number.isNaN(minValue)) {
+        conditions.push(gte(invoices.totalAmount, minValue));
+      }
     }
 
     if (filters?.amountMax !== undefined) {
-      conditions.push(lte(invoices.totalAmount, new Decimal(filters.amountMax).toFixed(2)));
+      const maxValue = Number(filters.amountMax);
+      if (!Number.isNaN(maxValue)) {
+        conditions.push(lte(invoices.totalAmount, maxValue));
+      }
     }
 
     const whereClause = and(...conditions);
@@ -387,6 +399,7 @@ export class InvoiceService {
 
     const serviceName = bookingRow.service?.name ?? 'Service';
     const bookingTotal = parseDecimal(booking.totalAmount);
+    const scheduledAt = booking.scheduledAt ?? new Date();
 
     const invoiceData: CreateInvoiceRequest = {
       customerId: booking.customerId,
@@ -398,7 +411,7 @@ export class InvoiceService {
         unitPrice: bookingTotal,
         serviceId: booking.serviceId
       }],
-      notes: `Invoice for booking on ${booking.scheduledAt.toLocaleDateString()}`
+      notes: `Invoice for booking on ${scheduledAt.toLocaleDateString()}`
     };
 
     return this.createInvoice(tenantId, invoiceData);
@@ -441,7 +454,7 @@ export class InvoiceService {
     const bookingServices = alias(services, 'booking_services');
     const itemServices = alias(services, 'invoice_item_services');
 
-    const baseRows = await db
+    let baseQuery: any = db
       .select({
         invoice: invoices,
         customer: customers,
@@ -455,9 +468,17 @@ export class InvoiceService {
       .leftJoin(bookingServices, eq(bookings.serviceId, bookingServices.id))
       .leftJoin(tenants, eq(invoices.tenantId, tenants.id))
       .where(whereClause)
-      .orderBy(desc(invoices.createdAt))
-      .limit(options.limit ?? undefined)
-      .offset(options.offset ?? undefined);
+      .orderBy(desc(invoices.createdAt));
+
+    if (options.limit !== undefined) {
+      baseQuery = baseQuery.limit(options.limit);
+    }
+
+    if (options.offset !== undefined) {
+      baseQuery = baseQuery.offset(options.offset);
+    }
+
+    const baseRows = await baseQuery as InvoiceQueryRow[];
 
     const invoiceIds = baseRows.map(row => row.invoice.id);
     if (invoiceIds.length === 0) {
@@ -494,8 +515,8 @@ export class InvoiceService {
       bookingId: invoice.bookingId ?? undefined,
       invoiceNumber: invoice.invoiceNumber,
       status: invoice.status as InvoiceStatus,
-      issueDate: invoice.issueDate,
-      dueDate: invoice.dueDate,
+      issueDate: invoice.issueDate ?? new Date(),
+      dueDate: invoice.dueDate ?? new Date(),
       paidDate: invoice.paidDate ?? undefined,
       subtotal: parseDecimal(invoice.subtotal),
       taxRate: parseDecimal(invoice.taxRate),
@@ -509,8 +530,8 @@ export class InvoiceService {
       terms: invoice.terms ?? undefined,
       qrCodeData: invoice.qrCodeData ?? undefined,
       qrCodeUrl: invoice.qrCodeUrl ?? undefined,
-      createdAt: invoice.createdAt,
-      updatedAt: invoice.updatedAt,
+      createdAt: invoice.createdAt ?? new Date(),
+      updatedAt: invoice.updatedAt ?? new Date(),
       customer: this.mapCustomerRow(row.customer),
       booking: this.mapBookingRow(row.booking, row.bookingService),
       tenant: this.mapTenantRow(row.tenant),
@@ -523,13 +544,11 @@ export class InvoiceService {
       id: item.id,
       invoiceId: item.invoiceId,
       description: item.description,
-      quantity: item.quantity,
+      quantity: item.quantity ?? 0,
       unitPrice: parseDecimal(item.unitPrice),
       totalPrice: parseDecimal(item.totalPrice),
       serviceId: item.serviceId ?? undefined,
       service: this.mapServiceRow(row.service),
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
     };
   }
 
@@ -549,9 +568,20 @@ export class InvoiceService {
       return undefined;
     }
 
+    const scheduledAt = booking.scheduledAt ?? new Date();
+    const createdAt = booking.createdAt ?? new Date();
+    const updatedAt = booking.updatedAt ?? new Date();
+    const remindersSent = Array.isArray(booking.remindersSent)
+      ? booking.remindersSent.map(value => new Date(value))
+      : [];
+
     return {
       ...booking,
+      scheduledAt,
+      createdAt,
+      updatedAt,
       totalAmount: parseDecimal(booking.totalAmount),
+      remindersSent,
       service: this.mapServiceRow(service),
     } as Booking;
   }

@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 import { WhatsAppConfiguration } from '@/types/whatsapp';

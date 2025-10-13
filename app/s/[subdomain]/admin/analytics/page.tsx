@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { redirect } from 'next/navigation';
 import { getTenantSession } from '@/lib/auth/tenant-auth';
 import { RBAC } from '@/lib/auth/rbac';

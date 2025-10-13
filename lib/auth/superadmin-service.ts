@@ -1,5 +1,10 @@
-import { redis } from '@/lib/redis';
+import { db } from '@/lib/database';
+import { superAdmins } from '@/lib/database/schema';
+import { eq, desc } from 'drizzle-orm';
 import { TenantAuth } from './tenant-auth';
+
+const DEFAULT_SUPERADMIN_EMAIL = process.env.DEFAULT_SUPERADMIN_EMAIL || 'dirhamrozi@gmail.com';
+const DEFAULT_SUPERADMIN_PASSWORD = process.env.DEFAULT_SUPERADMIN_PASSWORD || '12345nabila';
 
 export interface SuperAdmin {
   id: string;
@@ -7,21 +12,89 @@ export interface SuperAdmin {
   name: string;
   isActive: boolean;
   passwordHash: string;
-  lastLoginAt?: Date;
+  lastLoginAt?: Date | null;
   loginAttempts: number;
-  lockedUntil?: Date;
-  passwordResetToken?: string;
-  passwordResetExpires?: Date;
+  lockedUntil?: Date | null;
+  passwordResetToken?: string | null;
+  passwordResetExpires?: Date | null;
   permissions: string[];
   canAccessAllTenants: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
+type SuperAdminRow = typeof superAdmins.$inferSelect;
+
+const ensureCrypto = () => {
+  if (typeof globalThis.crypto === 'undefined') {
+    throw new Error('Web Crypto API is not available in this environment');
+  }
+  return globalThis.crypto;
+};
+
+const generateId = () => {
+  const cryptoObj = ensureCrypto();
+  if (typeof cryptoObj.randomUUID === 'function') {
+    return `sa_${cryptoObj.randomUUID().replace(/-/g, '')}`;
+  }
+  return `sa_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const mapRow = (row: SuperAdminRow): SuperAdmin => ({
+  id: row.id,
+  email: row.email,
+  name: row.name,
+  isActive: row.isActive ?? true,
+  passwordHash: row.passwordHash,
+  lastLoginAt: row.lastLoginAt ?? null,
+  loginAttempts: row.loginAttempts ?? 0,
+  lockedUntil: row.lockedUntil ?? null,
+  passwordResetToken: row.passwordResetToken ?? null,
+  passwordResetExpires: row.passwordResetExpires ?? null,
+  permissions: Array.isArray(row.permissions) ? row.permissions : [],
+  canAccessAllTenants: row.canAccessAllTenants ?? true,
+  createdAt: row.createdAt ?? new Date(),
+  updatedAt: row.updatedAt ?? new Date(),
+});
+
+const buildUpdate = (updates: Partial<SuperAdmin>) => {
+  const data: Partial<typeof superAdmins.$inferInsert> = {
+    updatedAt: new Date(),
+  };
+
+  if (updates.email !== undefined) data.email = updates.email;
+  if (updates.name !== undefined) data.name = updates.name;
+  if (updates.isActive !== undefined) data.isActive = updates.isActive;
+  if (updates.passwordHash !== undefined) data.passwordHash = updates.passwordHash;
+  if (updates.lastLoginAt !== undefined) data.lastLoginAt = updates.lastLoginAt ?? null;
+  if (updates.loginAttempts !== undefined) data.loginAttempts = updates.loginAttempts;
+  if (updates.lockedUntil !== undefined) data.lockedUntil = updates.lockedUntil ?? null;
+  if (updates.passwordResetToken !== undefined) data.passwordResetToken = updates.passwordResetToken ?? null;
+  if (updates.passwordResetExpires !== undefined) data.passwordResetExpires = updates.passwordResetExpires ?? null;
+  if (updates.permissions !== undefined) data.permissions = updates.permissions ?? [];
+  if (updates.canAccessAllTenants !== undefined) data.canAccessAllTenants = updates.canAccessAllTenants;
+
+  return data;
+};
+
 export class SuperAdminService {
-  private static readonly SUPERADMIN_PREFIX = 'superadmin:';
-  private static readonly SUPERADMIN_EMAIL_INDEX = 'superadmin:email:';
-  private static readonly SUPERADMIN_LIST = 'superadmin:list';
+  private static async ensureDefaultSuperAdmin(): Promise<void> {
+    if (process.env.NODE_ENV === 'production') {
+      return;
+    }
+
+    const existing = await this.findByEmail(DEFAULT_SUPERADMIN_EMAIL);
+    if (!existing) {
+      await this.create({
+        email: DEFAULT_SUPERADMIN_EMAIL,
+        name: 'Development SuperAdmin',
+        password: DEFAULT_SUPERADMIN_PASSWORD,
+      });
+      console.warn(
+        `[SuperAdminService] Created default super admin ${DEFAULT_SUPERADMIN_EMAIL} (development only)`
+      );
+    }
+  }
 
   // Create SuperAdmin
   static async create(data: {
@@ -40,9 +113,11 @@ export class SuperAdminService {
     // Hash password
     const passwordHash = await TenantAuth.hashPassword(password);
 
-    // Create SuperAdmin object
-    const superAdmin: SuperAdmin = {
-      id: `sa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    const now = new Date();
+    const id = generateId();
+
+    await db.insert(superAdmins).values({
+      id,
       email,
       name,
       isActive: true,
@@ -50,89 +125,39 @@ export class SuperAdminService {
       loginAttempts: 0,
       permissions: ['*'],
       canAccessAllTenants: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      createdAt: now,
+      updatedAt: now,
+    });
 
-    // Store in Redis
-    await this.save(superAdmin);
+    const [created] = await db
+      .select()
+      .from(superAdmins)
+      .where(eq(superAdmins.id, id))
+      .limit(1);
 
-    return superAdmin;
+    return mapRow(created!);
   }
 
   // Find SuperAdmin by email
   static async findByEmail(email: string): Promise<SuperAdmin | null> {
-    try {
-      console.log('Looking for SuperAdmin with email:', email);
-      const emailKey = `${this.SUPERADMIN_EMAIL_INDEX}${email}`;
-      console.log('Email key:', emailKey);
-      
-      const superAdminId = await redis.get(emailKey);
-      
-      if (!superAdminId) {
-        return null;
-      }
+    const [row] = await db
+      .select()
+      .from(superAdmins)
+      .where(eq(superAdmins.email, email))
+      .limit(1);
 
-      const dataKey = `${this.SUPERADMIN_PREFIX}${superAdminId}`;
-      const data = await redis.get(dataKey);
-      
-      if (!data) {
-        return null;
-      }
-
-      // Handle both string and object responses from Redis
-      let superAdmin: SuperAdmin;
-      if (typeof data === 'string') {
-        superAdmin = this.deserialize(data);
-      } else if (typeof data === 'object') {
-        // Redis already parsed the JSON, just convert dates
-        superAdmin = {
-          ...data as any,
-          createdAt: new Date(data.createdAt),
-          updatedAt: new Date(data.updatedAt),
-          lastLoginAt: data.lastLoginAt ? new Date(data.lastLoginAt) : undefined,
-          lockedUntil: data.lockedUntil ? new Date(data.lockedUntil) : undefined,
-          passwordResetExpires: data.passwordResetExpires ? new Date(data.passwordResetExpires) : undefined,
-        };
-      } else {
-        return null;
-      }
-      console.log('Deserialized SuperAdmin:', { id: superAdmin.id, email: superAdmin.email, isActive: superAdmin.isActive });
-      return superAdmin;
-    } catch (error) {
-      console.error('Error finding SuperAdmin by email:', error);
-      return null;
-    }
+    return row ? mapRow(row) : null;
   }
 
   // Find SuperAdmin by ID
   static async findById(id: string): Promise<SuperAdmin | null> {
-    try {
-      const data = await redis.get(`${this.SUPERADMIN_PREFIX}${id}`);
-      if (!data) {
-        return null;
-      }
+    const [row] = await db
+      .select()
+      .from(superAdmins)
+      .where(eq(superAdmins.id, id))
+      .limit(1);
 
-      // Handle both string and object responses from Redis
-      if (typeof data === 'string') {
-        return this.deserialize(data);
-      } else if (typeof data === 'object') {
-        // Redis already parsed the JSON, just convert dates
-        return {
-          ...data as any,
-          createdAt: new Date(data.createdAt),
-          updatedAt: new Date(data.updatedAt),
-          lastLoginAt: data.lastLoginAt ? new Date(data.lastLoginAt) : undefined,
-          lockedUntil: data.lockedUntil ? new Date(data.lockedUntil) : undefined,
-          passwordResetExpires: data.passwordResetExpires ? new Date(data.passwordResetExpires) : undefined,
-        };
-      } else {
-        return null;
-      }
-    } catch (error) {
-      console.error('Error finding SuperAdmin by ID:', error);
-      return null;
-    }
+    return row ? mapRow(row) : null;
   }
 
   // Update SuperAdmin
@@ -142,48 +167,22 @@ export class SuperAdminService {
       throw new Error('SuperAdmin not found');
     }
 
-    const updated: SuperAdmin = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date(),
-    };
+    const data = buildUpdate(updates);
+    await db.update(superAdmins).set(data).where(eq(superAdmins.id, id));
 
-    await this.save(updated);
-    return updated;
-  }
+    const [row] = await db
+      .select()
+      .from(superAdmins)
+      .where(eq(superAdmins.id, id))
+      .limit(1);
 
-  // Save SuperAdmin to Redis
-  private static async save(superAdmin: SuperAdmin): Promise<void> {
-    const serialized = this.serialize(superAdmin);
-    
-    // Store SuperAdmin data
-    await redis.set(`${this.SUPERADMIN_PREFIX}${superAdmin.id}`, serialized);
-
-    // Store email index
-    await redis.set(`${this.SUPERADMIN_EMAIL_INDEX}${superAdmin.email}`, superAdmin.id);
-
-    // Add to list
-    await redis.sadd(this.SUPERADMIN_LIST, superAdmin.id);
+    return mapRow(row!);
   }
 
   // List all SuperAdmins
   static async list(): Promise<SuperAdmin[]> {
-    try {
-      const ids = await redis.smembers(this.SUPERADMIN_LIST);
-      const superAdmins: SuperAdmin[] = [];
-
-      for (const id of ids) {
-        const superAdmin = await this.findById(id as string);
-        if (superAdmin) {
-          superAdmins.push(superAdmin);
-        }
-      }
-
-      return superAdmins.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    } catch (error) {
-      console.error('Error listing SuperAdmins:', error);
-      return [];
-    }
+    const rows = await db.select().from(superAdmins).orderBy(desc(superAdmins.createdAt));
+    return rows.map(mapRow);
   }
 
   // Delete SuperAdmin
@@ -193,10 +192,7 @@ export class SuperAdminService {
       throw new Error('SuperAdmin not found');
     }
 
-    // Remove from Redis
-    await redis.del(`${this.SUPERADMIN_PREFIX}${id}`);
-    await redis.del(`${this.SUPERADMIN_EMAIL_INDEX}${existing.email}`);
-    await redis.srem(this.SUPERADMIN_LIST, id);
+    await db.delete(superAdmins).where(eq(superAdmins.id, id));
   }
 
   // Authenticate SuperAdmin
@@ -205,6 +201,8 @@ export class SuperAdminService {
     password: string
   ): Promise<{ success: boolean; superAdmin?: SuperAdmin; error?: string }> {
     try {
+      await this.ensureDefaultSuperAdmin();
+
       const superAdmin = await this.findByEmail(email);
       
       if (!superAdmin) {
@@ -229,7 +227,7 @@ export class SuperAdminService {
         
         await this.update(superAdmin.id, {
           loginAttempts: newAttempts,
-          lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : undefined, // 30 minutes
+          lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
         });
 
         return { success: false, error: 'Invalid credentials' };
@@ -255,72 +253,16 @@ export class SuperAdminService {
     await this.update(id, {
       passwordHash,
       loginAttempts: 0,
-      lockedUntil: undefined,
+      lockedUntil: null,
     });
   }
 
   // Activate/Deactivate SuperAdmin
   static async setActive(id: string, isActive: boolean): Promise<SuperAdmin> {
-    return await this.update(id, { 
+    return await this.update(id, {
       isActive,
       loginAttempts: isActive ? 0 : undefined,
-      lockedUntil: isActive ? undefined : undefined,
+      lockedUntil: isActive ? null : undefined,
     });
-  }
-
-  // Serialize SuperAdmin for Redis storage
-  private static serialize(superAdmin: SuperAdmin): string {
-    return JSON.stringify({
-      ...superAdmin,
-      createdAt: superAdmin.createdAt.toISOString(),
-      updatedAt: superAdmin.updatedAt.toISOString(),
-      lastLoginAt: superAdmin.lastLoginAt?.toISOString(),
-      lockedUntil: superAdmin.lockedUntil?.toISOString(),
-      passwordResetExpires: superAdmin.passwordResetExpires?.toISOString(),
-    });
-  }
-
-  // Deserialize SuperAdmin from Redis storage
-  private static deserialize(data: string): SuperAdmin {
-    const parsed = JSON.parse(data);
-    return {
-      ...parsed,
-      createdAt: new Date(parsed.createdAt),
-      updatedAt: new Date(parsed.updatedAt),
-      lastLoginAt: parsed.lastLoginAt ? new Date(parsed.lastLoginAt) : undefined,
-      lockedUntil: parsed.lockedUntil ? new Date(parsed.lockedUntil) : undefined,
-      passwordResetExpires: parsed.passwordResetExpires ? new Date(parsed.passwordResetExpires) : undefined,
-    };
-  }
-
-  // Check if any SuperAdmin exists
-  static async hasAnySuperAdmin(): Promise<boolean> {
-    try {
-      const count = await redis.scard(this.SUPERADMIN_LIST);
-      return count > 0;
-    } catch (error) {
-      console.error('Error checking SuperAdmin existence:', error);
-      return false;
-    }
-  }
-
-  // Initialize default SuperAdmin if none exists
-  static async initializeDefault(): Promise<SuperAdmin | null> {
-    try {
-      const hasAny = await this.hasAnySuperAdmin();
-      if (hasAny) {
-        return null; // Already has SuperAdmin
-      }
-
-      // Create default SuperAdmin
-      return await this.create({
-        email: 'dirhamrozi@gmail.com',
-        name: 'Super Administrator',
-        password: '12345nabila',
-      });
-    } catch (error) {
-      console.error('Error initializing default SuperAdmin:', error);
-      return null;
-    }
   }
 }

@@ -1,43 +1,50 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
+import { sql } from 'drizzle-orm';
+import * as schema from './database/schema';
+import { createDrizzleD1Database } from './database/d1-client';
 
-// Create a connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of connections in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+type DatabaseInstance = DrizzleD1Database<typeof schema>;
 
-// Initialize Drizzle ORM
-export const db = drizzle(pool);
+let cachedDb: DatabaseInstance | null = null;
 
-// Export the pool for direct use if needed
-export { pool };
+export function getDb(env?: any): DatabaseInstance {
+  if (env) {
+    return drizzle(createDrizzleD1Database(env), { schema });
+  }
 
-// Connection health check
-export async function checkDatabaseConnection(): Promise<boolean> {
+  if (!cachedDb) {
+    const database = createDrizzleD1Database();
+    cachedDb = drizzle(database, { schema });
+  }
+
+  return cachedDb;
+}
+
+export const db = getDb();
+
+export async function checkDatabaseConnection(env?: any): Promise<boolean> {
   try {
-    await pool.query('SELECT 1');
+    const database = createDrizzleD1Database(env);
+    await database.prepare('SELECT 1').bind().first();
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
+    console.error('Cloudflare D1 connection failed:', error);
     return false;
   }
 }
 
-// Database utilities
 export class DatabaseUtils {
-  static async healthCheck(): Promise<{
+  static async healthCheck(env?: any): Promise<{
     status: 'healthy' | 'unhealthy';
     timestamp: Date;
     details?: string;
   }> {
     try {
       const start = Date.now();
-      await pool.query('SELECT 1');
+      const database = createDrizzleD1Database(env);
+      await database.prepare('SELECT 1').bind().first();
       const duration = Date.now() - start;
-      
+
       return {
         status: 'healthy',
         timestamp: new Date(),

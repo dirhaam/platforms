@@ -1,8 +1,107 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { db } from '@/lib/database';
 import { securityAuditLogs } from '@/lib/database/schema';
-import { eq, and, lt, gte, desc } from 'drizzle-orm';
+import { eq, and, lt, gte, desc, count } from 'drizzle-orm';
+
+const ensureCrypto = () => {
+  if (typeof globalThis.crypto === 'undefined') {
+    throw new Error('Web Crypto API is not available in this environment');
+  }
+  return globalThis.crypto;
+};
+
+const generateUUID = () => {
+  const cryptoObj = ensureCrypto();
+  if (typeof cryptoObj.randomUUID === 'function') {
+    return cryptoObj.randomUUID();
+  }
+  const bytes = cryptoObj.getRandomValues(new Uint8Array(16));
+  // RFC4122 v4 fallback
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'));
+  return (
+    hex[0] + hex[1] + hex[2] + hex[3] + '-' +
+    hex[4] + hex[5] + '-' + hex[6] + hex[7] + '-' +
+    hex[8] + hex[9] + '-' + hex[10] + hex[11] + hex[12] + hex[13] + hex[14] + hex[15]
+  );
+};
+
+const randomBytesHex = (length: number) => {
+  const cryptoObj = ensureCrypto();
+  const bytes = new Uint8Array(length);
+  cryptoObj.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+const arrayBufferToHex = (buffer: ArrayBuffer | Uint8Array) => {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const hexToUint8Array = (hex: string) => {
+  const length = hex.length / 2;
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return bytes;
+};
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer | Uint8Array) => {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(bytes).toString('base64');
+  }
+  if (typeof btoa === 'function') {
+    let binary = '';
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+  throw new Error('Base64 encoding is not supported in this environment');
+};
+
+const base64ToUint8Array = (value: string) => {
+  if (typeof Buffer !== 'undefined') {
+    return new Uint8Array(Buffer.from(value, 'base64'));
+  }
+  if (typeof atob === 'function') {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+  throw new Error('Base64 decoding is not supported in this environment');
+};
+
+const sha256Hex = async (data: string | Uint8Array) => {
+  const cryptoObj = ensureCrypto();
+  const input = typeof data === 'string' ? encoder.encode(data) : data;
+  const buffer = input instanceof Uint8Array
+    ? input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength)
+    : input;
+  const digest = await cryptoObj.subtle.digest('SHA-256', buffer as ArrayBuffer);
+  return arrayBufferToHex(digest);
+};
+
+const importAesKey = async (rawKey: string, usage: KeyUsage[]) => {
+  const cryptoObj = ensureCrypto();
+  const normalizedKey = rawKey.padEnd(32, '0').slice(0, 32);
+  return cryptoObj.subtle.importKey(
+    'raw',
+    encoder.encode(normalizedKey),
+    { name: 'AES-GCM' },
+    false,
+    usage
+  );
+};
 
 // Security configuration
 export const SECURITY_CONFIG = {
@@ -111,17 +210,17 @@ export class SecurityService {
 
   // Generate secure random token
   static generateSecureToken(length: number = 32): string {
-    return crypto.randomBytes(length).toString('hex');
+    return randomBytesHex(length);
   }
 
   // Generate password reset token
-  static generatePasswordResetToken(): {
+  static async generatePasswordResetToken(): Promise<{
     token: string;
     hashedToken: string;
     expiresAt: Date;
-  } {
+  }> {
     const token = this.generateSecureToken(32);
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = await sha256Hex(token);
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     return { token, hashedToken, expiresAt };
@@ -161,27 +260,34 @@ export class SecurityService {
   }
 
   // Encrypt sensitive data
-  static encryptSensitiveData(data: string, key?: string): string {
+  static async encryptSensitiveData(data: string, key?: string): Promise<string> {
+    const cryptoObj = ensureCrypto();
     const encryptionKey = key || process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
-    const algorithm = 'aes-256-cbc';
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(algorithm, Buffer.from(encryptionKey.padEnd(32, '0').slice(0, 32)), iv);
-    let encrypted = cipher.update(data, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    const aesKey = await importAesKey(encryptionKey, ['encrypt']);
+    const iv = cryptoObj.getRandomValues(new Uint8Array(12));
+    const encrypted = await cryptoObj.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      aesKey,
+      encoder.encode(data)
+    );
+    return `${arrayBufferToBase64(iv)}:${arrayBufferToBase64(new Uint8Array(encrypted))}`;
   }
 
   // Decrypt sensitive data
-  static decryptSensitiveData(encryptedData: string, key?: string): string {
+  static async decryptSensitiveData(encryptedData: string, key?: string): Promise<string> {
+    const cryptoObj = ensureCrypto();
     const encryptionKey = key || process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
-    const algorithm = 'aes-256-cbc';
-    const parts = encryptedData.split(':');
-    const iv = Buffer.from(parts[0], 'hex');
-    const encrypted = parts[1];
-    const decipher = crypto.createDecipheriv(algorithm, Buffer.from(encryptionKey.padEnd(32, '0').slice(0, 32)), iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
+    const [ivPart, dataPart] = encryptedData.split(':');
+    if (!ivPart || !dataPart) {
+      throw new Error('Invalid encrypted payload');
+    }
+    const aesKey = await importAesKey(encryptionKey, ['decrypt']);
+    const decrypted = await cryptoObj.subtle.decrypt(
+      { name: 'AES-GCM', iv: base64ToUint8Array(ivPart) },
+      aesKey,
+      base64ToUint8Array(dataPart)
+    );
+    return decoder.decode(decrypted);
   }
 
   // Log security audit event
@@ -197,7 +303,7 @@ export class SecurityService {
   ): Promise<void> {
     try {
       await db.insert(securityAuditLogs).values({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         tenantId,
         userId,
         action,
@@ -230,16 +336,19 @@ export class SecurityService {
 
       // Check failed login attempts
       if (action === 'login') {
-        const result = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
-          and(
-            eq(securityAuditLogs.userId, userId),
-            eq(securityAuditLogs.action, 'login'),
-            eq(securityAuditLogs.success, false),
-            gte(securityAuditLogs.timestamp, windowStart)
-          )
-        );
-        
-        const failedAttempts = result[0]?.count || 0;
+        const result = await db
+          .select({ count: count() })
+          .from(securityAuditLogs)
+          .where(
+            and(
+              eq(securityAuditLogs.userId, userId),
+              eq(securityAuditLogs.action, 'login'),
+              eq(securityAuditLogs.success, false),
+              gte(securityAuditLogs.timestamp, windowStart)
+            )
+          );
+
+        const failedAttempts = Number(result[0]?.count ?? 0);
 
         if (failedAttempts >= SECURITY_CONFIG.RATE_LIMITING.LOGIN_ATTEMPTS.MAX_ATTEMPTS) {
           return {
@@ -276,23 +385,20 @@ export class SecurityService {
   }
 
   // Generate session fingerprint
-  static generateSessionFingerprint(userAgent: string, ipAddress: string): string {
+  static async generateSessionFingerprint(userAgent: string, ipAddress: string): Promise<string> {
     const data = `${userAgent}:${ipAddress}:${Date.now()}`;
-    return crypto.createHash('sha256').update(data).digest('hex');
+    return await sha256Hex(data);
   }
 
   // Validate session fingerprint
-  static validateSessionFingerprint(
+  static async validateSessionFingerprint(
     storedFingerprint: string,
     currentUserAgent: string,
     currentIpAddress: string
-  ): boolean {
+  ): Promise<boolean> {
     // For now, we'll do a simple validation
     // In production, you might want more sophisticated fingerprinting
-    const currentFingerprint = crypto
-      .createHash('sha256')
-      .update(`${currentUserAgent}:${currentIpAddress}`)
-      .digest('hex');
+    const currentFingerprint = await sha256Hex(`${currentUserAgent}:${currentIpAddress}`);
 
     // Allow some flexibility for IP changes (mobile networks, etc.)
     return storedFingerprint.includes(currentFingerprint.substring(0, 16));
@@ -331,17 +437,17 @@ export class SecurityService {
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
       // Total login attempts
-      const totalLoginsResult = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
+      const totalLoginsResult = await db.select({ count: count() }).from(securityAuditLogs).where(
         and(
           eq(securityAuditLogs.tenantId, tenantId),
           eq(securityAuditLogs.action, 'login'),
           gte(securityAuditLogs.timestamp, since)
         )
       );
-      const totalLogins = totalLoginsResult[0]?.count || 0;
+      const totalLogins = Number(totalLoginsResult[0]?.count ?? 0);
 
       // Failed login attempts
-      const failedLoginsResult = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
+      const failedLoginsResult = await db.select({ count: count() }).from(securityAuditLogs).where(
         and(
           eq(securityAuditLogs.tenantId, tenantId),
           eq(securityAuditLogs.action, 'login'),
@@ -349,7 +455,7 @@ export class SecurityService {
           gte(securityAuditLogs.timestamp, since)
         )
       );
-      const failedLogins = failedLoginsResult[0]?.count || 0;
+      const failedLogins = Number(failedLoginsResult[0]?.count ?? 0);
 
       // Unique users - We'll count distinct userIds
       const uniqueUsersResult = await db.select({ userId: securityAuditLogs.userId }).from(securityAuditLogs).where(
@@ -361,20 +467,20 @@ export class SecurityService {
       const uniqueUsers = uniqueUsersResult.length;
 
       // Suspicious activities (failed logins + other security events)
-      const suspiciousActivitiesResult = await db.select({ count: db.$count() }).from(securityAuditLogs).where(
+      const suspiciousActivitiesResult = await db.select({ count: count() }).from(securityAuditLogs).where(
         and(
           eq(securityAuditLogs.tenantId, tenantId),
           eq(securityAuditLogs.success, false),
           gte(securityAuditLogs.timestamp, since)
         )
       );
-      const suspiciousActivities = suspiciousActivitiesResult[0]?.count || 0;
+      const suspiciousActivities = Number(suspiciousActivitiesResult[0]?.count ?? 0);
 
       // Top actions - Group by action and count
       const topActionsResult = await db
         .select({
           action: securityAuditLogs.action,
-          count: db.$count(),
+          count: count(),
         })
         .from(securityAuditLogs)
         .where(

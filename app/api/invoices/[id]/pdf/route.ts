@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { InvoiceService } from '@/lib/invoice/invoice-service';
 import { InvoicePDFGenerator } from '@/lib/invoice/pdf-generator';

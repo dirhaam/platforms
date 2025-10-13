@@ -2,7 +2,13 @@ import { db } from '@/lib/database';
 import { customers, bookings, services } from '@/lib/database/schema';
 import { Customer, CreateCustomerRequest, UpdateCustomerRequest } from '@/types/booking';
 import { eq, and, ne, gte, lte, or, ilike, asc, desc, sql } from 'drizzle-orm';
-import crypto from 'crypto';
+
+const randomUUID = () => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+};
 
 export class CustomerService {
   // Create a new customer
@@ -24,7 +30,7 @@ export class CustomerService {
       }
       
       const [newCustomer] = await db.insert(customers).values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         tenantId,
         name: data.name,
         email: data.email,
@@ -112,7 +118,7 @@ export class CustomerService {
   ): Promise<{ customers: Customer[]; total: number }> {
     try {
       // Build the query with base filter
-      let query = db.select({
+      let query: any = db.select({
         id: customers.id,
         tenantId: customers.tenantId,
         name: customers.name,
@@ -174,7 +180,7 @@ export class CustomerService {
       const customerResults = await query;
       
       // Get the total count separately
-      let countQuery = db.select({ count: sql<number>`count(*)` }).from(customers).where(eq(customers.tenantId, tenantId));
+      let countQuery: any = db.select({ count: sql<number>`count(*)` }).from(customers).where(eq(customers.tenantId, tenantId));
       
       if (options.search) {
         countQuery = countQuery.where(
@@ -398,7 +404,7 @@ export class CustomerService {
         return {
           id: customer.id,
           name: customer.name,
-          totalBookings: customer.totalBookings,
+          totalBookings: Number(customer.totalBookings ?? 0),
           totalSpent
         };
       }));

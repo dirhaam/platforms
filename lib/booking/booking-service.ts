@@ -23,7 +23,15 @@ import { LocationService } from '@/lib/location/location-service';
 import { ServiceAreaService } from '@/lib/location/service-area-service';
 import { eq, and, ne, gte, lte, inArray, asc } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
-import crypto from 'crypto';
+
+const randomUUID = () => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+};
+
+type BusinessHoursRow = typeof businessHours.$inferSelect;
 
 export class BookingService {
   // Create a new booking
@@ -70,14 +78,14 @@ export class BookingService {
       }
       
       // Get business hours for validation
-      const [businessHoursResult] = await db.select().from(businessHours).where(
+      const businessHoursRows: typeof businessHours.$inferSelect[] = await db.select().from(businessHours).where(
         eq(businessHours.tenantId, tenantId)
       ).limit(1);
       
-      const businessHours = businessHoursResult || null;
+      const businessHoursRecord = businessHoursRows[0] || null;
       
       // Validate against business hours
-      const hoursValidation = validateBusinessHours(scheduledAt, businessHours);
+      const hoursValidation = validateBusinessHours(scheduledAt, businessHoursRecord);
       if (!hoursValidation.valid) {
         return { error: hoursValidation.message };
       }
@@ -101,7 +109,7 @@ export class BookingService {
       }
       
       // Calculate total amount including location-based surcharges
-      let totalAmount = service.price;
+      let totalAmount: any = service.price;
       let locationSurcharge = 0;
       
       if (data.isHomeVisit) {
@@ -129,7 +137,7 @@ export class BookingService {
       
       // Create the booking
       const [newBooking] = await db.insert(bookings).values({
-        id: crypto.randomUUID(), // Assuming we need to generate an ID
+        id: randomUUID(), // Assuming we need to generate an ID
         tenantId,
         customerId: data.customerId,
         serviceId: data.serviceId,
@@ -198,7 +206,7 @@ export class BookingService {
         lastBookingAt: new Date()
       }).where(eq(customers.id, data.customerId));
       
-      return { booking: booking[0] as Booking };
+      return { booking: booking[0] as unknown as Booking };
     } catch (error) {
       console.error('Error creating booking:', error);
       return { error: 'Failed to create booking' };
@@ -279,7 +287,7 @@ export class BookingService {
           newScheduledAt,
           existingBooking.duration,
           bookingId,
-          data.isHomeVisit !== undefined ? data.isHomeVisit : existingBooking.isHomeVisit
+          data.isHomeVisit !== undefined ? data.isHomeVisit : Boolean(existingBooking.isHomeVisit)
         );
         
         if (conflictCheck.hasConflict) {
@@ -306,10 +314,10 @@ export class BookingService {
             if (typeof totalAmountValue?.add === 'function') {
               totalAmount = totalAmountValue.add(existingService.homeVisitSurcharge);
             } else {
-              const base = Number(totalAmount as unknown as string);
-              const surcharge = Number(existingService.homeVisitSurcharge as unknown as string);
+              const base = Number(totalAmount);
+              const surcharge = Number(existingService.homeVisitSurcharge);
               if (!Number.isNaN(base) && !Number.isNaN(surcharge)) {
-                totalAmount = (base + surcharge).toString();
+                totalAmount = base + surcharge;
               }
             }
           }
@@ -369,7 +377,7 @@ export class BookingService {
         }
       }).from(bookings).leftJoin(customers, eq(bookings.customerId, customers.id)).leftJoin(services, eq(bookings.serviceId, services.id)).where(eq(bookings.id, bookingId)).limit(1);
       
-      return { booking: updatedBooking as Booking };
+      return { booking: updatedBooking as unknown as Booking };
     } catch (error) {
       console.error('Error updating booking:', error);
       return { error: 'Failed to update booking' };
@@ -390,7 +398,7 @@ export class BookingService {
     } = {}
   ): Promise<Booking[]> {
     try {
-      let query = db.select({
+      let query: any = db.select({
         id: bookings.id,
         tenantId: bookings.tenantId,
         customerId: bookings.customerId,
@@ -514,7 +522,7 @@ export class BookingService {
         )
       ).limit(1);
       
-      return bookingResult as Booking | null;
+      return bookingResult ? (bookingResult as unknown as Booking) : null;
     } catch (error) {
       console.error('Error fetching booking:', error);
       return null;
@@ -706,13 +714,13 @@ export class BookingService {
       }
       
       // Get business hours
-      const [businessHoursResult] = await db
+      const businessHoursRows: typeof businessHours.$inferSelect[] = await db
         .select()
         .from(businessHours)
         .where(eq(businessHours.tenantId, tenantId))
         .limit(1);
 
-      const businessHoursRecord = businessHoursResult || null;
+      const businessHoursRecord = businessHoursRows[0] || null;
       
       const requestDate = new Date(request.date);
       const dayOfWeek = requestDate.getDay();

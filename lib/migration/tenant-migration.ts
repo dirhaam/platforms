@@ -1,16 +1,19 @@
 import { redis } from '@/lib/redis';
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
 import type { 
   LegacySubdomainData, 
   MigrationResult,
-  EnhancedTenant,
-  Tenant as PrismaTenant
+  EnhancedTenant
 } from '@/types/database';
+import { tenants } from '@/lib/database/schema';
+import { eq, and } from 'drizzle-orm';
 import { 
   isEnhancedTenant, 
   migrateFromLegacy
 } from '@/lib/subdomains';
 import { TenantValidation } from '@/lib/validation/tenant-validation';
+
+type TenantRow = typeof tenants.$inferSelect;
 
 /**
  * Tenant Migration System
@@ -64,7 +67,7 @@ export class TenantMigrationService {
       console.log(`Found ${keys.length} tenants in Redis`);
 
       // Get all data from Redis
-      const values = await redis.mget<(LegacySubdomainData | EnhancedTenant)[]>(...keys);
+      const values = (await redis.mget(...keys)) as Array<LegacySubdomainData | EnhancedTenant | null>;
 
       // Process each tenant
       for (let i = 0; i < keys.length; i++) {
@@ -113,9 +116,11 @@ export class TenantMigrationService {
     redisData: LegacySubdomainData | EnhancedTenant
   ): Promise<void> {
     // Check if tenant already exists in PostgreSQL
-    const existingTenant = await prisma.tenant.findUnique({
-      where: { subdomain },
-    });
+    const [existingTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .limit(1);
 
     if (existingTenant) {
       console.log(`Tenant ${subdomain} already exists in PostgreSQL, skipping`);
@@ -141,40 +146,32 @@ export class TenantMigrationService {
     const sanitizedData = TenantValidation.sanitizeTenantData(enhancedData);
 
     // Create tenant in PostgreSQL
-    await prisma.tenant.create({
-      data: {
-        id: sanitizedData.id!,
-        subdomain: sanitizedData.subdomain!,
-        emoji: sanitizedData.emoji!,
-        businessName: sanitizedData.businessName!,
-        businessCategory: sanitizedData.businessCategory!,
-        ownerName: sanitizedData.ownerName!,
-        email: sanitizedData.email!,
-        phone: sanitizedData.phone!,
-        address: sanitizedData.address,
-        businessDescription: sanitizedData.businessDescription,
-        logo: sanitizedData.logo,
-        
-        // Brand colors as JSON
-        brandColors: sanitizedData.brandColors || undefined,
-        
-        // Feature flags
-        whatsappEnabled: sanitizedData.features?.whatsapp || false,
-        homeVisitEnabled: sanitizedData.features?.homeVisit || false,
-        analyticsEnabled: sanitizedData.features?.analytics || false,
-        customTemplatesEnabled: sanitizedData.features?.customTemplates || false,
-        multiStaffEnabled: sanitizedData.features?.multiStaff || false,
-        
-        // Subscription info
-        subscriptionPlan: sanitizedData.subscription?.plan || 'basic',
-        subscriptionStatus: sanitizedData.subscription?.status || 'active',
-        subscriptionExpiresAt: sanitizedData.subscription?.expiresAt,
-        
-        // Timestamps
-        createdAt: new Date(sanitizedData.createdAt!),
-        updatedAt: sanitizedData.updatedAt || new Date(),
-      },
-    });
+    await db.insert(tenants).values({
+      id: sanitizedData.id!,
+      subdomain: sanitizedData.subdomain!,
+      emoji: sanitizedData.emoji!,
+      businessName: sanitizedData.businessName!,
+      businessCategory: sanitizedData.businessCategory!,
+      ownerName: sanitizedData.ownerName!,
+      email: sanitizedData.email!,
+      phone: sanitizedData.phone!,
+      address: sanitizedData.address ?? undefined,
+      businessDescription: sanitizedData.businessDescription ?? undefined,
+      logo: sanitizedData.logo ?? undefined,
+      brandColors: sanitizedData.brandColors ?? undefined,
+      whatsappEnabled: sanitizedData.features?.whatsapp ?? false,
+      homeVisitEnabled: sanitizedData.features?.homeVisit ?? false,
+      analyticsEnabled: sanitizedData.features?.analytics ?? false,
+      customTemplatesEnabled: sanitizedData.features?.customTemplates ?? false,
+      multiStaffEnabled: sanitizedData.features?.multiStaff ?? false,
+      subscriptionPlan: sanitizedData.subscription?.plan ?? 'basic',
+      subscriptionStatus: sanitizedData.subscription?.status ?? 'active',
+      subscriptionExpiresAt: sanitizedData.subscription?.expiresAt
+        ? new Date(sanitizedData.subscription.expiresAt)
+        : null,
+      createdAt: new Date(sanitizedData.createdAt ?? Date.now()),
+      updatedAt: sanitizedData.updatedAt ?? new Date(),
+    } as any);
   }
 
   /**
@@ -217,19 +214,22 @@ export class TenantMigrationService {
   static async getSubdomainDataWithFallback(subdomain: string): Promise<EnhancedTenant | null> {
     try {
       // First, try to get from PostgreSQL
-      const tenant = await prisma.tenant.findUnique({
-        where: { subdomain },
-      });
+      const [tenantRow] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.subdomain, subdomain))
+        .limit(1);
 
-      if (tenant) {
-        // Convert PostgreSQL data to EnhancedTenant format
-        return this.convertPrismaToEnhanced(tenant);
+      if (tenantRow) {
+        // Convert database data to EnhancedTenant format
+        return this.convertTenantRowToEnhanced(tenantRow);
       }
 
       // Fallback to Redis if not found in PostgreSQL
-      const redisData = await redis.get<LegacySubdomainData | EnhancedTenant>(
-        `subdomain:${subdomain}`
-      );
+      const redisData = (await redis.get(`subdomain:${subdomain}`)) as
+        | LegacySubdomainData
+        | EnhancedTenant
+        | null;
 
       if (!redisData) {
         return null;
@@ -265,44 +265,43 @@ export class TenantMigrationService {
   /**
    * Convert Prisma tenant data to EnhancedTenant format
    */
-  static convertPrismaToEnhanced(tenant: PrismaTenant): EnhancedTenant {
-    // Parse brand colors from JSON
-    let brandColors: { primary: string; secondary: string; accent: string; } | undefined;
-    if (tenant.brandColors) {
-      try {
-        brandColors = JSON.parse(tenant.brandColors as string);
-      } catch (error) {
-        console.warn('Failed to parse brand colors:', error);
-      }
-    }
+  static convertTenantRowToEnhanced(tenant: TenantRow): EnhancedTenant {
+    const brandColorsRecord = tenant.brandColors as Record<string, string> | null | undefined;
+    const brandColors = brandColorsRecord
+      ? {
+          primary: brandColorsRecord.primary ?? '#000000',
+          secondary: brandColorsRecord.secondary ?? '#FFFFFF',
+          accent: brandColorsRecord.accent ?? '#FF0000',
+        }
+      : undefined;
 
     return {
       id: tenant.id,
       subdomain: tenant.subdomain,
-      emoji: tenant.emoji,
-      createdAt: tenant.createdAt.getTime(),
+      emoji: tenant.emoji ?? '🏢',
+      createdAt: tenant.createdAt ? tenant.createdAt.getTime() : Date.now(),
       businessName: tenant.businessName,
-      businessCategory: tenant.businessCategory,
-      ownerName: tenant.ownerName,
-      email: tenant.email,
-      phone: tenant.phone,
+      businessCategory: tenant.businessCategory ?? '',
+      ownerName: tenant.ownerName ?? '',
+      email: tenant.email ?? '',
+      phone: tenant.phone ?? '',
       address: tenant.address || undefined,
       businessDescription: tenant.businessDescription || undefined,
       logo: tenant.logo || undefined,
       brandColors,
       features: {
-        whatsapp: tenant.whatsappEnabled,
-        homeVisit: tenant.homeVisitEnabled,
-        analytics: tenant.analyticsEnabled,
-        customTemplates: tenant.customTemplatesEnabled,
-        multiStaff: tenant.multiStaffEnabled,
+        whatsapp: tenant.whatsappEnabled ?? false,
+        homeVisit: tenant.homeVisitEnabled ?? false,
+        analytics: tenant.analyticsEnabled ?? false,
+        customTemplates: tenant.customTemplatesEnabled ?? false,
+        multiStaff: tenant.multiStaffEnabled ?? false,
       },
       subscription: {
-        plan: tenant.subscriptionPlan as 'basic' | 'premium' | 'enterprise',
-        status: tenant.subscriptionStatus as 'active' | 'suspended' | 'cancelled',
+        plan: (tenant.subscriptionPlan ?? 'basic') as 'basic' | 'premium' | 'enterprise',
+        status: (tenant.subscriptionStatus ?? 'active') as 'active' | 'suspended' | 'cancelled',
         expiresAt: tenant.subscriptionExpiresAt || undefined,
       },
-      updatedAt: tenant.updatedAt,
+      updatedAt: tenant.updatedAt ?? new Date(),
     };
   }
 
@@ -311,15 +310,17 @@ export class TenantMigrationService {
    * Useful for maintaining consistency during transition period
    */
   static async syncTenantData(subdomain: string): Promise<void> {
-    const pgTenant = await prisma.tenant.findUnique({
-      where: { subdomain },
-    });
+    const [pgTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .limit(1);
 
     if (!pgTenant) {
       throw new Error(`Tenant ${subdomain} not found in PostgreSQL`);
     }
 
-    const enhancedData = this.convertPrismaToEnhanced(pgTenant);
+    const enhancedData = this.convertTenantRowToEnhanced(pgTenant);
 
     // Update Redis with PostgreSQL data
     await redis.set(`subdomain:${subdomain}`, enhancedData);
@@ -345,31 +346,34 @@ export class TenantMigrationService {
     try {
       // Get all subdomains from Redis
       const redisKeys = await redis.keys('subdomain:*');
-      const redisSubdomains = redisKeys.map(key => key.replace('subdomain:', ''));
+      const redisSubdomains = redisKeys.map((key: string) => key.replace('subdomain:', ''));
 
       // Get all subdomains from PostgreSQL
-      const pgTenants = await prisma.tenant.findMany({
-        select: { subdomain: true },
-      });
+      const pgTenants = await db
+        .select({ subdomain: tenants.subdomain })
+        .from(tenants);
       const pgSubdomains = pgTenants.map(t => t.subdomain);
 
       // Find Redis-only subdomains
-      result.redisOnly = redisSubdomains.filter(s => !pgSubdomains.includes(s));
+      result.redisOnly = redisSubdomains.filter((s: string) => !pgSubdomains.includes(s));
 
       // Find PostgreSQL-only subdomains
-      result.postgresOnly = pgSubdomains.filter(s => !redisSubdomains.includes(s));
+      result.postgresOnly = pgSubdomains.filter((s: string) => !redisSubdomains.includes(s));
 
       // Check for inconsistencies in common subdomains
-      const commonSubdomains = redisSubdomains.filter(s => pgSubdomains.includes(s));
+      const commonSubdomains = redisSubdomains.filter((s: string) => pgSubdomains.includes(s));
       
       for (const subdomain of commonSubdomains) {
         try {
-          const redisData = await redis.get<LegacySubdomainData | EnhancedTenant>(
-            `subdomain:${subdomain}`
-          );
-          const pgTenant = await prisma.tenant.findUnique({
-            where: { subdomain },
-          });
+          const redisData = (await redis.get(`subdomain:${subdomain}`)) as
+            | LegacySubdomainData
+            | EnhancedTenant
+            | null;
+          const [pgTenant] = await db
+            .select()
+            .from(tenants)
+            .where(eq(tenants.subdomain, subdomain))
+            .limit(1);
 
           if (!redisData || !pgTenant) {
             result.inconsistencies.push(`Missing data for ${subdomain}`);

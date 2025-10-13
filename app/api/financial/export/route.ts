@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { FinancialService } from '@/lib/invoice/financial-service';
 import { InvoiceExportOptions } from '@/types/invoice';

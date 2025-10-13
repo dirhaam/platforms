@@ -1,82 +1,44 @@
-import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { db } from '@/lib/database';
 import { SecurityService } from '@/lib/security/security-service';
 import { tenants, staff } from '@/lib/database/schema';
 import { eq, and } from 'drizzle-orm';
-
-// JWT configuration
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-);
-const JWT_EXPIRES_IN = '7d';
-
-// Session configuration
-export interface TenantSession {
-  userId: string;
-  tenantId: string;
-  role: 'superadmin' | 'owner' | 'admin' | 'staff';
-  permissions: string[];
-  email: string;
-  name: string;
-  isSuperAdmin?: boolean; // Flag for superadmin access
-  [key: string]: any; // Index signature for JWT compatibility
-}
-
-export interface AuthResult {
-  success: boolean;
-  session?: TenantSession;
-  error?: string;
-}
+import type { TenantSession, AuthResult, Permission } from './types';
+import {
+  persistSession,
+  retrieveSession,
+  removeSession,
+  SESSION_COOKIE_NAME,
+  SESSION_TTL_SECONDS,
+} from './session-store';
 
 export class TenantAuth {
-  // Create JWT token
-  static async createToken(session: TenantSession): Promise<string> {
-    return await new SignJWT(session)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime(JWT_EXPIRES_IN)
-      .sign(JWT_SECRET);
-  }
-
-  // Verify JWT token
-  static async verifyToken(token: string): Promise<TenantSession | null> {
-    try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      return payload as unknown as TenantSession;
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      return null;
-    }
-  }
-
   // Set authentication cookie
-  static async setAuthCookie(session: TenantSession): Promise<void> {
-    const token = await this.createToken(session);
+  static async setAuthCookie(session: TenantSession, env?: Record<string, unknown>): Promise<void> {
+    const sessionId = await persistSession(session, env);
     const cookieStore = await cookies();
     
-    cookieStore.set('tenant-auth', token, {
+    cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: SESSION_TTL_SECONDS,
       path: '/',
     });
   }
 
   // Get current session from cookies
-  static async getCurrentSession(): Promise<TenantSession | null> {
+  static async getCurrentSession(env?: Record<string, unknown>): Promise<TenantSession | null> {
     try {
       const cookieStore = await cookies();
-      const token = cookieStore.get('tenant-auth')?.value;
+      const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
       
-      if (!token) {
+      if (!sessionId) {
         return null;
       }
 
-      return await this.verifyToken(token);
+      return await retrieveSession(sessionId, env);
     } catch (error) {
       console.error('Failed to get current session:', error);
       return null;
@@ -84,15 +46,19 @@ export class TenantAuth {
   }
 
   // Get session from request (for middleware)
-  static async getSessionFromRequest(request: NextRequest): Promise<TenantSession | null> {
+  static async getSessionFromRequest(
+    request: NextRequest,
+    env?: Record<string, unknown>
+  ): Promise<TenantSession | null> {
     try {
-      const token = request.cookies.get('tenant-auth')?.value;
+      const sessionId = request.cookies.get(SESSION_COOKIE_NAME)?.value;
       
-      if (!token) {
+      if (!sessionId) {
         return null;
       }
 
-      return await this.verifyToken(token);
+      const resolvedEnv = (request as unknown as { cf?: { env?: Record<string, unknown> } })?.cf?.env ?? env;
+      return await retrieveSession(sessionId, resolvedEnv);
     } catch (error) {
       console.error('Failed to get session from request:', error);
       return null;
@@ -100,22 +66,26 @@ export class TenantAuth {
   }
 
   // Clear authentication cookie
-  static async clearAuthCookie(): Promise<void> {
+  static async clearAuthCookie(env?: Record<string, unknown>): Promise<void> {
     const cookieStore = await cookies();
-    cookieStore.delete('tenant-auth');
+    const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    if (sessionId) {
+      await removeSession(sessionId, env);
+    }
+    cookieStore.delete(SESSION_COOKIE_NAME);
   }
 
   // Get session from cookies (for server components)
-  static async getSession(): Promise<TenantSession | null> {
+  static async getSession(env?: Record<string, unknown>): Promise<TenantSession | null> {
     try {
       const cookieStore = await cookies();
-      const token = cookieStore.get('tenant-auth')?.value;
+      const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
       
-      if (!token) {
+      if (!sessionId) {
         return null;
       }
 
-      return await this.verifyToken(token);
+      return await retrieveSession(sessionId, env);
     } catch (error) {
       console.error('Failed to get session from cookies:', error);
       return null;
@@ -219,7 +189,8 @@ export class TenantAuth {
       
       if (!isValidPassword) {
         // Increment failed login attempts
-        const newAttempts = tenant.loginAttempts + 1;
+        const currentAttempts = tenant.loginAttempts ?? 0;
+        const newAttempts = currentAttempts + 1;
         const shouldLock = newAttempts >= 5;
         
         await db.update(tenants).set({
@@ -383,7 +354,8 @@ export class TenantAuth {
       
       if (!isValidPassword) {
         // Increment failed login attempts
-        const newAttempts = staffMember.loginAttempts + 1;
+        const currentAttempts = staffMember.loginAttempts ?? 0;
+        const newAttempts = currentAttempts + 1;
         const shouldLock = newAttempts >= 5;
         
         await db.update(staff).set({
@@ -416,7 +388,7 @@ export class TenantAuth {
         userId: staffMember.id,
         tenantId: tenant.id,
         role: staffMember.role as 'admin' | 'staff',
-        permissions: staffMember.permissions,
+        permissions: Array.isArray(staffMember.permissions) ? staffMember.permissions : [],
         email: staffMember.email,
         name: staffMember.name,
       };
@@ -443,7 +415,7 @@ export class TenantAuth {
   }
 
   // Check if user has permission
-  static hasPermission(session: TenantSession, permission: string): boolean {
+  static hasPermission(session: TenantSession, permission: Permission): boolean {
     // Owner has all permissions
     if (session.role === 'owner' || session.permissions.includes('*')) {
       return true;
@@ -515,7 +487,7 @@ export class TenantAuth {
   }
 
   // Get user permissions based on role
-  static getDefaultPermissions(role: 'superadmin' | 'owner' | 'admin' | 'staff'): string[] {
+  static getDefaultPermissions(role: 'superadmin' | 'owner' | 'admin' | 'staff'): Permission[] {
     switch (role) {
       case 'superadmin':
         return ['*']; // All permissions across all tenants
@@ -629,7 +601,7 @@ export class TenantAuth {
     userType: 'owner' | 'staff'
   ): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
-      const { token, hashedToken, expiresAt } = SecurityService.generatePasswordResetToken();
+      const { token, hashedToken, expiresAt } = await SecurityService.generatePasswordResetToken();
 
       if (userType === 'owner') {
         const tenantResult = await db.select().from(tenants).where(
@@ -696,8 +668,6 @@ export const PERMISSIONS = {
   MANAGE_SETTINGS: 'manage_settings',
   EXPORT_DATA: 'export_data',
 } as const;
-
-export type Permission = 'manage_bookings' | 'manage_customers' | 'view_customers' | 'manage_services' | 'manage_staff' | 'view_analytics' | 'send_messages' | 'manage_settings' | 'export_data' | '*';
 
 // Helper functions for API routes
 export async function getTenantFromRequest(request: NextRequest): Promise<{ id: string; name: string } | null> {

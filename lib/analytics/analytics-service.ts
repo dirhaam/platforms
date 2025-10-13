@@ -19,7 +19,7 @@ type BookingRow = {
   tenantId: string;
   customerId: string;
   serviceId: string;
-  status: string;
+  status: string | null;
   scheduledAt: Date;
   createdAt: Date;
   totalAmount: string | number | null;
@@ -36,7 +36,7 @@ type ServiceRow = {
   id: string;
   tenantId: string;
   name: string;
-  isActive: boolean;
+  isActive: boolean | null;
 };
 
 const COMPLETED_STATUSES = ['completed', 'confirmed'] as const;
@@ -60,14 +60,14 @@ async function fetchTenantBookings(
   ];
 
   if (options.statuses && options.statuses.length > 0) {
-    conditions.push(inArray(bookings.status, options.statuses));
+    conditions.push(inArray(bookings.status, options.statuses as any));
   }
 
   if (options.serviceIds && options.serviceIds.length > 0) {
-    conditions.push(inArray(bookings.serviceId, options.serviceIds));
+    conditions.push(inArray(bookings.serviceId, options.serviceIds as any));
   }
 
-  return await db
+  const rows = await db
     .select({
       id: bookings.id,
       tenantId: bookings.tenantId,
@@ -80,10 +80,16 @@ async function fetchTenantBookings(
     })
     .from(bookings)
     .where(and(...conditions));
+
+  return rows.map<BookingRow>(row => ({
+    ...row,
+    scheduledAt: row.scheduledAt ?? row.createdAt ?? new Date(),
+    createdAt: row.createdAt ?? new Date(),
+  }));
 }
 
 async function fetchTenantCustomers(tenantId: string): Promise<CustomerRow[]> {
-  return await db
+  const rows = await db
     .select({
       id: customers.id,
       tenantId: customers.tenantId,
@@ -92,10 +98,15 @@ async function fetchTenantCustomers(tenantId: string): Promise<CustomerRow[]> {
     })
     .from(customers)
     .where(eq(customers.tenantId, tenantId));
+
+  return rows.map<CustomerRow>(row => ({
+    ...row,
+    createdAt: row.createdAt ?? new Date(),
+  }));
 }
 
 async function fetchTenantServices(tenantId: string): Promise<ServiceRow[]> {
-  return await db
+  const rows = await db
     .select({
       id: services.id,
       tenantId: services.tenantId,
@@ -104,6 +115,11 @@ async function fetchTenantServices(tenantId: string): Promise<ServiceRow[]> {
     })
     .from(services)
     .where(eq(services.tenantId, tenantId));
+
+  return rows.map<ServiceRow>(row => ({
+    ...row,
+    isActive: row.isActive ?? false,
+  }));
 }
 
 export class AnalyticsService {
@@ -393,7 +409,7 @@ export class AnalyticsService {
       ((currentMetrics.totalRevenue - previousMetrics.totalRevenue) / previousMetrics.totalRevenue) * 100 : 0;
 
     // Get customer growth rate
-    const [{ count: currentCustomersResult }, { count: previousCustomersResult }] = await Promise.all([
+    const [currentCustomersRows, previousCustomersRows] = await Promise.all([
       db
         .select({ count: sql<number>`cast(count(${customers.id}) as int)` })
         .from(customers)
@@ -404,8 +420,8 @@ export class AnalyticsService {
         .where(and(eq(customers.tenantId, tenantId), lte(customers.createdAt, prevEndDate))),
     ]);
 
-    const currentCustomers = currentCustomersResult ?? 0;
-    const previousCustomers = previousCustomersResult ?? 0;
+    const currentCustomers = currentCustomersRows[0]?.count ?? 0;
+    const previousCustomers = previousCustomersRows[0]?.count ?? 0;
 
     const customerGrowthRate = previousCustomers > 0 ? 
       ((currentCustomers - previousCustomers) / previousCustomers) * 100 : 0;
@@ -500,7 +516,7 @@ export class AnalyticsService {
       })
       .from(tenants);
 
-    const bookingRows = await db
+    const bookingRowsRaw = await db
       .select({
         id: bookings.id,
         tenantId: bookings.tenantId,
@@ -513,9 +529,14 @@ export class AnalyticsService {
         and(
           gte(bookings.createdAt, startDate),
           lte(bookings.createdAt, endDate),
-          inArray(bookings.status, Array.from(COMPLETED_STATUSES) as string[])
+          inArray(bookings.status, Array.from(COMPLETED_STATUSES) as any)
         )
       );
+
+    const bookingRows = bookingRowsRaw.map(row => ({
+      ...row,
+      createdAt: row.createdAt ?? new Date(),
+    }));
 
     const totalTenants = tenantRows.length;
     const bookingsByTenant = new Map<string, BookingRow[]>();

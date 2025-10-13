@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/emoji-picker';
 import { createSubdomainAction } from '@/app/actions';
 import { rootDomain } from '@/lib/utils';
-import { BUSINESS_CATEGORIES, type BusinessCategory } from '@/lib/subdomains';
+import { BUSINESS_CATEGORIES, type BusinessCategory } from '@/lib/subdomain-constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 

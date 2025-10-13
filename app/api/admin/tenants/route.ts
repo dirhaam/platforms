@@ -1,12 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { redis } from '@/lib/redis';
-import { getAllSubdomains, type EnhancedTenant } from '@/lib/subdomains';
+import { setTenant, deleteTenant } from '@/lib/d1';
+import type { EnhancedTenant } from '@/lib/subdomain-constants';
 import { ActivityLogger } from '@/lib/admin/activity-logger';
+import { db } from '@/lib/database';
+import { tenants } from '@/lib/database/schema';
+import { eq } from 'drizzle-orm';
+
+// This API route requires Node.js runtime due to database access
+export const runtime = 'edge';
+
+function mapDbTenantToEnhanced(dbTenant: any): EnhancedTenant {
+  return {
+    subdomain: dbTenant.subdomain,
+    emoji: dbTenant.emoji || '🏢',
+    createdAt: dbTenant.createdAt ? dbTenant.createdAt.getTime() : Date.now(),
+    id: dbTenant.id,
+    businessName: dbTenant.businessName,
+    businessCategory: dbTenant.businessCategory,
+    ownerName: dbTenant.ownerName,
+    email: dbTenant.email,
+    phone: dbTenant.phone,
+    address: dbTenant.address ?? undefined,
+    businessDescription: dbTenant.businessDescription ?? undefined,
+    logo: dbTenant.logo ?? undefined,
+    brandColors: dbTenant.brandColors ?? undefined,
+    whatsappEnabled: dbTenant.whatsappEnabled,
+    homeVisitEnabled: dbTenant.homeVisitEnabled,
+    analyticsEnabled: dbTenant.analyticsEnabled,
+    customTemplatesEnabled: dbTenant.customTemplatesEnabled,
+    multiStaffEnabled: dbTenant.multiStaffEnabled,
+    subscriptionPlan: dbTenant.subscriptionPlan,
+    subscriptionStatus: dbTenant.subscriptionStatus,
+    subscriptionExpiresAt: dbTenant.subscriptionExpiresAt ?? undefined,
+    updatedAt: dbTenant.updatedAt ?? new Date(),
+    features: {
+      whatsapp: dbTenant.whatsappEnabled,
+      homeVisit: dbTenant.homeVisitEnabled,
+      analytics: dbTenant.analyticsEnabled,
+      customTemplates: dbTenant.customTemplatesEnabled,
+      multiStaff: dbTenant.multiStaffEnabled,
+    },
+    subscription: {
+      plan: dbTenant.subscriptionPlan as 'basic' | 'premium' | 'enterprise',
+      status: dbTenant.subscriptionStatus as 'active' | 'suspended' | 'cancelled',
+      expiresAt: dbTenant.subscriptionExpiresAt ?? undefined,
+    },
+  };
+}
 
 export async function GET() {
   try {
-    const tenants = await getAllSubdomains();
-    return NextResponse.json({ tenants });
+    // Get all tenants directly from PostgreSQL using Drizzle
+    const dbTenants = await db.select().from(tenants).orderBy(tenants.createdAt);
+    
+    // Convert to EnhancedTenant format
+    const enhancedTenants = dbTenants.map(mapDbTenantToEnhanced);
+    
+    return NextResponse.json({ tenants: enhancedTenants });
   } catch (error) {
     console.error('Failed to fetch tenants:', error);
     return NextResponse.json(
@@ -27,10 +77,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get all tenants to find the one to update
-    const tenants = await getAllSubdomains();
-    const tenant = tenants.find(t => t.id === tenantId);
-
+    // Get the specific tenant from PostgreSQL directly
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    
     if (!tenant) {
       return NextResponse.json(
         { error: 'Tenant not found' },
@@ -38,90 +87,110 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update the tenant data
-    const updatedTenant: EnhancedTenant = {
-      ...tenant,
-      ...updates,
-      updatedAt: new Date(),
-      // Update computed properties based on feature flags
-      features: {
-        whatsapp: updates.whatsappEnabled ?? tenant.whatsappEnabled,
-        homeVisit: updates.homeVisitEnabled ?? tenant.homeVisitEnabled,
-        analytics: updates.analyticsEnabled ?? tenant.analyticsEnabled,
-        customTemplates: updates.customTemplatesEnabled ?? tenant.customTemplatesEnabled,
-        multiStaff: updates.multiStaffEnabled ?? tenant.multiStaffEnabled,
-      },
-      subscription: {
-        plan: (updates.subscriptionPlan ?? tenant.subscriptionPlan) as 'basic' | 'premium' | 'enterprise',
-        status: (updates.subscriptionStatus ?? tenant.subscriptionStatus) as 'active' | 'suspended' | 'cancelled',
-        expiresAt: tenant.subscription.expiresAt,
-      },
-    };
+    const allowedFields = [
+      'businessName',
+      'businessCategory',
+      'ownerName',
+      'email',
+      'phone',
+      'address',
+      'businessDescription',
+      'logo',
+      'brandColors',
+      'emoji',
+      'whatsappEnabled',
+      'homeVisitEnabled',
+      'analyticsEnabled',
+      'customTemplatesEnabled',
+      'multiStaffEnabled',
+      'subscriptionPlan',
+      'subscriptionStatus',
+      'subscriptionExpiresAt',
+    ] as const;
 
-    // Store updated tenant in Redis
-    await redis.set(`subdomain:${tenant.subdomain}`, updatedTenant);
+    const updatePayload: Record<string, any> = {};
 
-    // Try to update in PostgreSQL if available
-    try {
-      const { prisma } = await import('@/lib/database');
-      await prisma.tenant.update({
-        where: { subdomain: tenant.subdomain },
-        data: {
-          businessName: updatedTenant.businessName,
-          businessCategory: updatedTenant.businessCategory,
-          ownerName: updatedTenant.ownerName,
-          email: updatedTenant.email,
-          phone: updatedTenant.phone,
-          address: updatedTenant.address,
-          businessDescription: updatedTenant.businessDescription,
-          emoji: updatedTenant.emoji,
-          whatsappEnabled: updatedTenant.whatsappEnabled,
-          homeVisitEnabled: updatedTenant.homeVisitEnabled,
-          analyticsEnabled: updatedTenant.analyticsEnabled,
-          customTemplatesEnabled: updatedTenant.customTemplatesEnabled,
-          multiStaffEnabled: updatedTenant.multiStaffEnabled,
-          subscriptionPlan: updatedTenant.subscriptionPlan,
-          subscriptionStatus: updatedTenant.subscriptionStatus,
-          updatedAt: updatedTenant.updatedAt,
-        },
-      });
-    } catch (dbError) {
-      console.warn('Failed to update tenant in PostgreSQL:', dbError);
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        updatePayload[field] = field === 'subscriptionExpiresAt' && updates[field]
+          ? new Date(updates[field])
+          : updates[field];
+      }
     }
 
-    // Log the activity
-    const changes = Object.keys(updates).filter(key => updates[key] !== undefined);
-    if (changes.length > 0) {
+    if (Object.keys(updatePayload).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid updates provided' },
+        { status: 400 }
+      );
+    }
+
+    updatePayload.updatedAt = new Date();
+
+    await db.update(tenants).set(updatePayload).where(eq(tenants.id, tenantId));
+
+    const [updatedRow] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+
+    if (!updatedRow) {
+      throw new Error('Failed to load updated tenant');
+    }
+
+    const enhancedTenant = mapDbTenantToEnhanced(updatedRow);
+
+    await setTenant(updatedRow.subdomain, enhancedTenant);
+
+    const changedFields = Object.keys(updatePayload).filter(field => {
+      if (field === 'updatedAt') return false;
+      const previousValue = (tenant as any)[field];
+      const nextValue = updatePayload[field];
+      if (previousValue instanceof Date || nextValue instanceof Date) {
+        const prevTime = previousValue ? new Date(previousValue).getTime() : null;
+        const nextTime = nextValue ? new Date(nextValue).getTime() : null;
+        return prevTime !== nextTime;
+      }
+      return JSON.stringify(previousValue) !== JSON.stringify(nextValue);
+    });
+
+    if (changedFields.length > 0) {
       await ActivityLogger.logTenantUpdated(
         tenant.id,
-        updatedTenant.businessName,
-        changes
+        enhancedTenant.businessName,
+        changedFields
       );
     }
 
-    // Log feature toggles specifically
-    const featureChanges = changes.filter(change => change.endsWith('Enabled'));
-    for (const featureChange of featureChanges) {
-      const feature = featureChange.replace('Enabled', '');
-      await ActivityLogger.logFeatureToggled(
-        tenant.id,
-        updatedTenant.businessName,
-        feature,
-        updates[featureChange]
-      );
+    const featureKeys = [
+      'whatsappEnabled',
+      'homeVisitEnabled',
+      'analyticsEnabled',
+      'customTemplatesEnabled',
+      'multiStaffEnabled',
+    ];
+
+    for (const featureKey of featureKeys) {
+      if (changedFields.includes(featureKey) && updates[featureKey] !== undefined) {
+        await ActivityLogger.logFeatureToggled(
+          tenant.id,
+          enhancedTenant.businessName,
+          featureKey.replace('Enabled', ''),
+          updates[featureKey]
+        );
+      }
     }
 
-    // Log subscription changes
-    if (updates.subscriptionPlan && updates.subscriptionPlan !== tenant.subscriptionPlan) {
+    if (
+      updates.subscriptionPlan &&
+      updates.subscriptionPlan !== tenant.subscriptionPlan
+    ) {
       await ActivityLogger.logSubscriptionChanged(
         tenant.id,
-        updatedTenant.businessName,
-        tenant.subscriptionPlan,
+        enhancedTenant.businessName,
+        tenant.subscriptionPlan ?? 'basic',
         updates.subscriptionPlan
       );
     }
 
-    return NextResponse.json({ tenant: updatedTenant });
+    return NextResponse.json({ tenant: enhancedTenant });
   } catch (error) {
     console.error('Failed to update tenant:', error);
     return NextResponse.json(
@@ -142,10 +211,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get all tenants to find the one to delete
-    const tenants = await getAllSubdomains();
-    const tenant = tenants.find(t => t.id === tenantId);
-
+    // Get the specific tenant from PostgreSQL directly
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    
     if (!tenant) {
       return NextResponse.json(
         { error: 'Tenant not found' },
@@ -153,15 +221,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete from Redis
-    await redis.del(`subdomain:${tenant.subdomain}`);
+    // Delete from D1
+    await deleteTenant(tenant.subdomain);
 
     // Try to delete from PostgreSQL if available
     try {
-      const { prisma } = await import('@/lib/database');
-      await prisma.tenant.delete({
-        where: { subdomain: tenant.subdomain },
-      });
+      await db.delete(tenants).where(eq(tenants.subdomain, tenant.subdomain));
     } catch (dbError) {
       console.warn('Failed to delete tenant from PostgreSQL:', dbError);
     }

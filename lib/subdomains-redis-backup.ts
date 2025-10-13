@@ -1,4 +1,8 @@
 import { redis } from '@/lib/redis';
+import { db } from '@/lib/database';
+import { tenants } from '@/lib/database/schema';
+import { desc } from 'drizzle-orm';
+import { TenantMigrationService } from '@/lib/migration/tenant-migration';
 
 export function isValidIcon(str: string) {
   if (str.length > 10) {
@@ -129,9 +133,10 @@ export async function getSubdomainData(subdomain: string): Promise<SubdomainData
     console.warn('Migration service unavailable, falling back to Redis:', error);
     
     // Fallback to direct Redis access
-    const data = await redis.get<SubdomainData | EnhancedTenant>(
-      `subdomain:${sanitizedSubdomain}`
-    );
+    const data = (await redis.get(`subdomain:${sanitizedSubdomain}`)) as
+      | SubdomainData
+      | EnhancedTenant
+      | null;
     return data;
   }
 }
@@ -192,15 +197,41 @@ export function migrateFromLegacy(subdomain: string, legacyData: SubdomainData):
 export async function getAllSubdomains(): Promise<EnhancedTenant[]> {
   try {
     // Try to get from PostgreSQL first
-    const { prisma } = await import('./database');
-    const { TenantMigrationService } = await import('./migration/tenant-migration');
-    
-    const pgTenants = await prisma.tenant.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    const pgTenants = await db
+      .select()
+      .from(tenants)
+      .orderBy(desc(tenants.createdAt));
 
     if (pgTenants.length > 0) {
-      return pgTenants.map(tenant => TenantMigrationService.convertPrismaToEnhanced(tenant));
+      return pgTenants.map(tenant => {
+        const enhanced = TenantMigrationService.convertTenantRowToEnhanced(tenant);
+        return {
+          subdomain: enhanced.subdomain,
+          emoji: enhanced.emoji,
+          createdAt: enhanced.createdAt,
+          id: enhanced.id,
+          businessName: enhanced.businessName,
+          businessCategory: enhanced.businessCategory,
+          ownerName: enhanced.ownerName,
+          email: enhanced.email,
+          phone: enhanced.phone,
+          address: enhanced.address,
+          businessDescription: enhanced.businessDescription,
+          logo: enhanced.logo,
+          brandColors: enhanced.brandColors,
+          whatsappEnabled: enhanced.features.whatsapp,
+          homeVisitEnabled: enhanced.features.homeVisit,
+          analyticsEnabled: enhanced.features.analytics,
+          customTemplatesEnabled: enhanced.features.customTemplates,
+          multiStaffEnabled: enhanced.features.multiStaff,
+          subscriptionPlan: enhanced.subscription.plan,
+          subscriptionStatus: enhanced.subscription.status,
+          subscriptionExpiresAt: enhanced.subscription.expiresAt,
+          updatedAt: enhanced.updatedAt,
+          features: enhanced.features,
+          subscription: enhanced.subscription,
+        } as EnhancedTenant;
+      });
     }
   } catch (error) {
     console.warn('PostgreSQL unavailable, falling back to Redis:', error);
@@ -213,9 +244,9 @@ export async function getAllSubdomains(): Promise<EnhancedTenant[]> {
     return [];
   }
 
-  const values = await redis.mget<(SubdomainData | EnhancedTenant)[]>(...keys);
+  const values = (await redis.mget(...keys)) as Array<SubdomainData | EnhancedTenant | null>;
 
-  return keys.map((key, index) => {
+  return keys.map((key: string, index: number) => {
     const subdomain = key.replace('subdomain:', '');
     const data = values[index];
 

@@ -1,5 +1,7 @@
 import { CacheService } from '@/lib/cache/cache-service';
 import { DatabaseOptimization } from './database-optimization';
+import { db } from '@/lib/database';
+import { createDrizzleD1Database } from '@/lib/database/d1-client';
 
 // Performance monitoring configuration
 export const PERFORMANCE_CONFIG = {
@@ -308,8 +310,7 @@ export class PerformanceMonitor {
 
     try {
       // Database health check
-      const { prisma } = await import('@/lib/database');
-      const dbHealth = await DatabaseOptimization.getDatabaseHealth(prisma);
+      const dbHealth = await this.checkDatabaseHealth();
       checks.database = dbHealth.isHealthy;
       checks.responseTime = (dbHealth.avgResponseTime || 0) < PERFORMANCE_CONFIG.THRESHOLDS.SLOW_QUERY;
 
@@ -387,6 +388,24 @@ export class PerformanceMonitor {
       metrics: this.metrics,
       summary: this.getPerformanceSummary(),
     }, null, 2);
+  }
+
+  private static async checkDatabaseHealth(): Promise<{ isHealthy: boolean; avgResponseTime?: number }> {
+    try {
+      const start = Date.now();
+      const database = createDrizzleD1Database();
+      await database.prepare('SELECT 1').bind().first();
+      const responseTime = Date.now() - start;
+      return {
+        isHealthy: responseTime < PERFORMANCE_CONFIG.THRESHOLDS.SLOW_QUERY,
+        avgResponseTime: responseTime,
+      };
+    } catch (error) {
+      console.error('Database health check failed:', error);
+      return {
+        isHealthy: false,
+      };
+    }
   }
 
   private static exportPrometheusMetrics(): string {

@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

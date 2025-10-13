@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { LocationService } from '@/lib/location/location-service';
 import { CalculateTravelRequest } from '@/types/location';

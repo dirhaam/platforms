@@ -1,4 +1,4 @@
-import type { TenantSession, Permission } from './tenant-auth';
+import type { TenantSession, Permission } from './types';
 import * as React from 'react';
 
 // Role definitions

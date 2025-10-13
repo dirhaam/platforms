@@ -12,13 +12,30 @@ const nextConfig: NextConfig = {
   // Exclude folder Windows yang sering bikin EPERM error
   outputFileTracingExcludes: {
     "*": [
-      "C:\\Users\\*\\Application Data/**",
-      "C:\\Users\\*\\AppData/**",
-      "C:\\Users\\*\\Cookies/**",
-      "C:\\Users\\*\\Local Settings/**",
-      "C:\\Users\\*\\NTUSER.*",
-      "C:\\Users\\*\\OneDrive/**",
+      "C:\\\\Users\\\\*\\\\Application Data/**",
+      "C:\\\\Users\\\\*\\\\AppData/**",
+      "C:\\\\Users\\\\*\\\\Cookies/**",
+      "C:\\\\Users\\\\*\\\\Local Settings/**",
+      "C:\\\\Users\\\\*\\\\NTUSER.*",
+      "C:\\\\Users\\\\*\\\\OneDrive/**",
     ],
+  },
+
+  // Konfigurasi webpack untuk mengecualikan modul Node.js dari bundle client
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Jika di lingkungan client, buat modul Node.js menjadi external
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        pg: false,
+        "pg-native": false,
+      };
+    }
+    return config;
   },
 
   // Jika butuh header vercel speed-insights

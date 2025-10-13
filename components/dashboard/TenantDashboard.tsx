@@ -14,7 +14,7 @@ import {
   Plus,
 } from 'lucide-react';
 import Link from 'next/link';
-import type { TenantSession } from '@/lib/auth/tenant-auth';
+import type { TenantSession } from '@/lib/auth/types';
 import { DashboardService } from '@/lib/dashboard/dashboard-service';
 import { RBAC } from '@/lib/auth/rbac';
 

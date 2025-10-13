@@ -7,7 +7,7 @@ import {
   tenants,
 } from '@/lib/database/schema';
 import { InvoiceStatus, InvoiceExportOptions, PaymentMethod } from '@/types/invoice';
-import { alias } from 'drizzle-orm/pg-core';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import Decimal from 'decimal.js';
 import * as XLSX from 'xlsx';
@@ -90,8 +90,6 @@ function mapInvoice(
       totalPrice: parseDecimal(item.totalPrice),
       serviceId: item.serviceId ?? undefined,
       service: mapService(service),
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
     })),
     notes: invoice.notes ?? undefined,
     terms: invoice.terms ?? undefined,
@@ -197,7 +195,7 @@ export class FinancialService {
           paidRevenue = paidRevenue.add(invoiceAmount);
           paidInvoices++;
           
-          if (invoice.paidDate) {
+        if (invoice.paidDate && invoice.issueDate) {
             const paymentTime = Math.ceil(
               (invoice.paidDate.getTime() - invoice.issueDate.getTime()) / (1000 * 60 * 60 * 24)
             );
@@ -281,6 +279,9 @@ export class FinancialService {
 
     rows.forEach(invoice => {
       const issueDate = invoice.issueDate;
+      if (!issueDate) {
+        return;
+      }
       const key = issueDate.getFullYear() + '-' + String(issueDate.getMonth() + 1).padStart(2, '0');
       const entry = monthlyData[key];
       if (!entry) return;
@@ -356,14 +357,14 @@ export class FinancialService {
       const amount = new Decimal(parseDecimal(row.totalAmount));
       customer.totalAmount = customer.totalAmount.add(amount);
 
-      if (row.issueDate > customer.lastInvoiceDate) {
+      if (row.issueDate && row.issueDate > customer.lastInvoiceDate) {
         customer.lastInvoiceDate = row.issueDate;
       }
 
       switch (row.status) {
         case InvoiceStatus.PAID:
           customer.paidAmount = customer.paidAmount.add(amount);
-          if (row.paidDate) {
+          if (row.paidDate && row.issueDate) {
             const paymentTime = Math.ceil(
               (row.paidDate.getTime() - row.issueDate.getTime()) / (1000 * 60 * 60 * 24)
             );
@@ -412,7 +413,7 @@ export class FinancialService {
     let grandTotal = new Decimal(0);
 
     rows.forEach(invoice => {
-      const statusKey = invoice.status;
+      const statusKey = (invoice.status ?? 'pending') as InvoiceStatus;
       if (!statusMap[statusKey]) {
         statusMap[statusKey] = { count: 0, totalAmount: new Decimal(0) };
       }
@@ -459,7 +460,7 @@ export class FinancialService {
 
     const whereClause = buildWhere(conditions);
 
-    let query = db
+    let query: any = db
       .select({ invoice: invoices, customer: customers })
       .from(invoices)
       .leftJoin(customers, eq(invoices.customerId, customers.id))
@@ -469,7 +470,7 @@ export class FinancialService {
       query = query.where(whereClause);
     }
 
-    const rows = await query;
+    const rows = await query as Array<{ invoice: InvoiceRecord; customer: CustomerRecord | null }>;
 
     const includeItems = !!options.includeItems;
     let itemsMap = new Map<string, InvoiceItemRow[]>();
@@ -502,7 +503,7 @@ export class FinancialService {
       Customer: customer?.name || '',
       'Issue Date': formatDate(invoice.issueDate),
       'Due Date': formatDate(invoice.dueDate),
-      Status: invoice.status.toUpperCase(),
+      Status: (invoice.status ?? 'pending').toUpperCase(),
       Subtotal: parseDecimal(invoice.subtotal),
       Tax: parseDecimal(invoice.taxAmount),
       Discount: parseDecimal(invoice.discountAmount),

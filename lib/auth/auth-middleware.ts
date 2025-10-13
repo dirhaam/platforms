@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TenantAuth, type TenantSession } from './tenant-auth';
+import { TenantAuth } from './tenant-auth';
+import type { TenantSession } from './types';
 import { RBAC, RouteGuard, type RouteProtection } from './rbac';
 import { db } from '@/lib/database';
 import { tenants } from '@/lib/database/schema';

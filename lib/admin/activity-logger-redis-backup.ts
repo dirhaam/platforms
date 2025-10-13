@@ -46,7 +46,7 @@ class ActivityLogger {
 
   static async getActivityLog(limit?: number): Promise<ActivityLogEntry[]> {
     try {
-      const logs = await redis.get<ActivityLogEntry[]>(this.ACTIVITY_LOG_KEY) || [];
+      const logs = (await redis.get(this.ACTIVITY_LOG_KEY)) as ActivityLogEntry[] | null || [];
       
       // Convert timestamp strings back to Date objects
       const parsedLogs = logs.map(log => ({

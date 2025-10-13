@@ -89,7 +89,7 @@ async function runDryRun(): Promise<void> {
     
     console.log(`📊 Found ${keys.length} tenants in Redis:`);
     
-    const values = await redis.mget<any[]>(...keys);
+    const values = (await redis.mget(...keys)) as any[];
     
     for (let i = 0; i < keys.length; i++) {
       const subdomain = keys[i].replace('subdomain:', '');
@@ -337,9 +337,7 @@ async function main(): Promise<void> {
     console.error('❌ Operation failed:', error);
     process.exit(1);
   } finally {
-    // Cleanup database connection
-    const { disconnectDatabase } = await import('../lib/database');
-    await disconnectDatabase();
+    // Cleanup database connection (no-op for Drizzle)
   }
 }
 

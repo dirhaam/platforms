@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { TenantAuth } from '@/lib/auth/tenant-auth';
 import { SecurityService } from '@/lib/security/security-service';

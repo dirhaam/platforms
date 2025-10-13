@@ -78,7 +78,7 @@ export default function ServiceSettings({ tenantId, initialServices }: ServiceSe
       duration: service.duration,
       price: Number(service.price),
       category: service.category,
-      homeVisitAvailable: service.homeVisitAvailable,
+      homeVisitAvailable: service.homeVisitAvailable ?? false,
       homeVisitSurcharge: Number(service.homeVisitSurcharge || 0),
     });
     setEditingService(service);
@@ -242,7 +242,7 @@ export default function ServiceSettings({ tenantId, initialServices }: ServiceSe
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
-                      checked={service.isActive}
+                      checked={service.isActive ?? true}
                       onCheckedChange={() => handleToggleActive(service)}
                     />
                     <Button

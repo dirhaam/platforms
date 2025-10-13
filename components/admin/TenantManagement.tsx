@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { rootDomain, protocol } from '@/lib/utils';
-import type { EnhancedTenant } from '@/lib/subdomains';
+import type { EnhancedTenant } from '@/lib/subdomain-constants';
 import { TenantEditDialog } from '@/components/admin/TenantEditDialog';
 import { FeatureToggleCard } from '@/components/admin/FeatureToggleCard';
 

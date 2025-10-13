@@ -1,7 +1,94 @@
 // lib/redis.ts
 // Implementation baru untuk menggantikan Redis dengan Cloudflare D1
 
-import { getTenant, setTenant, deleteTenant, getCache, setCache, deleteCache } from '@/lib/d1';
+import {
+  getTenant,
+  setTenant,
+  deleteTenant,
+  getCache,
+  setCache,
+  deleteCache,
+  listCacheKeys,
+  listTenantSubdomains,
+} from '@/lib/d1';
+
+const SUBDOMAIN_PREFIX = 'subdomain:';
+
+async function getValue(key: string): Promise<any> {
+  if (key.startsWith(SUBDOMAIN_PREFIX)) {
+    const subdomain = key.slice(SUBDOMAIN_PREFIX.length);
+    return await getTenant(subdomain);
+  }
+
+  return await getCache(key);
+}
+
+async function setValue(key: string, value: any, ttl?: number): Promise<boolean> {
+  if (key.startsWith(SUBDOMAIN_PREFIX)) {
+    const subdomain = key.slice(SUBDOMAIN_PREFIX.length);
+    return await setTenant(subdomain, value);
+  }
+
+  return await setCache(key, value, ttl);
+}
+
+async function deleteValue(key: string): Promise<boolean> {
+  if (key.startsWith(SUBDOMAIN_PREFIX)) {
+    const subdomain = key.slice(SUBDOMAIN_PREFIX.length);
+    const existing = await getTenant(subdomain);
+    if (!existing) {
+      return false;
+    }
+    return await deleteTenant(subdomain);
+  }
+
+  const existing = await getCache(key);
+  if (existing === null || existing === undefined) {
+    return false;
+  }
+  return await deleteCache(key);
+}
+
+async function listKeys(pattern: string): Promise<string[]> {
+  if (pattern.startsWith(SUBDOMAIN_PREFIX)) {
+    const suffixPattern = pattern.slice(SUBDOMAIN_PREFIX.length) || '*';
+    const subdomains = await listTenantSubdomains(suffixPattern);
+    return subdomains.map(sub => `${SUBDOMAIN_PREFIX}${sub}`);
+  }
+
+  return await listCacheKeys(pattern);
+}
+
+function normaliseStop(length: number, stop: number): number {
+  if (stop < 0) {
+    const computed = length + stop;
+    return computed < 0 ? 0 : computed;
+  }
+  return stop;
+}
+
+class RedisPipeline {
+  private commands: Array<() => Promise<any>> = [];
+
+  set(key: string, value: any) {
+    this.commands.push(() => setValue(key, value));
+    return this;
+  }
+
+  del(key: string) {
+    this.commands.push(() => deleteValue(key));
+    return this;
+  }
+
+  async exec() {
+    const results: any[] = [];
+    for (const command of this.commands) {
+      results.push(await command());
+    }
+    this.commands = [];
+    return results;
+  }
+}
 
 // Fungsi untuk mendapatkan instance D1 (mock untuk sekarang)
 function getD1Client(): any {
@@ -10,90 +97,70 @@ function getD1Client(): any {
   return {
     // Mock methods untuk kompatibilitas dengan Redis API
     get: async (key: string) => {
-      // Untuk key tenant (subdomain), gunakan getTenant
-      if (key.startsWith('subdomain:')) {
-        const subdomain = key.replace('subdomain:', '');
-        return await getTenant(subdomain);
-      }
-      // Untuk cache umum, gunakan getCache
-      return await getCache(key);
+      return await getValue(key);
     },
     
     set: async (key: string, value: any, options?: { ex?: number }) => {
-      // Untuk key tenant (subdomain), gunakan setTenant
-      if (key.startsWith('subdomain:')) {
-        const subdomain = key.replace('subdomain:', '');
-        return await setTenant(subdomain, value);
-      }
-      // Untuk cache umum, gunakan setCache dengan TTL jika ada
-      const ttl = options?.ex || 3600; // Default 1 jam
-      return await setCache(key, value, ttl);
+      return await setValue(key, value, options?.ex);
     },
     
     del: async (...keys: string[]) => {
+      let deleted = 0;
       for (const key of keys) {
-        // Untuk key tenant (subdomain), gunakan deleteTenant
-        if (key.startsWith('subdomain:')) {
-          const subdomain = key.replace('subdomain:', '');
-          await deleteTenant(subdomain);
-        }
-        // Untuk cache umum, gunakan deleteCache
-        else {
-          await deleteCache(key);
+        if (await deleteValue(key)) {
+          deleted++;
         }
       }
-      return keys.length; // Return jumlah key yang dihapus
+      return deleted;
     },
     
     // Method-method lain yang mungkin digunakan
     keys: async (pattern: string) => {
-      // Ini adalah simulasi sederhana karena D1 tidak memiliki fitur keys seperti Redis
-      // Dalam implementasi nyata, Anda mungkin perlu menyimpan index keys secara terpisah
-      console.warn('Keys method is not directly supported in D1. Use specific key lookups instead.');
-      return [];
+      return await listKeys(pattern);
     },
     
     mget: async (...keys: string[]) => {
-      // Mendapatkan multiple values
-      const results = [];
-      for (const key of keys) {
-        const value = await getD1Client().get(key);
-        results.push(value);
-      }
-      return results;
+      return await Promise.all(keys.map(key => getValue(key)));
     },
     
     sadd: async (key: string, ...members: string[]) => {
-      // Simulasi set add - dalam D1 kita bisa menyimpan array dalam JSON
-      const existing = await getD1Client().get(key) || [];
-      const newMembers = [...new Set([...existing, ...members])]; // Deduplicate
-      await getD1Client().set(key, newMembers);
-      return members.length; // Return approximate count of added members
+      const existing = await getValue(key);
+      const current = Array.isArray(existing) ? new Set(existing) : new Set<string>();
+      let added = 0;
+      for (const member of members) {
+        if (!current.has(member)) {
+          current.add(member);
+          added++;
+        }
+      }
+      await setValue(key, Array.from(current));
+      return added;
     },
     
     smembers: async (key: string) => {
-      // Mendapatkan semua members dari set
-      return await getD1Client().get(key) || [];
+      const existing = await getValue(key);
+      return Array.isArray(existing) ? existing : [];
     },
     
     srem: async (key: string, ...members: string[]) => {
-      // Menghapus members dari set
-      const existing = await getD1Client().get(key) || [];
+      const existing = await getValue(key);
+      if (!Array.isArray(existing)) {
+        return 0;
+      }
+      const initialLength = existing.length;
       const filtered = existing.filter((item: string) => !members.includes(item));
-      await getD1Client().set(key, filtered);
-      return existing.length - filtered.length; // Return count of removed members
+      await setValue(key, filtered);
+      return initialLength - filtered.length;
     },
     
     scard: async (key: string) => {
-      // Mendapatkan ukuran set
-      const existing = await getD1Client().get(key) || [];
-      return existing.length;
+      const existing = await getValue(key);
+      return Array.isArray(existing) ? existing.length : 0;
     },
     
     exists: async (key: string) => {
-      // Mengecek apakah key exists
-      const value = await getD1Client().get(key);
-      return value !== null ? 1 : 0;
+      const value = await getValue(key);
+      return value !== null && value !== undefined ? 1 : 0;
     },
     
     ping: async () => {
@@ -108,58 +175,84 @@ function getD1Client(): any {
     },
     
     expire: async (key: string, seconds: number) => {
-      // Set expiry (simulasi dengan setCache)
-      const value = await getD1Client().get(key);
-      if (value !== null) {
-        await setCache(key, value, seconds);
-        return 1;
+      const value = await getValue(key);
+      if (value === null || value === undefined) {
+        return 0;
       }
-      return 0;
+      await setValue(key, value, seconds);
+      return 1;
     },
     
     pexpire: async (key: string, milliseconds: number) => {
-      // Set expiry dalam milliseconds
       return await getD1Client().expire(key, Math.floor(milliseconds / 1000));
     },
     
     ttl: async (key: string) => {
-      // Mendapatkan sisa waktu hidup key (-1 jika tidak ada expiry, -2 jika key tidak ada)
-      // Karena D1 tidak menyimpan TTL secara eksplisit seperti Redis, kita return nilai default
-      const value = await getD1Client().get(key);
-      return value !== null ? -1 : -2;
+      const value = await getValue(key);
+      return value !== null && value !== undefined ? -1 : -2;
     },
     
     incr: async (key: string) => {
-      // Increment nilai
-      const value = await getD1Client().get(key) || 0;
-      const newValue = parseInt(value) + 1;
-      await getD1Client().set(key, newValue.toString());
-      return newValue;
+      const value = await getValue(key);
+      const current = parseInt(value ?? '0', 10) || 0;
+      const next = current + 1;
+      await setValue(key, next.toString());
+      return next;
     },
     
     incrby: async (key: string, increment: number) => {
-      // Increment nilai dengan angka tertentu
-      const value = await getD1Client().get(key) || 0;
-      const newValue = parseInt(value) + increment;
-      await getD1Client().set(key, newValue.toString());
-      return newValue;
+      const value = await getValue(key);
+      const current = parseInt(value ?? '0', 10) || 0;
+      const next = current + increment;
+      await setValue(key, next.toString());
+      return next;
     },
     
     decr: async (key: string) => {
-      // Decrement nilai
-      const value = await getD1Client().get(key) || 0;
-      const newValue = parseInt(value) - 1;
-      await getD1Client().set(key, newValue.toString());
-      return newValue;
+      const value = await getValue(key);
+      const current = parseInt(value ?? '0', 10) || 0;
+      const next = current - 1;
+      await setValue(key, next.toString());
+      return next;
     },
     
     decrby: async (key: string, decrement: number) => {
-      // Decrement nilai dengan angka tertentu
-      const value = await getD1Client().get(key) || 0;
-      const newValue = parseInt(value) - decrement;
-      await getD1Client().set(key, newValue.toString());
-      return newValue;
+      const value = await getValue(key);
+      const current = parseInt(value ?? '0', 10) || 0;
+      const next = current - decrement;
+      await setValue(key, next.toString());
+      return next;
     },
+
+    lpush: async (key: string, value: any) => {
+      const existing = await getValue(key);
+      const list = Array.isArray(existing) ? existing : [];
+      list.unshift(value);
+      await setValue(key, list);
+      return list.length;
+    },
+
+    ltrim: async (key: string, start: number, stop: number) => {
+      const existing = await getValue(key);
+      if (!Array.isArray(existing)) {
+        return 'OK';
+      }
+      const normalizedStop = normaliseStop(existing.length, stop);
+      const trimmed = existing.slice(start, normalizedStop + 1);
+      await setValue(key, trimmed);
+      return 'OK';
+    },
+
+    lrange: async (key: string, start: number, stop: number) => {
+      const existing = await getValue(key);
+      if (!Array.isArray(existing)) {
+        return [];
+      }
+      const normalizedStop = normaliseStop(existing.length, stop);
+      return existing.slice(start, normalizedStop + 1);
+    },
+
+    pipeline: () => new RedisPipeline(),
   };
 }
 

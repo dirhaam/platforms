@@ -1,4 +1,13 @@
-import { redis } from '@/lib/redis';
+import {
+  getCache as d1GetCache,
+  setCache as d1SetCache,
+  deleteCache as d1DeleteCache,
+  deleteCacheByPattern as d1DeleteCacheByPattern,
+  listCacheKeys as d1ListCacheKeys,
+} from '@/lib/d1';
+import { db } from '@/lib/database';
+import { tenants, services as servicesTable, staff as staffTable, businessHours as businessHoursTable } from '@/lib/database/schema';
+import { and, eq } from 'drizzle-orm';
 
 // Cache configuration
 export const CACHE_CONFIG = {
@@ -40,7 +49,7 @@ export class CacheService {
   // Generic get method
   static async get<T>(key: string): Promise<T | null> {
     try {
-      const data = await redis.get(key);
+      const data = await d1GetCache(key);
       return data as T | null;
     } catch (error) {
       console.error(`Cache get error for key ${key}:`, error);
@@ -56,12 +65,7 @@ export class CacheService {
   ): Promise<void> {
     try {
       const { ttl } = options;
-      
-      if (ttl) {
-        await redis.setex(key, ttl, JSON.stringify(value));
-      } else {
-        await redis.set(key, JSON.stringify(value));
-      }
+      await d1SetCache(key, value, ttl);
     } catch (error) {
       console.error(`Cache set error for key ${key}:`, error);
     }
@@ -70,7 +74,7 @@ export class CacheService {
   // Delete single key
   static async delete(key: string): Promise<void> {
     try {
-      await redis.del(key);
+      await d1DeleteCache(key);
     } catch (error) {
       console.error(`Cache delete error for key ${key}:`, error);
     }
@@ -80,7 +84,7 @@ export class CacheService {
   static async deleteMany(keys: string[]): Promise<void> {
     try {
       if (keys.length > 0) {
-        await redis.del(...keys);
+        await Promise.all(keys.map(key => d1DeleteCache(key)));
       }
     } catch (error) {
       console.error(`Cache delete many error:`, error);
@@ -90,10 +94,7 @@ export class CacheService {
   // Delete keys by pattern
   static async deleteByPattern(pattern: string): Promise<void> {
     try {
-      const keys = await redis.keys(pattern);
-      if (keys.length > 0) {
-        await redis.del(...keys);
-      }
+      await d1DeleteCacheByPattern(pattern);
     } catch (error) {
       console.error(`Cache delete by pattern error for ${pattern}:`, error);
     }
@@ -102,8 +103,8 @@ export class CacheService {
   // Check if key exists
   static async exists(key: string): Promise<boolean> {
     try {
-      const result = await redis.exists(key);
-      return result === 1;
+      const value = await d1GetCache(key);
+      return value !== null && value !== undefined;
     } catch (error) {
       console.error(`Cache exists error for key ${key}:`, error);
       return false;
@@ -394,33 +395,42 @@ export class CacheService {
   // Cache warming methods
   static async warmTenantCache(tenantId: string) {
     try {
-      const { prisma } = await import('@/lib/database');
-      
-      // Warm tenant data
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        include: {
-          services: { where: { isActive: true } },
-          staff: { where: { isActive: true } },
-          businessHours: true,
-        },
-      });
+      const [tenantRow] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
 
-      if (tenant) {
-        await this.setTenant(tenantId, tenant);
-        await this.setTenantBySubdomain(tenant.subdomain, tenant);
-        
-        if (tenant.services) {
-          await this.setServicesByTenant(tenantId, tenant.services);
-        }
-        
-        if (tenant.staff) {
-          await this.setStaffByTenant(tenantId, tenant.staff);
-        }
-        
-        if (tenant.businessHours) {
-          await this.setBusinessHours(tenantId, tenant.businessHours);
-        }
+      if (!tenantRow) {
+        console.warn(`Tenant ${tenantId} not found while warming cache`);
+        return;
+      }
+
+      await this.setTenant(tenantId, tenantRow);
+      await this.setTenantBySubdomain(tenantRow.subdomain, tenantRow);
+
+      const tenantServices = await db
+        .select()
+        .from(servicesTable)
+        .where(and(eq(servicesTable.tenantId, tenantId), eq(servicesTable.isActive, true)));
+
+      if (tenantServices.length) {
+        await this.setServicesByTenant(tenantId, tenantServices);
+      }
+
+      const tenantStaff = await db
+        .select()
+        .from(staffTable)
+        .where(and(eq(staffTable.tenantId, tenantId), eq(staffTable.isActive, true)));
+
+      if (tenantStaff.length) {
+        await this.setStaffByTenant(tenantId, tenantStaff);
+      }
+
+      const [businessHoursRow] = await db
+        .select()
+        .from(businessHoursTable)
+        .where(eq(businessHoursTable.tenantId, tenantId))
+        .limit(1);
+
+      if (businessHoursRow?.schedule) {
+        await this.setBusinessHours(tenantId, businessHoursRow.schedule);
       }
 
       console.log(`Cache warmed for tenant ${tenantId}`);
@@ -436,9 +446,7 @@ export class CacheService {
     hitRate?: number;
   }> {
     try {
-      // Get all keys (be careful with this in production with large datasets)
-      const keys = await redis.keys('*');
-      
+      const keys = await d1ListCacheKeys('%');
       return {
         totalKeys: keys.length,
         // Additional stats would require Redis INFO command which may not be available in Upstash
@@ -455,9 +463,9 @@ export class CacheService {
       const testKey = 'health_check';
       const testValue = Date.now().toString();
       
-      await redis.set(testKey, testValue);
-      const retrieved = await redis.get(testKey);
-      await redis.del(testKey);
+      await d1SetCache(testKey, testValue, 5);
+      const retrieved = await d1GetCache(testKey);
+      await d1DeleteCache(testKey);
       
       return retrieved === testValue;
     } catch (error) {

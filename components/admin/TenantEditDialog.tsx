@@ -19,8 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { EnhancedTenant, BusinessCategory } from '@/lib/subdomains';
-import { BUSINESS_CATEGORIES } from '@/lib/subdomains';
+import type { EnhancedTenant, BusinessCategory } from '@/lib/subdomain-constants';
+import { BUSINESS_CATEGORIES } from '@/lib/subdomain-constants';
 
 interface TenantEditDialogProps {
   tenant: EnhancedTenant;

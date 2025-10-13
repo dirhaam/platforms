@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { checkDatabaseConnection, db } from '@/lib/database';
 import { DatabaseUtils } from '@/lib/database';
@@ -83,9 +85,11 @@ export async function GET() {
     // Get more detailed database health
     try {
       const dbHealth = await DatabaseUtils.healthCheck();
+      const mappedStatus: 'online' | 'offline' | 'degraded' =
+        dbHealth.status === 'healthy' ? 'online' : 'degraded';
       healthChecks.push({
         service: 'Database Health',
-        status: dbHealth.status,
+        status: mappedStatus,
         responseTime: parseInt(dbHealth.details?.split(' ')[2] || '0'),
         lastChecked: new Date(),
       });

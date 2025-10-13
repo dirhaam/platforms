@@ -150,13 +150,13 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                   <span>Subtotal:</span>
                   <span>Rp {invoice.subtotal.toFixed(2)}</span>
                 </div>
-                {invoice.taxAmount.toNumber() > 0 && (
+                {Number(invoice.taxAmount ?? 0) > 0 && (
                   <div className="flex justify-between">
-                    <span>Tax ({(invoice.taxRate.toNumber() * 100).toFixed(1)}%):</span>
+                    <span>Tax ({(Number(invoice.taxRate ?? 0) * 100).toFixed(1)}%):</span>
                     <span>Rp {invoice.taxAmount.toFixed(2)}</span>
                   </div>
                 )}
-                {invoice.discountAmount.toNumber() > 0 && (
+                {Number(invoice.discountAmount ?? 0) > 0 && (
                   <div className="flex justify-between">
                     <span>Discount:</span>
                     <span>-Rp {invoice.discountAmount.toFixed(2)}</span>

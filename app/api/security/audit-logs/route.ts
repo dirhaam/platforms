@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthMiddleware } from '@/lib/auth/auth-middleware';
 import { RBAC } from '@/lib/auth/rbac';

@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { ExportService, ExportOptions } from '@/lib/analytics/export-service';
 

@@ -5,7 +5,7 @@ import LandingPageSettings from './LandingPageSettings';
 import ServiceSettings from './ServiceSettings';
 import BusinessHoursSettings from './BusinessHoursSettings';
 import NotificationSettings from './NotificationSettings';
-import type { TenantSession } from '@/lib/auth/tenant-auth';
+import type { TenantSession } from '@/lib/auth/types';
 import { SettingsService } from '@/lib/settings/settings-service';
 
 interface TenantSettingsProps {

@@ -15,3 +15,15 @@ export interface AuthResult {
   session?: TenantSession;
   error?: string;
 }
+
+export type Permission =
+  | 'manage_bookings'
+  | 'manage_customers'
+  | 'view_customers'
+  | 'manage_services'
+  | 'manage_staff'
+  | 'view_analytics'
+  | 'send_messages'
+  | 'manage_settings'
+  | 'export_data'
+  | '*';

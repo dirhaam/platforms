@@ -1,9 +1,11 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthMiddleware } from '@/lib/auth/auth-middleware';
 import { RBAC } from '@/lib/auth/rbac';
 import { PerformanceMonitor } from '@/lib/performance/performance-monitor';
 import { CacheService } from '@/lib/cache/cache-service';
-import { DatabaseOptimization } from '@/lib/performance/database-optimization';
+import { DatabaseUtils } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,8 +46,7 @@ export async function GET(request: NextRequest) {
     const cacheStats = await CacheService.getCacheStats();
 
     // Get database health
-    const { prisma } = await import('@/lib/database');
-    const databaseHealth = await DatabaseOptimization.getDatabaseHealth(prisma);
+    const databaseHealth = await DatabaseUtils.healthCheck();
 
     // Get performance recommendations
     const recommendations = PerformanceMonitor.getPerformanceRecommendations();

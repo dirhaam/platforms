@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { InvoiceService } from '@/lib/invoice/invoice-service';
 import { CreateInvoiceRequest, InvoiceFilters } from '@/types/invoice';

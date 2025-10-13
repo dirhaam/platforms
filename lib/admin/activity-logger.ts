@@ -41,7 +41,7 @@ class ActivityLogger {
         action: logEntry.action,
         details: logEntry.details,
         severity: logEntry.severity,
-        metadata: logEntry.metadata ? JSON.stringify(logEntry.metadata) : null,
+        metadata: logEntry.metadata ?? null,
       });
 
       // Cleanup old entries periodically
@@ -65,11 +65,41 @@ class ActivityLogger {
       const logs = await query;
       
       // Parse metadata JSON strings back to objects
-      const parsedLogs = logs.map(log => ({
-        ...log,
-        metadata: log.metadata ? JSON.parse(log.metadata as string) : undefined,
-        timestamp: new Date(log.timestamp),
-      }));
+      const allowedTypes: ActivityLogEntry['type'][] = [
+        'tenant_created',
+        'tenant_updated',
+        'tenant_deleted',
+        'feature_toggled',
+        'subscription_changed',
+        'admin_action',
+      ];
+      const allowedSeverities: ActivityLogEntry['severity'][] = ['info', 'warning', 'error', 'success'];
+
+      const parsedLogs: ActivityLogEntry[] = logs.map(log => {
+        const type = allowedTypes.includes(log.type as ActivityLogEntry['type'])
+          ? (log.type as ActivityLogEntry['type'])
+          : 'admin_action';
+        const severity = allowedSeverities.includes(log.severity as ActivityLogEntry['severity'])
+          ? (log.severity as ActivityLogEntry['severity'])
+          : 'info';
+
+        const metadataValue = (log.metadata ?? undefined) as Record<string, any> | undefined;
+        const timestampValue = log.timestamp instanceof Date
+          ? log.timestamp
+          : new Date(log.timestamp ?? Date.now());
+
+        return {
+          ...log,
+          type,
+          severity,
+          metadata: metadataValue,
+          timestamp: timestampValue,
+          tenantId: log.tenantId ?? undefined,
+          tenantName: log.tenantName ?? undefined,
+          userId: log.userId ?? undefined,
+          userName: log.userName ?? undefined,
+        };
+      });
       
       return parsedLogs;
     } catch (error) {

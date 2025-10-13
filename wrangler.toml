@@ -1,0 +1,42 @@
+name = "boq-platforms"
+main = ".workers/worker.js"
+compatibility_date = "2024-01-01"
+
+# Enable Node.js compatibility
+node_compat = true
+
+# Set placement mode to smart
+[placement]
+mode = "smart"
+
+# Configure build command
+[build]
+command = "next build"
+
+# Environment variables
+[vars]
+NODE_VERSION = "18"
+
+# Define routes that should be handled by this worker
+# Note: For a real deployment, you would configure specific routes
+# For now, we're using a placeholder
+routes = [
+  { pattern = "your-boq-app.your-domain.com/*" }
+]
+
+# If you need to use D1 database, uncomment and configure:
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "your-database-name"
+# database_id = "your-database-id"
+
+# If you need to use R2 buckets, uncomment and configure:
+# [[r2_buckets]]
+# binding = "BUCKET"
+# bucket_name = "your-bucket-name"
+# preview_bucket_name = "your-preview-bucket-name"
+
+# If you need to use KV namespaces, uncomment and configure:
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "your-kv-namespace-id"

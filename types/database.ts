@@ -140,7 +140,7 @@ export interface TenantMigrationData {
   validationErrors: string[];
 }
 
-// Re-export Prisma types for convenience
+// Re-export Drizzle select types for convenience
 export type Tenant = InferSelectModel<typeof tenantsTable>;
 export type Service = InferSelectModel<typeof servicesTable>;
 export type Customer = InferSelectModel<typeof customersTable>;

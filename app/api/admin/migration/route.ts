@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { TenantMigrationService } from '@/lib/migration/tenant-migration';
 import { MigrationUtils } from '@/lib/migration/migration-utils';

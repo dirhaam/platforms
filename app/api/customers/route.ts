@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { CustomerService } from '@/lib/booking/customer-service';
 import { createCustomerSchema } from '@/lib/validation/booking-validation';

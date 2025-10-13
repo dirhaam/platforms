@@ -33,22 +33,23 @@ export async function GET() {
       });
     }
 
-    // Check PostgreSQL connection
-    const dbStart = Date.now();
+    // Direct Cloudflare D1 query verification
+    const d1QueryStart = Date.now();
     try {
-      const { db } = await import('@/lib/database');
-      await db.execute('SELECT 1');
+      const { createDrizzleD1Database } = await import('@/lib/database/d1-client');
+      const database = createDrizzleD1Database();
+      await database.prepare('SELECT 1').bind().first();
       healthChecks.push({
-        service: 'PostgreSQL Database',
+        service: 'Cloudflare D1',
         status: 'online',
-        responseTime: Date.now() - dbStart,
+        responseTime: Date.now() - d1QueryStart,
         lastChecked: new Date(),
       });
     } catch (error) {
       healthChecks.push({
-        service: 'PostgreSQL Database',
+        service: 'Cloudflare D1',
         status: 'offline',
-        responseTime: Date.now() - dbStart,
+        responseTime: Date.now() - d1QueryStart,
         lastChecked: new Date(),
       });
     }

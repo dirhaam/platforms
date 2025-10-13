@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { ServiceService } from '@/lib/booking/service-service';
 import { updateServiceSchema } from '@/lib/validation/booking-validation';

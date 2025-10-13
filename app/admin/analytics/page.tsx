@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
 import { PlatformAnalyticsDashboard } from '@/components/analytics/PlatformAnalyticsDashboard';

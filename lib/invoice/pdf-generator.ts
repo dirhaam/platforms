@@ -213,14 +213,14 @@ export class InvoicePDFGenerator {
     yPosition += 6;
 
     // Tax
-    if (invoice.taxAmount.toNumber() > 0) {
-      this.pdf.text(`Tax (${(invoice.taxRate.toNumber() * 100).toFixed(1)}%):`, rightX, yPosition);
+    if (invoice.taxAmount > 0) {
+      this.pdf.text(`Tax (${(invoice.taxRate * 100).toFixed(1)}%):`, rightX, yPosition);
       this.pdf.text(`Rp ${invoice.taxAmount.toFixed(2)}`, rightX + 30, yPosition);
       yPosition += 6;
     }
 
     // Discount
-    if (invoice.discountAmount.toNumber() > 0) {
+    if (invoice.discountAmount > 0) {
       this.pdf.text('Discount:', rightX, yPosition);
       this.pdf.text(`-Rp ${invoice.discountAmount.toFixed(2)}`, rightX + 30, yPosition);
       yPosition += 6;

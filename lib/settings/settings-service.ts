@@ -79,10 +79,10 @@ export class SettingsService {
         ownerName: tenant.ownerName,
         email: tenant.email,
         phone: tenant.phone,
-        address: tenant.address,
-        businessDescription: tenant.businessDescription,
-        logo: tenant.logo,
-        brandColors: tenant.brandColors as any,
+        address: tenant.address ?? undefined,
+        businessDescription: tenant.businessDescription ?? undefined,
+        logo: tenant.logo ?? undefined,
+        brandColors: (tenant.brandColors ?? undefined) as any,
       };
     } catch (error) {
       console.error('Error fetching business profile:', error);
@@ -167,7 +167,7 @@ export class SettingsService {
           requirements: serviceData.requirements || [],
           createdAt: new Date(),
           updatedAt: new Date(),
-        })
+        } as any)
         .returning();
 
       return { success: true, service: service as Service };
@@ -194,12 +194,23 @@ export class SettingsService {
     }>
   ): Promise<{ success: boolean; service?: Service; error?: string }> {
     try {
+      const updatePayload: Record<string, any> = { updatedAt: new Date() };
+      if (serviceData.name !== undefined) updatePayload.name = serviceData.name;
+      if (serviceData.description !== undefined) updatePayload.description = serviceData.description;
+      if (serviceData.duration !== undefined) updatePayload.duration = serviceData.duration;
+      if (serviceData.price !== undefined) updatePayload.price = serviceData.price.toFixed(2);
+      if (serviceData.category !== undefined) updatePayload.category = serviceData.category;
+      if (serviceData.isActive !== undefined) updatePayload.isActive = serviceData.isActive;
+      if (serviceData.homeVisitAvailable !== undefined) updatePayload.homeVisitAvailable = serviceData.homeVisitAvailable;
+      if (serviceData.homeVisitSurcharge !== undefined) {
+        updatePayload.homeVisitSurcharge = serviceData.homeVisitSurcharge?.toFixed(2);
+      }
+      if (serviceData.images !== undefined) updatePayload.images = serviceData.images;
+      if (serviceData.requirements !== undefined) updatePayload.requirements = serviceData.requirements;
+
       const [service] = await db
         .update(servicesTable)
-        .set({
-          ...serviceData,
-          updatedAt: new Date(),
-        })
+        .set(updatePayload as any)
         .where(eq(servicesTable.id, serviceId))
         .returning();
 
@@ -267,7 +278,7 @@ export class SettingsService {
           schedule,
           timezone,
           updatedAt: new Date(),
-        })
+        } as any)
         .onConflictDoUpdate({
           target: businessHoursTable.tenantId,
           set: {

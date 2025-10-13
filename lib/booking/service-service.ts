@@ -2,7 +2,13 @@ import { db } from '@/lib/database';
 import { services, bookings } from '@/lib/database/schema';
 import { Service, CreateServiceRequest, UpdateServiceRequest } from '@/types/booking';
 import { eq, and, ne, gte, lte, or, asc, desc, sql } from 'drizzle-orm';
-import crypto from 'crypto';
+
+const randomUUID = () => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+};
 
 export class ServiceService {
   // Create a new service
@@ -12,7 +18,7 @@ export class ServiceService {
   ): Promise<{ service?: Service; error?: string }> {
     try {
       const [newService] = await db.insert(services).values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         tenantId,
         name: data.name,
         description: data.description,
@@ -26,9 +32,9 @@ export class ServiceService {
         requirements: data.requirements || [],
         createdAt: new Date(),
         updatedAt: new Date()
-      }).returning();
+      } as any).returning();
       
-      return { service: newService as Service };
+      return { service: newService as unknown as Service };
     } catch (error) {
       console.error('Error creating service:', error);
       return { error: 'Failed to create service' };
@@ -71,7 +77,7 @@ export class ServiceService {
       
       const [updatedService] = await db.update(services).set(updateData).where(eq(services.id, serviceId)).returning();
       
-      return { service: updatedService as Service };
+      return { service: updatedService as unknown as Service };
     } catch (error) {
       console.error('Error updating service:', error);
       return { error: 'Failed to update service' };
@@ -90,7 +96,7 @@ export class ServiceService {
     } = {}
   ): Promise<Service[]> {
     try {
-      let query = db.select().from(services).where(eq(services.tenantId, tenantId));
+      let query: any = db.select().from(services).where(eq(services.tenantId, tenantId));
       
       if (options.category) query = query.where(and(eq(services.tenantId, tenantId), eq(services.category, options.category)));
       if (options.isActive !== undefined) query = query.where(and(eq(services.tenantId, tenantId), eq(services.isActive, options.isActive)));
@@ -124,7 +130,7 @@ export class ServiceService {
         )
       ).limit(1);
       
-      return serviceResult as Service | null;
+      return serviceResult ? (serviceResult as unknown as Service) : null;
     } catch (error) {
       console.error('Error fetching service:', error);
       return null;
@@ -197,7 +203,7 @@ export class ServiceService {
     averageRating?: number;
   }> {
     try {
-      let baseWhere = eq(bookings.tenantId, tenantId);
+      let baseWhere: any = eq(bookings.tenantId, tenantId);
       if (serviceId) {
         baseWhere = and(baseWhere, eq(bookings.serviceId, serviceId));
       }

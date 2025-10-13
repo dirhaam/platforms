@@ -1,8 +1,11 @@
 import { redis } from '@/lib/redis';
-import { prisma } from '@/lib/database';
+import { db } from '@/lib/database';
 import type { EnhancedTenant, LegacySubdomainData } from '@/types/database';
 import { TenantMigrationService } from './tenant-migration';
 import { MigrationUtils } from './migration-utils';
+import { tenants } from '@/lib/database/schema';
+import { eq, and } from 'drizzle-orm';
+import { createDrizzleD1Database } from '@/lib/database/d1-client';
 
 /**
  * Migration testing utilities
@@ -62,17 +65,18 @@ export class MigrationTests {
     details?: any;
   }> {
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      const database = createDrizzleD1Database();
+      await database.prepare('SELECT 1').bind().first();
       return {
         test: 'Database Connectivity',
         passed: true,
-        message: 'PostgreSQL connection successful',
+        message: 'Database connection successful',
       };
     } catch (error) {
       return {
         test: 'Database Connectivity',
         passed: false,
-        message: 'PostgreSQL connection failed',
+        message: 'Database connection failed',
         details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
@@ -165,18 +169,18 @@ export class MigrationTests {
       await TenantMigrationService.migrateSingleTenant(testSubdomain, testData);
       
       // Verify migration
-      const migratedTenant = await prisma.tenant.findUnique({
-        where: { subdomain: testSubdomain },
-      });
+      const [migratedTenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.subdomain, testSubdomain))
+        .limit(1);
       
       if (!migratedTenant) {
-        throw new Error('Migrated tenant not found in PostgreSQL');
+        throw new Error('Migrated tenant not found in database');
       }
       
       // Cleanup
-      await prisma.tenant.delete({
-        where: { subdomain: testSubdomain },
-      });
+      await db.delete(tenants).where(eq(tenants.subdomain, testSubdomain));
       await redis.del(`subdomain:${testSubdomain}`);
       
       return {
@@ -188,9 +192,7 @@ export class MigrationTests {
     } catch (error) {
       // Cleanup on error
       try {
-        await prisma.tenant.deleteMany({
-          where: { subdomain: testSubdomain },
-        });
+        await db.delete(tenants).where(eq(tenants.subdomain, testSubdomain));
         await redis.del(`subdomain:${testSubdomain}`);
       } catch (cleanupError) {
         console.warn('Cleanup failed:', cleanupError);
@@ -281,11 +283,9 @@ export class MigrationTests {
       // Cleanup
       await redis.del(`subdomain:${testSubdomain}`);
       
-      // Also cleanup from PostgreSQL if it was auto-migrated
+      // Also cleanup from database if it was auto-migrated
       try {
-        await prisma.tenant.deleteMany({
-          where: { subdomain: testSubdomain },
-        });
+        await db.delete(tenants).where(eq(tenants.subdomain, testSubdomain));
       } catch (cleanupError) {
         // Ignore cleanup errors for this test
       }
@@ -300,9 +300,7 @@ export class MigrationTests {
       // Cleanup on error
       try {
         await redis.del(`subdomain:${testSubdomain}`);
-        await prisma.tenant.deleteMany({
-          where: { subdomain: testSubdomain },
-        });
+        await db.delete(tenants).where(eq(tenants.subdomain, testSubdomain));
       } catch (cleanupError) {
         console.warn('Cleanup failed:', cleanupError);
       }
@@ -326,9 +324,10 @@ export class MigrationTests {
   }> {
     try {
       // Get original data from Redis
-      const redisData = await redis.get<LegacySubdomainData | EnhancedTenant>(
-        `subdomain:${subdomain}`
-      );
+      const redisData = (await redis.get(`subdomain:${subdomain}`)) as
+        | LegacySubdomainData
+        | EnhancedTenant
+        | null;
       
       if (!redisData) {
         return {
@@ -338,9 +337,11 @@ export class MigrationTests {
       }
       
       // Check if already migrated
-      const existingTenant = await prisma.tenant.findUnique({
-        where: { subdomain },
-      });
+      const [existingTenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.subdomain, subdomain))
+        .limit(1);
       
       if (existingTenant) {
         return {
@@ -354,9 +355,11 @@ export class MigrationTests {
       await TenantMigrationService.migrateSingleTenant(subdomain, redisData);
       
       // Verify migration
-      const migratedTenant = await prisma.tenant.findUnique({
-        where: { subdomain },
-      });
+      const [migratedTenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.subdomain, subdomain))
+        .limit(1);
       
       if (!migratedTenant) {
         return {

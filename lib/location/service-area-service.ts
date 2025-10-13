@@ -1,11 +1,15 @@
-import { prisma } from '@/lib/database';
-import { 
-  ServiceArea, 
-  CreateServiceAreaRequest, 
+import { db } from '@/lib/database';
+import {
+  ServiceArea,
+  CreateServiceAreaRequest,
   UpdateServiceAreaRequest,
   Coordinates,
-  ServiceAreaBoundary
+  ServiceAreaBoundary,
 } from '@/types/location';
+import { serviceAreas, services } from '@/lib/database/schema';
+import { eq, and, inArray } from 'drizzle-orm';
+
+type ServiceAreaRow = typeof serviceAreas.$inferSelect;
 
 export class ServiceAreaService {
   // Create a new service area
@@ -22,35 +26,33 @@ export class ServiceAreaService {
 
       // Validate available services exist
       if (data.availableServices.length > 0) {
-        const services = await prisma.service.findMany({
-          where: {
-            tenantId,
-            id: { in: data.availableServices },
-            isActive: true
-          }
-        });
+        const dbServices = await db.select().from(services).where(
+          and(
+            eq(services.tenantId, tenantId),
+            inArray(services.id, data.availableServices),
+            eq(services.isActive, true)
+          )
+        );
 
-        if (services.length !== data.availableServices.length) {
+        if (dbServices.length !== data.availableServices.length) {
           return { error: 'Some specified services do not exist or are inactive' };
         }
       }
 
-      const serviceArea = await prisma.serviceArea.create({
-        data: {
-          tenantId,
-          name: data.name,
-          description: data.description,
-          boundaries: data.boundaries,
-          baseTravelSurcharge: data.baseTravelSurcharge,
-          perKmSurcharge: data.perKmSurcharge,
-          maxTravelDistance: data.maxTravelDistance,
-          estimatedTravelTime: data.estimatedTravelTime,
-          availableServices: data.availableServices,
-          isActive: true
-        }
-      });
+      const [serviceArea] = await db.insert(serviceAreas).values({
+        tenantId,
+        name: data.name,
+        description: data.description,
+        boundaries: data.boundaries,
+        baseTravelSurcharge: data.baseTravelSurcharge,
+        perKmSurcharge: data.perKmSurcharge,
+        maxTravelDistance: data.maxTravelDistance,
+        estimatedTravelTime: data.estimatedTravelTime,
+        availableServices: data.availableServices,
+        isActive: true
+      } as any).returning();
 
-      return { serviceArea: serviceArea as ServiceArea };
+      return { serviceArea: this.mapServiceAreaRow(serviceArea) };
     } catch (error) {
       console.error('Error creating service area:', error);
       return { error: 'Failed to create service area' };
@@ -65,11 +67,14 @@ export class ServiceAreaService {
   ): Promise<{ serviceArea?: ServiceArea; error?: string }> {
     try {
       // Check if service area exists and belongs to tenant
-      const existingServiceArea = await prisma.serviceArea.findFirst({
-        where: { id: serviceAreaId, tenantId }
-      });
+      const existingServiceArea = await db.select().from(serviceAreas).where(
+        and(
+          eq(serviceAreas.id, serviceAreaId),
+          eq(serviceAreas.tenantId, tenantId)
+        )
+      ).limit(1);
 
-      if (!existingServiceArea) {
+      if (existingServiceArea.length === 0) {
         return { error: 'Service area not found' };
       }
 
@@ -95,27 +100,26 @@ export class ServiceAreaService {
       // Validate available services if provided
       if (data.availableServices) {
         if (data.availableServices.length > 0) {
-          const services = await prisma.service.findMany({
-            where: {
-              tenantId,
-              id: { in: data.availableServices },
-              isActive: true
-            }
-          });
+          const dbServices = await db.select().from(services).where(
+            and(
+              eq(services.tenantId, tenantId),
+              inArray(services.id, data.availableServices),
+              eq(services.isActive, true)
+            )
+          );
 
-          if (services.length !== data.availableServices.length) {
+          if (dbServices.length !== data.availableServices.length) {
             return { error: 'Some specified services do not exist or are inactive' };
           }
         }
         updateData.availableServices = data.availableServices;
       }
 
-      const serviceArea = await prisma.serviceArea.update({
-        where: { id: serviceAreaId },
-        data: updateData
-      });
+      const [serviceArea] = await db.update(serviceAreas).set(updateData as any)
+        .where(eq(serviceAreas.id, serviceAreaId))
+        .returning();
 
-      return { serviceArea: serviceArea as ServiceArea };
+      return { serviceArea: this.mapServiceAreaRow(serviceArea) };
     } catch (error) {
       console.error('Error updating service area:', error);
       return { error: 'Failed to update service area' };
@@ -131,25 +135,29 @@ export class ServiceAreaService {
     } = {}
   ): Promise<ServiceArea[]> {
     try {
-      const where: any = { tenantId };
+      let serviceAreaRows: ServiceAreaRow[];
 
-      if (!options.includeInactive) {
-        where.isActive = true;
+      if (options.includeInactive) {
+        serviceAreaRows = await db
+          .select()
+          .from(serviceAreas)
+          .where(eq(serviceAreas.tenantId, tenantId))
+          .orderBy(serviceAreas.name);
+      } else {
+        serviceAreaRows = await db
+          .select()
+          .from(serviceAreas)
+          .where(
+            and(eq(serviceAreas.tenantId, tenantId), eq(serviceAreas.isActive, true))
+          )
+          .orderBy(serviceAreas.name);
       }
 
-      let serviceAreas = await prisma.serviceArea.findMany({
-        where,
-        orderBy: { name: 'asc' }
-      });
-
-      // Filter by service availability if specified
       if (options.serviceId) {
-        serviceAreas = serviceAreas.filter(area => 
-          area.availableServices.includes(options.serviceId!)
-        );
+        serviceAreaRows = serviceAreaRows.filter(row => row.availableServices?.includes(options.serviceId!) ?? false);
       }
 
-      return serviceAreas as ServiceArea[];
+      return serviceAreaRows.map(row => this.mapServiceAreaRow(row));
     } catch (error) {
       console.error('Error fetching service areas:', error);
       return [];
@@ -159,11 +167,14 @@ export class ServiceAreaService {
   // Get a single service area
   static async getServiceArea(tenantId: string, serviceAreaId: string): Promise<ServiceArea | null> {
     try {
-      const serviceArea = await prisma.serviceArea.findFirst({
-        where: { id: serviceAreaId, tenantId }
-      });
+      const [serviceArea] = await db.select().from(serviceAreas).where(
+        and(
+          eq(serviceAreas.id, serviceAreaId),
+          eq(serviceAreas.tenantId, tenantId)
+        )
+      ).limit(1);
 
-      return serviceArea as ServiceArea | null;
+      return serviceArea ? this.mapServiceAreaRow(serviceArea) : null;
     } catch (error) {
       console.error('Error fetching service area:', error);
       return null;
@@ -176,17 +187,18 @@ export class ServiceAreaService {
     serviceAreaId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const serviceArea = await prisma.serviceArea.findFirst({
-        where: { id: serviceAreaId, tenantId }
-      });
+      const [serviceArea] = await db.select().from(serviceAreas).where(
+        and(
+          eq(serviceAreas.id, serviceAreaId),
+          eq(serviceAreas.tenantId, tenantId)
+        )
+      ).limit(1);
 
       if (!serviceArea) {
         return { success: false, error: 'Service area not found' };
       }
 
-      await prisma.serviceArea.delete({
-        where: { id: serviceAreaId }
-      });
+      await db.delete(serviceAreas).where(eq(serviceAreas.id, serviceAreaId));
 
       return { success: true };
     } catch (error) {
@@ -266,6 +278,27 @@ export class ServiceAreaService {
   }
 
   // Private helper methods
+
+  private static mapServiceAreaRow(row: ServiceAreaRow): ServiceArea {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      name: row.name,
+      description: row.description ?? undefined,
+      isActive: row.isActive ?? false,
+      boundaries: row.boundaries as ServiceAreaBoundary,
+      baseTravelSurcharge: Number(row.baseTravelSurcharge ?? 0),
+      perKmSurcharge:
+        row.perKmSurcharge !== null && row.perKmSurcharge !== undefined
+          ? Number(row.perKmSurcharge)
+          : undefined,
+      maxTravelDistance: Number(row.maxTravelDistance ?? 0),
+      estimatedTravelTime: Number(row.estimatedTravelTime ?? 0),
+      availableServices: row.availableServices ?? [],
+      createdAt: row.createdAt ?? new Date(),
+      updatedAt: row.updatedAt ?? new Date(),
+    };
+  }
 
   private static validateBoundaries(boundaries: ServiceAreaBoundary): { valid: boolean; message?: string } {
     if (boundaries.type === 'circle') {
