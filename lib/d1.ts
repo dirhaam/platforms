@@ -1,152 +1,132 @@
 // lib/d1.ts
-// Implementasi baru untuk menggantikan Redis dengan Cloudflare D1
+// PostgreSQL implementation to replace D1 functionality
 
-import { D1DatabaseService } from '@/lib/database/d1-client';
+import {
+  testPostgresConnection,
+  setTenant as setTenantPg,
+  getTenant as getTenantPg,
+  deleteTenant as deleteTenantPg,
+  setSession as setSessionPg,
+  getSession as getSessionPg,
+  deleteSession as deleteSessionPg,
+  setCache as setCachePg,
+  getCache as getCachePg,
+  deleteCache as deleteCachePg,
+  cleanupExpiredData as cleanupExpiredDataPg,
+  deleteCacheByPattern as deleteCacheByPatternPg,
+  listCacheKeys as listCacheKeysPg,
+  listTenantSubdomains as listTenantSubdomainsPg,
+} from '@/lib/database/postgres-service';
 
-let cachedService: D1DatabaseService | null = null;
-
-function getD1Service(env?: any): D1DatabaseService {
-  if (env) {
-    // Jangan cache instance yang dibuat dengan env khusus context Workers.
-    return new D1DatabaseService(env);
-  }
-
-  if (!cachedService) {
-    cachedService = new D1DatabaseService();
-  }
-
-  return cachedService;
-}
-
-// Fungsi untuk menguji koneksi D1
-export async function testD1Connection(env?: any): Promise<boolean> {
+// Fungsi untuk menguji koneksi PostgreSQL
+export async function testD1Connection(): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    const key = `d1_healthcheck_${Date.now()}`;
-    const setResult = await service.setCache(key, 'ok', 30);
-    if (!setResult) {
-      return false;
-    }
-    await service.deleteCache(key);
-    return true;
+    return await testPostgresConnection();
   } catch (error) {
-    console.error('D1 connection failed:', error);
+    console.error('PostgreSQL connection failed:', error);
     return false;
   }
 }
 
 // Fungsi-fungsi tambahan yang bisa digunakan sebagai pengganti operasi Redis
-export async function setTenant(subdomain: string, tenantData: any, env?: any): Promise<boolean> {
+export async function setTenant(subdomain: string, tenantData: any): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    return await service.setTenant(subdomain, tenantData);
+    return await setTenantPg(subdomain, tenantData);
   } catch (error) {
-    console.error('Error setting tenant in D1:', error);
+    console.error('Error setting tenant in PostgreSQL:', error);
     return false;
   }
 }
 
-export async function getTenant(subdomain: string, env?: any): Promise<any | null> {
+export async function getTenant(subdomain: string): Promise<any | null> {
   try {
-    const service = getD1Service(env);
-    return await service.getTenant(subdomain);
+    return await getTenantPg(subdomain);
   } catch (error) {
-    console.error('Error getting tenant from D1:', error);
+    console.error('Error getting tenant from PostgreSQL:', error);
     return null;
   }
 }
 
-export async function deleteTenant(subdomain: string, env?: any): Promise<boolean> {
+export async function deleteTenant(subdomain: string): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    return await service.deleteTenant(subdomain);
+    return await deleteTenantPg(subdomain);
   } catch (error) {
-    console.error('Error deleting tenant from D1:', error);
+    console.error('Error deleting tenant from PostgreSQL:', error);
     return false;
   }
 }
 
-export async function setSession(sessionId: string, userId: string, tenantId: string, sessionData: any, ttl: number = 86400, env?: any): Promise<boolean> {
+export async function setSession(sessionId: string, userId: string, tenantId: string, sessionData: any, ttl: number = 86400): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    return await service.setSession(sessionId, userId, tenantId, sessionData, ttl);
+    return await setSessionPg(sessionId, userId, tenantId, sessionData, ttl);
   } catch (error) {
-    console.error('Error setting session in D1:', error);
+    console.error('Error setting session in PostgreSQL:', error);
     return false;
   }
 }
 
-export async function getSession(sessionId: string, env?: any): Promise<any | null> {
+export async function getSession(sessionId: string): Promise<any | null> {
   try {
-    const service = getD1Service(env);
-    return await service.getSession(sessionId);
+    return await getSessionPg(sessionId);
   } catch (error) {
-    console.error('Error getting session from D1:', error);
+    console.error('Error getting session from PostgreSQL:', error);
     return null;
   }
 }
 
-export async function deleteSession(sessionId: string, env?: any): Promise<boolean> {
+export async function deleteSession(sessionId: string): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    return await service.deleteSession(sessionId);
+    return await deleteSessionPg(sessionId);
   } catch (error) {
-    console.error('Error deleting session from D1:', error);
+    console.error('Error deleting session from PostgreSQL:', error);
     return false;
   }
 }
 
-export async function setCache(key: string, value: any, ttl: number = 3600, env?: any): Promise<boolean> {
+export async function setCache(key: string, value: any, ttl: number = 3600): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    return await service.setCache(key, value, ttl);
+    return await setCachePg(key, value, ttl);
   } catch (error) {
-    console.error('Error setting cache in D1:', error);
+    console.error('Error setting cache in PostgreSQL:', error);
     return false;
   }
 }
 
-export async function getCache(key: string, env?: any): Promise<any | null> {
+export async function getCache(key: string): Promise<any | null> {
   try {
-    const service = getD1Service(env);
-    return await service.getCache(key);
+    return await getCachePg(key);
   } catch (error) {
-    console.error('Error getting cache from D1:', error);
+    console.error('Error getting cache from PostgreSQL:', error);
     return null;
   }
 }
 
-export async function deleteCache(key: string, env?: any): Promise<boolean> {
+export async function deleteCache(key: string): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    return await service.deleteCache(key);
+    return await deleteCachePg(key);
   } catch (error) {
-    console.error('Error deleting cache from D1:', error);
+    console.error('Error deleting cache from PostgreSQL:', error);
     return false;
   }
 }
 
-export async function cleanupExpiredData(env?: any): Promise<boolean> {
+export async function cleanupExpiredData(): Promise<boolean> {
   try {
-    const service = getD1Service(env);
-    return await service.cleanupExpiredData();
+    return await cleanupExpiredDataPg();
   } catch (error) {
     console.error('Error cleaning up expired data:', error);
     return false;
   }
 }
 
-export async function deleteCacheByPattern(pattern: string, env?: any): Promise<number> {
-  const service = getD1Service(env);
-  return await service.deleteCacheByPattern(pattern);
+export async function deleteCacheByPattern(pattern: string): Promise<number> {
+  return await deleteCacheByPatternPg(pattern);
 }
 
-export async function listCacheKeys(pattern?: string, env?: any): Promise<string[]> {
-  const service = getD1Service(env);
-  return await service.listCacheKeys(pattern ?? '%');
+export async function listCacheKeys(pattern?: string): Promise<string[]> {
+  return await listCacheKeysPg(pattern ?? '%');
 }
 
-export async function listTenantSubdomains(pattern?: string, env?: any): Promise<string[]> {
-  const service = getD1Service(env);
-  return await service.listTenantSubdomains(pattern ?? '%');
+export async function listTenantSubdomains(pattern?: string): Promise<string[]> {
+  return await listTenantSubdomainsPg(pattern ?? '%');
 }

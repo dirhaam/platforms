@@ -1,7 +1,7 @@
 import { CacheService } from '@/lib/cache/cache-service';
 import { DatabaseOptimization } from './database-optimization';
 import { db } from '@/lib/database';
-import { createDrizzleD1Database } from '@/lib/database/d1-client';
+import { tenants } from '@/lib/database/schema';
 
 // Performance monitoring configuration
 export const PERFORMANCE_CONFIG = {
@@ -393,8 +393,7 @@ export class PerformanceMonitor {
   private static async checkDatabaseHealth(): Promise<{ isHealthy: boolean; avgResponseTime?: number }> {
     try {
       const start = Date.now();
-      const database = createDrizzleD1Database();
-      await database.prepare('SELECT 1').bind().first();
+      await db.select().from(tenants).limit(1);
       const responseTime = Date.now() - start;
       return {
         isHealthy: responseTime < PERFORMANCE_CONFIG.THRESHOLDS.SLOW_QUERY,

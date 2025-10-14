@@ -1,20 +1,10 @@
-// Drizzle schema for Cloudflare D1 (SQLite)
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-import { relations, sql } from 'drizzle-orm';
-
-const timestampColumn = (name: string, notNull: boolean = true) => {
-  const column = integer(name, { mode: 'timestamp_ms' }).default(sql`(unixepoch() * 1000)`);
-  return notNull ? column.notNull() : column;
-};
-
-const booleanColumn = (name: string, defaultValue?: boolean) => {
-  const column = integer(name, { mode: 'boolean' });
-  return defaultValue === undefined ? column : column.default(defaultValue);
-};
+// Drizzle schema for Supabase (PostgreSQL)
+import { pgTable, text, integer, real, boolean, timestamp, jsonb, uuid } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // Tenant table
-export const tenants = sqliteTable('tenants', {
-  id: text('id').primaryKey().notNull(),
+export const tenants = pgTable('tenants', {
+  id: uuid('id').defaultRandom().primaryKey(),
   subdomain: text('subdomain').notNull().unique(),
   emoji: text('emoji').default('🏢'),
   businessName: text('business_name').notNull(),
@@ -26,177 +16,177 @@ export const tenants = sqliteTable('tenants', {
   businessDescription: text('business_description'),
   logo: text('logo'),
 
-  brandColors: text('brand_colors', { mode: 'json' }).$type<Record<string, string> | null>(),
+  brandColors: jsonb('brand_colors').$type<Record<string, string> | null>(),
 
-  whatsappEnabled: booleanColumn('whatsapp_enabled', false),
-  homeVisitEnabled: booleanColumn('home_visit_enabled', false),
-  analyticsEnabled: booleanColumn('analytics_enabled', false),
-  customTemplatesEnabled: booleanColumn('custom_templates_enabled', false),
-  multiStaffEnabled: booleanColumn('multi_staff_enabled', false),
+  whatsappEnabled: boolean('whatsapp_enabled').default(false),
+  homeVisitEnabled: boolean('home_visit_enabled').default(false),
+  analyticsEnabled: boolean('analytics_enabled').default(false),
+  customTemplatesEnabled: boolean('custom_templates_enabled').default(false),
+  multiStaffEnabled: boolean('multi_staff_enabled').default(false),
 
   subscriptionPlan: text('subscription_plan').notNull().default('basic'),
   subscriptionStatus: text('subscription_status').notNull().default('active'),
-  subscriptionExpiresAt: timestampColumn('subscription_expires_at', false),
+  subscriptionExpiresAt: timestamp('subscription_expires_at', { withTimezone: true }),
 
   passwordHash: text('password_hash'),
-  lastLoginAt: timestampColumn('last_login_at', false),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   loginAttempts: integer('login_attempts').default(0),
-  lockedUntil: timestampColumn('locked_until', false),
+  lockedUntil: timestamp('locked_until', { withTimezone: true }),
   passwordResetToken: text('password_reset_token'),
-  passwordResetExpires: timestampColumn('password_reset_expires', false),
+  passwordResetExpires: timestamp('password_reset_expires', { withTimezone: true }),
 
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Service table
-export const services = sqliteTable('services', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+export const services = pgTable('services', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description').notNull(),
   duration: integer('duration').notNull(),
   price: real('price').notNull(),
   category: text('category').notNull(),
-  isActive: booleanColumn('is_active', true),
-  homeVisitAvailable: booleanColumn('home_visit_available', false),
+  isActive: boolean('is_active').default(true),
+  homeVisitAvailable: boolean('home_visit_available').default(false),
   homeVisitSurcharge: real('home_visit_surcharge'),
-  images: text('images', { mode: 'json' }).$type<string[] | null>(),
-  requirements: text('requirements', { mode: 'json' }).$type<string[] | null>(),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  images: jsonb('images').$type<string[] | null>(),
+  requirements: jsonb('requirements').$type<string[] | null>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Customer table
-export const customers = sqliteTable('customers', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+export const customers = pgTable('customers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   email: text('email'),
   phone: text('phone').notNull(),
   address: text('address'),
   notes: text('notes'),
   totalBookings: integer('total_bookings').default(0),
-  lastBookingAt: timestampColumn('last_booking_at', false),
+  lastBookingAt: timestamp('last_booking_at', { withTimezone: true }),
   whatsappNumber: text('whatsapp_number'),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Booking table
-export const bookings = sqliteTable('bookings', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  customerId: text('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
-  serviceId: text('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
+export const bookings = pgTable('bookings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
   status: text('status').notNull().default('pending'),
-  scheduledAt: timestampColumn('scheduled_at'),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   duration: integer('duration').notNull(),
-  isHomeVisit: booleanColumn('is_home_visit', false),
+  isHomeVisit: boolean('is_home_visit').default(false),
   homeVisitAddress: text('home_visit_address'),
-  homeVisitCoordinates: text('home_visit_coordinates', { mode: 'json' }).$type<{ lat: number; lng: number } | null>(),
+  homeVisitCoordinates: jsonb('home_visit_coordinates').$type<{ lat: number; lng: number } | null>(),
   notes: text('notes'),
   totalAmount: real('total_amount').notNull(),
   paymentStatus: text('payment_status').notNull().default('pending'),
-  remindersSent: text('reminders_sent', { mode: 'json' }).$type<string[] | null>(),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  remindersSent: jsonb('reminders_sent').$type<string[] | null>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Staff table
-export const staff = sqliteTable('staff', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+export const staff = pgTable('staff', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   email: text('email').notNull(),
   phone: text('phone'),
   role: text('role').notNull().default('staff'),
-  permissions: text('permissions', { mode: 'json' }).$type<string[] | null>(),
-  isActive: booleanColumn('is_active', true),
+  permissions: jsonb('permissions').$type<string[] | null>(),
+  isActive: boolean('is_active').default(true),
 
   passwordHash: text('password_hash'),
-  lastLoginAt: timestampColumn('last_login_at', false),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   loginAttempts: integer('login_attempts').default(0),
-  lockedUntil: timestampColumn('locked_until', false),
+  lockedUntil: timestamp('locked_until', { withTimezone: true }),
   passwordResetToken: text('password_reset_token'),
-  passwordResetExpires: timestampColumn('password_reset_expires', false),
+  passwordResetExpires: timestamp('password_reset_expires', { withTimezone: true }),
 
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // WhatsApp Device table
-export const whatsappDevices = sqliteTable('whatsapp_devices', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+export const whatsappDevices = pgTable('whatsapp_devices', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   deviceName: text('device_name').notNull(),
   phoneNumber: text('phone_number').notNull(),
   status: text('status').notNull().default('disconnected'),
-  lastSeen: timestampColumn('last_seen', false),
+  lastSeen: timestamp('last_seen', { withTimezone: true }),
   qrCode: text('qr_code'),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Conversation table
-export const conversations = sqliteTable('conversations', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  customerId: text('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+export const conversations = pgTable('conversations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
   whatsappNumber: text('whatsapp_number').notNull(),
-  lastMessageAt: timestampColumn('last_message_at'),
+  lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
   unreadCount: integer('unread_count').default(0),
-  assignedToId: text('assigned_to_id').references(() => staff.id, { onDelete: 'set null' }),
+  assignedToId: uuid('assigned_to_id').references(() => staff.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('active'),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Message table
-export const messages = sqliteTable('messages', {
-  id: text('id').primaryKey().notNull(),
-  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+export const messages = pgTable('messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   type: text('type').notNull().default('text'),
   content: text('content').notNull(),
   mediaUrl: text('media_url'),
-  isFromCustomer: booleanColumn('is_from_customer', true),
+  isFromCustomer: boolean('is_from_customer').default(true),
   deliveryStatus: text('delivery_status').notNull().default('sent'),
-  sentAt: timestampColumn('sent_at'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
 });
 
 // Message Template table
-export const messageTemplates = sqliteTable('message_templates', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+export const messageTemplates = pgTable('message_templates', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   content: text('content').notNull(),
-  variables: text('variables', { mode: 'json' }).$type<string[] | null>(),
+  variables: jsonb('variables').$type<string[] | null>(),
   category: text('category').notNull().default('reminder'),
-  isActive: booleanColumn('is_active', true),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Business Hours table
-export const businessHours = sqliteTable('business_hours', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().unique().references(() => tenants.id, { onDelete: 'cascade' }),
-  schedule: text('schedule', { mode: 'json' }).notNull().$type<Record<string, any>>(),
+export const businessHours = pgTable('business_hours', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().unique().references(() => tenants.id, { onDelete: 'cascade' }),
+  schedule: jsonb('schedule').notNull().$type<Record<string, any>>(),
   timezone: text('timezone').default('Asia/Jakarta'),
-  updatedAt: timestampColumn('updated_at'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Invoice table
-export const invoices = sqliteTable('invoices', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  customerId: text('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
-  bookingId: text('booking_id').references(() => bookings.id, { onDelete: 'set null' }),
+export const invoices = pgTable('invoices', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  bookingId: uuid('booking_id').references(() => bookings.id, { onDelete: 'set null' }),
   invoiceNumber: text('invoice_number').notNull().unique(),
   status: text('status').notNull().default('draft'),
-  issueDate: timestampColumn('issue_date'),
-  dueDate: timestampColumn('due_date'),
-  paidDate: timestampColumn('paid_date', false),
+  issueDate: timestamp('issue_date', { withTimezone: true }),
+  dueDate: timestamp('due_date', { withTimezone: true }),
+  paidDate: timestamp('paid_date', { withTimezone: true }),
 
   subtotal: real('subtotal').notNull(),
   taxRate: real('tax_rate').default(0),
@@ -212,76 +202,76 @@ export const invoices = sqliteTable('invoices', {
   qrCodeData: text('qr_code_data'),
   qrCodeUrl: text('qr_code_url'),
 
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Invoice Item table
-export const invoiceItems = sqliteTable('invoice_items', {
-  id: text('id').primaryKey().notNull(),
-  invoiceId: text('invoice_id').notNull().references(() => invoices.id, { onDelete: 'cascade' }),
+export const invoiceItems = pgTable('invoice_items', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  invoiceId: uuid('invoice_id').notNull().references(() => invoices.id, { onDelete: 'cascade' }),
   description: text('description').notNull(),
   quantity: integer('quantity').default(1),
   unitPrice: real('unit_price').notNull(),
   totalPrice: real('total_price').notNull(),
-  serviceId: text('service_id').references(() => services.id, { onDelete: 'set null' }),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  serviceId: uuid('service_id').references(() => services.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Service Area table
-export const serviceAreas = sqliteTable('service_areas', {
-  id: text('id').primaryKey().notNull(),
-  tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+export const serviceAreas = pgTable('service_areas', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description'),
-  isActive: booleanColumn('is_active', true),
-  boundaries: text('boundaries', { mode: 'json' }).notNull().$type<Record<string, any>>(),
+  isActive: boolean('is_active').default(true),
+  boundaries: jsonb('boundaries').notNull().$type<Record<string, any>>(),
   baseTravelSurcharge: real('base_travel_surcharge').notNull(),
   perKmSurcharge: real('per_km_surcharge'),
   maxTravelDistance: real('max_travel_distance').notNull(),
   estimatedTravelTime: integer('estimated_travel_time').notNull(),
-  availableServices: text('available_services', { mode: 'json' }).$type<string[] | null>(),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  availableServices: jsonb('available_services').$type<string[] | null>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Super Admin table
-export const superAdmins = sqliteTable('super_admins', {
-  id: text('id').primaryKey().notNull(),
+export const superAdmins = pgTable('super_admins', {
+  id: uuid('id').defaultRandom().primaryKey(),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
-  isActive: booleanColumn('is_active', true),
+  isActive: boolean('is_active').default(true),
   passwordHash: text('password_hash').notNull(),
-  lastLoginAt: timestampColumn('last_login_at', false),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   loginAttempts: integer('login_attempts').default(0),
-  lockedUntil: timestampColumn('locked_until', false),
+  lockedUntil: timestamp('locked_until', { withTimezone: true }),
   passwordResetToken: text('password_reset_token'),
-  passwordResetExpires: timestampColumn('password_reset_expires', false),
-  permissions: text('permissions', { mode: 'json' }).$type<string[] | null>().default([] as string[]),
-  canAccessAllTenants: booleanColumn('can_access_all_tenants', true),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  passwordResetExpires: timestamp('password_reset_expires', { withTimezone: true }),
+  permissions: jsonb('permissions').$type<string[] | null>().default([] as string[]),
+  canAccessAllTenants: boolean('can_access_all_tenants').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Security Audit Log table
-export const securityAuditLogs = sqliteTable('security_audit_logs', {
-  id: text('id').primaryKey().notNull(),
+export const securityAuditLogs = pgTable('security_audit_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
   tenantId: text('tenant_id').notNull(),
   userId: text('user_id').notNull(),
   action: text('action').notNull(),
   resource: text('resource'),
   ipAddress: text('ip_address').notNull(),
   userAgent: text('user_agent').notNull(),
-  success: booleanColumn('success', true),
+  success: boolean('success').default(true),
   details: text('details'),
-  timestamp: timestampColumn('timestamp'),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Activity Logs table
-export const activityLogs = sqliteTable('activity_logs', {
-  id: text('id').primaryKey().notNull(),
-  timestamp: timestampColumn('timestamp'),
+export const activityLogs = pgTable('activity_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
   type: text('type').notNull(),
   tenantId: text('tenant_id'),
   tenantName: text('tenant_name'),
@@ -290,35 +280,35 @@ export const activityLogs = sqliteTable('activity_logs', {
   action: text('action').notNull(),
   details: text('details').notNull(),
   severity: text('severity').notNull().default('info'),
-  metadata: text('metadata', { mode: 'json' }).$type<Record<string, any> | null>(),
+  metadata: jsonb('metadata').$type<Record<string, any> | null>(),
 });
 
 // Tenant Subdomains table
-export const tenantSubdomains = sqliteTable('tenant_subdomains', {
-  id: text('id').primaryKey().notNull(),
+export const tenantSubdomains = pgTable('tenant_subdomains', {
+  id: uuid('id').defaultRandom().primaryKey(),
   subdomain: text('subdomain').notNull().unique(),
-  tenantData: text('tenant_data', { mode: 'json' }).notNull().$type<any>(),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  tenantData: jsonb('tenant_data').notNull().$type<any>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Sessions table
-export const sessions = sqliteTable('sessions', {
-  id: text('id').primaryKey().notNull(),
+export const sessions = pgTable('sessions', {
+  id: uuid('id').defaultRandom().primaryKey(),
   userId: text('user_id').notNull(),
   tenantId: text('tenant_id').notNull(),
-  sessionData: text('session_data', { mode: 'json' }).$type<any>(),
-  expiresAt: timestampColumn('expires_at', false),
-  createdAt: timestampColumn('created_at'),
-  updatedAt: timestampColumn('updated_at'),
+  sessionData: jsonb('session_data').$type<any>(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Cache table
-export const cache = sqliteTable('cache', {
+export const cache = pgTable('cache', {
   key: text('key').primaryKey().notNull(),
-  value: text('value', { mode: 'json' }).notNull().$type<any>(),
-  expiresAt: timestampColumn('expires_at', false),
-  createdAt: timestampColumn('created_at'),
+  value: jsonb('value').notNull().$type<any>(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Relations

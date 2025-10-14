@@ -5,7 +5,6 @@ import { TenantMigrationService } from './tenant-migration';
 import { MigrationUtils } from './migration-utils';
 import { tenants } from '@/lib/database/schema';
 import { eq, and } from 'drizzle-orm';
-import { createDrizzleD1Database } from '@/lib/database/d1-client';
 
 /**
  * Migration testing utilities
@@ -65,8 +64,7 @@ export class MigrationTests {
     details?: any;
   }> {
     try {
-      const database = createDrizzleD1Database();
-      await database.prepare('SELECT 1').bind().first();
+      await db.select().from(tenants).limit(1);
       return {
         test: 'Database Connectivity',
         passed: true,
