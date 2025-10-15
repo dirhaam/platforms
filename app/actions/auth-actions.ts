@@ -5,9 +5,7 @@ import { cookies } from 'next/headers';
 // This action requires Node.js runtime due to database access and bcrypt usage
 export const runtime = 'nodejs';
 import { redirect } from 'next/navigation';
-import { db } from '@/lib/database';
 import { SecurityService } from '@/lib/security/security-service';
-import { tenants, staff } from '@/lib/database/schema';
 import { eq, and } from 'drizzle-orm';
 import { TenantAuth } from '@/lib/auth/tenant-auth';
 import type { TenantSession } from '@/lib/auth/types';
@@ -36,17 +34,19 @@ export async function authenticateOwner(credentials: LoginCredentials): Promise<
   const userAgent = request.headers.get('user-agent') || '';
 
   try {
+    // Use Supabase client directly instead of Drizzle
+    const { supabase } = await import('@/lib/database');
+    
     // Find tenant by subdomain and email
-    const tenantResult = await db.select().from(tenants).where(
-      and(
-        eq(tenants.subdomain, subdomain),
-        eq(tenants.email, email)
-      )
-    ).limit(1);
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenant_subdomains')
+      .select('*')
+      .eq('subdomain', subdomain)
+      .eq('email', email)
+      .limit(1)
+      .single();
 
-    const tenant = tenantResult[0] || null;
-
-    if (!tenant) {
+    if (tenantError || !tenantData) {
       // Log failed attempt
       await SecurityService.logSecurityEvent(
         'unknown',
@@ -61,8 +61,10 @@ export async function authenticateOwner(credentials: LoginCredentials): Promise<
       return { success: false, error: 'Invalid credentials' };
     }
 
+    const tenant = tenantData;
+
     // Check if account is locked
-    if (tenant.lockedUntil && new Date(tenant.lockedUntil) > new Date()) {
+    if (tenant.locked_until && new Date(tenant.locked_until) > new Date()) {
       await SecurityService.logSecurityEvent(
         tenant.id,
         tenant.id,
@@ -100,28 +102,34 @@ export async function authenticateOwner(credentials: LoginCredentials): Promise<
     let isValidPassword = false;
 
     // Check if tenant has a password hash
-    if (tenant.passwordHash) {
-      isValidPassword = await SecurityService.verifyPassword(password, tenant.passwordHash);
+    if (tenant.password_hash) {
+      isValidPassword = await SecurityService.verifyPassword(password, tenant.password_hash);
     } else {
       // Fallback for development/migration - check against default password
       if (process.env.NODE_ENV === 'development' && password === 'admin123') {
         isValidPassword = true;
         // Hash and store the password for future use
         const hashedPassword = await SecurityService.hashPassword(password);
-        await db.update(tenants).set({ passwordHash: hashedPassword }).where(eq(tenants.id, tenant.id));
+        await supabase
+          .from('tenant_subdomains')
+          .update({ password_hash: hashedPassword })
+          .eq('id', tenant.id);
       }
     }
     
     if (!isValidPassword) {
       // Increment failed login attempts
-      const currentAttempts = tenant.loginAttempts ?? 0;
+      const currentAttempts = tenant.login_attempts ?? 0;
       const newAttempts = currentAttempts + 1;
       const shouldLock = newAttempts >= 5;
       
-      await db.update(tenants).set({
-        loginAttempts: newAttempts,
-        lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
-      }).where(eq(tenants.id, tenant.id));
+      await supabase
+        .from('tenant_subdomains')
+        .update({
+          login_attempts: newAttempts,
+          locked_until: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
+        })
+        .eq('id', tenant.id);
 
       await SecurityService.logSecurityEvent(
         tenant.id,
@@ -138,11 +146,14 @@ export async function authenticateOwner(credentials: LoginCredentials): Promise<
     }
 
     // Reset login attempts on successful login
-    await db.update(tenants).set({
-      loginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: new Date(),
-    }).where(eq(tenants.id, tenant.id));
+    await supabase
+      .from('tenant_subdomains')
+      .update({
+        login_attempts: 0,
+        locked_until: null,
+        last_login_at: new Date(),
+      })
+      .eq('id', tenant.id);
 
     const session: TenantSession = {
       userId: tenant.id,
@@ -150,7 +161,7 @@ export async function authenticateOwner(credentials: LoginCredentials): Promise<
       role: 'owner',
       permissions: ['*'], // Owner has all permissions
       email: tenant.email,
-      name: tenant.ownerName,
+      name: tenant.owner_name,
     };
 
     await TenantAuth.setAuthCookie(session);
@@ -187,11 +198,18 @@ export async function authenticateStaff(credentials: LoginCredentials): Promise<
   const userAgent = request.headers.get('user-agent') || '';
 
   try {
+    // Use Supabase client directly instead of Drizzle
+    const { supabase } = await import('@/lib/database');
+    
     // Find tenant first
-    const tenantResult = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain)).limit(1);
-    const tenant = tenantResult[0] || null;
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenant_subdomains')
+      .select('id')
+      .eq('subdomain', subdomain)
+      .limit(1)
+      .single();
 
-    if (!tenant) {
+    if (tenantError || !tenantData) {
       await SecurityService.logSecurityEvent(
         'unknown',
         'unknown',
@@ -205,18 +223,21 @@ export async function authenticateStaff(credentials: LoginCredentials): Promise<
       return { success: false, error: 'Invalid credentials' };
     }
 
-    // Find staff member
-    const staffResult = await db.select().from(staff).where(
-      and(
-        eq(staff.tenantId, tenant.id),
-        eq(staff.email, email),
-        eq(staff.isActive, true)
-      )
-    ).limit(1);
-    
-    const staffMember = staffResult[0] || null;
+    const tenant = tenantData;
 
-    if (!staffMember) {
+    // Find staff member
+    const { data: staffData, error: staffError } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .eq('email', email)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+    
+    const staffMember = staffData || null;
+
+    if (staffError || !staffMember) {
       await SecurityService.logSecurityEvent(
         tenant.id,
         'unknown',
@@ -231,7 +252,7 @@ export async function authenticateStaff(credentials: LoginCredentials): Promise<
     }
 
     // Check if account is locked
-    if (staffMember.lockedUntil && new Date(staffMember.lockedUntil) > new Date()) {
+    if (staffMember.locked_until && new Date(staffMember.locked_until) > new Date()) {
       await SecurityService.logSecurityEvent(
         tenant.id,
         staffMember.id,
@@ -269,28 +290,34 @@ export async function authenticateStaff(credentials: LoginCredentials): Promise<
     let isValidPassword = false;
 
     // Check if staff has a password hash
-    if (staffMember.passwordHash) {
-      isValidPassword = await SecurityService.verifyPassword(password, staffMember.passwordHash);
+    if (staffMember.password_hash) {
+      isValidPassword = await SecurityService.verifyPassword(password, staffMember.password_hash);
     } else {
       // Fallback for development/migration - check against default password
       if (process.env.NODE_ENV === 'development' && password === 'staff123') {
         isValidPassword = true;
         // Hash and store the password for future use
         const hashedPassword = await SecurityService.hashPassword(password);
-        await db.update(staff).set({ passwordHash: hashedPassword }).where(eq(staff.id, staffMember.id));
+        await supabase
+          .from('staff')
+          .update({ password_hash: hashedPassword })
+          .eq('id', staffMember.id);
       }
     }
     
     if (!isValidPassword) {
       // Increment failed login attempts
-      const currentAttempts = staffMember.loginAttempts ?? 0;
+      const currentAttempts = staffMember.login_attempts ?? 0;
       const newAttempts = currentAttempts + 1;
       const shouldLock = newAttempts >= 5;
       
-      await db.update(staff).set({
-        loginAttempts: newAttempts,
-        lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
-      }).where(eq(staff.id, staffMember.id));
+      await supabase
+        .from('staff')
+        .update({
+          login_attempts: newAttempts,
+          locked_until: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
+        })
+        .eq('id', staffMember.id);
 
       await SecurityService.logSecurityEvent(
         tenant.id,
@@ -307,11 +334,14 @@ export async function authenticateStaff(credentials: LoginCredentials): Promise<
     }
 
     // Reset login attempts on successful login
-    await db.update(staff).set({
-      loginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: new Date(),
-    }).where(eq(staff.id, staffMember.id));
+    await supabase
+      .from('staff')
+      .update({
+        login_attempts: 0,
+        locked_until: null,
+        last_login_at: new Date(),
+      })
+      .eq('id', staffMember.id);
 
     const session: TenantSession = {
       userId: staffMember.id,

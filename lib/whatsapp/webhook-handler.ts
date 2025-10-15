@@ -1,12 +1,19 @@
-import { 
-  WhatsAppWebhookPayload, 
-  WhatsAppMessage, 
+import {
+  WhatsAppWebhookPayload,
+  WhatsAppMessage,
   WhatsAppConversation,
-  WhatsAppEvent 
+  WhatsAppEvent,
 } from '@/types/whatsapp';
 import { WhatsAppDeviceManager } from './device-manager';
 import { WhatsAppEndpointManager } from './endpoint-manager';
-import { redis } from '@/lib/redis';
+import {
+  kvAddToSet,
+  kvExpire,
+  kvGet,
+  kvGetList,
+  kvPushToList,
+  kvSet,
+} from '@/lib/cache/key-value-store';
 
 const ensureCrypto = () => {
   if (typeof globalThis.crypto === 'undefined') {
@@ -53,6 +60,32 @@ const computeHmacSha256Hex = async (secret: string, payload: string) => {
   );
   const signature = await cryptoObj.subtle.sign('HMAC', key, encoder.encode(payload));
   return arrayBufferToHex(signature);
+};
+
+const normalizeConversation = (data: WhatsAppConversation | null): WhatsAppConversation | null => {
+  if (!data) {
+    return null;
+  }
+
+  return {
+    ...data,
+    lastMessageAt: new Date(data.lastMessageAt),
+    createdAt: new Date(data.createdAt),
+    updatedAt: new Date(data.updatedAt),
+  };
+};
+
+const normalizeMessage = (data: WhatsAppMessage | null): WhatsAppMessage | null => {
+  if (!data) {
+    return null;
+  }
+
+  return {
+    ...data,
+    sentAt: new Date(data.sentAt),
+    deliveredAt: data.deliveredAt ? new Date(data.deliveredAt) : undefined,
+    readAt: data.readAt ? new Date(data.readAt) : undefined,
+  };
 };
 
 export class WhatsAppWebhookHandler {
@@ -356,16 +389,15 @@ export class WhatsAppWebhookHandler {
   ): Promise<WhatsAppConversation> {
     try {
       const conversationKey = `whatsapp:conversation:${tenantId}:${customerPhone}`;
-      const existingData = await redis.get(conversationKey) as string | null;
+      const existingData = await kvGet<WhatsAppConversation>(conversationKey);
 
       if (existingData) {
-        const conversation = JSON.parse(existingData);
-        return {
-          ...conversation,
-          lastMessageAt: new Date(conversation.lastMessageAt),
-          createdAt: new Date(conversation.createdAt),
-          updatedAt: new Date(conversation.updatedAt)
-        };
+        const conversation = normalizeConversation(existingData);
+        if (conversation) {
+          const indexKey = `whatsapp:conversation:index:${conversation.id}`;
+          await kvSet(indexKey, conversationKey);
+          return conversation;
+        }
       }
 
       // Create new conversation
@@ -383,11 +415,13 @@ export class WhatsAppWebhookHandler {
         updatedAt: new Date()
       };
 
-      await redis.set(conversationKey, JSON.stringify(conversation));
+      await kvSet(conversationKey, conversation);
+      const indexKey = `whatsapp:conversation:index:${conversation.id}`;
+      await kvSet(indexKey, conversationKey);
       
       // Add to tenant conversations list
       const conversationsKey = `whatsapp:conversations:${tenantId}`;
-      await redis.sadd(conversationsKey, conversation.id);
+      await kvAddToSet(conversationsKey, conversation.id);
 
       return conversation;
     } catch (error) {
@@ -401,25 +435,25 @@ export class WhatsAppWebhookHandler {
     updates: Partial<WhatsAppConversation>
   ): Promise<void> {
     try {
-      // Find conversation by ID (this is a simplified approach)
-      const conversationsPattern = `whatsapp:conversation:*`;
-      const keys = await redis.keys(conversationsPattern);
-      
-      for (const key of keys) {
-        const data = await redis.get(key) as string | null;
-        if (data) {
-          const conversation = JSON.parse(data);
-          if (conversation.id === conversationId) {
-            const updatedConversation = {
-              ...conversation,
-              ...updates,
-              updatedAt: new Date()
-            };
-            await redis.set(key, JSON.stringify(updatedConversation));
-            break;
-          }
-        }
+      const indexKey = `whatsapp:conversation:index:${conversationId}`;
+      const conversationKey = await kvGet<string>(indexKey);
+
+      if (!conversationKey) {
+        return;
       }
+
+      const existing = await kvGet<WhatsAppConversation>(conversationKey);
+      if (!existing) {
+        return;
+      }
+
+      const updatedConversation: WhatsAppConversation = {
+        ...existing,
+        ...updates,
+        updatedAt: new Date(),
+      };
+
+      await kvSet(conversationKey, updatedConversation);
     } catch (error) {
       console.error('Error updating conversation:', error);
     }
@@ -428,14 +462,11 @@ export class WhatsAppWebhookHandler {
   private async storeMessage(message: WhatsAppMessage): Promise<void> {
     try {
       const messageKey = `whatsapp:message:${message.id}`;
-      await redis.set(messageKey, JSON.stringify(message));
+      await kvSet(messageKey, message);
 
       // Add to conversation messages list
       const conversationMessagesKey = `whatsapp:messages:${message.conversationId}`;
-      await redis.lpush(conversationMessagesKey, message.id);
-      
-      // Keep only last 1000 messages per conversation
-      await redis.ltrim(conversationMessagesKey, 0, 999);
+      await kvPushToList(conversationMessagesKey, message.id, 1000);
     } catch (error) {
       console.error('Error storing message:', error);
     }
@@ -448,23 +479,29 @@ export class WhatsAppWebhookHandler {
   ): Promise<void> {
     try {
       const messageKey = `whatsapp:message:${messageId}`;
-      const messageData = await redis.get(messageKey) as string | null;
-      
-      if (messageData) {
-        const message = JSON.parse(messageData);
-        const updates: Partial<WhatsAppMessage> = {
-          deliveryStatus: status as any
-        };
+      const messageData = await kvGet<WhatsAppMessage>(messageKey);
 
-        if (status === 'delivered') {
-          updates.deliveredAt = timestamp;
-        } else if (status === 'read') {
-          updates.readAt = timestamp;
-        }
-
-        const updatedMessage = { ...message, ...updates };
-        await redis.set(messageKey, JSON.stringify(updatedMessage));
+      const message = normalizeMessage(messageData);
+      if (!message) {
+        return;
       }
+
+      const updates: Partial<WhatsAppMessage> = {
+        deliveryStatus: status as WhatsAppMessage['deliveryStatus'],
+      };
+
+      if (status === 'delivered') {
+        updates.deliveredAt = timestamp;
+      } else if (status === 'read') {
+        updates.readAt = timestamp;
+      }
+
+      const updatedMessage: WhatsAppMessage = {
+        ...message,
+        ...updates,
+      };
+
+      await kvSet(messageKey, updatedMessage);
     } catch (error) {
       console.error('Error updating message status:', error);
     }
@@ -496,13 +533,12 @@ export class WhatsAppWebhookHandler {
   private async emitEvent(event: WhatsAppEvent): Promise<void> {
     try {
       const eventKey = `whatsapp:events:${event.tenantId}`;
-      await redis.lpush(eventKey, JSON.stringify(event));
-      await redis.expire(eventKey, 3600); // 1 hour TTL
+      await kvPushToList(eventKey, event, 1000);
+      await kvExpire(eventKey, 3600); // 1 hour TTL
 
       // Also store in global events for platform monitoring
       const globalEventKey = 'whatsapp:events:global';
-      await redis.lpush(globalEventKey, JSON.stringify(event));
-      await redis.ltrim(globalEventKey, 0, 9999); // Keep last 10k events
+      await kvPushToList(globalEventKey, event, 10000);
     } catch (error) {
       console.error('Error emitting WhatsApp event:', error);
     }
@@ -511,15 +547,12 @@ export class WhatsAppWebhookHandler {
   async getTenantEvents(tenantId: string, limit = 100): Promise<WhatsAppEvent[]> {
     try {
       const eventKey = `whatsapp:events:${tenantId}`;
-      const eventStrings = await redis.lrange(eventKey, 0, limit - 1);
-      
-      return eventStrings.map((eventStr: string) => {
-        const event = JSON.parse(eventStr);
-        return {
-          ...event,
-          timestamp: new Date(event.timestamp)
-        };
-      });
+      const events = await kvGetList<WhatsAppEvent>(eventKey, 0, limit - 1);
+
+      return events.map(event => ({
+        ...event,
+        timestamp: new Date(event.timestamp),
+      }));
     } catch (error) {
       console.error('Error getting tenant events:', error);
       return [];

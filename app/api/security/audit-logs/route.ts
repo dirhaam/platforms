@@ -1,9 +1,9 @@
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthMiddleware } from '@/lib/auth/auth-middleware';
 import { RBAC } from '@/lib/auth/rbac';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { securityAuditLogs } from '@/lib/database/schema';
 import { and, desc, eq, gte } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';

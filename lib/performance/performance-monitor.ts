@@ -1,6 +1,6 @@
 import { CacheService } from '@/lib/cache/cache-service';
 import { DatabaseOptimization } from './database-optimization';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { tenants } from '@/lib/database/schema';
 
 // Performance monitoring configuration

@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { services, bookings } from '@/lib/database/schema';
 import { Service, CreateServiceRequest, UpdateServiceRequest } from '@/types/booking';
 import { eq, and, ne, gte, lte, or, asc, desc, sql } from 'drizzle-orm';

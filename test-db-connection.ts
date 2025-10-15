@@ -1,7 +1,7 @@
 // test-db-connection.ts
 // Simple test to verify PostgreSQL connection
 
-import { db } from './lib/database';
+import { db } from './lib/database/server';
 import { tenants } from './lib/database/schema';
 
 async function testConnection() {

@@ -1,4 +1,4 @@
-import { deleteSession, getSession, setSession } from '@/lib/d1';
+import { deleteSession, getSession, setSession } from '@/lib/database-service';
 import type { TenantSession } from './types';
 
 export const SESSION_COOKIE_NAME = 'tenant-auth';
@@ -48,14 +48,11 @@ function isInlineSession(value: string): boolean {
   return value.startsWith(INLINE_PREFIX);
 }
 
-export async function persistSession(
-  session: TenantSession,
-  env?: Record<string, unknown>
-): Promise<string> {
+export async function persistSession(session: TenantSession): Promise<string> {
   const sessionId = generateSessionId();
 
   try {
-    await setSession(sessionId, session.userId, session.tenantId, session, SESSION_TTL_SECONDS, env);
+    await setSession(sessionId, session.userId, session.tenantId, session, SESSION_TTL_SECONDS);
     return sessionId;
   } catch (error) {
     console.warn('Falling back to inline session storage:', error);
@@ -63,10 +60,7 @@ export async function persistSession(
   }
 }
 
-export async function retrieveSession(
-  sessionId: string,
-  env?: Record<string, unknown>
-): Promise<TenantSession | null> {
+export async function retrieveSession(sessionId: string): Promise<TenantSession | null> {
   if (!sessionId) {
     return null;
   }
@@ -75,8 +69,8 @@ export async function retrieveSession(
     return decodeInline(sessionId);
   }
 
-  const record = await getSession(sessionId, env).catch(error => {
-    console.error('Failed to retrieve session from D1:', error);
+  const record = await getSession(sessionId).catch(error => {
+    console.error('Failed to retrieve session:', error);
     return null;
   });
 
@@ -87,10 +81,7 @@ export async function retrieveSession(
   return record.data as TenantSession;
 }
 
-export async function removeSession(
-  sessionId: string,
-  env?: Record<string, unknown>
-): Promise<void> {
+export async function removeSession(sessionId: string): Promise<void> {
   if (!sessionId) {
     return;
   }
@@ -99,7 +90,7 @@ export async function removeSession(
     return;
   }
 
-  await deleteSession(sessionId, env).catch(error => {
-    console.error('Failed to delete session from D1:', error);
+  await deleteSession(sessionId).catch(error => {
+    console.error('Failed to delete session:', error);
   });
 }

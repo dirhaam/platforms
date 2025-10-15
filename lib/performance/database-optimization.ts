@@ -4,8 +4,8 @@ export interface SlowQueryMetadata {
 }
 
 /**
- * Lightweight database optimization helpers for Cloudflare D1 runtime.
- * Extend these hooks to persist telemetry into D1 or an external
+ * Lightweight database optimization helpers for the Supabase runtime.
+ * Extend these hooks to persist telemetry into Supabase or an external
  * observability pipeline when needed.
  */
 export class DatabaseOptimization {

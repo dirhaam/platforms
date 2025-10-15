@@ -1,6 +1,6 @@
 'use server';
 
-import { setTenant, getTenant } from '@/lib/d1';
+import { setTenant, getTenant, deleteTenant } from '@/lib/database-service';
 
 import { isValidIcon, type TenantRegistrationData, type BusinessCategory, BUSINESS_CATEGORIES } from '@/lib/subdomain-constants';
 import { createEnhancedTenant } from '@/lib/subdomains';
@@ -145,7 +145,7 @@ export async function createSubdomainAction(
   // Create enhanced tenant data
   const enhancedTenant = await createEnhancedTenant(registrationData);
 
-  // Store in D1
+  // Store in Supabase
   await setTenant(sanitizedSubdomain, enhancedTenant);
 
   // Log the tenant creation activity
@@ -159,7 +159,7 @@ export async function createSubdomainAction(
   redirect(`${protocol}://${sanitizedSubdomain}.${rootDomain}`);
 }
 
-import { deleteTenant } from '@/lib/d1';
+
 
 export async function deleteSubdomainAction(
   prevState: any,

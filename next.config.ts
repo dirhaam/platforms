@@ -31,8 +31,12 @@ const nextConfig: NextConfig = {
         net: false,
         tls: false,
         dns: false,
+        path: false,
+        stream: false,
         pg: false,
         "pg-native": false,
+        "drizzle-orm": false,
+        "@supabase/supabase-js": false,
       };
     }
     return config;

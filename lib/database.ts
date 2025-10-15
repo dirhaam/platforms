@@ -1,49 +1,48 @@
-import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
-import { sql } from 'drizzle-orm';
-import * as schema from './database/schema';
-import { createDrizzleD1Database } from './database/d1-client';
+// Simple database module that works with both client and server environments
+// Using only Supabase client to avoid Node.js module issues in Next.js
 
-type DatabaseInstance = DrizzleD1Database<typeof schema>;
+import { createClient } from '@supabase/supabase-js';
 
-let cachedDb: DatabaseInstance | null = null;
+// Initialize Supabase client for client-side and server-side operations
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export function getDb(env?: any): DatabaseInstance {
-  if (env) {
-    return drizzle(createDrizzleD1Database(env), { schema });
-  }
-
-  if (!cachedDb) {
-    const database = createDrizzleD1Database();
-    cachedDb = drizzle(database, { schema });
-  }
-
-  return cachedDb;
-}
-
-export const db = getDb();
-
-export async function checkDatabaseConnection(env?: any): Promise<boolean> {
+// For health checks and simple operations using Supabase client directly
+export async function checkDatabaseConnection(): Promise<boolean> {
   try {
-    const database = createDrizzleD1Database(env);
-    await database.prepare('SELECT 1').bind().first();
+    // Test connection by making a simple query to Supabase
+    const { error } = await supabase.from('tenant_subdomains').select('subdomain').limit(1);
+    if (error) {
+      console.error('Supabase connection failed:', error);
+      return false;
+    }
     return true;
   } catch (error) {
-    console.error('Cloudflare D1 connection failed:', error);
+    console.error('Supabase connection failed:', error);
     return false;
   }
 }
 
 export class DatabaseUtils {
-  static async healthCheck(env?: any): Promise<{
+  static async healthCheck(): Promise<{
     status: 'healthy' | 'unhealthy';
     timestamp: Date;
     details?: string;
   }> {
     try {
       const start = Date.now();
-      const database = createDrizzleD1Database(env);
-      await database.prepare('SELECT 1').bind().first();
+      const { error } = await supabase.from('tenant_subdomains').select('subdomain').limit(1);
       const duration = Date.now() - start;
+
+      if (error) {
+        return {
+          status: 'unhealthy',
+          timestamp: new Date(),
+          details: error.message,
+        };
+      }
 
       return {
         status: 'healthy',

@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { TenantAuth } from '@/lib/auth/tenant-auth';
 import { SecurityService } from '@/lib/security/security-service';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { tenants, staff } from '@/lib/database/schema';
 import { eq } from 'drizzle-orm';
 

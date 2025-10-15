@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import {
   bookings as bookingsTable,
   customers as customersTable,

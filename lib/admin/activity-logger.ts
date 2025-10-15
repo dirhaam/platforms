@@ -1,5 +1,5 @@
-import { db } from '@/lib/database';
 import { activityLogs } from '@/lib/database/schema';
+import { db } from '@/lib/database/index';
 import { desc, gte } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 

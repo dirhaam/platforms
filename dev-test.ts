@@ -1,17 +1,17 @@
 // dev-test.ts
 // Development test script to verify Supabase/PostgreSQL integration
 
-import { db } from './lib/database';
+import { db } from './lib/database/server';
 import { tenants } from './lib/database/schema';
 import { eq } from 'drizzle-orm';
-import { setTenant, getTenant, testD1Connection } from './lib/d1';
+import { setTenant, getTenant, testSupabaseConnection } from './lib/database-service';
 
 async function runDevelopmentTests() {
   console.log('Running development tests for Supabase integration...\n');
   
   // Test 1: Database connection
   console.log('1. Testing database connection...');
-  const connectionOk = await testD1Connection();
+  const connectionOk = await testSupabaseConnection();
   console.log(connectionOk ? '✅ Connection test passed' : '❌ Connection test failed');
   
   if (!connectionOk) {
@@ -58,7 +58,7 @@ async function runDevelopmentTests() {
     console.log(queryOk ? '✅ Database query test passed' : '❌ Database query test failed');
     
     // Clean up: Delete the test tenant
-    await db.delete(tenants).where(tenants.subdomain === testSubdomain);
+    await db.delete(tenants).where(eq(tenants.subdomain, testSubdomain));
     console.log('✅ Cleanup completed');
     
   } catch (error) {

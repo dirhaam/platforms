@@ -1,11 +1,11 @@
-import { 
-  WhatsAppEndpoint, 
-  WhatsAppConfiguration, 
+import {
+  WhatsAppEndpoint,
+  WhatsAppConfiguration,
   WhatsAppHealthCheck,
-  WhatsAppEndpointConfig 
+  WhatsAppEndpointConfig,
 } from '@/types/whatsapp';
 import { WhatsAppClient } from './whatsapp-client';
-import { redis } from '@/lib/redis';
+import { kvGet, kvSet } from '@/lib/cache/key-value-store';
 
 export class WhatsAppEndpointManager {
   private static instance: WhatsAppEndpointManager;
@@ -22,13 +22,23 @@ export class WhatsAppEndpointManager {
   async getConfiguration(tenantId: string): Promise<WhatsAppConfiguration | null> {
     try {
       const configKey = `whatsapp:config:${tenantId}`;
-      const configData = await redis.get(configKey) as string | null;
-      
-      if (!configData) {
+      const rawConfig = await kvGet<WhatsAppConfiguration>(configKey);
+
+      if (!rawConfig) {
         return null;
       }
 
-      return JSON.parse(configData);
+      return {
+        ...rawConfig,
+        createdAt: new Date(rawConfig.createdAt),
+        updatedAt: new Date(rawConfig.updatedAt),
+        endpoints: rawConfig.endpoints.map(endpoint => ({
+          ...endpoint,
+          createdAt: new Date(endpoint.createdAt),
+          updatedAt: new Date(endpoint.updatedAt),
+          lastHealthCheck: endpoint.lastHealthCheck ? new Date(endpoint.lastHealthCheck) : new Date(),
+        })),
+      };
     } catch (error) {
       console.error('Error getting WhatsApp configuration:', error);
       return null;
@@ -38,7 +48,7 @@ export class WhatsAppEndpointManager {
   async saveConfiguration(config: WhatsAppConfiguration): Promise<void> {
     try {
       const configKey = `whatsapp:config:${config.tenantId}`;
-      await redis.set(configKey, JSON.stringify(config));
+      await kvSet(configKey, config);
       
       // Update clients for this tenant
       await this.updateTenantClients(config.tenantId);
@@ -295,7 +305,7 @@ export class WhatsAppEndpointManager {
 
         // Store health check result
         const healthKey = `whatsapp:health:${endpoint.id}`;
-        await redis.setex(healthKey, 3600, JSON.stringify(healthCheck)); // 1 hour TTL
+        await kvSet(healthKey, healthCheck, 3600);
 
         // Trigger failover if needed
         if (healthCheck.status === 'unhealthy' && endpoint.isPrimary && config.failoverEnabled) {

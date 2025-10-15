@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { setTenant, deleteTenant } from '@/lib/d1';
+import { setTenant, deleteTenant } from '@/lib/database-service';
 import type { EnhancedTenant } from '@/lib/subdomain-constants';
 import { ActivityLogger } from '@/lib/admin/activity-logger';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { tenants } from '@/lib/database/schema';
 import { eq } from 'drizzle-orm';
 
 // This API route requires Node.js runtime due to database access
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 function mapDbTenantToEnhanced(dbTenant: any): EnhancedTenant {
   return {
@@ -221,15 +221,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete from D1
+    // Delete cached tenant payload from Supabase key-value store
     await deleteTenant(tenant.subdomain);
 
-    // Try to delete from PostgreSQL if available
-    try {
-      await db.delete(tenants).where(eq(tenants.subdomain, tenant.subdomain));
-    } catch (dbError) {
-      console.warn('Failed to delete tenant from PostgreSQL:', dbError);
-    }
+    await db.delete(tenants).where(eq(tenants.subdomain, tenant.subdomain));
 
     // Log the activity
     await ActivityLogger.logTenantDeleted(tenant.id, tenant.businessName);

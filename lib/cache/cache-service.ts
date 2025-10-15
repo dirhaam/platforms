@@ -1,11 +1,11 @@
 import {
-  getCache as d1GetCache,
-  setCache as d1SetCache,
-  deleteCache as d1DeleteCache,
-  deleteCacheByPattern as d1DeleteCacheByPattern,
-  listCacheKeys as d1ListCacheKeys,
-} from '@/lib/d1';
-import { db } from '@/lib/database';
+  getCache as supabaseGetCache,
+  setCache as supabaseSetCache,
+  deleteCache as supabaseDeleteCache,
+  deleteCacheByPattern as supabaseDeleteCacheByPattern,
+  listCacheKeys as supabaseListCacheKeys,
+} from '@/lib/database-service';
+import { db } from '@/lib/database/server';
 import { tenants, services as servicesTable, staff as staffTable, businessHours as businessHoursTable } from '@/lib/database/schema';
 import { and, eq } from 'drizzle-orm';
 
@@ -49,7 +49,7 @@ export class CacheService {
   // Generic get method
   static async get<T>(key: string): Promise<T | null> {
     try {
-      const data = await d1GetCache(key);
+      const data = await supabaseGetCache(key);
       return data as T | null;
     } catch (error) {
       console.error(`Cache get error for key ${key}:`, error);
@@ -65,7 +65,7 @@ export class CacheService {
   ): Promise<void> {
     try {
       const { ttl } = options;
-      await d1SetCache(key, value, ttl);
+      await supabaseSetCache(key, value, ttl);
     } catch (error) {
       console.error(`Cache set error for key ${key}:`, error);
     }
@@ -74,7 +74,7 @@ export class CacheService {
   // Delete single key
   static async delete(key: string): Promise<void> {
     try {
-      await d1DeleteCache(key);
+      await supabaseDeleteCache(key);
     } catch (error) {
       console.error(`Cache delete error for key ${key}:`, error);
     }
@@ -84,7 +84,7 @@ export class CacheService {
   static async deleteMany(keys: string[]): Promise<void> {
     try {
       if (keys.length > 0) {
-        await Promise.all(keys.map(key => d1DeleteCache(key)));
+        await Promise.all(keys.map(key => supabaseDeleteCache(key)));
       }
     } catch (error) {
       console.error(`Cache delete many error:`, error);
@@ -94,7 +94,7 @@ export class CacheService {
   // Delete keys by pattern
   static async deleteByPattern(pattern: string): Promise<void> {
     try {
-      await d1DeleteCacheByPattern(pattern);
+      await supabaseDeleteCacheByPattern(pattern);
     } catch (error) {
       console.error(`Cache delete by pattern error for ${pattern}:`, error);
     }
@@ -103,7 +103,7 @@ export class CacheService {
   // Check if key exists
   static async exists(key: string): Promise<boolean> {
     try {
-      const value = await d1GetCache(key);
+      const value = await supabaseGetCache(key);
       return value !== null && value !== undefined;
     } catch (error) {
       console.error(`Cache exists error for key ${key}:`, error);
@@ -446,10 +446,10 @@ export class CacheService {
     hitRate?: number;
   }> {
     try {
-      const keys = await d1ListCacheKeys('%');
+      const keys = await supabaseListCacheKeys('%');
       return {
         totalKeys: keys.length,
-        // Additional stats would require Redis INFO command which may not be available in Upstash
+        // Additional stats would require database telemetry beyond the Supabase cache table
       };
     } catch (error) {
       console.error('Failed to get cache stats:', error);
@@ -463,9 +463,9 @@ export class CacheService {
       const testKey = 'health_check';
       const testValue = Date.now().toString();
       
-      await d1SetCache(testKey, testValue, 5);
-      const retrieved = await d1GetCache(testKey);
-      await d1DeleteCache(testKey);
+      await supabaseSetCache(testKey, testValue, 5);
+      const retrieved = await supabaseGetCache(testKey);
+      await supabaseDeleteCache(testKey);
       
       return retrieved === testValue;
     } catch (error) {

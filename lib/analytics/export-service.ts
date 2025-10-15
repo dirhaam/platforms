@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { bookings, customers, services, tenants } from '@/lib/database/schema';
 import { and, eq, gte, lte, inArray, desc } from 'drizzle-orm';
 import * as XLSX from 'xlsx';

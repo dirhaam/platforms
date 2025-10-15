@@ -1,8 +1,9 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { checkDatabaseConnection, db } from '@/lib/database';
+import { checkDatabaseConnection } from '@/lib/database';
 import { DatabaseUtils } from '@/lib/database';
+import { CacheService } from '@/lib/cache/cache-service';
 
 interface SystemHealthCheck {
   service: string;
@@ -30,27 +31,6 @@ export async function GET() {
         service: 'PostgreSQL Database',
         status: 'offline',
         responseTime: Date.now() - dbStart,
-        lastChecked: new Date(),
-      });
-    }
-
-    // Check D1 connection if available (this would be specific to Cloudflare Workers environment)
-    const d1Start = Date.now();
-    try {
-      // In Cloudflare Workers environment, you'd check D1 connection here
-      // For now, we'll simulate a check
-      const d1Ok = true; // Placeholder: in real environment this could check D1
-      healthChecks.push({
-        service: 'Cloudflare D1',
-        status: d1Ok ? 'online' : 'offline',
-        responseTime: Date.now() - d1Start,
-        lastChecked: new Date(),
-      });
-    } catch (error) {
-      healthChecks.push({
-        service: 'Cloudflare D1',
-        status: 'offline',
-        responseTime: Date.now() - d1Start,
         lastChecked: new Date(),
       });
     }
@@ -87,10 +67,11 @@ export async function GET() {
       const dbHealth = await DatabaseUtils.healthCheck();
       const mappedStatus: 'online' | 'offline' | 'degraded' =
         dbHealth.status === 'healthy' ? 'online' : 'degraded';
+      const responseTime = Number(dbHealth.details?.match(/\d+/)?.[0] ?? '0');
       healthChecks.push({
         service: 'Database Health',
         status: mappedStatus,
-        responseTime: parseInt(dbHealth.details?.split(' ')[2] || '0'),
+        responseTime,
         lastChecked: new Date(),
       });
     } catch (error) {
@@ -155,10 +136,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: `Service ${data.service} restart initiated` });
 
       case 'clear_cache':
-        // In D1, we might clear specific cache entries instead of flushall
-        // This would depend on your specific implementation
         console.log('Clearing cache entries');
-        // Here you might call a function to clear D1 cache tables
+        if (data?.pattern) {
+          await CacheService.deleteByPattern(data.pattern);
+        } else {
+          await CacheService.deleteByPattern('*');
+        }
         return NextResponse.json({ success: true, message: 'Cache cleared successfully' });
 
       case 'run_health_check':

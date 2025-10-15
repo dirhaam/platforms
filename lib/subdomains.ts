@@ -1,86 +1,25 @@
-import { db } from '@/lib/database';
-import { tenants } from '@/lib/database/schema';
-import { eq, desc } from 'drizzle-orm';
-import { getTenant, setTenant, deleteTenant } from '@/lib/d1';
+import { supabase } from '@/lib/database';
+import { getTenant, setTenant, deleteTenant } from '@/lib/database-service';
 import { EnhancedTenant, TenantRegistrationData, BusinessCategory, isValidIcon } from '@/lib/subdomain-constants';
 
 export async function getSubdomainData(subdomain: string): Promise<EnhancedTenant | null> {
   const sanitizedSubdomain = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '');
-  
+
   try {
-    // Try to get from database first
-    const [tenantResult] = await db.select().from(tenants).where(
-      eq(tenants.subdomain, sanitizedSubdomain)
-    ).limit(1);
-    
-    if (tenantResult) {
-      // Convert database tenant to EnhancedTenant format
-      return convertDbToEnhancedTenant(tenantResult);
+    const existing = await getTenant(sanitizedSubdomain);
+    if (!existing) {
+      return null;
     }
-    
-    // Fallback to D1 if not found in database
-    const d1Data = await getTenant(sanitizedSubdomain);
-    if (d1Data) {
-      return d1Data;
+
+    if (isEnhancedTenant(existing)) {
+      return existing;
     }
-    
-    return null;
+
+    return migrateFromLegacy(sanitizedSubdomain, existing);
   } catch (error) {
     console.error('Error getting subdomain data:', error);
     return null;
   }
-}
-
-// Helper function to convert database tenant to EnhancedTenant
-function convertDbToEnhancedTenant(dbTenant: any): EnhancedTenant {
-  return {
-    // Basic info
-    subdomain: dbTenant.subdomain,
-    emoji: dbTenant.emoji || '🏢',
-    createdAt: dbTenant.createdAt ? dbTenant.createdAt.getTime() : Date.now(),
-    
-    // New fields from database
-    id: dbTenant.id,
-    businessName: dbTenant.businessName,
-    businessCategory: dbTenant.businessCategory,
-    ownerName: dbTenant.ownerName,
-    email: dbTenant.email,
-    phone: dbTenant.phone,
-    address: dbTenant.address,
-    businessDescription: dbTenant.businessDescription,
-    logo: dbTenant.logo,
-    
-    // Brand colors
-    brandColors: dbTenant.brandColors,
-    
-    // Feature flags
-    whatsappEnabled: dbTenant.whatsappEnabled,
-    homeVisitEnabled: dbTenant.homeVisitEnabled,
-    analyticsEnabled: dbTenant.analyticsEnabled,
-    customTemplatesEnabled: dbTenant.customTemplatesEnabled,
-    multiStaffEnabled: dbTenant.multiStaffEnabled,
-    
-    // Subscription info
-    subscriptionPlan: dbTenant.subscriptionPlan,
-    subscriptionStatus: dbTenant.subscriptionStatus,
-    subscriptionExpiresAt: dbTenant.subscriptionExpiresAt,
-    
-    updatedAt: dbTenant.updatedAt,
-    
-    // Computed properties for backward compatibility
-    features: {
-      whatsapp: dbTenant.whatsappEnabled,
-      homeVisit: dbTenant.homeVisitEnabled,
-      analytics: dbTenant.analyticsEnabled,
-      customTemplates: dbTenant.customTemplatesEnabled,
-      multiStaff: dbTenant.multiStaffEnabled,
-    },
-    subscription: {
-      plan: dbTenant.subscriptionPlan as 'basic' | 'premium' | 'enterprise',
-      status: dbTenant.subscriptionStatus as 'active' | 'suspended' | 'cancelled',
-      expiresAt: dbTenant.subscriptionExpiresAt,
-    },
-  };
 }
 
 // Helper function to check if data is enhanced tenant data
@@ -138,11 +77,27 @@ export function migrateFromLegacy(subdomain: string, legacyData: any): EnhancedT
 
 export async function getAllSubdomains(): Promise<EnhancedTenant[]> {
   try {
-    // Get all tenants from database
-    const dbTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
-    
-    // Convert database tenants to EnhancedTenant format
-    return dbTenants.map(convertDbToEnhancedTenant);
+    const { data, error } = await supabase
+      .from('tenant_subdomains')
+      .select('subdomain, tenant_data')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error getting all subdomains from Supabase:', error);
+      return [];
+    }
+
+    return (data ?? [])
+      .map(row => {
+        if (row?.tenant_data && isEnhancedTenant(row.tenant_data)) {
+          return row.tenant_data as EnhancedTenant;
+        }
+        if (row?.tenant_data) {
+          return migrateFromLegacy(row.subdomain, row.tenant_data);
+        }
+        return null;
+      })
+      .filter((tenant): tenant is EnhancedTenant => tenant !== null);
   } catch (error) {
     console.error('Error getting all subdomains from database:', error);
     return [];

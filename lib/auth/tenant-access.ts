@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { TenantAuth } from '@/lib/auth/tenant-auth-edge';
 import type { TenantSession, Permission } from '@/lib/auth/types';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { tenants } from '@/lib/database/schema';
 import { eq } from 'drizzle-orm';
 
@@ -28,11 +28,11 @@ export async function verifyTenantAccess(
     // so we could validate it against the actual tenant data if necessary
     
     // For now, just verify that the subdomain matches the expected tenant
-    // In a real implementation, we might need to make an async call to our D1/DB
+    // In a real implementation, we might need to make an async call to our Supabase database
     // to verify that the tenant actually exists and the session is valid
     
     // This is a simplified check - in a real implementation you might want to 
-    // verify against the actual tenant data from DB/D1
+    // verify against the actual tenant data from Supabase
     const [tenant] = await db
       .select({ id: tenants.id })
       .from(tenants)

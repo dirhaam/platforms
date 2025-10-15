@@ -16,7 +16,7 @@
 // 2. Simple calculations or transformations on client-provided data
 // 3. Routes that only access external APIs (if compatible)
 //
-// These routes can have: export const runtime = 'edge'; (default behavior without explicit declaration)
+// These routes can have: export const runtime = 'nodejs'; (default behavior without explicit declaration)
 
 // Examples of routes requiring Node.js:
 // - /api/auth/* (database + bcrypt)

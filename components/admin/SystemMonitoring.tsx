@@ -86,7 +86,7 @@ export function SystemMonitoring() {
       endpoint: '/admin',
     },
     {
-      name: 'Redis Cache',
+      name: 'Supabase Cache',
       status: 'online',
       responseTime: 15,
       lastChecked: new Date(),

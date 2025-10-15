@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { tenants } from '@/lib/database/schema';
 import { desc } from 'drizzle-orm';
 
 // This API route requires Node.js runtime due to database access
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // Enhanced tenant data structure (compatible with database types)
 interface EnhancedTenant {

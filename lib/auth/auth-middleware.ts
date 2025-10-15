@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TenantAuth } from './tenant-auth';
 import type { TenantSession } from './types';
 import { RBAC, RouteGuard, type RouteProtection } from './rbac';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { tenants } from '@/lib/database/schema';
 import { eq } from 'drizzle-orm';
 

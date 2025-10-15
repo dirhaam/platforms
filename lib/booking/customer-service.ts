@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { customers, bookings, services } from '@/lib/database/schema';
 import { Customer, CreateCustomerRequest, UpdateCustomerRequest } from '@/types/booking';
 import { eq, and, ne, gte, lte, or, ilike, asc, desc, sql } from 'drizzle-orm';

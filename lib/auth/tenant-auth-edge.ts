@@ -11,8 +11,8 @@ import {
 
 export class TenantAuth {
   // Set authentication cookie
-  static async setAuthCookie(session: TenantSession, env?: Record<string, unknown>): Promise<void> {
-    const sessionId = await persistSession(session, env);
+  static async setAuthCookie(session: TenantSession): Promise<void> {
+    const sessionId = await persistSession(session);
     const cookieStore = await cookies();
     
     cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
@@ -25,7 +25,7 @@ export class TenantAuth {
   }
 
   // Get current session from cookies
-  static async getCurrentSession(env?: Record<string, unknown>): Promise<TenantSession | null> {
+  static async getCurrentSession(): Promise<TenantSession | null> {
     try {
       const cookieStore = await cookies();
       const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -34,7 +34,7 @@ export class TenantAuth {
         return null;
       }
 
-      return await retrieveSession(sessionId, env);
+      return await retrieveSession(sessionId);
     } catch (error) {
       console.error('Failed to get current session:', error);
       return null;
@@ -43,8 +43,7 @@ export class TenantAuth {
 
   // Get session from request (for middleware)
   static async getSessionFromRequest(
-    request: NextRequest,
-    env?: Record<string, unknown>
+    request: NextRequest
   ): Promise<TenantSession | null> {
     try {
       const sessionId = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -53,8 +52,7 @@ export class TenantAuth {
         return null;
       }
 
-      const resolvedEnv = (request as unknown as { cf?: { env?: Record<string, unknown> } })?.cf?.env ?? env;
-      return await retrieveSession(sessionId, resolvedEnv);
+      return await retrieveSession(sessionId);
     } catch (error) {
       console.error('Failed to get session from request:', error);
       return null;
@@ -62,17 +60,17 @@ export class TenantAuth {
   }
 
   // Clear authentication cookie
-  static async clearAuthCookie(env?: Record<string, unknown>): Promise<void> {
+  static async clearAuthCookie(): Promise<void> {
     const cookieStore = await cookies();
     const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (sessionId) {
-      await removeSession(sessionId, env);
+      await removeSession(sessionId);
     }
     cookieStore.delete(SESSION_COOKIE_NAME);
   }
 
   // Get session from cookies (for server components)
-  static async getSession(env?: Record<string, unknown>): Promise<TenantSession | null> {
+  static async getSession(): Promise<TenantSession | null> {
     try {
       const cookieStore = await cookies();
       const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -81,7 +79,7 @@ export class TenantAuth {
         return null;
       }
 
-      return await retrieveSession(sessionId, env);
+      return await retrieveSession(sessionId);
     } catch (error) {
       console.error('Failed to get session from cookies:', error);
       return null;

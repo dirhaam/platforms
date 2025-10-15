@@ -1,15 +1,16 @@
-import { 
-  WhatsAppEndpoint, 
-  WhatsAppDevice, 
+import {
+  WhatsAppEndpoint,
+  WhatsAppDevice,
   WhatsAppConfiguration,
   WhatsAppMessage,
   WhatsAppMessageData,
   WhatsAppConversation,
-  WhatsAppEvent
+  WhatsAppEvent,
 } from '@/types/whatsapp';
 import { WhatsAppEndpointManager } from './endpoint-manager';
 import { WhatsAppDeviceManager } from './device-manager';
 import { WhatsAppWebhookHandler } from './webhook-handler';
+import { kvGet } from '@/lib/cache/key-value-store';
 
 export class WhatsAppService {
   private static instance: WhatsAppService;
@@ -271,29 +272,24 @@ export class WhatsAppService {
 
   // Utility Methods
   private async getConversationById(conversationId: string): Promise<WhatsAppConversation | null> {
-    // This is a simplified implementation
-    // In production, you'd want a more efficient way to look up conversations
     try {
-      const redis = (await import('@/lib/redis')).redis;
-      const conversationsPattern = `whatsapp:conversation:*`;
-      const keys = await redis.keys(conversationsPattern);
-      
-      for (const key of keys) {
-        const data = await redis.get(key) as string | null;
-        if (data) {
-          const conversation = JSON.parse(data);
-          if (conversation.id === conversationId) {
-            return {
-              ...conversation,
-              lastMessageAt: new Date(conversation.lastMessageAt),
-              createdAt: new Date(conversation.createdAt),
-              updatedAt: new Date(conversation.updatedAt)
-            };
-          }
-        }
+      const indexKey = `whatsapp:conversation:index:${conversationId}`;
+      const conversationKey = await kvGet<string>(indexKey);
+      if (!conversationKey) {
+        return null;
       }
-      
-      return null;
+
+      const conversation = await kvGet<WhatsAppConversation>(conversationKey);
+      if (!conversation) {
+        return null;
+      }
+
+      return {
+        ...conversation,
+        lastMessageAt: new Date(conversation.lastMessageAt),
+        createdAt: new Date(conversation.createdAt),
+        updatedAt: new Date(conversation.updatedAt),
+      };
     } catch (error) {
       console.error('Error getting conversation by ID:', error);
       return null;

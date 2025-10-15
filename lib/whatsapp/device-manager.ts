@@ -1,11 +1,33 @@
-import { 
-  WhatsAppDevice, 
+import {
+  WhatsAppDevice,
   WhatsAppSessionManager,
   WhatsAppReconnectionStrategy,
-  WhatsAppEvent 
+  WhatsAppEvent,
 } from '@/types/whatsapp';
 import { WhatsAppEndpointManager } from './endpoint-manager';
-import { redis } from '@/lib/redis';
+import {
+  kvAddToSet,
+  kvDelete,
+  kvExpire,
+  kvGet,
+  kvGetSet,
+  kvPushToList,
+  kvRemoveFromSet,
+  kvSet,
+} from '@/lib/cache/key-value-store';
+
+function normalizeDevice(raw: WhatsAppDevice | null): WhatsAppDevice | null {
+  if (!raw) {
+    return null;
+  }
+
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+    updatedAt: new Date(raw.updatedAt),
+    lastSeen: raw.lastSeen ? new Date(raw.lastSeen) : undefined,
+  };
+}
 
 export class WhatsAppDeviceManager implements WhatsAppSessionManager {
   private static instance: WhatsAppDeviceManager;
@@ -48,19 +70,9 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
   async getDevice(deviceId: string): Promise<WhatsAppDevice | null> {
     try {
       const deviceKey = `whatsapp:device:${deviceId}`;
-      const deviceData = await redis.get(deviceKey) as string | null;
-      
-      if (!deviceData) {
-        return null;
-      }
+      const deviceData = await kvGet<WhatsAppDevice>(deviceKey);
 
-      const device = JSON.parse(deviceData);
-      return {
-        ...device,
-        createdAt: new Date(device.createdAt),
-        updatedAt: new Date(device.updatedAt),
-        lastSeen: device.lastSeen ? new Date(device.lastSeen) : undefined
-      };
+      return normalizeDevice(deviceData ?? null);
     } catch (error) {
       console.error('Error getting WhatsApp device:', error);
       return null;
@@ -70,7 +82,7 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
   async getTenantDevices(tenantId: string): Promise<WhatsAppDevice[]> {
     try {
       const devicesKey = `whatsapp:tenant:${tenantId}:devices`;
-      const deviceIds = await redis.smembers(devicesKey) || [];
+      const deviceIds = await kvGetSet(devicesKey);
       
       const devices: WhatsAppDevice[] = [];
       for (const deviceId of deviceIds) {
@@ -129,11 +141,11 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
 
       // Remove from tenant devices set
       const devicesKey = `whatsapp:tenant:${device.tenantId}:devices`;
-      await redis.srem(devicesKey, deviceId);
+      await kvRemoveFromSet(devicesKey, deviceId);
 
       // Remove device data
       const deviceKey = `whatsapp:device:${deviceId}`;
-      await redis.del(deviceKey);
+      await kvDelete(deviceKey);
     } catch (error) {
       console.error('Error deleting WhatsApp device:', error);
       throw error;
@@ -295,7 +307,7 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
       const sessionKey = `whatsapp:session:${deviceId}`;
       // Encrypt session data before storing
       const encryptedData = Buffer.from(sessionData).toString('base64');
-      await redis.setex(sessionKey, 86400 * 7, encryptedData); // 7 days TTL
+      await kvSet(sessionKey, encryptedData, 86400 * 7);
     } catch (error) {
       console.error('Error saving WhatsApp session:', error);
       throw error;
@@ -305,7 +317,7 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
   async loadSession(deviceId: string): Promise<string | null> {
     try {
       const sessionKey = `whatsapp:session:${deviceId}`;
-      const encryptedData = await redis.get(sessionKey);
+      const encryptedData = await kvGet<string>(sessionKey);
       
       if (!encryptedData) {
         return null;
@@ -322,7 +334,7 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
   async clearSession(deviceId: string): Promise<void> {
     try {
       const sessionKey = `whatsapp:session:${deviceId}`;
-      await redis.del(sessionKey);
+      await kvDelete(sessionKey);
     } catch (error) {
       console.error('Error clearing WhatsApp session:', error);
     }
@@ -342,8 +354,8 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
     const deviceKey = `whatsapp:device:${device.id}`;
     const devicesKey = `whatsapp:tenant:${device.tenantId}:devices`;
     
-    await redis.set(deviceKey, JSON.stringify(device));
-    await redis.sadd(devicesKey, device.id);
+    await kvSet(deviceKey, device);
+    await kvAddToSet(devicesKey, device.id);
   }
 
   private async startReconnection(device: WhatsAppDevice): Promise<void> {
@@ -405,8 +417,8 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
 
       // Store event for webhook processing
       const eventKey = `whatsapp:events:${device.tenantId}`;
-      await redis.lpush(eventKey, JSON.stringify(event));
-      await redis.expire(eventKey, 3600); // 1 hour TTL
+      await kvPushToList(eventKey, event);
+      await kvExpire(eventKey, 3600);
     } catch (error) {
       console.error('Error emitting device event:', error);
     }

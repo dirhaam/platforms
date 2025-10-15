@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { superAdmins } from '@/lib/database/schema';
 import { eq, desc } from 'drizzle-orm';
 import { TenantAuth } from './tenant-auth';

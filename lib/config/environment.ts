@@ -10,10 +10,6 @@ if (!databaseUrl) {
   throw new Error('DATABASE_URL environment variable is required');
 }
 
-// Redis configuration (existing)
-export const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-export const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-
 // Application configuration
 export const appConfig = {
   name: process.env.NEXT_PUBLIC_APP_NAME || 'Booqing Platform',
@@ -53,10 +49,6 @@ export function validateEnvironment(): { isValid: boolean; errors: string[] } {
     errors.push('DATABASE_URL is required');
   }
 
-  if (!redisUrl || !redisToken) {
-    errors.push('Redis configuration (UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN) is required');
-  }
-
   return {
     isValid: errors.length === 0,
     errors,
@@ -67,10 +59,6 @@ export function validateEnvironment(): { isValid: boolean; errors: string[] } {
 export interface EnvironmentConfig {
   app: typeof appConfig;
   database: typeof databaseConfig;
-  redis: {
-    url: string;
-    token: string;
-  };
   whatsapp: typeof whatsappConfig;
   storage: typeof storageConfig;
 }
@@ -78,10 +66,6 @@ export interface EnvironmentConfig {
 export const environment: EnvironmentConfig = {
   app: appConfig,
   database: databaseConfig,
-  redis: {
-    url: redisUrl || '',
-    token: redisToken || '',
-  },
   whatsapp: whatsappConfig,
   storage: storageConfig,
 };

@@ -1,3 +1,6 @@
+// Server-only database module - DO NOT IMPORT IN CLIENT CODE
+import 'server-only';
+
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';

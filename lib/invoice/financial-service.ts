@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import {
   invoices,
   invoiceItems,
@@ -7,7 +7,7 @@ import {
   tenants,
 } from '@/lib/database/schema';
 import { InvoiceStatus, InvoiceExportOptions, PaymentMethod } from '@/types/invoice';
-import { alias } from 'drizzle-orm/sqlite-core';
+import { alias } from 'drizzle-orm/pg-core';
 import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import Decimal from 'decimal.js';
 import * as XLSX from 'xlsx';

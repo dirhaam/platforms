@@ -3,7 +3,7 @@ import { getRecommendedTemplate, type LandingPageTemplate } from '@/lib/template
 import { CacheService } from '@/lib/cache/cache-service';
 import { PerformanceMonitor } from '@/lib/performance/performance-monitor';
 import { Service } from '@/types/booking';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { services as servicesTable, businessHours as businessHoursTable } from '@/lib/database/schema';
 import { and, eq, desc } from 'drizzle-orm';
 

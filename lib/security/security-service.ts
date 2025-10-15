@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database/server';
 import { securityAuditLogs } from '@/lib/database/schema';
 import { eq, and, lt, gte, desc, count } from 'drizzle-orm';
 
