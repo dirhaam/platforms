@@ -1,5 +1,3 @@
-export const runtime = 'nodejs';
-
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, ArrowLeft } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Building2, ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { TenantCreationForm } from '@/components/admin/TenantCreationForm';
 
 export default async function CreateTenantPage() {
   const session = await getServerSession();
@@ -35,97 +36,17 @@ export default async function CreateTenantPage() {
         </div>
       </div>
       
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
-            Tenant Information
-          </CardTitle>
-          <CardDescription>
-            Enter the details for the new tenant
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="businessName">Business Name *</Label>
-              <Input
-                id="businessName"
-                placeholder="Enter business name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="subdomain">Subdomain *</Label>
-              <Input
-                id="subdomain"
-                placeholder="mybusiness"
-                required
-              />
-              <p className="text-xs text-gray-500">
-                Will be accessible at: mybusiness.localhost:3001
-              </p>
-            </div>
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-yellow-600" />
+          <div className="text-sm text-yellow-800">
+            <strong>Testing Notice:</strong> This is a development environment. 
+            Create test tenants with placeholder data to validate the functionality.
           </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="ownerName">Owner Name *</Label>
-              <Input
-                id="ownerName"
-                placeholder="Enter owner's full name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ownerEmail">Owner Email *</Label>
-              <Input
-                id="ownerEmail"
-                type="email"
-                placeholder="owner@business.com"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Business Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Brief description of the business"
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                placeholder="+1 (555) 123-4567"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                placeholder="https://business.com"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button variant="outline" asChild>
-              <Link href="/admin/tenants">
-                Cancel
-              </Link>
-            </Button>
-            <Button type="submit">
-              Create Tenant
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <TenantCreationForm session={session} />
     </div>
   );
 }

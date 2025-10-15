@@ -1,8 +1,9 @@
-export const runtime = 'nodejs';
-
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
-
+import { Button } from '@/components/ui/button';
+import { Plus, Building2 } from 'lucide-react';
+import Link from 'next/link';
+import { TenantsList } from '@/components/admin/TenantsList';
 
 export default async function TenantsPage() {
   const session = await getServerSession();
@@ -14,18 +15,22 @@ export default async function TenantsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Tenant Management</h1>
-        <p className="text-gray-600">
-          Manage all tenants on the platform
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Tenant Management</h1>
+          <p className="text-gray-600">
+            Manage all tenants on the platform
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/tenants/create">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Tenant
+          </Link>
+        </Button>
       </div>
       
-      <div className="text-center py-8 text-gray-500">
-        Tenant management interface will be implemented here.
-        <br />
-        This will include tenant creation, editing, and management features.
-      </div>
+      <TenantsList initialSession={session} />
     </div>
   );
 }

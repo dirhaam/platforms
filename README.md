@@ -1,90 +1,254 @@
-# Next.js Multi-Tenant Example
+# 🏢 Booqing - Professional Booking Platform
 
-A production-ready example of a multi-tenant application built with Next.js 15, featuring custom subdomains for each tenant.
+A comprehensive multi-tenant booking platform built with Next.js 15, designed specifically for Indonesian businesses with advanced features like WhatsApp integration, home visit management, and powerful analytics.
 
-## Features
+## ✨ Features
 
-- ✅ Custom subdomain routing with Next.js middleware
-- ✅ Tenant-specific content and pages
-- ✅ Shared components and layouts across tenants
-- ✅ Redis for tenant data storage
-- ✅ Admin interface for managing tenants
-- ✅ Emoji support for tenant branding
-- ✅ Support for local development with subdomains
-- ✅ Compatible with Vercel preview deployments
+### 🏢 Multi-Tenant Architecture
+- ✅ Custom subdomain routing (`tenant.yourdomain.com`)
+- ✅ Complete tenant isolation with dedicated data
+- ✅ Role-based access control (Super Admin, Tenant Admin, Staff)
+- ✅ Customizable branding per tenant
 
-## Tech Stack
+### 📅 Advanced Booking System
+- ✅ Real-time availability checking
+- ✅ Recurring bookings support
+- ✅ Home visit management with location validation
+- ✅ Service area management with travel calculations
+- ✅ Blackout dates and business hours configuration
 
-- [Next.js 15](https://nextjs.org/) with App Router
-- [React 19](https://react.dev/)
-- [Upstash Redis](https://upstash.com/) for data storage
-- [Tailwind 4](https://tailwindcss.com/) for styling
-- [shadcn/ui](https://ui.shadcn.com/) for the design system
+### 📱 WhatsApp Integration
+- ✅ Multi-device management
+- ✅ Automated notifications and reminders
+- ✅ Customer conversation tracking
+- ✅ Message templates system
+- ✅ Webhook handling
 
-## Getting Started
+### 💰 Financial Management
+- ✅ Complete invoice generation with tax calculations
+- ✅ Payment status tracking
+- ✅ Export to Excel/CSV
+- ✅ Revenue analytics and reporting
+- ✅ Customer financial insights
+
+### 📊 Analytics & Monitoring
+- ✅ Customer analytics and lifetime value
+- ✅ Service performance metrics
+- ✅ Revenue tracking and forecasts
+- ✅ System health monitoring
+- ✅ Security audit logging
+
+### 🛡️ Security & Performance
+- ✅ JWT-based authentication with session management
+- ✅ Rate limiting and input validation
+- ✅ SQL injection prevention
+- ✅ XSS protection
+- ✅ Optimized for Verc deployment
+
+## 🛠️ Tech Stack
+
+### Core Framework
+- **[Next.js 15](https://nextjs.org/)** - App Router + Server Components
+- **[React 19](https://react.dev/)** - Latest React features
+- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
+
+### Database & Backend
+- **[PostgreSQL](https://www.postgresql.org/)** - Primary database
+- **[Drizzle ORM](https://orm.drizzle.team/)** - Modern TypeScript ORM
+- **[Supabase](https://supabase.com/)** - Backend-as-a-Service
+- **[NextAuth.js](https://next-auth.js.org/)** - Authentication
+
+### Frontend & UI
+- **[Tailwind CSS 4](https://tailwindcss.com/)** - Utility-first styling
+- **[shadcn/ui](https://ui.shadcn.com/)** - Accessible design system
+- **[Radix UI](https://www.radix-ui.com/)** - UI primitives
+- **[Lucide React](https://lucide.dev/)** - Icon library
+
+### Business Logic
+- **[Zod](https://zod.dev/)** - Schema validation
+- **[date-fns](https://date-fns.org/)** - Date manipulation
+- **[Decimal.js](https://mikemcl.github.io/decimal.js/)** - Precise calculations
+- **[Recharts](https://recharts.org/)** - Data visualization
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18.17.0 or later
-- pnpm (recommended) or npm/yarn
-- Upstash Redis account (for production)
+- **Node.js** 18.17.0 or higher
+- **pnpm** (recommended) or npm/yarn
+- **Supabase** account for PostgreSQL database
 
 ### Installation
 
-1. Clone the repository:
-
+1. **Clone the repository:**
    ```bash
-   git clone https://github.com/vercel/platforms.git
-   cd platforms
+   git clone <repository-url>
+   cd booqing-platform
    ```
 
-2. Install dependencies:
-
+2. **Install dependencies:**
    ```bash
    pnpm install
    ```
 
-3. Set up environment variables:
-   Create a `.env.local` file in the root directory with:
-
+3. **Set up environment variables:**
+   ```bash
+   cp .env.example .env.local
    ```
-   KV_REST_API_URL=your_redis_url
-   KV_REST_API_TOKEN=your_redis_token
+   
+   And configure:
+   ```env
+   # Database
+   DATABASE_URL="postgresql://[project_ref]:[password]@[project_ref].supabase.co:5432/postgres"
+   NEXT_PUBLIC_SUPABASE_URL="https://[project_ref].supabase.co"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="your_anon_key"
+   
+   # Authentication
+   JWT_SECRET="your-super-secret-jwt-key"
+   SESSION_SECRET="your-session-secret"
+   
+   # Application
+   NEXTAUTH_URL="http://localhost:3000"
+   ROOT_DOMAIN="localhost:3000"
+   
+   # WhatsApp (Optional)
+   WHATSAPP_API_KEY="your-whatsapp-api-key"
+   WHATSAPP_WEBHOOK_SECRET="your-webhook-secret"
    ```
 
-4. Start the development server:
+4. **Set up database:**
+   ```bash
+   # Generate and apply migrations
+   pnpm db:generate
+   pnpm db:push
+   
+   # Optional: Open Drizzle Studio
+   pnpm db:studio
+   ```
 
+5. **Start the development server:**
    ```bash
    pnpm dev
    ```
 
-5. Access the application:
-   - Main site: http://localhost:3000
-   - Admin panel: http://localhost:3000/admin
-   - Tenants: http://[tenant-name].localhost:3000
+6. **Access the application:**
+   - **Main Site**: http://localhost:3000
+   - **Admin Panel**: http://localhost:3000/admin
+   - **Tenant Example**: http://[tenant].localhost:3000
 
-## Multi-Tenant Architecture
+## 🏗️ Architecture
 
-This application demonstrates a subdomain-based multi-tenant architecture where:
+### Multi-Tenant Design
 
-- Each tenant gets their own subdomain (`tenant.yourdomain.com`)
-- The middleware handles routing requests to the correct tenant
-- Tenant data is stored in Redis using a `subdomain:{name}` key pattern
-- The main domain hosts the landing page and admin interface
-- Subdomains are dynamically mapped to tenant-specific content
+The platform uses a subdomain-based multi-tenant architecture:
 
-The middleware (`middleware.ts`) intelligently detects subdomains across various environments (local development, production, and Vercel preview deployments).
+- **Tenant Isolation**: Each tenant gets dedicated subdomain (`tenant.domain.com`)
+- **Data Separation**: Complete isolation dengan row-level security
+- **Custom Branding**: Per-tenant customization of colors, logo, etc.
+- **Scalable Design**: Easy to add/remove tenants without affecting others
 
-## Deployment
+### Database Schema
 
-This application is designed to be deployed on Vercel. To deploy:
+核心模块包括：
+- **Tenants**: Multi-tenant management
+- **Services**: Service catalog dengan pricing
+- **Customers**: Customer management
+- **Bookings**: Booking engine dengan status tracking
+- **Invoices**: Financial management
+- **WhatsApp**: Communication system
 
-1. Push your repository to GitHub
-2. Connect your repository to Vercel
-3. Configure environment variables
-4. Deploy
+For complete schema documentation, see `docs/PLATFORM_DOCUMENTATION.md`.
 
-For custom domains, make sure to:
+## 📚 Documentation
 
-1. Add your root domain to Vercel
-2. Set up a wildcard DNS record (`*.yourdomain.com`) on Vercel
+- **[Platform Documentation](./docs/PLATFORM_DOCUMENTATION.md)** - Complete platform overview
+- **[API Reference](./docs/API_REFERENCE.md)** - Comprehensive API documentation
+- **[Database Schema](./docs/DATABASE_SCHEMA.md)** - Database structure and relationships
+- **[Security Guide](./docs/SECURITY.md)** - Security best practices
+
+## 🔧 Development
+
+### Available Scripts
+
+```bash
+# Development
+pnpm dev              # Start development server
+pnpm build            # Build for production
+pnpm start            # Start production server
+
+# Database
+pnpm db:generate      # Generate migrations
+pnpm db:push          # Apply migrations
+pnpm db:studio        # Open Drizzle Studio
+
+# Testing
+pnpm test             # Run tests
+pnpm lint             # Run linter
+```
+
+### Project Structure
+
+```
+booqing-platform/
+├── app/                 # Next.js App Router
+│   ├── api/            # API routes
+│   ├── admin/          # Admin dashboard
+│   └── s/[subdomain]/  # Tenant interfaces
+├── components/         # Reusable components
+├── lib/               # Business logic & utilities
+├── types/             # TypeScript definitions
+└── docs/              # Documentation
+```
+
+## 🚀 Deployment
+
+### Vercel Deployment (Recommended)
+
+1. **Connect to Vercel:**
+   ```bash
+   vercel link
+   ```
+
+2. **Configure environment variables in Vercel dashboard:**
+   - `DATABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `JWT_SECRET`
+   - `ROOT_DOMAIN`
+
+3. **Deploy:**
+   ```bash
+   vercel --prod
+   ```
+
+4. **Set up custom domain:**
+   - Add your root domain to Vercel
+   - Configure wildcard DNS (`*.yourdomain.com` → CNAME → `cname.vercel-dns.com`)
+
+### Database Migration in Production
+
+```bash
+# Apply migrations to production database
+pnpm db:push --prod
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: Check `docs/` folder for comprehensive guides
+- **Issues**: Report bugs via GitHub Issues
+- **Discussions**: Ask questions in GitHub Discussions
+
+---
+
+*Built with ❤️ for Indonesian businesses*
