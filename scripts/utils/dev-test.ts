@@ -1,10 +1,10 @@
 // dev-test.ts
 // Development test script to verify Supabase/PostgreSQL integration
 
-import { db } from './lib/database/server';
-import { tenants } from './lib/database/schema';
+import { db } from '../../lib/database/server';
+import { tenants } from '../../lib/database/schema';
 import { eq } from 'drizzle-orm';
-import { setTenant, getTenant, testSupabaseConnection } from './lib/database-service';
+import { setTenant, getTenant, testSupabaseConnection } from '../../lib/database-service';
 
 async function runDevelopmentTests() {
   console.log('Running development tests for Supabase integration...\n');
