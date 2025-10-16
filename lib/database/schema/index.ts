@@ -7,7 +7,7 @@ export const tenants = pgTable('tenants', {
   id: uuid('id').defaultRandom().primaryKey(),
   subdomain: text('subdomain').notNull().unique(),
   emoji: text('emoji').default('🏢'),
-  businessName: text('business_name').notNull(),
+  businessName: text('business_name').notNull().default(''),
   businessCategory: text('business_category').notNull(),
   ownerName: text('owner_name').notNull(),
   email: text('email').notNull(),
@@ -23,7 +23,7 @@ export const tenants = pgTable('tenants', {
   analyticsEnabled: boolean('analytics_enabled').default(false),
   customTemplatesEnabled: boolean('custom_templates_enabled').default(false),
   multiStaffEnabled: boolean('multi_staff_enabled').default(false),
-
+  // Add business-critical fields
   subscriptionPlan: text('subscription_plan').notNull().default('basic'),
   subscriptionStatus: text('subscription_status').notNull().default('active'),
   subscriptionExpiresAt: timestamp('subscription_expires_at', { withTimezone: true }),
@@ -242,7 +242,7 @@ export const superAdmins = pgTable('super_admins', {
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   isActive: boolean('is_active').default(true),
-  passwordHash: text('password_hash').notNull(),
+  passwordHash: text('password_hash').notNull().default(''),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   loginAttempts: integer('login_attempts').default(0),
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
