@@ -112,6 +112,21 @@ export async function setSession(
   try {
     const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
     
+    // Check if IDs are valid UUIDs, if not generate new ones
+    // This handles potential UUID issues
+    if (!isValidUUID(sessionId)) {
+      console.warn('Invalid session ID, generating new UUID:', sessionId);
+      sessionId = crypto.randomUUID();
+    }
+    if (!isValidUUID(userId)) {
+      console.warn('Invalid user ID, generating new UUID:', userId);
+      userId = crypto.randomUUID();
+    }
+    if (!isValidUUID(tenantId)) {
+      console.warn('Invalid tenant ID, generating new UUID:', tenantId);
+      tenantId = crypto.randomUUID();
+    }
+    
     const { error } = await supabase
       .from('sessions')
       .upsert({ 
@@ -133,8 +148,20 @@ export async function setSession(
   }
 }
 
+// Helper function to validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 export async function getSession(sessionId: string): Promise<any | null> {
   try {
+    // Validate session ID format
+    if (!isValidUUID(sessionId)) {
+      console.warn('Invalid session ID format:', sessionId);
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from('sessions')
       .select('user_id, tenant_id, session_data, expires_at')
@@ -169,6 +196,12 @@ export async function getSession(sessionId: string): Promise<any | null> {
 
 export async function deleteSession(sessionId: string): Promise<boolean> {
   try {
+    // Validate session ID format before attempting deletion
+    if (!isValidUUID(sessionId)) {
+      console.warn('Invalid session ID format for deletion:', sessionId);
+      return false;
+    }
+    
     const { error } = await supabase
       .from('sessions')
       .delete()

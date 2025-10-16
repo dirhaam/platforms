@@ -160,7 +160,9 @@ CREATE TABLE IF NOT EXISTS messages (
     media_url TEXT,
     is_from_customer BOOLEAN DEFAULT TRUE,
     delivery_status TEXT NOT NULL DEFAULT 'sent',
-    sent_at TIMESTAMP WITH TIME ZONE
+    sent_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Message Template table
@@ -182,6 +184,7 @@ CREATE TABLE IF NOT EXISTS business_hours (
     tenant_id TEXT NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
     schedule JSONB NOT NULL,
     timezone TEXT DEFAULT 'Asia/Jakarta',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -304,12 +307,14 @@ CREATE TABLE IF NOT EXISTS tenant_subdomains (
 -- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id TEXT NOT NULL,
-    tenant_id TEXT NOT NULL,
+    user_id UUID NOT NULL,
+    tenant_id UUID NOT NULL,
     session_data JSONB,
     expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+    CONSTRAINT fk_sessions_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 );
 
 -- Cache table

@@ -52,10 +52,15 @@ export async function persistSession(session: TenantSession): Promise<string> {
   const sessionId = generateSessionId();
 
   try {
-    await setSession(sessionId, session.userId, session.tenantId, session, SESSION_TTL_SECONDS);
+    // Store session in database
+    const success = await setSession(sessionId, session.userId, session.tenantId, session, SESSION_TTL_SECONDS);
+    if (!success) {
+      console.warn('Failed to persist session in database, falling back to inline storage');
+      return encodeInline(session);
+    }
     return sessionId;
   } catch (error) {
-    console.warn('Falling back to inline session storage:', error);
+    console.warn('Falling back to inline session storage due to error:', error);
     return encodeInline(session);
   }
 }
@@ -70,11 +75,23 @@ export async function retrieveSession(sessionId: string): Promise<TenantSession 
   }
 
   const record = await getSession(sessionId).catch(error => {
-    console.error('Failed to retrieve session:', error);
+    console.error('Failed to retrieve session from database:', error);
     return null;
   });
 
-  if (!record?.data) {
+  if (!record) {
+    console.warn('Session not found in database, attempting inline retrieval');
+    // If database lookup failed, try inline decoding as fallback
+    if (isInlineSession(sessionId)) {
+      return decodeInline(sessionId);
+    }
+    return null;
+  }
+
+  // Check if session is expired before returning
+  if (record.expires_at && new Date() > new Date(record.expires_at)) {
+    console.log('Session expired, removing from database');
+    await removeSession(sessionId);
     return null;
   }
 
@@ -87,10 +104,16 @@ export async function removeSession(sessionId: string): Promise<void> {
   }
 
   if (isInlineSession(sessionId)) {
+    // Inline sessions don't need database removal
     return;
   }
 
-  await deleteSession(sessionId).catch(error => {
-    console.error('Failed to delete session:', error);
+  const success = await deleteSession(sessionId).catch(error => {
+    console.error('Failed to delete session from database:', error);
+    return false;
   });
+
+  if (!success) {
+    console.warn('Failed to remove session from database');
+  }
 }

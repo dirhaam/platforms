@@ -96,18 +96,34 @@ export async function POST(request: NextRequest) {
 
     console.log('Login debug - Authentication result:', result);
 
-    if (result.success) {
+    if (result.success && result.session) {
       console.log('Login debug - Login successful for:', email);
-      return NextResponse.json({
+      
+      // Create response with authentication cookie
+      const response = NextResponse.json({
         success: true,
         user: {
-          name: result.session?.name,
-          email: result.session?.email,
-          role: result.session?.role,
-          tenantId: result.session?.tenantId,
-          isSuperAdmin: result.session?.isSuperAdmin || false,
+          name: result.session.name,
+          email: result.session.email,
+          role: result.session.role,
+          tenantId: result.session.tenantId,
+          isSuperAdmin: result.session.isSuperAdmin || false,
         },
       });
+      
+      // Set authentication cookie
+      const { persistSession } = await import('@/lib/auth/session-store');
+      const sessionId = await persistSession(result.session);
+      
+      response.cookies.set('tenant-auth', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/',
+      });
+
+      return response;
     } else {
       console.log('Login debug - Login failed for:', email, 'Error:', result.error);
       return NextResponse.json(

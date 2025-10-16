@@ -295,8 +295,8 @@ export const tenantSubdomains = pgTable('tenant_subdomains', {
 // Sessions table
 export const sessions = pgTable('sessions', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: text('user_id').notNull(),
-  tenantId: text('tenant_id').notNull(),
+  userId: uuid('user_id').notNull(),
+  tenantId: uuid('tenant_id').notNull(),
   sessionData: jsonb('session_data').$type<any>(),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

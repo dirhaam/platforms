@@ -35,9 +35,9 @@ const ensureCrypto = () => {
 const generateId = () => {
   const cryptoObj = ensureCrypto();
   if (typeof cryptoObj.randomUUID === 'function') {
-    return `sa_${cryptoObj.randomUUID().replace(/-/g, '')}`;
+    return cryptoObj.randomUUID();
   }
-  return `sa_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  return `superadmin-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
 const mapRow = (row: SuperAdminRow): SuperAdmin => ({
@@ -113,11 +113,7 @@ export class SuperAdminService {
     // Hash password
     const passwordHash = await TenantAuth.hashPassword(password);
 
-    const now = new Date();
-    const id = generateId();
-
     await db.insert(superAdmins).values({
-      id,
       email,
       name,
       isActive: true,
@@ -125,17 +121,20 @@ export class SuperAdminService {
       loginAttempts: 0,
       permissions: ['*'],
       canAccessAllTenants: true,
-      createdAt: now,
-      updatedAt: now,
     });
 
+    // Find the created record
     const [created] = await db
       .select()
       .from(superAdmins)
-      .where(eq(superAdmins.id, id))
+      .where(eq(superAdmins.email, email))
       .limit(1);
 
-    return mapRow(created!);
+    if (!created) {
+      throw new Error('Failed to create SuperAdmin');
+    }
+
+    return mapRow(created);
   }
 
   // Find SuperAdmin by email
@@ -236,7 +235,7 @@ export class SuperAdminService {
       // Reset login attempts on successful login
       const updatedSuperAdmin = await this.update(superAdmin.id, {
         loginAttempts: 0,
-        lockedUntil: undefined,
+        lockedUntil: null,
         lastLoginAt: new Date(),
       });
 
