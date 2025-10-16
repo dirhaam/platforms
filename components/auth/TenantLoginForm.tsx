@@ -171,10 +171,10 @@ export default function TenantLoginForm() {
             <div className="bg-blue-50 p-3 rounded-md text-sm">
               <p className="font-medium text-blue-800 mb-1">Development Credentials:</p>
               <p className="text-blue-700">
-                Owner: Use your registered email + password: <code>admin123</code>
+                Owner: Use your registered email + password
               </p>
               <p className="text-blue-700">
-                Staff: Any staff email + password: <code>staff123</code>
+                Staff: Use your staff email + password
               </p>
             </div>
           )}

@@ -10,8 +10,8 @@ async function testSuperAdminAuthSimple() {
   console.log('🔐 Testing SuperAdmin authentication (simple)...');
   
   try {
-    const email = 'dirhamrozi@gmail.com';
-    const password = '12345nabila';
+    const email = 'test-superadmin@example.com';
+    const password = 'test123password';
     
     console.log('📧 Email:', email);
     console.log('🔑 Password:', password);

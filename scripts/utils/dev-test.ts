@@ -24,7 +24,7 @@ async function runDevelopmentTests() {
   const testSubdomain = `dev-test-${Date.now()}`;
   const testData = {
     businessName: "Dev Test Tenant",
-    email: "test@example.com",
+    email: "dev-test@example.com",
     phone: "1234567890",
     createdAt: new Date().toISOString(),
   };

@@ -3,8 +3,8 @@ import { superAdmins } from '@/lib/database/schema';
 import { eq, desc } from 'drizzle-orm';
 import { TenantAuth } from './tenant-auth';
 
-const DEFAULT_SUPERADMIN_EMAIL = process.env.DEFAULT_SUPERADMIN_EMAIL || 'dirhamrozi@gmail.com';
-const DEFAULT_SUPERADMIN_PASSWORD = process.env.DEFAULT_SUPERADMIN_PASSWORD || '12345nabila';
+const DEFAULT_SUPERADMIN_EMAIL = process.env.DEFAULT_SUPERADMIN_EMAIL || 'superadmin@booqing.my.id';
+const DEFAULT_SUPERADMIN_PASSWORD = process.env.DEFAULT_SUPERADMIN_PASSWORD || 'ChangeThisPassword123!';
 
 export interface SuperAdmin {
   id: string;

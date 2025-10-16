@@ -209,15 +209,7 @@ function LoginPageContent() {
               </form>
             </Tabs>
 
-            {loginType === 'superadmin' && (
-              <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  <strong>Default SuperAdmin Credentials:</strong><br />
-                  Email: dirhamrozi@gmail.com<br />
-                  Password: 12345nabila
-                </p>
-              </div>
-            )}
+            
           </CardContent>
         </Card>
 
