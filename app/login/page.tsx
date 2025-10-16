@@ -75,7 +75,7 @@ async function LoginPageContent({
             <p className="text-xs text-gray-500 mb-3">Quick Access (Development)</p>
             <div className="space-y-2">
               <div className="text-xs text-gray-400">
-                <strong>Super Admin:</strong> superadmin@booqing.my.id / ChangeThisPassword123!
+                <strong>Super Admin:</strong> Use your configured superadmin credentials
               </div>
               <div className="text-xs text-gray-400">
                 <strong>Test Owner:</strong> test@owner.com / password123

@@ -16,7 +16,7 @@ INSERT INTO super_admins (
   'newadmin@booqing.my.id',
   'New Admin',
   true,
-  '$2b$10$yxLNNmJqQEVW6mRcC8uQLulNK/smTVEe4TDm5IT.EqUd13bq4CVRS', -- ChangeThisPassword123!
+  '$2b$10$hash_goes_here', -- Replace with actual bcrypt hash
   '["*"]',
   true
 );

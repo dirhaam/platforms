@@ -17,7 +17,7 @@ INSERT INTO super_admins (
   'admin@booqing.my.id',
   'Admin User',
   true,
-  '$2b$10$yxLNNmJqQEVW6mRcC8uQLulNK/smTVEe4TDm5IT.EqUd13bq4CVRS',
+  '$2b$10$your-generated-bcrypt-hash-here',
   '["*"]',
   true
 ),
@@ -25,7 +25,7 @@ INSERT INTO super_admins (
   'support@booqing.my.id',
   'Support Team',
   true,
-  '$2b$10$yxLNNmJqQEVW6mRcC8uQLulNK/smTVEe4TDm5IT.EqUd13bq4CVRS',
+  '$2b$10$your-generated-bcrypt-hash-here',
   '["read:*", "manage:tenants", "manage:customers", "manage:bookings"]',
   true
 ),
@@ -33,7 +33,7 @@ INSERT INTO super_admins (
   'developer@booqing.my.id',
   'Developer',
   true,
-  '$2b$10$yxLNNmJqQEVW6mRcC8uQLulNK/smTVEe4TDm5IT.EqUd13bq4CVRS',
+  '$2b$10$your-generated-bcrypt-hash-here',
   '["*"]',
   true
 );
@@ -55,7 +55,7 @@ SELECT 'Superadmin Login Credentials:' as login_info;
 SELECT 
   email,
   name,
-  'Password: ChangeThisPassword123!' as password,
+  'Password: Set your own secure password' as password,
   CASE 
     WHEN permissions = '["*"]' THEN 'Full Access'
     ELSE 'Limited Access'

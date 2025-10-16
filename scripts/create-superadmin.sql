@@ -2,14 +2,13 @@
 -- Run this in Supabase SQL Editor
 
 -- First, check if superadmin already exists
-SELECT * FROM super_admins WHERE email = 'superadmin@booqing.my.id';
+-- SELECT * FROM super_admins WHERE email = 'your-admin-email@example.com';
 
 -- If not exists, create one
 -- Note: You need to hash the password first using bcrypt
--- Password: ChangeThisPassword123!
--- Bcrypt hash (10 rounds): $2a$10$YourHashedPasswordHere
+-- Generate your own bcrypt hash using: https://bcrypt-generator.com/
+-- Or use Node.js: require('bcrypt').hashSync('your-password', 10)
 
--- Example insert (you need to generate the actual bcrypt hash):
 INSERT INTO super_admins (
   id,
   email,
@@ -22,10 +21,10 @@ INSERT INTO super_admins (
   created_at,
   updated_at
 ) VALUES (
-  'sa_' || gen_random_uuid(),
-  'superadmin@booqing.my.id',
-  'Super Admin',
-  '$2a$10$aZXQHX9kCp5pFMLBzzVAuuYfhVwvPWNrLJGzj6rCcovzgXaR8lTYi', -- This is example hash, generate your own!
+  gen_random_uuid(),
+  'your-admin-email@example.com',
+  'Your Admin Name',
+  '$2a$10$your-generated-bcrypt-hash-here',
   true,
   0,
   '["*"]',
