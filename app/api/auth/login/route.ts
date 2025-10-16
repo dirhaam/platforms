@@ -56,9 +56,17 @@ export async function POST(request: NextRequest) {
         if (isSubdomain) {
           subdomain = hostname.replace(`.${rootDomainFormatted}`, '');
         }
+        
+        // Debug logging
+        console.log('Login debug - Hostname:', hostname);
+        console.log('Login debug - Root domain:', rootDomain);
+        console.log('Login debug - Root domain formatted:', rootDomainFormatted);
+        console.log('Login debug - Is subdomain?', isSubdomain);
+        console.log('Login debug - Extracted subdomain:', subdomain);
       }
 
       if (!subdomain) {
+        console.log('Login debug - Subdomain validation failed for login type:', loginType);
         return NextResponse.json(
           { success: false, error: 'Invalid subdomain' },
           { status: 400 }
@@ -74,6 +82,10 @@ export async function POST(request: NextRequest) {
 
     // Authenticate based on login type
     let result;
+    console.log('Login debug - Login type:', loginType);
+    console.log('Login debug - Email:', email);
+    console.log('Login debug - Subdomain (if applicable):', subdomain || 'N/A');
+    
     if (loginType === 'superadmin') {
       result = await TenantAuth.authenticateSuperAdmin(email, password, ipAddress, userAgent);
     } else if (loginType === 'owner') {
@@ -82,7 +94,10 @@ export async function POST(request: NextRequest) {
       result = await TenantAuth.authenticateStaff(email, password, subdomain!, ipAddress, userAgent);
     }
 
+    console.log('Login debug - Authentication result:', result);
+
     if (result.success) {
+      console.log('Login debug - Login successful for:', email);
       return NextResponse.json({
         success: true,
         user: {
@@ -94,6 +109,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
+      console.log('Login debug - Login failed for:', email, 'Error:', result.error);
       return NextResponse.json(
         { success: false, error: result.error },
         { status: 401 }
