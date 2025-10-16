@@ -47,7 +47,13 @@ export async function POST(request: NextRequest) {
         const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'booqing.my.id';
         const rootDomainFormatted = rootDomain.split(':')[0];
         
-        if (hostname !== rootDomainFormatted && hostname.endsWith(`.${rootDomainFormatted}`)) {
+        // Consistent with middleware.ts logic - exclude www subdomain
+        const isSubdomain =
+          hostname !== rootDomainFormatted &&
+          hostname !== `www.${rootDomainFormatted}` &&
+          hostname.endsWith(`.${rootDomainFormatted}`);
+          
+        if (isSubdomain) {
           subdomain = hostname.replace(`.${rootDomainFormatted}`, '');
         }
       }
