@@ -36,6 +36,11 @@ export async function POST(request: NextRequest) {
         const subdomainMatch = referer.match(/http:\/\/([^.]+)\.localhost/);
         if (subdomainMatch) {
           subdomain = subdomainMatch[1];
+        } else {
+          // Fallback: extract from host header for localhost
+          if (hostname.includes('.localhost')) {
+            subdomain = hostname.split('.')[0];
+          }
         }
       } else {
         // Production - extract from hostname

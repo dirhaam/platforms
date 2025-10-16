@@ -243,9 +243,83 @@ pnpm db:push --prod
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 🧪 Debugging & Scripts
+
+The project includes comprehensive debugging and setup tools in the `scripts/` folder:
+
+### **Quick Debugging**
+```bash
+# Run comprehensive diagnostics
+node scripts/debug/comprehensive-rls-diagnostics.js
+
+# Test login flow
+node scripts/debug/test-api-login.js
+
+# Test middleware & sessions
+node scripts/debug/test-middleware-specific.js
+
+# Check environment variables
+node scripts/setup/check-vercel-env.js
+```
+
+### **Setup & Admin**
+```bash
+# Quick admin setup
+node scripts/setup/quick-admin-setup.js
+
+# Create tenant admin
+node scripts/setup/create-admin.js
+
+# Setup production deployment
+node scripts/setup/setup-production.js
+```
+
+### **Project Structure**
+```
+scripts/
+├── debug/          # Debugging and diagnostic scripts
+│   ├── test-api-login.js
+│   ├── test-middleware-specific.js
+│   └── comprehensive-rls-diagnostics.js
+├── setup/          # Setup and admin scripts
+│   ├── quick-admin-setup.js
+│   ├── create-admin.js
+│   └── check-vercel-env.js
+└── utils/          # Development utilities
+    └── test-db-connection.ts
+```
+
+## 🔧 Troubleshooting
+
+### **Login Issues**
+1. **401 Unauthorized**:
+   ```bash
+   node scripts/debug/comprehensive-rls-diagnostics.js
+   ```
+
+2. **Subdomain not working**:
+   ```bash
+   node scripts/debug/test-subdomain-simple.js
+   ```
+
+3. **Session problems**:
+   ```bash
+   node scripts/debug/test-session-debug.js
+   ```
+
+### **Database Issues**
+- Check connection: `npx ts-node scripts/utils/test-db-connection.ts`
+- Run diagnostics: `node scripts/debug/comprehensive-rls-diagnostics.js`
+- Check RLS policies: See debug output
+
+### **Environment Variables**
+- Verify Vercel setup: `node scripts/setup/check-vercel-env.js`
+- Check documentation: See [fix-rls-and-login.md](./fix-rls-and-login.md)
+
 ## 🆘 Support
 
-- **Documentation**: Check `docs/` folder for comprehensive guides
+- **Scripts Documentation**: See `scripts/README.md` for detailed usage
+- **Project Documentation**: Check `docs/` folder for comprehensive guides
 - **Issues**: Report bugs via GitHub Issues
 - **Discussions**: Ask questions in GitHub Discussions
 
