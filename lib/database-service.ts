@@ -63,6 +63,8 @@ export async function setTenant(subdomain: string, tenantData: any): Promise<boo
 export async function getTenant(subdomain: string): Promise<any | null> {
   try {
     console.log(`[getTenant] Fetching from new tenants table for subdomain: ${subdomain}`);
+    console.log(`[getTenant] Supabase URL exists: ${!!process.env.NEXT_PUBLIC_SUPABASE_URL}`);
+    console.log(`[getTenant] Supabase key exists: ${!!process.env.SUPABASE_SERVICE_ROLE_KEY}`);
     
     // First try to get from tenants table (new schema)
     const { data: tenantData, error: tenantError } = await supabase
@@ -73,6 +75,13 @@ export async function getTenant(subdomain: string): Promise<any | null> {
       .single();
     
     console.log(`[getTenant] Query result - error: ${tenantError ? 'yes' : 'no'}, data: ${tenantData ? 'yes' : 'no'}`);
+    if (tenantError) {
+      console.error(`[getTenant] Error details:`, {
+        code: tenantError.code,
+        message: tenantError.message,
+        details: (tenantError as any).details,
+      });
+    }
     
     if (tenantData && !tenantError) {
       console.log(`[getTenant] Converting database columns to camelCase`);
