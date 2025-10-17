@@ -2,11 +2,5 @@
   "buildCommand": "pnpm run build",
   "installCommand": "pnpm install",
   "devCommand": "pnpm run dev",
-  "framework": "nextjs",
-  "env": [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "NEXT_PUBLIC_ROOT_DOMAIN"
-  ]
+  "framework": "nextjs"
 }
