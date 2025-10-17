@@ -62,6 +62,55 @@ export async function setTenant(subdomain: string, tenantData: any): Promise<boo
 
 export async function getTenant(subdomain: string): Promise<any | null> {
   try {
+    // First try to get from tenants table (new schema)
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('subdomain', subdomain.toLowerCase())
+      .limit(1)
+      .single();
+    
+    if (tenantData && !tenantError) {
+      // Convert snake_case database columns to camelCase for API consistency
+      return {
+        id: tenantData.id,
+        subdomain: tenantData.subdomain,
+        emoji: tenantData.emoji || '🏢',
+        createdAt: tenantData.created_at ? new Date(tenantData.created_at).getTime() : Date.now(),
+        businessName: tenantData.business_name,
+        businessCategory: tenantData.business_category,
+        ownerName: tenantData.owner_name,
+        email: tenantData.email,
+        phone: tenantData.phone,
+        address: tenantData.address,
+        businessDescription: tenantData.business_description,
+        logo: tenantData.logo,
+        brandColors: tenantData.brand_colors,
+        whatsappEnabled: tenantData.whatsapp_enabled,
+        homeVisitEnabled: tenantData.home_visit_enabled,
+        analyticsEnabled: tenantData.analytics_enabled,
+        customTemplatesEnabled: tenantData.custom_templates_enabled,
+        multiStaffEnabled: tenantData.multi_staff_enabled,
+        subscriptionPlan: tenantData.subscription_plan,
+        subscriptionStatus: tenantData.subscription_status,
+        subscriptionExpiresAt: tenantData.subscription_expires_at,
+        updatedAt: tenantData.updated_at,
+        features: {
+          whatsapp: tenantData.whatsapp_enabled,
+          homeVisit: tenantData.home_visit_enabled,
+          analytics: tenantData.analytics_enabled,
+          customTemplates: tenantData.custom_templates_enabled,
+          multiStaff: tenantData.multi_staff_enabled,
+        },
+        subscription: {
+          plan: tenantData.subscription_plan,
+          status: tenantData.subscription_status,
+          expiresAt: tenantData.subscription_expires_at,
+        },
+      };
+    }
+    
+    // Fallback to tenant_subdomains table for legacy data
     const { data, error } = await supabase
       .from('tenant_subdomains')
       .select('tenant_data')
