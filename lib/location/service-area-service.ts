@@ -1,4 +1,4 @@
-import { db } from '@/lib/database/server';
+import { createClient } from '@supabase/supabase-js';
 import {
   ServiceArea,
   CreateServiceAreaRequest,
@@ -6,8 +6,13 @@ import {
   Coordinates,
   ServiceAreaBoundary,
 } from '@/types/location';
-import { serviceAreas, services } from '@/lib/database/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 type ServiceAreaRow = typeof serviceAreas.$inferSelect;
 
@@ -25,32 +30,49 @@ export class ServiceAreaService {
       }
 
       // Validate available services exist
+      const supabase = getSupabaseClient();
+      
       if (data.availableServices.length > 0) {
-        const dbServices = await db.select().from(services).where(
-          and(
-            eq(services.tenantId, tenantId),
-            inArray(services.id, data.availableServices),
-            eq(services.isActive, true)
-          )
-        );
+        const { data: dbServices, error: servicesError } = await supabase
+          .from('services')
+          .select('id')
+          .eq('tenantId', tenantId)
+          .in('id', data.availableServices)
+          .eq('isActive', true);
 
-        if (dbServices.length !== data.availableServices.length) {
+        if (servicesError) {
+          console.error('Error validating services:', servicesError);
+          return { error: 'Failed to validate services' };
+        }
+
+        if (!dbServices || dbServices.length !== data.availableServices.length) {
           return { error: 'Some specified services do not exist or are inactive' };
         }
       }
 
-      const [serviceArea] = await db.insert(serviceAreas).values({
-        tenantId,
-        name: data.name,
-        description: data.description,
-        boundaries: data.boundaries,
-        baseTravelSurcharge: data.baseTravelSurcharge,
-        perKmSurcharge: data.perKmSurcharge,
-        maxTravelDistance: data.maxTravelDistance,
-        estimatedTravelTime: data.estimatedTravelTime,
-        availableServices: data.availableServices,
-        isActive: true
-      } as any).returning();
+      const { data: serviceAreas, error: insertError } = await supabase
+        .from('serviceAreas')
+        .insert({
+          tenantId,
+          name: data.name,
+          description: data.description,
+          boundaries: data.boundaries,
+          baseTravelSurcharge: data.baseTravelSurcharge,
+          perKmSurcharge: data.perKmSurcharge,
+          maxTravelDistance: data.maxTravelDistance,
+          estimatedTravelTime: data.estimatedTravelTime,
+          availableServices: data.availableServices,
+          isActive: true
+        })
+        .select()
+        .single();
+
+      if (insertError || !serviceAreas) {
+        console.error('Error creating service area:', insertError);
+        return { error: 'Failed to create service area' };
+      }
+
+      const serviceArea = serviceAreas;
 
       return { serviceArea: this.mapServiceAreaRow(serviceArea) };
     } catch (error) {

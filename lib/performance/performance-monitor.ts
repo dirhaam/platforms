@@ -1,7 +1,13 @@
 import { CacheService } from '@/lib/cache/cache-service';
 import { DatabaseOptimization } from './database-optimization';
-import { db } from '@/lib/database/server';
-import { tenants } from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 // Performance monitoring configuration
 export const PERFORMANCE_CONFIG = {
@@ -393,7 +399,8 @@ export class PerformanceMonitor {
   private static async checkDatabaseHealth(): Promise<{ isHealthy: boolean; avgResponseTime?: number }> {
     try {
       const start = Date.now();
-      await db.select().from(tenants).limit(1);
+      const supabase = getSupabaseClient();
+        await supabase.from('tenants').select('*').limit(1);
       const responseTime = Date.now() - start;
       return {
         isHealthy: responseTime < PERFORMANCE_CONFIG.THRESHOLDS.SLOW_QUERY,

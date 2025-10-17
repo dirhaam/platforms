@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/database/server';
-import { tenants } from '@/lib/database/schema';
-import { eq } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 
 // This API route requires Node.js runtime due to database access
 export const runtime = 'nodejs';
@@ -117,6 +115,11 @@ export async function GET(
   { params }: { params: Promise<{ subdomain: string }> }
 ) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { subdomain } = await params;
     const sanitizedSubdomain = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '');
     
@@ -127,10 +130,20 @@ export async function GET(
       );
     }
 
-    // Get tenant from PostgreSQL database
-    const [tenantResult] = await db.select().from(tenants).where(
-      eq(tenants.subdomain, sanitizedSubdomain)
-    ).limit(1);
+    // Get tenant from Supabase
+    const { data: tenantResult, error } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('subdomain', sanitizedSubdomain)
+      .limit(1)
+      .single();
+    
+    if (error) {
+      return NextResponse.json(
+        { error: 'Tenant not found' },
+        { status: 404 }
+      );
+    }
     
     if (!tenantResult) {
       return NextResponse.json(

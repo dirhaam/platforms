@@ -3,10 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthMiddleware } from '@/lib/auth/auth-middleware';
 import { RBAC } from '@/lib/auth/rbac';
-import { db } from '@/lib/database/server';
-import { securityAuditLogs } from '@/lib/database/schema';
-import { and, desc, eq, gte } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,6 +28,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
@@ -40,55 +42,37 @@ export async function GET(request: NextRequest) {
     const days = parseInt(searchParams.get('days') || '30');
 
     const offset = (page - 1) * limit;
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    // Build where clause
-    const conditions = [
-      eq(securityAuditLogs.tenantId, session.tenantId),
-      gte(securityAuditLogs.timestamp, since),
-    ];
+    // Build query with filters
+    let query = supabase
+      .from('securityAuditLogs')
+      .select('id, userId, action, resource, ipAddress, userAgent, success, details, timestamp', { count: 'exact' })
+      .eq('tenantId', session.tenantId)
+      .gte('timestamp', since)
+      .order('timestamp', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (action) {
-      conditions.push(eq(securityAuditLogs.action, action));
+      query = query.eq('action', action);
     }
 
     if (userId) {
-      conditions.push(eq(securityAuditLogs.userId, userId));
+      query = query.eq('userId', userId);
     }
 
     if (success !== null && success !== undefined) {
-      conditions.push(eq(securityAuditLogs.success, success === 'true'));
+      query = query.eq('success', success === 'true');
     }
 
-    const whereClause = and(...conditions);
-
-    const logsQuery = db
-      .select({
-        id: securityAuditLogs.id,
-        userId: securityAuditLogs.userId,
-        action: securityAuditLogs.action,
-        resource: securityAuditLogs.resource,
-        ipAddress: securityAuditLogs.ipAddress,
-        userAgent: securityAuditLogs.userAgent,
-        success: securityAuditLogs.success,
-        details: securityAuditLogs.details,
-        timestamp: securityAuditLogs.timestamp,
-      })
-      .from(securityAuditLogs)
-      .where(whereClause)
-      .orderBy(desc(securityAuditLogs.timestamp))
-      .limit(limit)
-      .offset(offset);
-
-    const countQuery = db
-      .select({ count: sql<number>`cast(count(${securityAuditLogs.id}) as int)` })
-      .from(securityAuditLogs)
-      .where(whereClause);
-
-    const [logs, [{ count: total }]] = await Promise.all([logsQuery, countQuery]);
+    const { data: logs, count: total, error: fetchError } = await query;
+    
+    if (fetchError) {
+      throw fetchError;
+    }
 
     // Parse details JSON
-    const parsedLogs = logs.map(log => ({
+    const parsedLogs = (logs || []).map(log => ({
       ...log,
       details: log.details ? JSON.parse(log.details) : null,
     }));
@@ -100,8 +84,8 @@ export async function GET(request: NextRequest) {
         pagination: {
           page,
           limit,
-          total,
-          pages: Math.ceil(total / limit),
+          total: total || 0,
+          pages: Math.ceil((total || 0) / limit),
         },
       },
     });

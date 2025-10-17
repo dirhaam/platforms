@@ -1,5 +1,4 @@
-import { db } from '@/lib/database/server';
-import { bookings, customers, services, tenants } from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
 import {
   AnalyticsDashboardData,
   BookingMetrics,
@@ -11,8 +10,13 @@ import {
   ConversionMetrics,
   PlatformAnalytics,
 } from '@/types/analytics';
-import { and, eq, gte, lte, inArray } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 type BookingRow = {
   id: string;
@@ -53,72 +57,81 @@ async function fetchTenantBookings(
   endDate: Date,
   options: { statuses?: string[]; serviceIds?: string[] } = {}
 ): Promise<BookingRow[]> {
-  const conditions = [
-    eq(bookings.tenantId, tenantId),
-    gte(bookings.createdAt, startDate),
-    lte(bookings.createdAt, endDate),
-  ];
+  const supabase = getSupabaseClient();
+  
+  let query = supabase
+    .from('bookings')
+    .select('*')
+    .eq('tenantId', tenantId)
+    .gte('createdAt', startDate.toISOString())
+    .lte('createdAt', endDate.toISOString());
 
   if (options.statuses && options.statuses.length > 0) {
-    conditions.push(inArray(bookings.status, options.statuses as any));
+    query = query.in('status', options.statuses);
   }
 
   if (options.serviceIds && options.serviceIds.length > 0) {
-    conditions.push(inArray(bookings.serviceId, options.serviceIds as any));
+    query = query.in('serviceId', options.serviceIds);
   }
 
-  const rows = await db
-    .select({
-      id: bookings.id,
-      tenantId: bookings.tenantId,
-      customerId: bookings.customerId,
-      serviceId: bookings.serviceId,
-      status: bookings.status,
-      scheduledAt: bookings.scheduledAt,
-      createdAt: bookings.createdAt,
-      totalAmount: bookings.totalAmount,
-    })
-    .from(bookings)
-    .where(and(...conditions));
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error fetching bookings:', error);
+    return [];
+  }
 
-  return rows.map<BookingRow>(row => ({
-    ...row,
-    scheduledAt: row.scheduledAt ?? row.createdAt ?? new Date(),
-    createdAt: row.createdAt ?? new Date(),
+  return (data || []).map<BookingRow>(row => ({
+    id: row.id,
+    tenantId: row.tenantId,
+    customerId: row.customerId,
+    serviceId: row.serviceId,
+    status: row.status,
+    scheduledAt: row.scheduledAt ? new Date(row.scheduledAt) : new Date(),
+    createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
+    totalAmount: row.totalAmount,
   }));
 }
 
 async function fetchTenantCustomers(tenantId: string): Promise<CustomerRow[]> {
-  const rows = await db
-    .select({
-      id: customers.id,
-      tenantId: customers.tenantId,
-      name: customers.name,
-      createdAt: customers.createdAt,
-    })
-    .from(customers)
-    .where(eq(customers.tenantId, tenantId));
-
-  return rows.map<CustomerRow>(row => ({
-    ...row,
-    createdAt: row.createdAt ?? new Date(),
+  const supabase = getSupabaseClient();
+  
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('tenantId', tenantId);
+  
+  if (error) {
+    console.error('Error fetching customers:', error);
+    return [];
+  }
+  
+  return (data || []).map<CustomerRow>(row => ({
+    id: row.id,
+    tenantId: row.tenantId,
+    name: row.name,
+    createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
   }));
 }
 
 async function fetchTenantServices(tenantId: string): Promise<ServiceRow[]> {
-  const rows = await db
-    .select({
-      id: services.id,
-      tenantId: services.tenantId,
-      name: services.name,
-      isActive: services.isActive,
-    })
-    .from(services)
-    .where(eq(services.tenantId, tenantId));
-
-  return rows.map<ServiceRow>(row => ({
-    ...row,
-    isActive: row.isActive ?? false,
+  const supabase = getSupabaseClient();
+  
+  const { data, error } = await supabase
+    .from('services')
+    .select('*')
+    .eq('tenantId', tenantId);
+  
+  if (error) {
+    console.error('Error fetching services:', error);
+    return [];
+  }
+  
+  return (data || []).map<ServiceRow>(row => ({
+    id: row.id,
+    tenantId: row.tenantId,
+    name: row.name,
+    isActive: row.isActive,
   }));
 }
 
@@ -211,16 +224,18 @@ export class AnalyticsService {
   ): Promise<CustomerMetrics> {
     const customerRows = await fetchTenantCustomers(tenantId);
 
-    const [{ count: newCustomersResult }] = await db
-      .select({ count: sql<number>`cast(count(${customers.id}) as int)` })
-      .from(customers)
-      .where(
-        and(
-          eq(customers.tenantId, tenantId),
-          gte(customers.createdAt, startDate),
-          lte(customers.createdAt, endDate)
-        )
-      );
+    const supabase = getSupabaseClient();
+    
+    const { count: newCustomersResult, error: countError } = await supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenantId', tenantId)
+      .gte('createdAt', startDate.toISOString())
+      .lte('createdAt', endDate.toISOString());
+    
+    if (countError) {
+      console.error('Error counting new customers:', countError);
+    }
 
     const bookingRows = await fetchTenantBookings(tenantId, startDate, endDate, {
       statuses: Array.from(COMPLETED_STATUSES),
@@ -409,19 +424,22 @@ export class AnalyticsService {
       ((currentMetrics.totalRevenue - previousMetrics.totalRevenue) / previousMetrics.totalRevenue) * 100 : 0;
 
     // Get customer growth rate
-    const [currentCustomersRows, previousCustomersRows] = await Promise.all([
-      db
-        .select({ count: sql<number>`cast(count(${customers.id}) as int)` })
-        .from(customers)
-        .where(and(eq(customers.tenantId, tenantId), lte(customers.createdAt, endDate))),
-      db
-        .select({ count: sql<number>`cast(count(${customers.id}) as int)` })
-        .from(customers)
-        .where(and(eq(customers.tenantId, tenantId), lte(customers.createdAt, prevEndDate))),
+    const supabase = getSupabaseClient();
+    const [currentCustomersResult, previousCustomersResult] = await Promise.all([
+      supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenantId', tenantId)
+        .lte('createdAt', endDate.toISOString()),
+      supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenantId', tenantId)
+        .lte('createdAt', prevEndDate.toISOString()),
     ]);
 
-    const currentCustomers = currentCustomersRows[0]?.count ?? 0;
-    const previousCustomers = previousCustomersRows[0]?.count ?? 0;
+    const currentCustomers = currentCustomersResult.count ?? 0;
+    const previousCustomers = previousCustomersResult.count ?? 0;
 
     const customerGrowthRate = previousCustomers > 0 ? 
       ((currentCustomers - previousCustomers) / previousCustomers) * 100 : 0;
@@ -508,34 +526,35 @@ export class AnalyticsService {
     startDate: Date, 
     endDate: Date
   ): Promise<PlatformAnalytics> {
-    const tenantRows = await db
-      .select({
-        id: tenants.id,
-        businessName: tenants.businessName,
-        createdAt: tenants.createdAt,
-      })
-      .from(tenants);
+    const supabase = getSupabaseClient();
+    
+    const { data: tenantRows, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id, businessName, createdAt');
 
-    const bookingRowsRaw = await db
-      .select({
-        id: bookings.id,
-        tenantId: bookings.tenantId,
-        totalAmount: bookings.totalAmount,
-        createdAt: bookings.createdAt,
-        status: bookings.status,
-      })
-      .from(bookings)
-      .where(
-        and(
-          gte(bookings.createdAt, startDate),
-          lte(bookings.createdAt, endDate),
-          inArray(bookings.status, Array.from(COMPLETED_STATUSES) as any)
-        )
-      );
+    const { data: bookingRowsRaw, error: bookingError } = await supabase
+      .from('bookings')
+      .select('id, tenantId, totalAmount, createdAt, status')
+      .gte('createdAt', startDate.toISOString())
+      .lte('createdAt', endDate.toISOString())
+      .in('status', Array.from(COMPLETED_STATUSES));
+    
+    if (tenantError || bookingError) {
+      console.error('Error fetching platform data:', { tenantError, bookingError });
+      return {
+        totalRevenue: 0,
+        totalTenants: 0,
+        totalBookings: 0,
+        activeTenants: 0,
+        topPerformingTenants: [],
+        tenantGrowth: [],
+        featureUsage: [],
+      };
+    }
 
-    const bookingRows = bookingRowsRaw.map(row => ({
+    const bookingRows = (bookingRowsRaw || []).map(row => ({
       ...row,
-      createdAt: row.createdAt ?? new Date(),
+      createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
     }));
 
     const totalTenants = tenantRows.length;

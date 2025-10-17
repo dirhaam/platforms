@@ -1,12 +1,4 @@
-import { db } from '@/lib/database/server';
-import {
-  invoices,
-  invoiceItems,
-  customers,
-  bookings,
-  services,
-  tenants,
-} from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
 import {
   Invoice,
   InvoiceStatus,
@@ -21,8 +13,13 @@ import {
   type Booking,
   type Tenant,
 } from '@/types/invoice';
-import { alias } from 'drizzle-orm/pg-core';
-import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from 'drizzle-orm';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 import Decimal from 'decimal.js';
 
 const randomUUID = () => {

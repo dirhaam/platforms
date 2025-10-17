@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { setTenant, deleteTenant } from '@/lib/database-service';
 import type { EnhancedTenant } from '@/lib/subdomain-constants';
 import { ActivityLogger } from '@/lib/admin/activity-logger';
-import { db } from '@/lib/database/server';
-import { tenants } from '@/lib/database/schema';
-import { eq } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 
 // This API route requires Node.js runtime due to database access
 export const runtime = 'nodejs';
@@ -50,11 +48,23 @@ function mapDbTenantToEnhanced(dbTenant: any): EnhancedTenant {
 
 export async function GET() {
   try {
-    // Get all tenants directly from PostgreSQL using Drizzle
-    const dbTenants = await db.select().from(tenants).orderBy(tenants.createdAt);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Get all tenants from Supabase
+    const { data: dbTenants, error } = await supabase
+      .from('tenants')
+      .select('*')
+      .order('createdAt', { ascending: true });
+    
+    if (error) {
+      throw error;
+    }
     
     // Convert to EnhancedTenant format
-    const enhancedTenants = dbTenants.map(mapDbTenantToEnhanced);
+    const enhancedTenants = (dbTenants || []).map(mapDbTenantToEnhanced);
     
     return NextResponse.json({ tenants: enhancedTenants });
   } catch (error) {
@@ -68,6 +78,11 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { tenantId, updates } = await request.json();
 
     if (!tenantId || !updates) {
@@ -77,10 +92,15 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get the specific tenant from PostgreSQL directly
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    // Get the specific tenant from Supabase
+    const { data: tenant, error: fetchError } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .limit(1)
+      .single();
     
-    if (!tenant) {
+    if (fetchError || !tenant) {
       return NextResponse.json(
         { error: 'Tenant not found' },
         { status: 404 }
@@ -125,14 +145,26 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    updatePayload.updatedAt = new Date();
+    updatePayload.updatedAt = new Date().toISOString();
 
-    await db.update(tenants).set(updatePayload).where(eq(tenants.id, tenantId));
+    const { error: updateError } = await supabase
+      .from('tenants')
+      .update(updatePayload)
+      .eq('id', tenantId);
 
-    const [updatedRow] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    if (updateError) {
+      throw updateError;
+    }
 
-    if (!updatedRow) {
-      throw new Error('Failed to load updated tenant');
+    const { data: updatedRow, error: refetchError } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .limit(1)
+      .single();
+
+    if (refetchError || !updatedRow) {
+      throw refetchError || new Error('Failed to load updated tenant');
     }
 
     const enhancedTenant = mapDbTenantToEnhanced(updatedRow);
@@ -202,6 +234,11 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { tenantId } = await request.json();
 
     if (!tenantId) {
@@ -211,10 +248,15 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get the specific tenant from PostgreSQL directly
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    // Get the specific tenant from Supabase
+    const { data: tenant, error: fetchError } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .limit(1)
+      .single();
     
-    if (!tenant) {
+    if (fetchError || !tenant) {
       return NextResponse.json(
         { error: 'Tenant not found' },
         { status: 404 }
@@ -224,7 +266,14 @@ export async function DELETE(request: NextRequest) {
     // Delete cached tenant payload from Supabase key-value store
     await deleteTenant(tenant.subdomain);
 
-    await db.delete(tenants).where(eq(tenants.subdomain, tenant.subdomain));
+    const { error: deleteError } = await supabase
+      .from('tenants')
+      .delete()
+      .eq('subdomain', tenant.subdomain);
+
+    if (deleteError) {
+      throw deleteError;
+    }
 
     // Log the activity
     await ActivityLogger.logTenantDeleted(tenant.id, tenant.businessName);

@@ -1,7 +1,5 @@
-import { db } from '@/lib/database/server';
-import { customers, bookings, services } from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
 import { Customer, CreateCustomerRequest, UpdateCustomerRequest } from '@/types/booking';
-import { eq, and, ne, gte, lte, or, ilike, asc, desc, sql } from 'drizzle-orm';
 
 const randomUUID = () => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -17,32 +15,43 @@ export class CustomerService {
     data: CreateCustomerRequest
   ): Promise<{ customer?: Customer; error?: string }> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       // Check if customer with same phone already exists for this tenant
-      const [existingCustomer] = await db.select().from(customers).where(
-        and(
-          eq(customers.tenantId, tenantId),
-          eq(customers.phone, data.phone)
-        )
-      ).limit(1);
+      const { data: existingData, error: checkError } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('tenantId', tenantId)
+        .eq('phone', data.phone)
+        .limit(1)
+        .single();
       
-      if (existingCustomer) {
+      if (existingData) {
         return { error: 'Customer with this phone number already exists' };
       }
       
-      const [newCustomer] = await db.insert(customers).values({
-        id: randomUUID(),
-        tenantId,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        notes: data.notes,
-        whatsappNumber: data.whatsappNumber,
-        totalBookings: 0,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+      const { data: newCustomer, error: insertError } = await supabase
+        .from('customers')
+        .insert({
+          id: randomUUID(),
+          tenantId,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          notes: data.notes,
+          whatsappNumber: data.whatsappNumber,
+          totalBookings: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .select()
+        .single();
       
+      if (insertError || !newCustomer) throw insertError || new Error('Failed to create customer');
       return { customer: newCustomer as Customer };
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -57,35 +66,43 @@ export class CustomerService {
     data: UpdateCustomerRequest
   ): Promise<{ customer?: Customer; error?: string }> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       // Check if customer exists and belongs to tenant
-      const [existingCustomer] = await db.select().from(customers).where(
-        and(
-          eq(customers.id, customerId),
-          eq(customers.tenantId, tenantId)
-        )
-      ).limit(1);
+      const { data: existingData, error: fetchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
       
+      const existingCustomer = fetchError ? null : existingData;
       if (!existingCustomer) {
         return { error: 'Customer not found' };
       }
       
       // Check if phone number is being changed and if it conflicts
       if (data.phone && data.phone !== existingCustomer.phone) {
-        const [phoneConflict] = await db.select().from(customers).where(
-          and(
-            eq(customers.tenantId, tenantId),
-            eq(customers.phone, data.phone),
-            ne(customers.id, customerId)
-          )
-        ).limit(1);
+        const { data: phoneData, error: phoneError } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('tenantId', tenantId)
+          .eq('phone', data.phone)
+          .neq('id', customerId)
+          .limit(1)
+          .single();
         
-        if (phoneConflict) {
+        if (phoneData) {
           return { error: 'Another customer with this phone number already exists' };
         }
       }
       
       // Build update object
-      const updateData: any = {};
+      const updateData: any = { updatedAt: new Date().toISOString() };
       if (data.name !== undefined) updateData.name = data.name;
       if (data.email !== undefined) updateData.email = data.email;
       if (data.phone !== undefined) updateData.phone = data.phone;
@@ -93,10 +110,14 @@ export class CustomerService {
       if (data.notes !== undefined) updateData.notes = data.notes;
       if (data.whatsappNumber !== undefined) updateData.whatsappNumber = data.whatsappNumber;
       
-      updateData.updatedAt = new Date();
+      const { data: updatedCustomer, error: updateError } = await supabase
+        .from('customers')
+        .update(updateData)
+        .eq('id', customerId)
+        .select()
+        .single();
       
-      const [updatedCustomer] = await db.update(customers).set(updateData).where(eq(customers.id, customerId)).returning();
-      
+      if (updateError || !updatedCustomer) throw updateError || new Error('Failed to update customer');
       return { customer: updatedCustomer as Customer };
     } catch (error) {
       console.error('Error updating customer:', error);

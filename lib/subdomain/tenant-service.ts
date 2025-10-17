@@ -3,9 +3,14 @@ import { getRecommendedTemplate, type LandingPageTemplate } from '@/lib/template
 import { CacheService } from '@/lib/cache/cache-service';
 import { PerformanceMonitor } from '@/lib/performance/performance-monitor';
 import { Service } from '@/types/booking';
-import { db } from '@/lib/database/server';
-import { services as servicesTable, businessHours as businessHoursTable } from '@/lib/database/schema';
-import { and, eq, desc } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 export interface TenantLandingData {
   id: string;
@@ -110,15 +115,23 @@ export class TenantService {
         }
 
         try {
-          const services = await db
-            .select()
-            .from(servicesTable)
-            .where(and(eq(servicesTable.tenantId, tenantId), eq(servicesTable.isActive, true)))
-            .orderBy(desc(servicesTable.createdAt));
+          const supabase = getSupabaseClient();
+          
+          const { data: services, error } = await supabase
+            .from('services')
+            .select('*')
+            .eq('tenantId', tenantId)
+            .eq('isActive', true)
+            .order('createdAt', { ascending: false });
 
-          const formattedServices: Service[] = services.map(service => {
-            const createdAt = service.createdAt ?? new Date();
-            const updatedAt = service.updatedAt ?? new Date();
+          if (error) {
+            console.error('Error fetching services:', error);
+            throw error;
+          }
+
+          const formattedServices: Service[] = (services || []).map(service => {
+            const createdAt = service.createdAt ? new Date(service.createdAt) : new Date();
+            const updatedAt = service.updatedAt ? new Date(service.updatedAt) : new Date();
 
             return {
               id: service.id,
@@ -171,12 +184,20 @@ export class TenantService {
         }
 
         try {
-          const [record] = await db
-            .select()
-            .from(businessHoursTable)
-            .where(eq(businessHoursTable.tenantId, tenantId))
+          const supabase = getSupabaseClient();
+          
+          const { data: records, error } = await supabase
+            .from('businessHours')
+            .select('*')
+            .eq('tenantId', tenantId)
             .limit(1);
-
+          
+          if (error) {
+            console.error('Error fetching business hours:', error);
+            throw error;
+          }
+          
+          const record = records && records.length > 0 ? records[0] : null;
           const result: BusinessHours = record?.schedule
             ? (record.schedule as BusinessHours)
             : this.getDefaultBusinessHours();

@@ -1,6 +1,4 @@
-import { db } from '@/lib/database/server';
-import { superAdmins } from '@/lib/database/schema';
-import { eq, desc } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 import { TenantAuth } from './tenant-auth';
 
 const DEFAULT_SUPERADMIN_EMAIL = process.env.DEFAULT_SUPERADMIN_EMAIL || '';
@@ -23,24 +21,7 @@ export interface SuperAdmin {
   updatedAt: Date;
 }
 
-type SuperAdminRow = typeof superAdmins.$inferSelect;
-
-const ensureCrypto = () => {
-  if (typeof globalThis.crypto === 'undefined') {
-    throw new Error('Web Crypto API is not available in this environment');
-  }
-  return globalThis.crypto;
-};
-
-const generateId = () => {
-  const cryptoObj = ensureCrypto();
-  if (typeof cryptoObj.randomUUID === 'function') {
-    return cryptoObj.randomUUID();
-  }
-  return `superadmin-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-};
-
-const mapRow = (row: SuperAdminRow): SuperAdmin => ({
+const mapRow = (row: any): SuperAdmin => ({
   id: row.id,
   email: row.email,
   name: row.name,
@@ -58,19 +39,19 @@ const mapRow = (row: SuperAdminRow): SuperAdmin => ({
 });
 
 const buildUpdate = (updates: Partial<SuperAdmin>) => {
-  const data: Partial<typeof superAdmins.$inferInsert> = {
-    updatedAt: new Date(),
+  const data: any = {
+    updatedAt: new Date().toISOString(),
   };
 
   if (updates.email !== undefined) data.email = updates.email;
   if (updates.name !== undefined) data.name = updates.name;
   if (updates.isActive !== undefined) data.isActive = updates.isActive;
   if (updates.passwordHash !== undefined) data.passwordHash = updates.passwordHash;
-  if (updates.lastLoginAt !== undefined) data.lastLoginAt = updates.lastLoginAt ?? null;
+  if (updates.lastLoginAt !== undefined) data.lastLoginAt = updates.lastLoginAt?.toISOString() ?? null;
   if (updates.loginAttempts !== undefined) data.loginAttempts = updates.loginAttempts;
-  if (updates.lockedUntil !== undefined) data.lockedUntil = updates.lockedUntil ?? null;
+  if (updates.lockedUntil !== undefined) data.lockedUntil = updates.lockedUntil?.toISOString() ?? null;
   if (updates.passwordResetToken !== undefined) data.passwordResetToken = updates.passwordResetToken ?? null;
-  if (updates.passwordResetExpires !== undefined) data.passwordResetExpires = updates.passwordResetExpires ?? null;
+  if (updates.passwordResetExpires !== undefined) data.passwordResetExpires = updates.passwordResetExpires?.toISOString() ?? null;
   if (updates.permissions !== undefined) data.permissions = updates.permissions ?? [];
   if (updates.canAccessAllTenants !== undefined) data.canAccessAllTenants = updates.canAccessAllTenants;
 
@@ -103,6 +84,10 @@ export class SuperAdminService {
     password: string;
   }): Promise<SuperAdmin> {
     const { email, name, password } = data;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     // Check if email already exists
     const existing = await this.findByEmail(email);
@@ -113,25 +98,25 @@ export class SuperAdminService {
     // Hash password
     const passwordHash = await TenantAuth.hashPassword(password);
 
-    await db.insert(superAdmins).values({
-      email,
-      name,
-      isActive: true,
-      passwordHash,
-      loginAttempts: 0,
-      permissions: ['*'],
-      canAccessAllTenants: true,
-    });
-
-    // Find the created record
-    const [created] = await db
+    const { data: created, error: insertError } = await supabase
+      .from('superAdmins')
+      .insert({
+        id: crypto.randomUUID(),
+        email,
+        name,
+        isActive: true,
+        passwordHash,
+        loginAttempts: 0,
+        permissions: ['*'],
+        canAccessAllTenants: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
       .select()
-      .from(superAdmins)
-      .where(eq(superAdmins.email, email))
-      .limit(1);
+      .single();
 
-    if (!created) {
-      throw new Error('Failed to create SuperAdmin');
+    if (insertError || !created) {
+      throw insertError || new Error('Failed to create SuperAdmin');
     }
 
     return mapRow(created);
@@ -139,59 +124,103 @@ export class SuperAdminService {
 
   // Find SuperAdmin by email
   static async findByEmail(email: string): Promise<SuperAdmin | null> {
-    const [row] = await db
-      .select()
-      .from(superAdmins)
-      .where(eq(superAdmins.email, email))
-      .limit(1);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    return row ? mapRow(row) : null;
+    const { data: row, error } = await supabase
+      .from('superAdmins')
+      .select('*')
+      .eq('email', email)
+      .limit(1)
+      .single();
+
+    return error ? null : (row ? mapRow(row) : null);
   }
 
   // Find SuperAdmin by ID
   static async findById(id: string): Promise<SuperAdmin | null> {
-    const [row] = await db
-      .select()
-      .from(superAdmins)
-      .where(eq(superAdmins.id, id))
-      .limit(1);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    return row ? mapRow(row) : null;
+    const { data: row, error } = await supabase
+      .from('superAdmins')
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .single();
+
+    return error ? null : (row ? mapRow(row) : null);
   }
 
   // Update SuperAdmin
   static async update(id: string, updates: Partial<SuperAdmin>): Promise<SuperAdmin> {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const existing = await this.findById(id);
     if (!existing) {
       throw new Error('SuperAdmin not found');
     }
 
     const data = buildUpdate(updates);
-    await db.update(superAdmins).set(data).where(eq(superAdmins.id, id));
+    const { error: updateError } = await supabase
+      .from('superAdmins')
+      .update(data)
+      .eq('id', id);
 
-    const [row] = await db
-      .select()
-      .from(superAdmins)
-      .where(eq(superAdmins.id, id))
-      .limit(1);
+    if (updateError) throw updateError;
 
-    return mapRow(row!);
+    const { data: row, error: fetchError } = await supabase
+      .from('superAdmins')
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .single();
+
+    if (fetchError || !row) throw fetchError || new Error('Failed to fetch updated SuperAdmin');
+    return mapRow(row);
   }
 
   // List all SuperAdmins
   static async list(): Promise<SuperAdmin[]> {
-    const rows = await db.select().from(superAdmins).orderBy(desc(superAdmins.createdAt));
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: rows, error } = await supabase
+      .from('superAdmins')
+      .select('*')
+      .order('createdAt', { ascending: false });
+
+    if (error || !rows) return [];
     return rows.map(mapRow);
   }
 
   // Delete SuperAdmin
   static async delete(id: string): Promise<void> {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const existing = await this.findById(id);
     if (!existing) {
       throw new Error('SuperAdmin not found');
     }
 
-    await db.delete(superAdmins).where(eq(superAdmins.id, id));
+    const { error } = await supabase
+      .from('superAdmins')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   }
 
   // Authenticate SuperAdmin

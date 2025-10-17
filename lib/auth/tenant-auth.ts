@@ -1,9 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/database/server';
+import { createClient } from '@supabase/supabase-js';
 import { SecurityService } from '@/lib/security/security-service';
-import { tenants, staff } from '@/lib/database/schema';
-import { eq, and } from 'drizzle-orm';
 import type { TenantSession, AuthResult, Permission } from './types';
 import {
   persistSession,
@@ -109,15 +107,21 @@ export class TenantAuth {
     userAgent: string = ''
   ): Promise<AuthResult> {
     try {
-      // Find tenant by subdomain and email
-      const tenantResult = await db.select().from(tenants).where(
-        and(
-          eq(tenants.subdomain, subdomain),
-          eq(tenants.email, email)
-        )
-      ).limit(1);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      const tenant = tenantResult[0] || null;
+      // Find tenant by subdomain and email
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('subdomain', subdomain)
+        .eq('email', email)
+        .limit(1)
+        .single();
+
+      const tenant = tenantError ? null : tenantData;
 
       if (!tenant) {
         // Log failed attempt
@@ -181,7 +185,10 @@ export class TenantAuth {
           isValidPassword = true;
           // Hash and store the password for future use
           const hashedPassword = await this.hashPassword(password);
-          await db.update(tenants).set({ passwordHash: hashedPassword }).where(eq(tenants.id, tenant.id));
+          await supabase
+            .from('tenants')
+            .update({ passwordHash: hashedPassword })
+            .eq('id', tenant.id);
         }
       }
       
@@ -191,10 +198,13 @@ export class TenantAuth {
         const newAttempts = currentAttempts + 1;
         const shouldLock = newAttempts >= 5;
         
-        await db.update(tenants).set({
-          loginAttempts: newAttempts,
-          lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
-        }).where(eq(tenants.id, tenant.id));
+        await supabase
+          .from('tenants')
+          .update({
+            loginAttempts: newAttempts,
+            lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000).toISOString() : null,
+          })
+          .eq('id', tenant.id);
 
         await SecurityService.logSecurityEvent(
           tenant.id,
@@ -211,11 +221,14 @@ export class TenantAuth {
       }
 
       // Reset login attempts on successful login
-      await db.update(tenants).set({
-        loginAttempts: 0,
-        lockedUntil: null,
-        lastLoginAt: new Date(),
-      }).where(eq(tenants.id, tenant.id));
+      await supabase
+        .from('tenants')
+        .update({
+          loginAttempts: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date().toISOString(),
+        })
+        .eq('id', tenant.id);
 
       const session: TenantSession = {
         userId: tenant.id,
@@ -256,9 +269,20 @@ export class TenantAuth {
     userAgent: string = ''
   ): Promise<AuthResult> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       // Find tenant first
-      const tenantResult = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain)).limit(1);
-      const tenant = tenantResult[0] || null;
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('subdomain', subdomain)
+        .limit(1)
+        .single();
+      
+      const tenant = tenantError ? null : tenantData;
 
       if (!tenant) {
         await SecurityService.logSecurityEvent(
@@ -275,15 +299,16 @@ export class TenantAuth {
       }
 
       // Find staff member
-      const staffResult = await db.select().from(staff).where(
-        and(
-          eq(staff.tenantId, tenant.id),
-          eq(staff.email, email),
-          eq(staff.isActive, true)
-        )
-      ).limit(1);
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('tenantId', tenant.id)
+        .eq('email', email)
+        .eq('isActive', true)
+        .limit(1)
+        .single();
       
-      const staffMember = staffResult[0] || null;
+      const staffMember = staffError ? null : staffData;
 
       if (!staffMember) {
         await SecurityService.logSecurityEvent(
@@ -346,7 +371,10 @@ export class TenantAuth {
           isValidPassword = true;
           // Hash and store the password for future use
           const hashedPassword = await this.hashPassword(password);
-          await db.update(staff).set({ passwordHash: hashedPassword }).where(eq(staff.id, staffMember.id));
+          await supabase
+            .from('staff')
+            .update({ passwordHash: hashedPassword })
+            .eq('id', staffMember.id);
         }
       }
       
@@ -356,10 +384,13 @@ export class TenantAuth {
         const newAttempts = currentAttempts + 1;
         const shouldLock = newAttempts >= 5;
         
-        await db.update(staff).set({
-          loginAttempts: newAttempts,
-          lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // 30 minutes
-        }).where(eq(staff.id, staffMember.id));
+        await supabase
+          .from('staff')
+          .update({
+            loginAttempts: newAttempts,
+            lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000).toISOString() : null,
+          })
+          .eq('id', staffMember.id);
 
         await SecurityService.logSecurityEvent(
           tenant.id,
@@ -376,11 +407,14 @@ export class TenantAuth {
       }
 
       // Reset login attempts on successful login
-      await db.update(staff).set({
-        loginAttempts: 0,
-        lockedUntil: null,
-        lastLoginAt: new Date(),
-      }).where(eq(staff.id, staffMember.id));
+      await supabase
+        .from('staff')
+        .update({
+          loginAttempts: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date().toISOString(),
+        })
+        .eq('id', staffMember.id);
 
       const session: TenantSession = {
         userId: staffMember.id,
@@ -540,6 +574,11 @@ export class TenantAuth {
     newPassword: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       // Validate password strength
       const validation = SecurityService.validatePassword(newPassword);
       if (!validation.isValid) {
@@ -550,11 +589,16 @@ export class TenantAuth {
       const passwordHash = await this.hashPassword(newPassword);
 
       // Update tenant
-      await db.update(tenants).set({ 
-        passwordHash,
-        loginAttempts: 0,
-        lockedUntil: null,
-      }).where(eq(tenants.id, tenantId));
+      const { error } = await supabase
+        .from('tenants')
+        .update({
+          passwordHash,
+          loginAttempts: 0,
+          lockedUntil: null,
+        })
+        .eq('id', tenantId);
+      
+      if (error) throw error;
 
       return { success: true };
     } catch (error) {
@@ -569,6 +613,11 @@ export class TenantAuth {
     newPassword: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       // Validate password strength
       const validation = SecurityService.validatePassword(newPassword);
       if (!validation.isValid) {
@@ -579,11 +628,16 @@ export class TenantAuth {
       const passwordHash = await this.hashPassword(newPassword);
 
       // Update staff
-      await db.update(staff).set({ 
-        passwordHash,
-        loginAttempts: 0,
-        lockedUntil: null,
-      }).where(eq(staff.id, staffId));
+      const { error } = await supabase
+        .from('staff')
+        .update({
+          passwordHash,
+          loginAttempts: 0,
+          lockedUntil: null,
+        })
+        .eq('id', staffId);
+      
+      if (error) throw error;
 
       return { success: true };
     } catch (error) {
@@ -599,51 +653,74 @@ export class TenantAuth {
     userType: 'owner' | 'staff'
   ): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       const { token, hashedToken, expiresAt } = await SecurityService.generatePasswordResetToken();
 
       if (userType === 'owner') {
-        const tenantResult = await db.select().from(tenants).where(
-          and(
-            eq(tenants.subdomain, subdomain),
-            eq(tenants.email, email)
-          )
-        ).limit(1);
+        const { data: tenantData, error: tenantError } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('subdomain', subdomain)
+          .eq('email', email)
+          .limit(1)
+          .single();
         
-        const tenant = tenantResult[0] || null;
+        const tenant = tenantError ? null : tenantData;
 
         if (!tenant) {
           return { success: false, error: 'User not found' };
         }
 
-        await db.update(tenants).set({
-          passwordResetToken: hashedToken,
-          passwordResetExpires: expiresAt,
-        }).where(eq(tenants.id, tenant.id));
+        const { error: updateError } = await supabase
+          .from('tenants')
+          .update({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: expiresAt.toISOString(),
+          })
+          .eq('id', tenant.id);
+        
+        if (updateError) throw updateError;
       } else {
-        const tenantResult = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain)).limit(1);
-        const tenant = tenantResult[0] || null;
+        const { data: tenantData, error: tenantError } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('subdomain', subdomain)
+          .limit(1)
+          .single();
+        
+        const tenant = tenantError ? null : tenantData;
 
         if (!tenant) {
           return { success: false, error: 'Tenant not found' };
         }
 
-        const staffResult = await db.select().from(staff).where(
-          and(
-            eq(staff.tenantId, tenant.id),
-            eq(staff.email, email)
-          )
-        ).limit(1);
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('*')
+          .eq('tenantId', tenant.id)
+          .eq('email', email)
+          .limit(1)
+          .single();
         
-        const staffMember = staffResult[0] || null;
+        const staffMember = staffError ? null : staffData;
 
         if (!staffMember) {
           return { success: false, error: 'User not found' };
         }
 
-        await db.update(staff).set({
-          passwordResetToken: hashedToken,
-          passwordResetExpires: expiresAt,
-        }).where(eq(staff.id, staffMember.id));
+        const { error: updateError } = await supabase
+          .from('staff')
+          .update({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: expiresAt.toISOString(),
+          })
+          .eq('id', staffMember.id);
+        
+        if (updateError) throw updateError;
       }
 
       return { success: true, token };

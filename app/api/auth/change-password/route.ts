@@ -3,9 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { TenantAuth } from '@/lib/auth/tenant-auth';
 import { SecurityService } from '@/lib/security/security-service';
-import { db } from '@/lib/database/server';
-import { tenants, staff } from '@/lib/database/schema';
-import { eq } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 
 interface ChangePasswordRequest {
   currentPassword: string;
@@ -14,6 +12,11 @@ interface ChangePasswordRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     // Get current session
     const session = await TenantAuth.getSessionFromRequest(request);
     if (!session) {
@@ -44,11 +47,12 @@ export async function POST(request: NextRequest) {
     let currentPasswordValid = false;
     
     if (session.role === 'owner') {
-      const [tenant] = await db
-        .select({ passwordHash: tenants.passwordHash })
-        .from(tenants)
-        .where(eq(tenants.id, session.tenantId))
-        .limit(1);
+      const { data: tenant, error } = await supabase
+        .from('tenants')
+        .select('passwordHash')
+        .eq('id', session.tenantId)
+        .limit(1)
+        .single();
 
       if (tenant?.passwordHash) {
         currentPasswordValid = await TenantAuth.verifyPassword(currentPassword, tenant.passwordHash);
@@ -56,11 +60,12 @@ export async function POST(request: NextRequest) {
         currentPasswordValid = true;
       }
     } else {
-      const [staffMember] = await db
-        .select({ passwordHash: staff.passwordHash })
-        .from(staff)
-        .where(eq(staff.id, session.userId))
-        .limit(1);
+      const { data: staffMember, error } = await supabase
+        .from('staff')
+        .select('passwordHash')
+        .eq('id', session.userId)
+        .limit(1)
+        .single();
 
       if (staffMember?.passwordHash) {
         currentPasswordValid = await TenantAuth.verifyPassword(currentPassword, staffMember.passwordHash);

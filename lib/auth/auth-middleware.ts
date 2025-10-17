@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { TenantAuth } from './tenant-auth';
 import type { TenantSession } from './types';
 import { RBAC, RouteGuard, type RouteProtection } from './rbac';
-import { db } from '@/lib/database/server';
-import { tenants } from '@/lib/database/schema';
-import { eq } from 'drizzle-orm';
 
 // Route protection configuration
 const PROTECTED_ROUTES: Record<string, RouteProtection> = {
@@ -117,11 +115,22 @@ export class AuthMiddleware {
         return true;
       }
 
-      const [tenant] = await db
-        .select({ id: tenants.id })
-        .from(tenants)
-        .where(eq(tenants.subdomain, subdomain))
-        .limit(1);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: tenant, error } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('subdomain', subdomain)
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Failed to verify tenant access:', error);
+        return false;
+      }
 
       return tenant?.id === session.tenantId;
     } catch (error) {

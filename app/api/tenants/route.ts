@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/database/server';
-import { tenants } from '@/lib/database/schema';
-import { desc, eq } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 
 // This API route requires Node.js runtime due to database access
 export const runtime = 'nodejs';
@@ -114,17 +112,34 @@ function convertDbToEnhancedTenant(dbTenant: any): EnhancedTenant {
 
 export async function GET() {
   try {
-    // Get all tenants from PostgreSQL database, ordered by creation date
-    const dbTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Get all tenants from Supabase, try to order if possible
+    let query = supabase.from('tenants').select('*');
+    
+    // Try to order by a common column, fallback to no ordering if it fails
+    const { data: dbTenants, error } = await query.order('id', { ascending: false });
+    
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { error: 'Database query failed', details: error.message },
+        { status: 500 }
+      );
+    }
     
     // Convert to EnhancedTenant format
-    const enhancedTenants = dbTenants.map(convertDbToEnhancedTenant);
+    const enhancedTenants = (dbTenants || []).map(convertDbToEnhancedTenant);
     
     return NextResponse.json({ tenants: enhancedTenants });
   } catch (error) {
     console.error('Error getting all tenants:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch tenants data' },
+      { error: 'Failed to fetch tenants data', details: errorMessage },
       { status: 500 }
     );
   }
@@ -132,6 +147,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const body = await request.json();
     
     const {
@@ -162,12 +182,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if subdomain already exists
-    const existingSubdomain = await db.select()
-      .from(tenants)
-      .where(eq(tenants.subdomain, subdomain))
+    const { data: existingSubdomain, error: checkError } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('subdomain', subdomain.trim().toLowerCase())
       .limit(1);
     
-    if (existingSubdomain.length > 0) {
+    if (checkError) throw checkError;
+    
+    if (existingSubdomain && existingSubdomain.length > 0) {
       return NextResponse.json(
         { error: 'Subdomain already exists. Please choose a different subdomain.' },
         { status: 409 }
@@ -198,25 +221,28 @@ export async function POST(request: NextRequest) {
       // Subscription
       subscriptionPlan: subscriptionPlan || 'basic',
       subscriptionStatus: 'active',
-      subscriptionExpiresAt: null, // Will be set based on plan in a real implementation
+      subscriptionExpiresAt: null,
       
       // Metadata
-      passwordHash: '', // Will be set when tenant owner creates an account
+      passwordHash: '',
       lastLoginAt: null,
       loginAttempts: 0,
       lockedUntil: null,
       passwordResetToken: null,
       passwordResetExpires: null,
       
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     // Insert tenant into database
-    const result = await db.insert(tenants).values(newTenant).returning();
+    const { data: result, error: insertError } = await supabase
+      .from('tenants')
+      .insert([newTenant])
+      .select();
     
-    if (!result || result.length === 0) {
-      throw new Error('Failed to create tenant');
+    if (insertError || !result || result.length === 0) {
+      throw insertError || new Error('Failed to create tenant');
     }
 
     const createdTenant = result[0];

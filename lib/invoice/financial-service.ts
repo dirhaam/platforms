@@ -1,18 +1,14 @@
-import { db } from '@/lib/database/server';
-import {
-  invoices,
-  invoiceItems,
-  customers,
-  services,
-  tenants,
-} from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
 import { InvoiceStatus, InvoiceExportOptions, PaymentMethod } from '@/types/invoice';
-import { alias } from 'drizzle-orm/pg-core';
-import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import Decimal from 'decimal.js';
 import * as XLSX from 'xlsx';
 
-import type { SQL } from 'drizzle-orm';
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 type InvoiceRecord = typeof invoices.$inferSelect;
 type InvoiceItemRecord = typeof invoiceItems.$inferSelect;

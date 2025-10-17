@@ -1,7 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { db } from '@/lib/database/server';
-import { securityAuditLogs } from '@/lib/database/schema';
-import { eq, and, lt, gte, desc, count } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 
 const ensureCrypto = () => {
   if (typeof globalThis.crypto === 'undefined') {
@@ -302,7 +300,12 @@ export class SecurityService {
     details?: Record<string, any>
   ): Promise<void> {
     try {
-      await db.insert(securityAuditLogs).values({
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { error } = await supabase.from('securityAuditLogs').insert({
         id: generateUUID(),
         tenantId,
         userId,
@@ -312,11 +315,14 @@ export class SecurityService {
         userAgent,
         success,
         details: details ? JSON.stringify(details) : null,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       });
+
+      if (error) {
+        throw error;
+      }
     } catch (error) {
       console.error('Failed to log security event:', error);
-      // Don't throw error to avoid breaking the main flow
     }
   }
 
@@ -331,24 +337,25 @@ export class SecurityService {
     shouldBlock?: boolean;
   }> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       const now = new Date();
       const windowStart = new Date(now.getTime() - SECURITY_CONFIG.RATE_LIMITING.LOGIN_ATTEMPTS.WINDOW_MS);
 
       // Check failed login attempts
       if (action === 'login') {
-        const result = await db
-          .select({ count: count() })
-          .from(securityAuditLogs)
-          .where(
-            and(
-              eq(securityAuditLogs.userId, userId),
-              eq(securityAuditLogs.action, 'login'),
-              eq(securityAuditLogs.success, false),
-              gte(securityAuditLogs.timestamp, windowStart)
-            )
-          );
+        const { data, error } = await supabase
+          .from('securityAuditLogs')
+          .select('id', { count: 'exact' })
+          .eq('userId', userId)
+          .eq('action', 'login')
+          .eq('success', false)
+          .gte('timestamp', windowStart.toISOString());
 
-        const failedAttempts = Number(result[0]?.count ?? 0);
+        const failedAttempts = data?.length ?? 0;
 
         if (failedAttempts >= SECURITY_CONFIG.RATE_LIMITING.LOGIN_ATTEMPTS.MAX_ATTEMPTS) {
           return {
@@ -360,16 +367,16 @@ export class SecurityService {
       }
 
       // Check for multiple IP addresses
-      const result = await db.select({ ipAddress: securityAuditLogs.ipAddress }).from(securityAuditLogs).where(
-        and(
-          eq(securityAuditLogs.userId, userId),
-          gte(securityAuditLogs.timestamp, new Date(now.getTime() - 24 * 60 * 60 * 1000)) // Last 24 hours
-        )
-      ).groupBy(securityAuditLogs.ipAddress);
-      
-      const recentIPs = result;
+      const last24hStart = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentLogsData, error: recentLogsError } = await supabase
+        .from('securityAuditLogs')
+        .select('ipAddress')
+        .eq('userId', userId)
+        .gte('timestamp', last24hStart);
 
-      if (recentIPs.length > 5) {
+      const uniqueIPs = new Set((recentLogsData || []).map(log => log.ipAddress));
+
+      if (uniqueIPs.size > 5) {
         return {
           isSuspicious: true,
           reason: 'Multiple IP addresses detected',
@@ -407,17 +414,23 @@ export class SecurityService {
   // Clean up expired sessions and audit logs
   static async cleanupExpiredData(): Promise<void> {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
       const now = new Date();
-      const sessionExpiry = new Date(now.getTime() - SECURITY_CONFIG.SESSION.MAX_AGE);
       const auditLogExpiry = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days
 
-      // Clean up expired sessions (if you implement session storage)
-      // await db.delete(sessions).where(lt(sessions.expiresAt, sessionExpiry));
-
       // Clean up old audit logs
-      await db.delete(securityAuditLogs).where(
-        lt(securityAuditLogs.timestamp, auditLogExpiry)
-      );
+      const { error } = await supabase
+        .from('securityAuditLogs')
+        .delete()
+        .lt('timestamp', auditLogExpiry.toISOString());
+
+      if (error) {
+        throw error;
+      }
 
       console.log('Expired security data cleaned up successfully');
     } catch (error) {
@@ -434,69 +447,66 @@ export class SecurityService {
     topActions: Array<{ action: string; count: number }>;
   }> {
     try {
-      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
       // Total login attempts
-      const totalLoginsResult = await db.select({ count: count() }).from(securityAuditLogs).where(
-        and(
-          eq(securityAuditLogs.tenantId, tenantId),
-          eq(securityAuditLogs.action, 'login'),
-          gte(securityAuditLogs.timestamp, since)
-        )
-      );
-      const totalLogins = Number(totalLoginsResult[0]?.count ?? 0);
+      const { data: totalLoginsData, count: totalLoginsCount } = await supabase
+        .from('securityAuditLogs')
+        .select('*', { count: 'exact' })
+        .eq('tenantId', tenantId)
+        .eq('action', 'login')
+        .gte('timestamp', since);
+      const totalLogins = totalLoginsCount ?? 0;
 
       // Failed login attempts
-      const failedLoginsResult = await db.select({ count: count() }).from(securityAuditLogs).where(
-        and(
-          eq(securityAuditLogs.tenantId, tenantId),
-          eq(securityAuditLogs.action, 'login'),
-          eq(securityAuditLogs.success, false),
-          gte(securityAuditLogs.timestamp, since)
-        )
-      );
-      const failedLogins = Number(failedLoginsResult[0]?.count ?? 0);
+      const { data: failedLoginsData, count: failedLoginsCount } = await supabase
+        .from('securityAuditLogs')
+        .select('*', { count: 'exact' })
+        .eq('tenantId', tenantId)
+        .eq('action', 'login')
+        .eq('success', false)
+        .gte('timestamp', since);
+      const failedLogins = failedLoginsCount ?? 0;
 
-      // Unique users - We'll count distinct userIds
-      const uniqueUsersResult = await db.select({ userId: securityAuditLogs.userId }).from(securityAuditLogs).where(
-        and(
-          eq(securityAuditLogs.tenantId, tenantId),
-          gte(securityAuditLogs.timestamp, since)
-        )
-      ).groupBy(securityAuditLogs.userId);
-      const uniqueUsers = uniqueUsersResult.length;
+      // Unique users
+      const { data: allData, error: allError } = await supabase
+        .from('securityAuditLogs')
+        .select('userId')
+        .eq('tenantId', tenantId)
+        .gte('timestamp', since);
+      const uniqueUsers = new Set((allData || []).map(log => log.userId)).size;
 
       // Suspicious activities (failed logins + other security events)
-      const suspiciousActivitiesResult = await db.select({ count: count() }).from(securityAuditLogs).where(
-        and(
-          eq(securityAuditLogs.tenantId, tenantId),
-          eq(securityAuditLogs.success, false),
-          gte(securityAuditLogs.timestamp, since)
-        )
-      );
-      const suspiciousActivities = Number(suspiciousActivitiesResult[0]?.count ?? 0);
+      const { data: suspiciousData, count: suspiciousCount } = await supabase
+        .from('securityAuditLogs')
+        .select('*', { count: 'exact' })
+        .eq('tenantId', tenantId)
+        .eq('success', false)
+        .gte('timestamp', since);
+      const suspiciousActivities = suspiciousCount ?? 0;
 
-      // Top actions - Group by action and count
-      const topActionsResult = await db
-        .select({
-          action: securityAuditLogs.action,
-          count: count(),
-        })
-        .from(securityAuditLogs)
-        .where(
-          and(
-            eq(securityAuditLogs.tenantId, tenantId),
-            gte(securityAuditLogs.timestamp, since)
-          )
-        )
-        .groupBy(securityAuditLogs.action)
-        .orderBy(({ count }) => desc(count))
-        .limit(10);
-      
-      const topActions = topActionsResult.map(r => ({
-        action: r.action,
-        count: Number(r.count),
-      }));
+      // Top actions
+      const { data: allActionsData, error: actionsError } = await supabase
+        .from('securityAuditLogs')
+        .select('action')
+        .eq('tenantId', tenantId)
+        .gte('timestamp', since);
+
+      const actionCounts = new Map<string, number>();
+      (allActionsData || []).forEach(log => {
+        const count = actionCounts.get(log.action) || 0;
+        actionCounts.set(log.action, count + 1);
+      });
+
+      const topActions = Array.from(actionCounts.entries())
+        .map(([action, count]) => ({ action, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
 
       return {
         totalLogins,

@@ -1,7 +1,5 @@
-import { db } from '@/lib/database/server';
-import { services, bookings } from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
 import { Service, CreateServiceRequest, UpdateServiceRequest } from '@/types/booking';
-import { eq, and, ne, gte, lte, or, asc, desc, sql } from 'drizzle-orm';
 
 const randomUUID = () => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -17,23 +15,33 @@ export class ServiceService {
     data: CreateServiceRequest
   ): Promise<{ service?: Service; error?: string }> {
     try {
-      const [newService] = await db.insert(services).values({
-        id: randomUUID(),
-        tenantId,
-        name: data.name,
-        description: data.description,
-        duration: data.duration,
-        price: data.price,
-        category: data.category,
-        isActive: true, // Default to active
-        homeVisitAvailable: data.homeVisitAvailable || false,
-        homeVisitSurcharge: data.homeVisitSurcharge,
-        images: data.images || [],
-        requirements: data.requirements || [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as any).returning();
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: newService, error } = await supabase
+        .from('services')
+        .insert({
+          id: randomUUID(),
+          tenantId,
+          name: data.name,
+          description: data.description,
+          duration: data.duration,
+          price: data.price,
+          category: data.category,
+          isActive: true,
+          homeVisitAvailable: data.homeVisitAvailable || false,
+          homeVisitSurcharge: data.homeVisitSurcharge,
+          images: data.images || [],
+          requirements: data.requirements || [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .select()
+        .single();
       
+      if (error || !newService) throw error || new Error('Failed to create service');
       return { service: newService as unknown as Service };
     } catch (error) {
       console.error('Error creating service:', error);
@@ -48,20 +56,24 @@ export class ServiceService {
     data: UpdateServiceRequest
   ): Promise<{ service?: Service; error?: string }> {
     try {
-      // Check if service exists and belongs to tenant
-      const [existingService] = await db.select().from(services).where(
-        and(
-          eq(services.id, serviceId),
-          eq(services.tenantId, tenantId)
-        )
-      ).limit(1);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: existingService, error: fetchError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', serviceId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
       
-      if (!existingService) {
+      if (fetchError || !existingService) {
         return { error: 'Service not found' };
       }
       
-      // Build update object
-      const updateData: any = {};
+      const updateData: any = { updatedAt: new Date().toISOString() };
       if (data.name !== undefined) updateData.name = data.name;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.duration !== undefined) updateData.duration = data.duration;
@@ -73,10 +85,14 @@ export class ServiceService {
       if (data.images !== undefined) updateData.images = data.images;
       if (data.requirements !== undefined) updateData.requirements = data.requirements;
       
-      updateData.updatedAt = new Date();
+      const { data: updatedService, error: updateError } = await supabase
+        .from('services')
+        .update(updateData)
+        .eq('id', serviceId)
+        .select()
+        .single();
       
-      const [updatedService] = await db.update(services).set(updateData).where(eq(services.id, serviceId)).returning();
-      
+      if (updateError || !updatedService) throw updateError || new Error('Failed to update service');
       return { service: updatedService as unknown as Service };
     } catch (error) {
       console.error('Error updating service:', error);
@@ -96,24 +112,29 @@ export class ServiceService {
     } = {}
   ): Promise<Service[]> {
     try {
-      let query: any = db.select().from(services).where(eq(services.tenantId, tenantId));
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      let query = supabase
+        .from('services')
+        .select('*')
+        .eq('tenantId', tenantId);
       
-      if (options.category) query = query.where(and(eq(services.tenantId, tenantId), eq(services.category, options.category)));
-      if (options.isActive !== undefined) query = query.where(and(eq(services.tenantId, tenantId), eq(services.isActive, options.isActive)));
-      if (options.homeVisitAvailable !== undefined) query = query.where(and(eq(services.tenantId, tenantId), eq(services.homeVisitAvailable, options.homeVisitAvailable)));
+      if (options.category) query = query.eq('category', options.category);
+      if (options.isActive !== undefined) query = query.eq('isActive', options.isActive);
+      if (options.homeVisitAvailable !== undefined) query = query.eq('homeVisitAvailable', options.homeVisitAvailable);
       
-      // Apply filters one by one
-      if (options.category) query = query.where(eq(services.category, options.category));
-      if (options.isActive !== undefined) query = query.where(eq(services.isActive, options.isActive));
-      if (options.homeVisitAvailable !== undefined) query = query.where(eq(services.homeVisitAvailable, options.homeVisitAvailable));
+      query = query.order('createdAt', { ascending: false });
       
-      query = query.orderBy(desc(services.createdAt));
       if (options.limit) query = query.limit(options.limit);
-      if (options.offset) query = query.offset(options.offset);
+      if (options.offset) query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
       
-      const serviceResults = await query;
+      const { data: serviceResults, error } = await query;
       
-      return serviceResults as Service[];
+      if (error) throw error;
+      return (serviceResults || []) as Service[];
     } catch (error) {
       console.error('Error fetching services:', error);
       return [];
@@ -123,13 +144,20 @@ export class ServiceService {
   // Get a single service
   static async getService(tenantId: string, serviceId: string): Promise<Service | null> {
     try {
-      const [serviceResult] = await db.select().from(services).where(
-        and(
-          eq(services.id, serviceId),
-          eq(services.tenantId, tenantId)
-        )
-      ).limit(1);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: serviceResult, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', serviceId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
       
+      if (error) return null;
       return serviceResult ? (serviceResult as unknown as Service) : null;
     } catch (error) {
       console.error('Error fetching service:', error);
@@ -140,17 +168,18 @@ export class ServiceService {
   // Delete a service
   static async deleteService(tenantId: string, serviceId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Check if service has active bookings
-      const activeBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(
-        and(
-          eq(bookings.serviceId, serviceId),
-          or(
-            eq(bookings.status, 'pending'),
-            eq(bookings.status, 'confirmed')
-          )
-        )
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
-      const activeBookings = activeBookingsResult[0]?.count || 0;
+
+      const { count } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact' })
+        .eq('serviceId', serviceId)
+        .in('status', ['pending', 'confirmed']);
+      
+      const activeBookings = count || 0;
       
       if (activeBookings > 0) {
         return { 
@@ -159,19 +188,24 @@ export class ServiceService {
         };
       }
       
-      const [service] = await db.select().from(services).where(
-        and(
-          eq(services.id, serviceId),
-          eq(services.tenantId, tenantId)
-        )
-      ).limit(1);
+      const { data: service, error: fetchError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', serviceId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
       
-      if (!service) {
+      if (fetchError || !service) {
         return { success: false, error: 'Service not found' };
       }
       
-      await db.delete(services).where(eq(services.id, serviceId));
+      const { error: deleteError } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', serviceId);
       
+      if (deleteError) throw deleteError;
       return { success: true };
     } catch (error) {
       console.error('Error deleting service:', error);
@@ -182,12 +216,21 @@ export class ServiceService {
   // Get service categories for a tenant
   static async getServiceCategories(tenantId: string): Promise<string[]> {
     try {
-      const categoryResults = await db
-        .selectDistinct({ category: services.category })
-        .from(services)
-        .where(and(eq(services.tenantId, tenantId), eq(services.isActive, true)));
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      return categoryResults.map(c => c.category).filter(Boolean);
+      const { data: categoryResults, error } = await supabase
+        .from('services')
+        .select('category')
+        .eq('tenantId', tenantId)
+        .eq('isActive', true);
+
+      if (error || !categoryResults) return [];
+      
+      const uniqueCategories = Array.from(new Set(categoryResults.map(c => c.category).filter(Boolean)));
+      return uniqueCategories as string[];
     } catch (error) {
       console.error('Error fetching service categories:', error);
       return [];
@@ -203,36 +246,54 @@ export class ServiceService {
     averageRating?: number;
   }> {
     try {
-      let baseWhere: any = eq(bookings.tenantId, tenantId);
-      if (serviceId) {
-        baseWhere = and(baseWhere, eq(bookings.serviceId, serviceId));
-      }
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      let query = supabase
+        .from('bookings')
+        .select('id', { count: 'exact' })
+        .eq('tenantId', tenantId);
       
-      // Get counts using separate queries
-      const totalBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(baseWhere);
-      const completedBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(
-        and(baseWhere, eq(bookings.status, 'completed'))
-      );
-      const cancelledBookingsResult = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(
-        and(baseWhere, eq(bookings.status, 'cancelled'))
-      );
+      if (serviceId) query = query.eq('serviceId', serviceId);
+      const { count: totalBookings } = await query;
       
-      // Get total revenue for completed and paid bookings
-      const revenueResult = await db.select({
-        total: sql<number>`SUM(${bookings.totalAmount})`
-      }).from(bookings).where(
-        and(
-          baseWhere,
-          eq(bookings.status, 'completed'),
-          eq(bookings.paymentStatus, 'paid')
-        )
-      );
+      query = supabase
+        .from('bookings')
+        .select('id', { count: 'exact' })
+        .eq('tenantId', tenantId)
+        .eq('status', 'completed');
+      
+      if (serviceId) query = query.eq('serviceId', serviceId);
+      const { count: completedBookings } = await query;
+      
+      query = supabase
+        .from('bookings')
+        .select('id', { count: 'exact' })
+        .eq('tenantId', tenantId)
+        .eq('status', 'cancelled');
+      
+      if (serviceId) query = query.eq('serviceId', serviceId);
+      const { count: cancelledBookings } = await query;
+      
+      query = supabase
+        .from('bookings')
+        .select('totalAmount')
+        .eq('tenantId', tenantId)
+        .eq('status', 'completed')
+        .eq('paymentStatus', 'paid');
+      
+      if (serviceId) query = query.eq('serviceId', serviceId);
+      const { data: revenueData } = await query;
+      
+      const totalRevenue = (revenueData || []).reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
       
       return {
-        totalBookings: totalBookingsResult[0]?.count || 0,
-        completedBookings: completedBookingsResult[0]?.count || 0,
-        cancelledBookings: cancelledBookingsResult[0]?.count || 0,
-        totalRevenue: Number(revenueResult[0]?.total || 0)
+        totalBookings: totalBookings || 0,
+        completedBookings: completedBookings || 0,
+        cancelledBookings: cancelledBookings || 0,
+        totalRevenue
       };
     } catch (error) {
       console.error('Error fetching service stats:', error);

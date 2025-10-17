@@ -5,9 +5,7 @@ import {
   deleteCacheByPattern as supabaseDeleteCacheByPattern,
   listCacheKeys as supabaseListCacheKeys,
 } from '@/lib/database-service';
-import { db } from '@/lib/database/server';
-import { tenants, services as servicesTable, staff as staffTable, businessHours as businessHoursTable } from '@/lib/database/schema';
-import { and, eq } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 
 // Cache configuration
 export const CACHE_CONFIG = {
@@ -395,9 +393,19 @@ export class CacheService {
   // Cache warming methods
   static async warmTenantCache(tenantId: string) {
     try {
-      const [tenantRow] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      if (!tenantRow) {
+      const { data: tenantRow, error: tenantError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', tenantId)
+        .limit(1)
+        .single();
+
+      if (tenantError || !tenantRow) {
         console.warn(`Tenant ${tenantId} not found while warming cache`);
         return;
       }
@@ -405,29 +413,32 @@ export class CacheService {
       await this.setTenant(tenantId, tenantRow);
       await this.setTenantBySubdomain(tenantRow.subdomain, tenantRow);
 
-      const tenantServices = await db
-        .select()
-        .from(servicesTable)
-        .where(and(eq(servicesTable.tenantId, tenantId), eq(servicesTable.isActive, true)));
+      const { data: tenantServices, error: servicesError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .eq('isActive', true);
 
-      if (tenantServices.length) {
+      if (tenantServices && tenantServices.length) {
         await this.setServicesByTenant(tenantId, tenantServices);
       }
 
-      const tenantStaff = await db
-        .select()
-        .from(staffTable)
-        .where(and(eq(staffTable.tenantId, tenantId), eq(staffTable.isActive, true)));
+      const { data: tenantStaff, error: staffError } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .eq('isActive', true);
 
-      if (tenantStaff.length) {
+      if (tenantStaff && tenantStaff.length) {
         await this.setStaffByTenant(tenantId, tenantStaff);
       }
 
-      const [businessHoursRow] = await db
-        .select()
-        .from(businessHoursTable)
-        .where(eq(businessHoursTable.tenantId, tenantId))
-        .limit(1);
+      const { data: businessHoursRow, error: businessHoursError } = await supabase
+        .from('businessHours')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
 
       if (businessHoursRow?.schedule) {
         await this.setBusinessHours(tenantId, businessHoursRow.schedule);

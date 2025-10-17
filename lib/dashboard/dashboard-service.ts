@@ -1,11 +1,11 @@
-import { db } from '@/lib/database/server';
-import {
-  bookings as bookingsTable,
-  customers as customersTable,
-  services as servicesTable,
-} from '@/lib/database/schema';
-import { and, desc, eq, gte, lt, lte, inArray } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 const COMPLETED_STATUSES = ['confirmed', 'completed'] as const;
 
@@ -14,32 +14,114 @@ function toNumber(value: unknown): number {
   return Number.isFinite(num) ? num : 0;
 }
 
-async function countBookings(whereClause: any): Promise<number> {
-  const [{ count } = { count: 0 }] = await db
-    .select({ count: sql<number>`cast(count(${bookingsTable.id}) as int)` })
-    .from(bookingsTable)
-    .where(whereClause);
-
-  return count ?? 0;
+async function countBookings(tenantId: string, filters: any = {}): Promise<number> {
+  const supabase = getSupabaseClient();
+  let query = supabase
+    .from('bookings')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenantId', tenantId);
+  
+  if (filters.status) {
+    if (Array.isArray(filters.status)) {
+      query = query.in('status', filters.status);
+    } else {
+      query = query.eq('status', filters.status);
+    }
+  }
+  
+  if (filters.paymentStatus) {
+    query = query.eq('paymentStatus', filters.paymentStatus);
+  }
+  
+  if (filters.startDate) {
+    query = query.gte('scheduledAt', filters.startDate.toISOString());
+  }
+  
+  if (filters.endDate) {
+    query = query.lte('scheduledAt', filters.endDate.toISOString());
+  }
+  
+  if (filters.createdBefore) {
+    query = query.lt('createdAt', filters.createdBefore.toISOString());
+  }
+  
+  if (filters.createdAfter) {
+    query = query.gte('createdAt', filters.createdAfter.toISOString());
+  }
+  
+  if (filters.updatedBefore) {
+    query = query.lt('updatedAt', filters.updatedBefore.toISOString());
+  }
+  
+  const { count, error } = await query;
+  
+  if (error) {
+    console.error('Error counting bookings:', error);
+    return 0;
+  }
+  
+  return count || 0;
 }
 
-async function sumBookings(whereClause: any): Promise<number> {
-  const [{ total } = { total: 0 }] = await db
-    .select({ total: sql<number>`coalesce(sum(${bookingsTable.totalAmount}), 0)` })
-    .from(bookingsTable)
-    .where(whereClause);
-
-  return toNumber(total);
+async function sumBookings(tenantId: string, filters: any = {}): Promise<number> {
+  const supabase = getSupabaseClient();
+  let query = supabase
+    .from('bookings')
+    .select('totalAmount')
+    .eq('tenantId', tenantId);
+  
+  if (filters.status) {
+    if (Array.isArray(filters.status)) {
+      query = query.in('status', filters.status);
+    } else {
+      query = query.eq('status', filters.status);
+    }
+  }
+  
+  if (filters.startDate) {
+    query = query.gte('scheduledAt', filters.startDate.toISOString());
+  }
+  
+  if (filters.endDate) {
+    query = query.lte('scheduledAt', filters.endDate.toISOString());
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error summing bookings:', error);
+    return 0;
+  }
+  
+  return (data || []).reduce((sum, booking) => sum + toNumber(booking.totalAmount), 0);
 }
 
-async function countCustomers(whereClause: any): Promise<number> {
-  const [{ count } = { count: 0 }] = await db
-    .select({ count: sql<number>`cast(count(${customersTable.id}) as int)` })
-    .from(customersTable)
-    .where(whereClause);
-
-  return count ?? 0;
+async function countCustomers(tenantId: string, filters: any = {}): Promise<number> {
+  const supabase = getSupabaseClient();
+  let query = supabase
+    .from('customers')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenantId', tenantId);
+  
+  if (filters.createdAfter) {
+    query = query.gte('createdAt', filters.createdAfter.toISOString());
+  }
+  
+  if (filters.createdBefore) {
+    query = query.lte('createdAt', filters.createdBefore.toISOString());
+  }
+  
+  const { count, error } = await query;
+  
+  if (error) {
+    console.error('Error counting customers:', error);
+    return 0;
+  }
+  
+  return count || 0;
 }
+
+// Helper functions already defined above
 
 export interface DashboardStats {
   todayBookings: number;
@@ -102,49 +184,44 @@ export class DashboardService {
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     try {
-      const tenantCondition = eq(bookingsTable.tenantId, tenantId);
-
-      const todayRange = and(
-        tenantCondition,
-        gte(bookingsTable.scheduledAt, today),
-        lt(bookingsTable.scheduledAt, tomorrow)
-      );
-
-      const yesterdayRange = and(
-        tenantCondition,
-        gte(bookingsTable.scheduledAt, yesterday),
-        lt(bookingsTable.scheduledAt, today)
-      );
-
-      const weekRange = and(
-        tenantCondition,
-        gte(bookingsTable.scheduledAt, weekAgo)
-      );
-
-      const statusesArray = Array.from(COMPLETED_STATUSES);
-
-      const revenueTodayCondition = and(
-        todayRange,
-        inArray(bookingsTable.status, statusesArray)
-      );
-
-      const revenueYesterdayCondition = and(
-        yesterdayRange,
-        inArray(bookingsTable.status, statusesArray)
-      );
-
-      const todayBookings = await countBookings(todayRange);
-      const yesterdayBookings = await countBookings(yesterdayRange);
-      const totalCustomers = await countCustomers(eq(customersTable.tenantId, tenantId));
-      const newCustomersThisWeek = await countCustomers(
-        and(eq(customersTable.tenantId, tenantId), gte(customersTable.createdAt, weekAgo))
-      );
-      const todayRevenue = await sumBookings(revenueTodayCondition);
-      const yesterdayRevenue = await sumBookings(revenueYesterdayCondition);
-      const thisWeekBookings = await countBookings(weekRange);
-      const thisWeekCompleted = await countBookings(
-        and(weekRange, eq(bookingsTable.status, 'completed'))
-      );
+      const todayBookings = await countBookings(tenantId, {
+        startDate: today,
+        endDate: yesterday,
+        status: null // all statuses
+      });
+      
+      const yesterdayBookings = await countBookings(tenantId, {
+        startDate: yesterday,
+        endDate: today,
+        status: null // all statuses
+      });
+      
+      const totalCustomers = await countCustomers(tenantId);
+      
+      const newCustomersThisWeek = await countCustomers(tenantId, {
+        createdAfter: weekAgo
+      });
+      
+      const todayRevenue = await sumBookings(tenantId, {
+        startDate: today,
+        endDate: tomorrow,
+        status: COMPLETED_STATUSES
+      });
+      
+      const yesterdayRevenue = await sumBookings(tenantId, {
+        startDate: yesterday,
+        endDate: today,
+        status: COMPLETED_STATUSES
+      });
+      
+      const thisWeekBookings = await countBookings(tenantId, {
+        startDate: weekAgo
+      });
+      
+      const thisWeekCompleted = await countBookings(tenantId, {
+        startDate: weekAgo,
+        status: 'completed'
+      });
 
       const todayBookingsChange = yesterdayBookings > 0 
         ? Math.round(((todayBookings - yesterdayBookings) / yesterdayBookings) * 100)
@@ -184,42 +261,41 @@ export class DashboardService {
   // Get recent bookings
   static async getRecentBookings(tenantId: string, limit: number = 10): Promise<DashboardBooking[]> {
     try {
-      const results = await db
-        .select({
-          id: bookingsTable.id,
-          scheduledAt: bookingsTable.scheduledAt,
-          status: bookingsTable.status,
-          totalAmount: bookingsTable.totalAmount,
-          customer: {
-            id: customersTable.id,
-            name: customersTable.name,
-            phone: customersTable.phone,
-          },
-          service: {
-            id: servicesTable.id,
-            name: servicesTable.name,
-          },
-        })
-        .from(bookingsTable)
-        .leftJoin(customersTable, eq(bookingsTable.customerId, customersTable.id))
-        .leftJoin(servicesTable, eq(bookingsTable.serviceId, servicesTable.id))
-        .where(eq(bookingsTable.tenantId, tenantId))
-        .orderBy(desc(bookingsTable.createdAt))
+      const supabase = getSupabaseClient();
+      
+      // Get recent bookings with customer and service data
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          scheduledAt,
+          status,
+          totalAmount,
+          customer:customers(id, name, phone),
+          service:services(id, name)
+        `)
+        .eq('tenantId', tenantId)
+        .order('createdAt', { ascending: false })
         .limit(limit);
 
-      return results.map(row => ({
-        id: row.id,
-        scheduledAt: row.scheduledAt ?? new Date(),
-        status: row.status ?? 'pending',
-        totalAmount: toNumber(row.totalAmount),
+      if (error) {
+        console.error('Error fetching recent bookings:', error);
+        return [];
+      }
+
+      return (bookings || []).map((booking: any) => ({
+        id: booking.id,
+        scheduledAt: booking.scheduledAt ? new Date(booking.scheduledAt) : new Date(),
+        status: booking.status || 'pending',
+        totalAmount: toNumber(booking.totalAmount),
         customer: {
-          id: row.customer?.id || '',
-          name: row.customer?.name || 'Unknown',
-          phone: row.customer?.phone || '',
+          id: booking.customer?.id || '',
+          name: booking.customer?.name || 'Unknown',
+          phone: booking.customer?.phone || '',
         },
         service: {
-          id: row.service?.id || '',
-          name: row.service?.name || 'Unknown',
+          id: booking.service?.id || '',
+          name: booking.service?.name || 'Unknown',
         },
       }));
     } catch (error) {
@@ -233,48 +309,42 @@ export class DashboardService {
     const now = new Date();
     
     try {
-      const results = await db
-        .select({
-          id: bookingsTable.id,
-          scheduledAt: bookingsTable.scheduledAt,
-          status: bookingsTable.status,
-          totalAmount: bookingsTable.totalAmount,
-          customer: {
-            id: customersTable.id,
-            name: customersTable.name,
-            phone: customersTable.phone,
-          },
-          service: {
-            id: servicesTable.id,
-            name: servicesTable.name,
-          },
-        })
-        .from(bookingsTable)
-        .leftJoin(customersTable, eq(bookingsTable.customerId, customersTable.id))
-        .leftJoin(servicesTable, eq(bookingsTable.serviceId, servicesTable.id))
-        .where(
-          and(
-            eq(bookingsTable.tenantId, tenantId),
-            gte(bookingsTable.scheduledAt, now),
-            inArray(bookingsTable.status, ['pending', 'confirmed'])
-          )
-        )
-        .orderBy(bookingsTable.scheduledAt)
+      const supabase = getSupabaseClient();
+      
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          scheduledAt,
+          status,
+          totalAmount,
+          customer:customers(id, name, phone),
+          service:services(id, name)
+        `)
+        .eq('tenantId', tenantId)
+        .gte('scheduledAt', now.toISOString())
+        .in('status', ['pending', 'confirmed'])
+        .order('scheduledAt', { ascending: true })
         .limit(limit);
 
-      return results.map(row => ({
-        id: row.id,
-        scheduledAt: row.scheduledAt ?? new Date(),
-        status: row.status ?? 'pending',
-        totalAmount: toNumber(row.totalAmount),
+      if (error) {
+        console.error('Error fetching upcoming bookings:', error);
+        return [];
+      }
+
+      return (bookings || []).map((booking: any) => ({
+        id: booking.id,
+        scheduledAt: booking.scheduledAt ? new Date(booking.scheduledAt) : new Date(),
+        status: booking.status || 'pending',
+        totalAmount: toNumber(booking.totalAmount),
         customer: {
-          id: row.customer?.id || '',
-          name: row.customer?.name || 'Unknown',
-          phone: row.customer?.phone || '',
+          id: booking.customer?.id || '',
+          name: booking.customer?.name || 'Unknown',
+          phone: booking.customer?.phone || '',
         },
         service: {
-          id: row.service?.id || '',
-          name: row.service?.name || 'Unknown',
+          id: booking.service?.id || '',
+          name: booking.service?.name || 'Unknown',
         },
       }));
     } catch (error) {

@@ -1,13 +1,5 @@
-import { db } from '@/lib/database/server';
-import {
-  tenants,
-  services as servicesTable,
-  bookings,
-  businessHours as businessHoursTable,
-} from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
 import type { Tenant, Service, BusinessHours } from '@/types/database';
-import { asc, eq } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
 
 export interface BusinessProfileData {
   businessName: string;
@@ -55,23 +47,19 @@ export class SettingsService {
   // Get business profile
   static async getBusinessProfile(tenantId: string): Promise<BusinessProfileData | null> {
     try {
-      const [tenant] = await db
-        .select({
-          businessName: tenants.businessName,
-          businessCategory: tenants.businessCategory,
-          ownerName: tenants.ownerName,
-          email: tenants.email,
-          phone: tenants.phone,
-          address: tenants.address,
-          businessDescription: tenants.businessDescription,
-          logo: tenants.logo,
-          brandColors: tenants.brandColors,
-        })
-        .from(tenants)
-        .where(eq(tenants.id, tenantId))
-        .limit(1);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      if (!tenant) return null;
+      const { data: tenant, error } = await supabase
+        .from('tenants')
+        .select('businessName, businessCategory, ownerName, email, phone, address, businessDescription, logo, brandColors')
+        .eq('id', tenantId)
+        .limit(1)
+        .single();
+
+      if (error || !tenant) return null;
 
       return {
         businessName: tenant.businessName,
@@ -96,21 +84,31 @@ export class SettingsService {
     data: Partial<BusinessProfileData>
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      await db
-        .update(tenants)
-        .set({
-          businessName: data.businessName,
-          businessCategory: data.businessCategory,
-          ownerName: data.ownerName,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          businessDescription: data.businessDescription,
-          logo: data.logo,
-          brandColors: data.brandColors as Tenant['brandColors'],
-          updatedAt: new Date(),
-        })
-        .where(eq(tenants.id, tenantId));
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const updatePayload: Record<string, any> = {
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (data.businessName) updatePayload.businessName = data.businessName;
+      if (data.businessCategory) updatePayload.businessCategory = data.businessCategory;
+      if (data.ownerName) updatePayload.ownerName = data.ownerName;
+      if (data.email) updatePayload.email = data.email;
+      if (data.phone) updatePayload.phone = data.phone;
+      if (data.address) updatePayload.address = data.address;
+      if (data.businessDescription) updatePayload.businessDescription = data.businessDescription;
+      if (data.logo) updatePayload.logo = data.logo;
+      if (data.brandColors) updatePayload.brandColors = data.brandColors;
+
+      const { error } = await supabase
+        .from('tenants')
+        .update(updatePayload)
+        .eq('id', tenantId);
+
+      if (error) throw error;
 
       return { success: true };
     } catch (error) {
@@ -122,13 +120,19 @@ export class SettingsService {
   // Get services
   static async getServices(tenantId: string): Promise<Service[]> {
     try {
-      const results = await db
-        .select()
-        .from(servicesTable)
-        .where(eq(servicesTable.tenantId, tenantId))
-        .orderBy(asc(servicesTable.name));
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      return results as Service[];
+      const { data: results, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      return (results || []) as Service[];
     } catch (error) {
       console.error('Error fetching services:', error);
       return [];
@@ -151,9 +155,15 @@ export class SettingsService {
     }
   ): Promise<{ success: boolean; service?: Service; error?: string }> {
     try {
-      const [service] = await db
-        .insert(servicesTable)
-        .values({
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: service, error } = await supabase
+        .from('services')
+        .insert({
+          id: crypto.randomUUID(),
           tenantId,
           name: serviceData.name,
           description: serviceData.description,
@@ -165,11 +175,13 @@ export class SettingsService {
           homeVisitSurcharge: serviceData.homeVisitSurcharge,
           images: serviceData.images || [],
           requirements: serviceData.requirements || [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as any)
-        .returning();
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
+      if (error || !service) throw error || new Error('Failed to create service');
       return { success: true, service: service as Service };
     } catch (error) {
       console.error('Error creating service:', error);
@@ -194,7 +206,12 @@ export class SettingsService {
     }>
   ): Promise<{ success: boolean; service?: Service; error?: string }> {
     try {
-      const updatePayload: Record<string, any> = { updatedAt: new Date() };
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const updatePayload: Record<string, any> = { updatedAt: new Date().toISOString() };
       if (serviceData.name !== undefined) updatePayload.name = serviceData.name;
       if (serviceData.description !== undefined) updatePayload.description = serviceData.description;
       if (serviceData.duration !== undefined) updatePayload.duration = serviceData.duration;
@@ -208,12 +225,14 @@ export class SettingsService {
       if (serviceData.images !== undefined) updatePayload.images = serviceData.images;
       if (serviceData.requirements !== undefined) updatePayload.requirements = serviceData.requirements;
 
-      const [service] = await db
-        .update(servicesTable)
-        .set(updatePayload as any)
-        .where(eq(servicesTable.id, serviceId))
-        .returning();
+      const { data: service, error } = await supabase
+        .from('services')
+        .update(updatePayload)
+        .eq('id', serviceId)
+        .select()
+        .single();
 
+      if (error || !service) throw error || new Error('Failed to update service');
       return { success: true, service: service as Service };
     } catch (error) {
       console.error('Error updating service:', error);
@@ -224,21 +243,31 @@ export class SettingsService {
   // Delete service
   static async deleteService(serviceId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Check if service has any bookings
-      const [{ count }] = await db
-        .select({ count: sql<number>`cast(count(${bookings.id}) as int)` })
-        .from(bookings)
-        .where(eq(bookings.serviceId, serviceId));
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      if ((count ?? 0) > 0) {
-        // Soft delete by deactivating instead of hard delete
-        await db
-          .update(servicesTable)
-          .set({ isActive: false, updatedAt: new Date() })
-          .where(eq(servicesTable.id, serviceId));
+      // Check if service has any bookings
+      const { data: bookingsData, count: bookingCount } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact' })
+        .eq('serviceId', serviceId);
+
+      if ((bookingCount ?? 0) > 0) {
+        // Soft delete by deactivating
+        const { error } = await supabase
+          .from('services')
+          .update({ isActive: false, updatedAt: new Date().toISOString() })
+          .eq('id', serviceId);
+        if (error) throw error;
       } else {
         // Hard delete if no bookings
-        await db.delete(servicesTable).where(eq(servicesTable.id, serviceId));
+        const { error } = await supabase
+          .from('services')
+          .delete()
+          .eq('id', serviceId);
+        if (error) throw error;
       }
 
       return { success: true };
@@ -251,12 +280,19 @@ export class SettingsService {
   // Get business hours
   static async getBusinessHours(tenantId: string): Promise<BusinessHours | null> {
     try {
-      const [record] = await db
-        .select()
-        .from(businessHoursTable)
-        .where(eq(businessHoursTable.tenantId, tenantId))
-        .limit(1);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
+      const { data: record, error } = await supabase
+        .from('businessHours')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
+
+      if (error) return null;
       return (record as BusinessHours) ?? null;
     } catch (error) {
       console.error('Error fetching business hours:', error);
@@ -271,22 +307,44 @@ export class SettingsService {
     timezone: string = 'Asia/Jakarta'
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      await db
-        .insert(businessHoursTable)
-        .values({
-          tenantId,
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      // Try to update first
+      const { error: updateError } = await supabase
+        .from('businessHours')
+        .update({
           schedule,
           timezone,
-          updatedAt: new Date(),
-        } as any)
-        .onConflictDoUpdate({
-          target: businessHoursTable.tenantId,
-          set: {
-            schedule,
-            timezone,
-            updatedAt: new Date(),
-          },
-        });
+          updatedAt: new Date().toISOString(),
+        })
+        .eq('tenantId', tenantId);
+
+      // If no rows updated, insert
+      if (updateError || !updateError) {
+        const { data: existing, error: checkError } = await supabase
+          .from('businessHours')
+          .select('id')
+          .eq('tenantId', tenantId)
+          .limit(1)
+          .single();
+
+        if (!existing) {
+          const { error: insertError } = await supabase
+            .from('businessHours')
+            .insert({
+              id: crypto.randomUUID(),
+              tenantId,
+              schedule,
+              timezone,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          if (insertError) throw insertError;
+        }
+      }
 
       return { success: true };
     } catch (error) {

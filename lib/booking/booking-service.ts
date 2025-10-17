@@ -1,11 +1,4 @@
-import { db } from '@/lib/database/server';
-import { 
-  bookings,
-  services,
-  customers,
-  businessHours,
-  tenants
-} from '@/lib/database/schema';
+import { createClient } from '@supabase/supabase-js';
 import { 
   Booking, 
   Service, 
@@ -21,8 +14,6 @@ import {
 import { validateBookingTime, validateBusinessHours } from '@/lib/validation/booking-validation';
 import { LocationService } from '@/lib/location/location-service';
 import { ServiceAreaService } from '@/lib/location/service-area-service';
-import { eq, and, ne, gte, lte, inArray, asc } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
 
 const randomUUID = () => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -31,7 +22,12 @@ const randomUUID = () => {
   return Math.random().toString(36).slice(2);
 };
 
-type BusinessHoursRow = typeof businessHours.$inferSelect;
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 export class BookingService {
   // Create a new booking
@@ -40,34 +36,36 @@ export class BookingService {
     data: CreateBookingRequest
   ): Promise<{ booking?: Booking; error?: string }> {
     try {
+      const supabase = getSupabaseClient();
+      
       // Validate the service exists and belongs to tenant
-      const [serviceResult] = await db.select().from(services).where(
-        and(
-          eq(services.id, data.serviceId),
-          eq(services.tenantId, tenantId),
-          eq(services.isActive, true)
-        )
-      ).limit(1);
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', data.serviceId)
+        .eq('tenantId', tenantId)
+        .eq('isActive', true)
+        .single();
       
-      const service = serviceResult || null;
-      
-      if (!service) {
+      if (serviceError || !serviceData) {
         return { error: 'Service not found or inactive' };
       }
       
+      const service = serviceData;
+      
       // Validate the customer exists and belongs to tenant
-      const [customerResult] = await db.select().from(customers).where(
-        and(
-          eq(customers.id, data.customerId),
-          eq(customers.tenantId, tenantId)
-        )
-      ).limit(1);
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', data.customerId)
+        .eq('tenantId', tenantId)
+        .single();
       
-      const customer = customerResult || null;
-      
-      if (!customer) {
+      if (customerError || !customerData) {
         return { error: 'Customer not found' };
       }
+      
+      const customer = customerData;
       
       const scheduledAt = new Date(data.scheduledAt);
       
@@ -78,11 +76,13 @@ export class BookingService {
       }
       
       // Get business hours for validation
-      const businessHoursRows: typeof businessHours.$inferSelect[] = await db.select().from(businessHours).where(
-        eq(businessHours.tenantId, tenantId)
-      ).limit(1);
+      const { data: businessHoursData, error: businessHoursError } = await supabase
+        .from('businessHours')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .single();
       
-      const businessHoursRecord = businessHoursRows[0] || null;
+      const businessHoursRecord = businessHoursError ? null : businessHoursData;
       
       // Validate against business hours
       const hoursValidation = validateBusinessHours(scheduledAt, businessHoursRecord);
@@ -136,77 +136,89 @@ export class BookingService {
       }
       
       // Create the booking
-      const [newBooking] = await db.insert(bookings).values({
-        id: randomUUID(), // Assuming we need to generate an ID
-        tenantId,
-        customerId: data.customerId,
-        serviceId: data.serviceId,
-        scheduledAt,
-        duration: service.duration,
-        isHomeVisit: data.isHomeVisit || false,
-        homeVisitAddress: data.homeVisitAddress,
-        homeVisitCoordinates: data.homeVisitCoordinates,
-        notes: data.notes,
-        totalAmount,
-        status: BookingStatus.PENDING,
-        remindersSent: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+      const { data: newBooking, error: insertError } = await supabase
+        .from('bookings')
+        .insert({
+          id: randomUUID(), // Assuming we need to generate an ID
+          tenantId,
+          customerId: data.customerId,
+          serviceId: data.serviceId,
+          scheduledAt: scheduledAt.toISOString(),
+          duration: service.duration,
+          isHomeVisit: data.isHomeVisit || false,
+          homeVisitAddress: data.homeVisitAddress,
+          homeVisitCoordinates: data.homeVisitCoordinates,
+          notes: data.notes,
+          totalAmount,
+          status: BookingStatus.PENDING,
+          remindersSent: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (insertError || !newBooking) {
+        return { error: 'Failed to create booking' };
+      }
       
       // Get the created booking with customer and service data
-      const booking = await db.select({
-        id: bookings.id,
-        tenantId: bookings.tenantId,
-        customerId: bookings.customerId,
-        serviceId: bookings.serviceId,
-        status: bookings.status,
-        scheduledAt: bookings.scheduledAt,
-        duration: bookings.duration,
-        isHomeVisit: bookings.isHomeVisit,
-        homeVisitAddress: bookings.homeVisitAddress,
-        homeVisitCoordinates: bookings.homeVisitCoordinates,
-        notes: bookings.notes,
-        totalAmount: bookings.totalAmount,
-        paymentStatus: bookings.paymentStatus,
-        remindersSent: bookings.remindersSent,
-        createdAt: bookings.createdAt,
-        updatedAt: bookings.updatedAt,
-        customer: {
-          id: customers.id,
-          name: customers.name,
-          email: customers.email,
-          phone: customers.phone,
-          address: customers.address,
-          notes: customers.notes,
-          totalBookings: customers.totalBookings,
-          lastBookingAt: customers.lastBookingAt,
-          whatsappNumber: customers.whatsappNumber,
-          createdAt: customers.createdAt,
-          updatedAt: customers.updatedAt
-        },
-        service: {
-          id: services.id,
-          name: services.name,
-          description: services.description,
-          duration: services.duration,
-          price: services.price,
-          category: services.category,
-          isActive: services.isActive,
-          homeVisitAvailable: services.homeVisitAvailable,
-          homeVisitSurcharge: services.homeVisitSurcharge,
-          createdAt: services.createdAt,
-          updatedAt: services.updatedAt
-        }
-      }).from(bookings).leftJoin(customers, eq(bookings.customerId, customers.id)).leftJoin(services, eq(bookings.serviceId, services.id)).where(eq(bookings.id, newBooking.id)).limit(1);
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', newBooking.id)
+        .single();
+      
+      if (bookingError || !bookingData) {
+        return { error: 'Failed to retrieve created booking' };
+      }
+      
+      // Get customer data
+      const { data: customerDataResult, error: customerFetchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', bookingData.customerId)
+        .single();
+      
+      if (customerFetchError || !customerDataResult) {
+        return { error: 'Failed to retrieve customer data' };
+      }
+      
+      // Get service data
+      const { data: serviceDataResult, error: serviceFetchError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', bookingData.serviceId)
+        .single();
+      
+      if (serviceFetchError || !serviceDataResult) {
+        return { error: 'Failed to retrieve service data' };
+      }
+      
+      const booking = {
+        ...bookingData,
+        customer: customerDataResult,
+        service: serviceDataResult
+      };
       
       // Update customer's total bookings count
-      await db.update(customers).set({
-        totalBookings: sql`${customers.totalBookings} + 1`,
-        lastBookingAt: new Date()
-      }).where(eq(customers.id, data.customerId));
+      const { data: currentCustomer } = await supabase
+        .from('customers')
+        .select('totalBookings')
+        .eq('id', data.customerId)
+        .single();
       
-      return { booking: booking[0] as unknown as Booking };
+      if (currentCustomer) {
+        await supabase
+          .from('customers')
+          .update({
+            totalBookings: (currentCustomer.totalBookings || 0) + 1,
+            lastBookingAt: new Date().toISOString()
+          })
+          .eq('id', data.customerId);
+      }
+      
+      return { booking: booking as Booking };
     } catch (error) {
       console.error('Error creating booking:', error);
       return { error: 'Failed to create booking' };
