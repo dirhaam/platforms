@@ -356,25 +356,26 @@ export class DashboardService {
   // Get recent customers
   static async getRecentCustomers(tenantId: string, limit: number = 10): Promise<DashboardCustomer[]> {
     try {
-      const results = await db
-        .select({
-          id: customersTable.id,
-          name: customersTable.name,
-          phone: customersTable.phone,
-          totalBookings: customersTable.totalBookings,
-          lastBookingAt: customersTable.lastBookingAt,
-        })
-        .from(customersTable)
-        .where(eq(customersTable.tenantId, tenantId))
-        .orderBy(desc(customersTable.createdAt))
+      const supabase = getSupabaseClient();
+      
+      const { data: customers, error } = await supabase
+        .from('customers')
+        .select('id, name, phone, totalBookings, lastBookingAt')
+        .eq('tenantId', tenantId)
+        .order('createdAt', { ascending: false })
         .limit(limit);
 
-      return results.map(customer => ({
+      if (error) {
+        console.error('Error fetching recent customers:', error);
+        return [];
+      }
+
+      return (customers || []).map(customer => ({
         id: customer.id,
         name: customer.name,
-        phone: customer.phone,
+        phone: customer.phone || '',
         totalBookings: customer.totalBookings ?? 0,
-        lastBookingAt: customer.lastBookingAt,
+        lastBookingAt: customer.lastBookingAt ? new Date(customer.lastBookingAt) : null,
       }));
     } catch (error) {
       console.error('Error fetching recent customers:', error);
@@ -388,21 +389,22 @@ export class DashboardService {
     const now = new Date();
 
     try {
+      const supabase = getSupabaseClient();
+
       // Pending booking confirmations (bookings created more than 1 hour ago but still pending)
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-      const pendingBookings = await countBookings(
-        and(
-          eq(bookingsTable.tenantId, tenantId),
-          eq(bookingsTable.status, 'pending'),
-          lt(bookingsTable.createdAt, oneHourAgo)
-        )
-      );
+      const { count: pendingBookingsCount, error: pendingError } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenantId', tenantId)
+        .eq('status', 'pending')
+        .lt('createdAt', oneHourAgo.toISOString());
 
-      if (pendingBookings > 0) {
+      if (!pendingError && pendingBookingsCount && pendingBookingsCount > 0) {
         actions.push({
           id: 'pending-bookings',
           type: 'booking_confirmation',
-          title: `${pendingBookings} booking${pendingBookings > 1 ? 's' : ''} awaiting confirmation`,
+          title: `${pendingBookingsCount} booking${pendingBookingsCount > 1 ? 's' : ''} awaiting confirmation`,
           description: 'These bookings have been waiting for more than an hour',
           actionUrl: '/admin/bookings?status=pending',
           actionText: 'Review Bookings',
@@ -411,22 +413,21 @@ export class DashboardService {
         });
       }
 
-      // Overdue payments (bookings completed but payment still pending after 24 hours)
+      // Overdue payments
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const overduePayments = await countBookings(
-        and(
-          eq(bookingsTable.tenantId, tenantId),
-          eq(bookingsTable.status, 'completed'),
-          eq(bookingsTable.paymentStatus, 'pending'),
-          lt(bookingsTable.updatedAt, oneDayAgo)
-        )
-      );
+      const { count: overduePaymentsCount, error: overdueError } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenantId', tenantId)
+        .eq('status', 'completed')
+        .eq('paymentStatus', 'pending')
+        .lt('updatedAt', oneDayAgo.toISOString());
 
-      if (overduePayments > 0) {
+      if (!overdueError && overduePaymentsCount && overduePaymentsCount > 0) {
         actions.push({
           id: 'overdue-payments',
           type: 'payment_overdue',
-          title: `${overduePayments} overdue payment${overduePayments > 1 ? 's' : ''}`,
+          title: `${overduePaymentsCount} overdue payment${overduePaymentsCount > 1 ? 's' : ''}`,
           description: 'These payments are overdue by more than 24 hours',
           actionUrl: '/admin/bookings?payment_status=overdue',
           actionText: 'Follow Up',
@@ -435,26 +436,25 @@ export class DashboardService {
         });
       }
 
-      // Today's appointments that need confirmation calls
+      // Today's appointments
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const todayConfirmedBookings = await countBookings(
-        and(
-          eq(bookingsTable.tenantId, tenantId),
-          gte(bookingsTable.scheduledAt, today),
-          lt(bookingsTable.scheduledAt, tomorrow),
-          eq(bookingsTable.status, 'confirmed')
-        )
-      );
+      const { count: todayCount, error: todayError } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenantId', tenantId)
+        .eq('status', 'confirmed')
+        .gte('scheduledAt', today.toISOString())
+        .lt('scheduledAt', tomorrow.toISOString());
 
-      if (todayConfirmedBookings > 0) {
+      if (!todayError && todayCount && todayCount > 0) {
         actions.push({
           id: 'today-confirmations',
           type: 'booking_confirmation',
-          title: `${todayConfirmedBookings} appointment${todayConfirmedBookings > 1 ? 's' : ''} today`,
+          title: `${todayCount} appointment${todayCount > 1 ? 's' : ''} today`,
           description: 'Consider sending confirmation reminders',
           actionUrl: '/admin/bookings?date=today',
           actionText: 'Send Reminders',
@@ -463,7 +463,6 @@ export class DashboardService {
         });
       }
 
-      // Sort by priority and creation date
       return actions.sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
@@ -489,39 +488,55 @@ export class DashboardService {
     completionRate: number;
   }> {
     try {
-      const baseBookingCondition = and(
-        eq(bookingsTable.tenantId, tenantId),
-        gte(bookingsTable.scheduledAt, startDate),
-        lte(bookingsTable.scheduledAt, endDate)
-      );
+      const supabase = getSupabaseClient();
+      const startDateStr = startDate.toISOString();
+      const endDateStr = endDate.toISOString();
 
-      const completedStatuses = Array.from(COMPLETED_STATUSES);
-
-      const [bookingsResult, totalRevenue, customersCount, completedBookings] = await Promise.all([
-        countBookings(baseBookingCondition),
-        sumBookings(
-          and(
-            baseBookingCondition,
-            inArray(bookingsTable.status, completedStatuses)
-          )
-        ),
-        countCustomers(
-          and(
-            eq(customersTable.tenantId, tenantId),
-            gte(customersTable.createdAt, startDate),
-            lte(customersTable.createdAt, endDate)
-          )
-        ),
-        countBookings(and(baseBookingCondition, eq(bookingsTable.status, 'completed'))),
+      const [
+        { count: bookingsCount },
+        { data: bookingsData },
+        { count: customersCount },
+        { count: completedCount },
+      ] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select('*', { count: 'exact', head: true })
+          .eq('tenantId', tenantId)
+          .gte('scheduledAt', startDateStr)
+          .lte('scheduledAt', endDateStr),
+        supabase
+          .from('bookings')
+          .select('totalAmount')
+          .eq('tenantId', tenantId)
+          .in('status', Array.from(COMPLETED_STATUSES))
+          .gte('scheduledAt', startDateStr)
+          .lte('scheduledAt', endDateStr),
+        supabase
+          .from('customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('tenantId', tenantId)
+          .gte('createdAt', startDateStr)
+          .lte('createdAt', endDateStr),
+        supabase
+          .from('bookings')
+          .select('*', { count: 'exact', head: true })
+          .eq('tenantId', tenantId)
+          .eq('status', 'completed')
+          .gte('scheduledAt', startDateStr)
+          .lte('scheduledAt', endDateStr),
       ]);
 
-      const averageBookingValue = bookingsResult > 0 ? totalRevenue / bookingsResult : 0;
-      const completionRate = bookingsResult > 0 ? (completedBookings / bookingsResult) * 100 : 0;
+      const totalRevenue = (bookingsData || []).reduce((sum, b) => sum + toNumber(b.totalAmount), 0);
+      const bookingsCount_val = bookingsCount || 0;
+      const completedCount_val = completedCount || 0;
+
+      const averageBookingValue = bookingsCount_val > 0 ? totalRevenue / bookingsCount_val : 0;
+      const completionRate = bookingsCount_val > 0 ? (completedCount_val / bookingsCount_val) * 100 : 0;
 
       return {
-        totalBookings: bookingsResult,
+        totalBookings: bookingsCount_val,
         totalRevenue,
-        totalCustomers: customersCount,
+        totalCustomers: customersCount || 0,
         averageBookingValue,
         completionRate: Math.round(completionRate),
       };

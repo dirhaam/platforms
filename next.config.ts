@@ -5,6 +5,7 @@ process.env.TAILWIND_DISABLE_LIGHTNING =
   process.env.TAILWIND_DISABLE_LIGHTNING ?? "1";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   experimental: {
     useLightningcss: false,
   },

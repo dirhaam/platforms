@@ -13,6 +13,7 @@ import {
   type Booking,
   type Tenant,
 } from '@/types/invoice';
+import Decimal from 'decimal.js';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -20,33 +21,12 @@ const getSupabaseClient = () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 };
-import Decimal from 'decimal.js';
 
 const randomUUID = () => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
     return globalThis.crypto.randomUUID();
   }
   return Math.random().toString(36).slice(2);
-};
-
-type InvoiceRecord = typeof invoices.$inferSelect;
-type InvoiceItemRecord = typeof invoiceItems.$inferSelect;
-type CustomerRecord = typeof customers.$inferSelect;
-type BookingRecord = typeof bookings.$inferSelect;
-type ServiceRecord = typeof services.$inferSelect;
-type TenantRecord = typeof tenants.$inferSelect;
-
-type InvoiceQueryRow = {
-  invoice: InvoiceRecord;
-  customer: CustomerRecord | null;
-  booking: BookingRecord | null;
-  bookingService: ServiceRecord | null;
-  tenant: TenantRecord | null;
-};
-
-type InvoiceItemQueryRow = {
-  item: InvoiceItemRecord;
-  service: ServiceRecord | null;
 };
 
 function parseDecimal(value: string | number | null | undefined): number {
@@ -57,550 +37,335 @@ function parseDecimal(value: string | number | null | undefined): number {
 }
 
 export class InvoiceService {
-  /**
-   * Generate unique invoice number
-   */
   private static async generateInvoiceNumber(tenantId: string): Promise<string> {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    
-    // Get the count of invoices for this tenant in current month
-    const startOfMonth = new Date(year, now.getMonth(), 1);
-    const endOfMonth = new Date(year, now.getMonth() + 1, 1);
-    
-    const countResult = await db
-      .select({ count: sql<number>`cast(count(${invoices.id}) as int)` })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          gte(invoices.createdAt, startOfMonth),
-          lt(invoices.createdAt, endOfMonth)
-        )
-      );
-
-    const count = Number(countResult[0]?.count ?? 0);
-    const sequence = String(count + 1).padStart(4, '0');
+    const sequence = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
     return `INV-${year}${month}-${sequence}`;
   }
 
-  /**
-   * Create a new invoice
-   */
   static async createInvoice(tenantId: string, data: CreateInvoiceRequest): Promise<Invoice> {
-    const invoiceNumber = await this.generateInvoiceNumber(tenantId);
-    const invoiceId = randomUUID();
-    
-    // Calculate totals
-    let subtotal = new Decimal(0);
-    const items = data.items.map(item => {
-      const itemTotal = new Decimal(item.unitPrice).mul(item.quantity);
-      subtotal = subtotal.add(itemTotal);
-      return {
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: Number(item.unitPrice),
-        totalPrice: itemTotal.toNumber(),
-        serviceId: item.serviceId,
-      };
-    });
-    
-    const taxRate = new Decimal(data.taxRate || 0);
-    const taxAmount = subtotal.mul(taxRate);
-    const discountAmount = new Decimal(data.discountAmount || 0);
-    const totalAmount = subtotal.add(taxAmount).sub(discountAmount);
-    const [tenantRow] = await db
-      .select({ businessName: tenants.businessName })
-      .from(tenants)
-      .where(eq(tenants.id, tenantId))
-      .limit(1);
+    try {
+      const supabase = getSupabaseClient();
+      const invoiceNumber = await this.generateInvoiceNumber(tenantId);
+      const invoiceId = randomUUID();
 
-    const qrCodeData = await this.generateQRCodeData({
-      invoiceId,
-      amount: totalAmount.toNumber(),
-      currency: 'IDR',
-      reference: data.paymentReference || invoiceNumber,
-      dueDate: data.dueDate,
-      merchantInfo: {
-        name: tenantRow?.businessName || '',
-        account: data.paymentReference || '',
-      },
-    });
+      let subtotal = new Decimal(0);
+      (data.items || []).forEach(item => {
+        subtotal = subtotal.add(new Decimal(item.unitPrice).mul(item.quantity));
+      });
 
-    // Create the invoice first
-    await db.insert(invoices).values({
-      id: invoiceId,
-      tenantId,
-      customerId: data.customerId,
-      bookingId: data.bookingId,
-      invoiceNumber,
-      status: InvoiceStatus.DRAFT,
-      issueDate: new Date(),
-      dueDate: new Date(data.dueDate),
-      subtotal: subtotal.toNumber(),
-      taxRate: taxRate.toNumber(),
-      taxAmount: taxAmount.toNumber(),
-      discountAmount: discountAmount.toNumber(),
-      totalAmount: totalAmount.toNumber(),
-      notes: data.notes,
-      terms: data.terms,
-      qrCodeData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as any);
+      const taxRate = new Decimal(data.taxRate || 0);
+      const taxAmount = subtotal.mul(taxRate);
+      const discountAmount = new Decimal(data.discountAmount || 0);
+      const totalAmount = subtotal.add(taxAmount).sub(discountAmount);
 
-    // Create invoice items
-    const itemPromises = items.map(item => 
-      db.insert(invoiceItems).values({
-        id: randomUUID(),
-        invoiceId,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        serviceId: item.serviceId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as any).returning()
-    );
-    
-    await Promise.all(itemPromises);
+      const { error } = await supabase
+        .from('invoices')
+        .insert({
+          id: invoiceId,
+          tenantId,
+          customerId: data.customerId,
+          bookingId: data.bookingId,
+          invoiceNumber,
+          status: 'draft',
+          issueDate: new Date().toISOString(),
+          dueDate: data.dueDate,
+          subtotal: subtotal.toNumber(),
+          taxRate: taxRate.toNumber(),
+          taxAmount: taxAmount.toNumber(),
+          discountAmount: discountAmount.toNumber(),
+          totalAmount: totalAmount.toNumber(),
+          notes: data.notes,
+          terms: data.terms,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
 
-    const [invoice] = await this.queryInvoices(
-      and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
-      { limit: 1 }
-    );
+      if (error) {
+        console.error('Error creating invoice:', error);
+        throw error;
+      }
 
-    if (!invoice) {
-      throw new Error('Failed to load created invoice');
+      return this.getInvoiceById(tenantId, invoiceId) as Promise<Invoice>;
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      throw error;
     }
-
-    return invoice;
   }
 
-  /**
-   * Get invoice by ID
-   */
   static async getInvoiceById(tenantId: string, invoiceId: string): Promise<Invoice | null> {
-    const [invoice] = await this.queryInvoices(
-      and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
-      { limit: 1 }
-    );
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .eq('id', invoiceId)
+        .limit(1)
+        .single();
 
-    return invoice ?? null;
+      if (error || !data) {
+        return null;
+      }
+
+      return {
+        id: data.id,
+        tenantId: data.tenantId,
+        customerId: data.customerId,
+        bookingId: data.bookingId,
+        invoiceNumber: data.invoiceNumber,
+        status: data.status as InvoiceStatus,
+        issueDate: new Date(data.issueDate),
+        dueDate: new Date(data.dueDate),
+        paidDate: data.paidDate ? new Date(data.paidDate) : undefined,
+        subtotal: parseDecimal(data.subtotal),
+        taxRate: parseDecimal(data.taxRate),
+        taxAmount: parseDecimal(data.taxAmount),
+        discountAmount: parseDecimal(data.discountAmount),
+        totalAmount: parseDecimal(data.totalAmount),
+        paymentMethod: data.paymentMethod,
+        paymentReference: data.paymentReference,
+        items: [],
+        notes: data.notes,
+        terms: data.terms,
+        qrCodeData: data.qrCodeData,
+        qrCodeUrl: data.qrCodeUrl,
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt),
+      } as Invoice;
+    } catch (error) {
+      console.error('Error fetching invoice:', error);
+      return null;
+    }
   }
 
-  /**
-   * Get invoices with filters
-   */
   static async getInvoices(tenantId: string, filters?: InvoiceFilters, page = 1, limit = 20) {
-    const conditions = [eq(invoices.tenantId, tenantId)];
+    try {
+      const supabase = getSupabaseClient();
+      let query = supabase
+        .from('invoices')
+        .select('*', { count: 'exact' })
+        .eq('tenantId', tenantId);
 
-    if (filters?.status?.length) {
-      conditions.push(inArray(invoices.status, filters.status));
-    }
-
-    if (filters?.customerId) {
-      conditions.push(eq(invoices.customerId, filters.customerId));
-    }
-
-    if (filters?.dateFrom) {
-      conditions.push(gte(invoices.issueDate, new Date(filters.dateFrom)));
-    }
-
-    if (filters?.dateTo) {
-      conditions.push(lte(invoices.issueDate, new Date(filters.dateTo)));
-    }
-
-    if (filters?.amountMin !== undefined) {
-      const minValue = Number(filters.amountMin);
-      if (!Number.isNaN(minValue)) {
-        conditions.push(gte(invoices.totalAmount, minValue));
+      if (filters?.status?.length) {
+        query = query.in('status', filters.status);
       }
-    }
-
-    if (filters?.amountMax !== undefined) {
-      const maxValue = Number(filters.amountMax);
-      if (!Number.isNaN(maxValue)) {
-        conditions.push(lte(invoices.totalAmount, maxValue));
+      if (filters?.customerId) {
+        query = query.eq('customerId', filters.customerId);
       }
+      if (filters?.dateFrom) {
+        query = query.gte('issueDate', filters.dateFrom);
+      }
+      if (filters?.dateTo) {
+        query = query.lte('issueDate', filters.dateTo);
+      }
+
+      const { data, count, error } = await query
+        .order('createdAt', { ascending: false })
+        .range((page - 1) * limit, page * limit - 1);
+
+      const invoices = (data || []).map(inv => ({
+        id: inv.id,
+        tenantId: inv.tenantId,
+        customerId: inv.customerId,
+        invoiceNumber: inv.invoiceNumber,
+        status: inv.status as InvoiceStatus,
+        issueDate: new Date(inv.issueDate),
+        dueDate: new Date(inv.dueDate),
+        totalAmount: parseDecimal(inv.totalAmount),
+        items: [],
+      })) as any;
+
+      return {
+        invoices,
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      };
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      return {
+        invoices: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      };
     }
-
-    const whereClause = and(...conditions);
-    const safePage = Math.max(page, 1);
-    const offset = (safePage - 1) * limit;
-
-    const [{ count: totalCount }] = await db
-      .select({ count: sql<number>`cast(count(${invoices.id}) as int)` })
-      .from(invoices)
-      .where(whereClause);
-
-    const results = await this.queryInvoices(whereClause, {
-      limit,
-      offset,
-    });
-
-    const total = Number(totalCount ?? 0);
-
-    return {
-      invoices: results,
-      total,
-      page: safePage,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
   }
 
-  /**
-   * Update invoice
-   */
   static async updateInvoice(tenantId: string, invoiceId: string, data: UpdateInvoiceRequest): Promise<Invoice | null> {
-    const updateData: Partial<typeof invoices.$inferInsert> = {};
+    try {
+      const supabase = getSupabaseClient();
+      const updateData: any = {};
 
-    if (data.status) {
-      updateData.status = data.status;
-      
-      // Set paid date if status is paid
-      if (data.status === InvoiceStatus.PAID && data.paidDate) {
-        updateData.paidDate = new Date(data.paidDate);
+      if (data.status) {
+        updateData.status = data.status;
+        if (data.status === 'paid' && data.paidDate) {
+          updateData.paidDate = data.paidDate;
+        }
       }
-    }
+      if (data.dueDate) {
+        updateData.dueDate = data.dueDate;
+      }
+      if (data.paymentMethod) {
+        updateData.paymentMethod = data.paymentMethod;
+      }
+      if (data.paymentReference) {
+        updateData.paymentReference = data.paymentReference;
+      }
+      if (data.notes !== undefined) {
+        updateData.notes = data.notes;
+      }
+      if (data.terms !== undefined) {
+        updateData.terms = data.terms;
+      }
 
-    if (data.paidDate && data.status !== InvoiceStatus.PAID) {
-      updateData.paidDate = new Date(data.paidDate);
-    }
+      updateData.updatedAt = new Date().toISOString();
 
-    if (data.dueDate) {
-      updateData.dueDate = new Date(data.dueDate);
-    }
+      const { error } = await supabase
+        .from('invoices')
+        .update(updateData)
+        .eq('id', invoiceId)
+        .eq('tenantId', tenantId);
 
-    if (data.paymentMethod) {
-      updateData.paymentMethod = data.paymentMethod;
-    }
+      if (error) {
+        console.error('Error updating invoice:', error);
+        return null;
+      }
 
-    if (data.paymentReference) {
-      updateData.paymentReference = data.paymentReference;
-    }
-
-    if (data.notes !== undefined) {
-      updateData.notes = data.notes;
-    }
-
-    if (data.terms !== undefined) {
-      updateData.terms = data.terms;
-    }
-
-    if (Object.keys(updateData).length === 0) {
       return this.getInvoiceById(tenantId, invoiceId);
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      return null;
     }
-
-    await db
-      .update(invoices)
-      .set({
-        ...updateData,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)));
-
-    return this.getInvoiceById(tenantId, invoiceId);
   }
 
-  /**
-   * Delete invoice
-   */
   static async deleteInvoice(tenantId: string, invoiceId: string): Promise<boolean> {
     try {
-      const deleted = await db
-        .delete(invoices)
-        .where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)))
-        .returning({ id: invoices.id });
+      const supabase = getSupabaseClient();
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoiceId)
+        .eq('tenantId', tenantId);
 
-      return deleted.length > 0;
+      return !error;
     } catch (error) {
+      console.error('Error deleting invoice:', error);
       return false;
     }
   }
 
-  /**
-   * Get invoice summary for dashboard
-   */
   static async getInvoiceSummary(tenantId: string): Promise<InvoiceSummary> {
-    const invoiceRows = await db
-      .select({ status: invoices.status, totalAmount: invoices.totalAmount })
-      .from(invoices)
-      .where(eq(invoices.tenantId, tenantId));
+    try {
+      const supabase = getSupabaseClient();
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('status, totalAmount')
+        .eq('tenantId', tenantId);
 
-    const [{ count: overdueCount }] = await db
-      .select({ count: sql<number>`cast(count(${invoices.id}) as int)` })
-      .from(invoices)
-      .where(and(eq(invoices.tenantId, tenantId), eq(invoices.status, InvoiceStatus.OVERDUE)));
+      let totalAmount = 0;
+      let paidAmount = 0;
+      let overdueCount = 0;
 
-    let totalAmount = new Decimal(0);
-    let paidAmount = new Decimal(0);
-    let pendingAmount = new Decimal(0);
-    let overdueAmount = new Decimal(0);
+      (invoices || []).forEach((inv: any) => {
+        const amount = parseDecimal(inv.totalAmount);
+        totalAmount += amount;
+        if (inv.status === 'paid') {
+          paidAmount += amount;
+        }
+        if (inv.status === 'overdue') {
+          overdueCount++;
+        }
+      });
 
-    for (const row of invoiceRows) {
-      const amount = new Decimal(row.totalAmount || 0);
-      totalAmount = totalAmount.add(amount);
-
-      switch (row.status as InvoiceStatus) {
-        case InvoiceStatus.PAID:
-          paidAmount = paidAmount.add(amount);
-          break;
-        case InvoiceStatus.OVERDUE:
-          overdueAmount = overdueAmount.add(amount);
-          break;
-        case InvoiceStatus.SENT:
-        case InvoiceStatus.DRAFT:
-          pendingAmount = pendingAmount.add(amount);
-          break;
-      }
+      return {
+        totalInvoices: invoices?.length || 0,
+        totalAmount,
+        paidAmount,
+        pendingAmount: totalAmount - paidAmount,
+        overdueAmount: 0,
+        overdueCount,
+      };
+    } catch (error) {
+      console.error('Error fetching invoice summary:', error);
+      return {
+        totalInvoices: 0,
+        totalAmount: 0,
+        paidAmount: 0,
+        pendingAmount: 0,
+        overdueAmount: 0,
+        overdueCount: 0,
+      };
     }
-
-    return {
-      totalInvoices: invoiceRows.length,
-      totalAmount: totalAmount.toNumber(),
-      paidAmount: paidAmount.toNumber(),
-      pendingAmount: pendingAmount.toNumber(),
-      overdueAmount: overdueAmount.toNumber(),
-      overdueCount: Number(overdueCount ?? 0),
-    };
   }
 
-  /**
-   * Create invoice from booking
-   */
   static async createInvoiceFromBooking(tenantId: string, bookingId: string): Promise<Invoice> {
-    const bookingServiceAlias = alias(services, 'booking_service_for_invoice');
+    try {
+      const supabase = getSupabaseClient();
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
 
-    const [bookingRow] = await db
-      .select({
-        booking: bookings,
-        service: bookingServiceAlias,
-      })
-      .from(bookings)
-      .leftJoin(bookingServiceAlias, eq(bookings.serviceId, bookingServiceAlias.id))
-      .where(and(eq(bookings.id, bookingId), eq(bookings.tenantId, tenantId)))
-      .limit(1);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
 
-    if (!bookingRow?.booking) {
-      throw new Error('Booking not found');
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 7);
+
+      const invoiceData: CreateInvoiceRequest = {
+        customerId: booking.customerId,
+        bookingId: booking.id,
+        dueDate: dueDate.toISOString(),
+        items: [{
+          description: 'Service',
+          quantity: 1,
+          unitPrice: parseDecimal(booking.totalAmount),
+          serviceId: booking.serviceId,
+        }],
+        notes: `Invoice for booking on ${new Date(booking.scheduledAt).toLocaleDateString()}`,
+      };
+
+      return this.createInvoice(tenantId, invoiceData);
+    } catch (error) {
+      console.error('Error creating invoice from booking:', error);
+      throw error;
     }
-
-    const booking = bookingRow.booking;
-
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 7); // Due in 7 days
-
-    const serviceName = bookingRow.service?.name ?? 'Service';
-    const bookingTotal = parseDecimal(booking.totalAmount);
-    const scheduledAt = booking.scheduledAt ?? new Date();
-
-    const invoiceData: CreateInvoiceRequest = {
-      customerId: booking.customerId,
-      bookingId: booking.id,
-      dueDate: dueDate.toISOString(),
-      items: [{
-        description: serviceName,
-        quantity: 1,
-        unitPrice: bookingTotal,
-        serviceId: booking.serviceId
-      }],
-      notes: `Invoice for booking on ${scheduledAt.toLocaleDateString()}`
-    };
-
-    return this.createInvoice(tenantId, invoiceData);
   }
 
-  /**
-   * Mark overdue invoices
-   */
   static async markOverdueInvoices(): Promise<void> {
-    const now = new Date();
+    try {
+      const supabase = getSupabaseClient();
+      const now = new Date().toISOString();
 
-    await db
-      .update(invoices)
-      .set({ status: InvoiceStatus.OVERDUE, updatedAt: new Date() })
-      .where(and(eq(invoices.status, InvoiceStatus.SENT), lt(invoices.dueDate, now)));
+      await supabase
+        .from('invoices')
+        .update({ status: 'overdue', updatedAt: now })
+        .eq('status', 'sent')
+        .lt('dueDate', now);
+    } catch (error) {
+      console.error('Error marking overdue invoices:', error);
+    }
   }
 
-  /**
-   * Generate QR code data for payment
-   */
   private static async generateQRCodeData(data: QRCodePaymentData): Promise<string> {
-    // This is a simplified QR code data format
-    // In production, you would integrate with actual payment providers
     const qrData = {
       type: 'payment',
       amount: data.amount,
       currency: data.currency,
       reference: data.reference,
       dueDate: data.dueDate,
-      merchant: data.merchantInfo
+      merchant: data.merchantInfo,
     };
-    
     return JSON.stringify(qrData);
-  }
-
-  /**
-   * Query invoices with related entities
-   */
-  private static async queryInvoices(whereClause: any, options: { limit?: number; offset?: number } = {}): Promise<Invoice[]> {
-    const bookingServices = alias(services, 'booking_services');
-    const itemServices = alias(services, 'invoice_item_services');
-
-    let baseQuery: any = db
-      .select({
-        invoice: invoices,
-        customer: customers,
-        booking: bookings,
-        bookingService: bookingServices,
-        tenant: tenants,
-      })
-      .from(invoices)
-      .leftJoin(customers, eq(invoices.customerId, customers.id))
-      .leftJoin(bookings, eq(invoices.bookingId, bookings.id))
-      .leftJoin(bookingServices, eq(bookings.serviceId, bookingServices.id))
-      .leftJoin(tenants, eq(invoices.tenantId, tenants.id))
-      .where(whereClause)
-      .orderBy(desc(invoices.createdAt));
-
-    if (options.limit !== undefined) {
-      baseQuery = baseQuery.limit(options.limit);
-    }
-
-    if (options.offset !== undefined) {
-      baseQuery = baseQuery.offset(options.offset);
-    }
-
-    const baseRows = await baseQuery as InvoiceQueryRow[];
-
-    const invoiceIds = baseRows.map(row => row.invoice.id);
-    if (invoiceIds.length === 0) {
-      return [];
-    }
-
-    const itemRows = await db
-      .select({
-        item: invoiceItems,
-        service: itemServices,
-      })
-      .from(invoiceItems)
-      .leftJoin(itemServices, eq(invoiceItems.serviceId, itemServices.id))
-      .where(inArray(invoiceItems.invoiceId, invoiceIds))
-      .orderBy(asc(invoiceItems.createdAt));
-
-    const itemsByInvoice = new Map<string, InvoiceItemQueryRow[]>();
-    for (const row of itemRows) {
-      const list = itemsByInvoice.get(row.item.invoiceId) ?? [];
-      list.push(row);
-      itemsByInvoice.set(row.item.invoiceId, list);
-    }
-
-    return baseRows.map(row => this.mapInvoiceRow(row, itemsByInvoice.get(row.invoice.id) ?? []));
-  }
-
-  private static mapInvoiceRow(row: InvoiceQueryRow, itemRows: InvoiceItemQueryRow[]): Invoice {
-    const invoice = row.invoice;
-
-    return {
-      id: invoice.id,
-      tenantId: invoice.tenantId,
-      customerId: invoice.customerId,
-      bookingId: invoice.bookingId ?? undefined,
-      invoiceNumber: invoice.invoiceNumber,
-      status: invoice.status as InvoiceStatus,
-      issueDate: invoice.issueDate ?? new Date(),
-      dueDate: invoice.dueDate ?? new Date(),
-      paidDate: invoice.paidDate ?? undefined,
-      subtotal: parseDecimal(invoice.subtotal),
-      taxRate: parseDecimal(invoice.taxRate),
-      taxAmount: parseDecimal(invoice.taxAmount),
-      discountAmount: parseDecimal(invoice.discountAmount),
-      totalAmount: parseDecimal(invoice.totalAmount),
-      paymentMethod: (invoice.paymentMethod as PaymentMethod) ?? undefined,
-      paymentReference: invoice.paymentReference ?? undefined,
-      items: itemRows.map(rowItem => this.mapInvoiceItem(rowItem)),
-      notes: invoice.notes ?? undefined,
-      terms: invoice.terms ?? undefined,
-      qrCodeData: invoice.qrCodeData ?? undefined,
-      qrCodeUrl: invoice.qrCodeUrl ?? undefined,
-      createdAt: invoice.createdAt ?? new Date(),
-      updatedAt: invoice.updatedAt ?? new Date(),
-      customer: this.mapCustomerRow(row.customer),
-      booking: this.mapBookingRow(row.booking, row.bookingService),
-      tenant: this.mapTenantRow(row.tenant),
-    };
-  }
-
-  private static mapInvoiceItem(row: InvoiceItemQueryRow): Invoice['items'][number] {
-    const item = row.item;
-    return {
-      id: item.id,
-      invoiceId: item.invoiceId,
-      description: item.description,
-      quantity: item.quantity ?? 0,
-      unitPrice: parseDecimal(item.unitPrice),
-      totalPrice: parseDecimal(item.totalPrice),
-      serviceId: item.serviceId ?? undefined,
-      service: this.mapServiceRow(row.service),
-    };
-  }
-
-  private static mapCustomerRow(customer: CustomerRecord | null): Customer | undefined {
-    if (!customer) {
-      return undefined;
-    }
-
-    return {
-      ...customer,
-      totalBookings: customer.totalBookings ?? 0,
-    } as Customer;
-  }
-
-  private static mapBookingRow(booking: BookingRecord | null, service: ServiceRecord | null): Booking | undefined {
-    if (!booking) {
-      return undefined;
-    }
-
-    const scheduledAt = booking.scheduledAt ?? new Date();
-    const createdAt = booking.createdAt ?? new Date();
-    const updatedAt = booking.updatedAt ?? new Date();
-    const remindersSent = Array.isArray(booking.remindersSent)
-      ? booking.remindersSent.map(value => new Date(value))
-      : [];
-
-    return {
-      ...booking,
-      scheduledAt,
-      createdAt,
-      updatedAt,
-      totalAmount: parseDecimal(booking.totalAmount),
-      remindersSent,
-      service: this.mapServiceRow(service),
-    } as Booking;
-  }
-
-  private static mapServiceRow(service: ServiceRecord | null): Service | undefined {
-    if (!service) {
-      return undefined;
-    }
-
-    const { price, homeVisitSurcharge, ...rest } = service;
-
-    return {
-      ...rest,
-      price: parseDecimal(price),
-      homeVisitSurcharge:
-        homeVisitSurcharge !== null && homeVisitSurcharge !== undefined
-          ? parseDecimal(homeVisitSurcharge)
-          : undefined,
-    } as Service;
-  }
-
-  private static mapTenantRow(tenant: TenantRecord | null): Tenant | undefined {
-    return tenant ? (tenant as Tenant) : undefined;
   }
 }

@@ -14,7 +14,21 @@ const getSupabaseClient = () => {
   );
 };
 
-type ServiceAreaRow = typeof serviceAreas.$inferSelect;
+interface ServiceAreaRow {
+  id: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  boundaries: ServiceAreaBoundary;
+  baseTravelSurcharge: number;
+  perKmSurcharge?: number;
+  maxTravelDistance: number;
+  estimatedTravelTime: number;
+  availableServices: string[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export class ServiceAreaService {
   // Create a new service area
@@ -88,15 +102,18 @@ export class ServiceAreaService {
     data: UpdateServiceAreaRequest
   ): Promise<{ serviceArea?: ServiceArea; error?: string }> {
     try {
-      // Check if service area exists and belongs to tenant
-      const existingServiceArea = await db.select().from(serviceAreas).where(
-        and(
-          eq(serviceAreas.id, serviceAreaId),
-          eq(serviceAreas.tenantId, tenantId)
-        )
-      ).limit(1);
+      const supabase = getSupabaseClient();
 
-      if (existingServiceArea.length === 0) {
+      // Check if service area exists
+      const { data: existingData, error: checkError } = await supabase
+        .from('serviceAreas')
+        .select('id')
+        .eq('id', serviceAreaId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
+
+      if (checkError || !existingData) {
         return { error: 'Service area not found' };
       }
 
@@ -110,7 +127,6 @@ export class ServiceAreaService {
       if (data.maxTravelDistance !== undefined) updateData.maxTravelDistance = data.maxTravelDistance;
       if (data.estimatedTravelTime !== undefined) updateData.estimatedTravelTime = data.estimatedTravelTime;
 
-      // Validate boundaries if provided
       if (data.boundaries) {
         const boundariesValidation = this.validateBoundaries(data.boundaries);
         if (!boundariesValidation.valid) {
@@ -119,29 +135,34 @@ export class ServiceAreaService {
         updateData.boundaries = data.boundaries;
       }
 
-      // Validate available services if provided
       if (data.availableServices) {
         if (data.availableServices.length > 0) {
-          const dbServices = await db.select().from(services).where(
-            and(
-              eq(services.tenantId, tenantId),
-              inArray(services.id, data.availableServices),
-              eq(services.isActive, true)
-            )
-          );
+          const { data: dbServices } = await supabase
+            .from('services')
+            .select('id')
+            .eq('tenantId', tenantId)
+            .in('id', data.availableServices)
+            .eq('isActive', true);
 
-          if (dbServices.length !== data.availableServices.length) {
+          if (!dbServices || dbServices.length !== data.availableServices.length) {
             return { error: 'Some specified services do not exist or are inactive' };
           }
         }
         updateData.availableServices = data.availableServices;
       }
 
-      const [serviceArea] = await db.update(serviceAreas).set(updateData as any)
-        .where(eq(serviceAreas.id, serviceAreaId))
-        .returning();
+      const { data: updatedServiceArea, error: updateError } = await supabase
+        .from('serviceAreas')
+        .update(updateData)
+        .eq('id', serviceAreaId)
+        .select()
+        .single();
 
-      return { serviceArea: this.mapServiceAreaRow(serviceArea) };
+      if (updateError || !updatedServiceArea) {
+        return { error: 'Failed to update service area' };
+      }
+
+      return { serviceArea: this.mapServiceAreaRow(updatedServiceArea as ServiceAreaRow) };
     } catch (error) {
       console.error('Error updating service area:', error);
       return { error: 'Failed to update service area' };
@@ -157,29 +178,30 @@ export class ServiceAreaService {
     } = {}
   ): Promise<ServiceArea[]> {
     try {
-      let serviceAreaRows: ServiceAreaRow[];
+      const supabase = getSupabaseClient();
 
-      if (options.includeInactive) {
-        serviceAreaRows = await db
-          .select()
-          .from(serviceAreas)
-          .where(eq(serviceAreas.tenantId, tenantId))
-          .orderBy(serviceAreas.name);
-      } else {
-        serviceAreaRows = await db
-          .select()
-          .from(serviceAreas)
-          .where(
-            and(eq(serviceAreas.tenantId, tenantId), eq(serviceAreas.isActive, true))
-          )
-          .orderBy(serviceAreas.name);
+      let query = supabase
+        .from('serviceAreas')
+        .select('*')
+        .eq('tenantId', tenantId);
+
+      if (!options.includeInactive) {
+        query = query.eq('isActive', true);
       }
+
+      const { data: serviceAreaRows, error } = await query.order('name', { ascending: true });
+
+      if (error || !serviceAreaRows) {
+        return [];
+      }
+
+      let result = serviceAreaRows.map(row => this.mapServiceAreaRow(row as ServiceAreaRow));
 
       if (options.serviceId) {
-        serviceAreaRows = serviceAreaRows.filter(row => row.availableServices?.includes(options.serviceId!) ?? false);
+        result = result.filter(area => area.availableServices?.includes(options.serviceId!) ?? false);
       }
 
-      return serviceAreaRows.map(row => this.mapServiceAreaRow(row));
+      return result;
     } catch (error) {
       console.error('Error fetching service areas:', error);
       return [];
@@ -189,14 +211,21 @@ export class ServiceAreaService {
   // Get a single service area
   static async getServiceArea(tenantId: string, serviceAreaId: string): Promise<ServiceArea | null> {
     try {
-      const [serviceArea] = await db.select().from(serviceAreas).where(
-        and(
-          eq(serviceAreas.id, serviceAreaId),
-          eq(serviceAreas.tenantId, tenantId)
-        )
-      ).limit(1);
+      const supabase = getSupabaseClient();
+      
+      const { data: serviceArea, error } = await supabase
+        .from('serviceAreas')
+        .select('*')
+        .eq('id', serviceAreaId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
 
-      return serviceArea ? this.mapServiceAreaRow(serviceArea) : null;
+      if (error || !serviceArea) {
+        return null;
+      }
+
+      return this.mapServiceAreaRow(serviceArea as ServiceAreaRow);
     } catch (error) {
       console.error('Error fetching service area:', error);
       return null;
@@ -209,18 +238,28 @@ export class ServiceAreaService {
     serviceAreaId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const [serviceArea] = await db.select().from(serviceAreas).where(
-        and(
-          eq(serviceAreas.id, serviceAreaId),
-          eq(serviceAreas.tenantId, tenantId)
-        )
-      ).limit(1);
+      const supabase = getSupabaseClient();
 
-      if (!serviceArea) {
+      const { data: serviceArea, error: selectError } = await supabase
+        .from('serviceAreas')
+        .select('id')
+        .eq('id', serviceAreaId)
+        .eq('tenantId', tenantId)
+        .limit(1)
+        .single();
+
+      if (selectError || !serviceArea) {
         return { success: false, error: 'Service area not found' };
       }
 
-      await db.delete(serviceAreas).where(eq(serviceAreas.id, serviceAreaId));
+      const { error: deleteError } = await supabase
+        .from('serviceAreas')
+        .delete()
+        .eq('id', serviceAreaId);
+
+      if (deleteError) {
+        return { success: false, error: 'Failed to delete service area' };
+      }
 
       return { success: true };
     } catch (error) {
