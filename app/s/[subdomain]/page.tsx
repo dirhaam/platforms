@@ -42,51 +42,58 @@ export default async function SubdomainPage({
   
   console.log('[SubdomainPage] Rendering for subdomain:', subdomain);
   
-  // Get tenant data
-  console.log('[SubdomainPage] Getting tenant landing data...');
-  const tenantData = await TenantService.getTenantLandingData(subdomain);
-  
-  console.log('[SubdomainPage] Tenant data received:', tenantData ? 'YES' : 'NO');
-  
-  if (!tenantData) {
-    console.error('[SubdomainPage] No tenant data found, calling notFound()');
-    notFound();
-  }
-
-  // Get services and business hours
-  const [services, businessHours] = await Promise.all([
-    TenantService.getTenantServices(tenantData.id),
-    TenantService.getTenantBusinessHours(tenantData.id),
-  ]);
-
-  // Select template based on tenant preferences or business category
-  const templateId = tenantData.template.id;
-
-  // Render appropriate template
-  switch (templateId) {
-    case 'modern':
-      return (
-        <ModernTemplate
-          tenant={tenantData}
-          services={services}
-          businessHours={businessHours || undefined}
-        />
-      );
+  try {
+    // Get tenant data
+    console.log('[SubdomainPage] Getting tenant landing data...');
+    const tenantData = await TenantService.getTenantLandingData(subdomain);
     
-    case 'classic':
-    case 'minimal':
-    case 'beauty':
-    case 'healthcare':
-    default:
-      // For now, use the default TenantLandingPage for other templates
-      // Additional template components can be created later
-      return (
-        <TenantLandingPage
-          tenant={tenantData}
-          services={services}
-          businessHours={businessHours || undefined}
-          template={templateId as 'modern' | 'classic' | 'minimal'}
-        />
-      );
+    console.log('[SubdomainPage] Tenant data received:', tenantData ? 'YES' : 'NO');
+    
+    if (!tenantData) {
+      console.error('[SubdomainPage] No tenant data found, calling notFound()');
+      notFound();
+    }
+
+    // Get services and business hours
+    const [services, businessHours] = await Promise.all([
+      TenantService.getTenantServices(tenantData.id),
+      TenantService.getTenantBusinessHours(tenantData.id),
+    ]);
+
+    // Select template based on tenant preferences or business category
+    const templateId = tenantData.template.id;
+
+    // Render appropriate template
+    switch (templateId) {
+      case 'modern':
+        return (
+          <ModernTemplate
+            tenant={tenantData}
+            services={services}
+            businessHours={businessHours || undefined}
+          />
+        );
+      
+      case 'classic':
+      case 'minimal':
+      case 'beauty':
+      case 'healthcare':
+      default:
+        // For now, use the default TenantLandingPage for other templates
+        // Additional template components can be created later
+        return (
+          <TenantLandingPage
+            tenant={tenantData}
+            services={services}
+            businessHours={businessHours || undefined}
+            template={templateId as 'modern' | 'classic' | 'minimal'}
+          />
+        );
+    }
+  } catch (error) {
+    console.error('[SubdomainPage] Error:', error);
+    console.error('[SubdomainPage] Error details:', error instanceof Error ? error.message : String(error));
+    console.error('[SubdomainPage] Stack:', error instanceof Error ? error.stack : 'N/A');
+    notFound();
   }
 }
