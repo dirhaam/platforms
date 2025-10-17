@@ -1,8 +1,9 @@
 # Tenant Dashboard - Integration Roadmap (SIMPLIFIED)
 
-**Status:** Discovery complete - All components exist! Now integrating.  
+**Status:** Task 1 COMPLETE ✅ - Ready for Task 2!  
 **Actual Effort Estimate:** 1-2 weeks (vs original 4-6 weeks)  
-**Last Updated:** 2025-10-17
+**Last Updated:** 2025-10-17 (Updated after Task 1 completion)  
+**Session:** Started implementation
 
 ---
 
@@ -31,28 +32,84 @@ All core business logic is **ALREADY IMPLEMENTED** as React components in `/comp
 ### CRITICAL - Must Complete
 
 #### 1. Fix Tenant/Staff Authentication (Priority: 🔴 CRITICAL)
-- **Status:** ❌ Not started
-- **Effort:** 4-5 hours
+- **Status:** ✅ COMPLETE
+- **Effort:** 4-5 hours (Actual: ~2 hours)
+- **Completed:** 2025-10-17
+- **Commits:** 
+  - `feat: implement tenant/staff authentication system`
+  - `fix: remove use-toast hook dependency`
 - **Tasks:**
-  - [ ] Create auth endpoint for staff login (`/api/auth/staff-login`)
-  - [ ] Add session management for staff
-  - [ ] Create protected middleware for `/tenant/admin/*`
-  - [ ] Update login page to support tenant subdomain login
-  - [ ] Test login flow for staff
-- **Files to Create/Modify:**
-  - `app/tenant/login/page.tsx` (new)
-  - `app/api/auth/staff-login/route.ts` (new)
-  - Modify middleware.ts for tenant admin protection
-- **Acceptance Criteria:**
-  - Staff can login with email/password
-  - Session persists across page refreshes
-  - Unauthorized users redirected to login
+  - [x] Create auth endpoint for staff login (`/api/auth/staff-login`)
+  - [x] Add session management for staff
+  - [x] Create protected middleware for `/tenant/admin/*`
+  - [x] Update login page to support tenant subdomain login
+  - [ ] Test login flow for staff (manual testing needed after deploy)
+- **Files Created/Modified:**
+  - ✅ `app/tenant/login/page.tsx` (new)
+  - ✅ `app/api/auth/staff-login/route.ts` (new)
+  - ✅ `middleware.ts` (updated for tenant admin protection)
+  - ✅ Updated all `/tenant/admin/*` pages with proper redirects
+- **What Was Done:**
+  - Created staff login with email/password authentication
+  - Implemented session management with 7-day cookie expiration
+  - Added account lockout (5 attempts → 30 min lockout)
+  - Middleware protects `/tenant/admin/*` routes
+  - If no session, redirects to `/tenant/login`
+  - Session stored in database for audit purposes
+  - Secure password verification with hashing
+- **Status:** Ready for testing on Vercel ✅
 
 ---
 
-#### 2. Integrate Booking Management (Priority: 🔴 CRITICAL)
+#### 2. Update API Endpoints for Tenant Filtering (Priority: 🔴 CRITICAL) 
 - **Status:** ❌ Not started
-- **Effort:** 2-3 hours
+- **Effort:** 3-4 hours
+- **Prerequisite for:** Tasks 4-10 (all features depend on this)
+- **What to Do:**
+  Add `.eq('tenant_id', tenantId)` filter to every API endpoint so they only return data for current tenant.
+  
+  **Pattern:**
+  ```typescript
+  // BEFORE: Shows ALL bookings across ALL tenants
+  const { data } = await supabase.from('bookings').select('*');
+  
+  // AFTER: Shows ONLY tenant's bookings
+  const { data } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('tenant_id', tenantId);  // <-- ADD THIS!
+  ```
+
+- **Files to Update:**
+  - [ ] `app/api/bookings/route.ts` - GET/POST bookings
+  - [ ] `app/api/bookings/[id]/route.ts` - GET/PUT/DELETE single booking
+  - [ ] `app/api/bookings/availability/route.ts` - check availability
+  - [ ] `app/api/customers/route.ts` - GET/POST customers
+  - [ ] `app/api/customers/[id]/route.ts` - GET/PUT/DELETE customer
+  - [ ] `app/api/services/route.ts` - GET/POST services
+  - [ ] `app/api/services/[id]/route.ts` - GET/PUT/DELETE service
+  - [ ] `app/api/invoices/route.ts` - GET/POST invoices
+  - [ ] `app/api/invoices/[id]/route.ts` - GET/PUT/DELETE invoice
+  - [ ] And other APIs that query from database
+
+- **How to Get tenantId:**
+  ```typescript
+  // From request body or query params
+  const tenantId = request.nextUrl.searchParams.get('tenantId');
+  // OR from auth context if available
+  // OR extract from session cookie if available
+  ```
+
+- **Testing:**
+  - [ ] Each API returns only that tenant's data
+  - [ ] Cannot access other tenant's data
+  - [ ] 401/403 if no tenantId provided
+
+---
+
+#### 3. Integrate Booking Management (Priority: 🔴 CRITICAL)
+- **Status:** ⏳ Blocked by Task 2
+- **Effort:** 2-3 hours (after API updates)
 - **Tasks:**
   - [ ] Update `/tenant/admin/bookings/page.tsx`
   - [ ] Import `BookingManagement` component from `/components/booking/`
@@ -309,21 +366,26 @@ app/tenant/admin/
 
 ## 📈 Progress Tracking
 
-| Task | Status | Hours | Start | End |
-|------|--------|-------|-------|-----|
-| 1. Auth | ❌ | 4-5 | - | - |
-| 2. Bookings | ❌ | 2-3 | - | - |
-| 3. API Updates | ❌ | 3-4 | - | - |
-| 4. Customers | ❌ | 2-3 | - | - |
-| 5. Services | ❌ | 2-3 | - | - |
-| 6. Finance | ❌ | 2-3 | - | - |
-| 7. Analytics | ❌ | 2 | - | - |
-| 8. Messages | ❌ | 1-2 | - | - |
-| 9. Settings | ❌ | 1-2 | - | - |
-| 10. Staff | ❌ | 1-2 | - | - |
-| **TOTAL** | | **23-31 hours** | | |
+| Task | Status | Hours | Priority | Start | End |
+|------|--------|-------|----------|-------|-----|
+| 1. Auth | ✅ DONE | 4-5 | 🔴 | 2025-10-17 | 2025-10-17 |
+| 2. API Updates | ⏳ NEXT | 3-4 | 🔴 | - | - |
+| 3. Bookings | ⏳ After 2 | 2-3 | 🔴 | - | - |
+| 4. Customers | ⏳ After 2 | 2-3 | 🔴 | - | - |
+| 5. Services | ⏳ After 2 | 2-3 | 🔴 | - | - |
+| 6. Finance | ⏳ After 5 | 2-3 | 🟠 | - | - |
+| 7. Analytics | ⏳ After 5 | 2 | 🟠 | - | - |
+| 8. Messages | ⏳ After 5 | 1-2 | 🟠 | - | - |
+| 9. Settings | ⏳ After 5 | 1-2 | 🟠 | - | - |
+| 10. Staff | ⏳ After 5 | 1-2 | 🟠 | - | - |
+| **COMPLETED** | ✅ | 4-5 hours | | | |
+| **REMAINING** | | **18-27 hours** | | | |
+| **TOTAL** | | **23-32 hours** | | | |
 
-**Timeline:** 3-5 days (working full-time) or 1-2 weeks (part-time)
+**Timeline:** 
+- ✅ Task 1 completed: 2 hours (faster than expected!)
+- ⏳ Task 2 next: 3-4 hours
+- Estimated total: 1-2 weeks (5 working days at 6 hrs/day)
 
 ---
 
@@ -365,4 +427,77 @@ When complete:
 
 ---
 
-**Next Action:** Start with Task 1 (Authentication) to unblock other tasks! 🚀
+---
+
+## 📝 Session Update - 2025-10-17
+
+### ✅ What Was Completed Today
+
+**Task 1: Tenant/Staff Authentication - COMPLETE**
+- Created `/api/auth/staff-login` endpoint
+  - Staff login with email/password
+  - Account lockout after 5 failed attempts (30 min)
+  - Session management with 7-day expiration
+  - Secure password hashing and verification
+  
+- Created `/tenant/login` page
+  - Clean UI for staff login
+  - Error handling and validation
+  - Redirects to admin dashboard on success
+  
+- Updated middleware.ts
+  - Protects `/tenant/admin/*` routes
+  - Redirects to login if no session
+  - Auto-adds subdomain to query params
+  
+- Updated all tenant admin pages to use correct redirects
+
+### 🎯 What's Next (For Tonight)
+
+**Task 2: Update API Endpoints for Tenant Filtering - PRIORITY**
+
+This is CRITICAL because all other features depend on it. The pattern is simple:
+
+**Current state:** APIs return ALL data across ALL tenants (security risk!)
+```typescript
+const { data } = await supabase.from('bookings').select('*'); // Returns everything!
+```
+
+**What to do:** Add tenant filter to every API
+```typescript
+const { data } = await supabase
+  .from('bookings')
+  .select('*')
+  .eq('tenant_id', tenantId); // Only this tenant's data
+```
+
+**Files to update:**
+- `/api/bookings/route.ts` - and all booking-related APIs
+- `/api/customers/route.ts` - and customer APIs
+- `/api/services/route.ts` - and service APIs
+- `/api/invoices/route.ts` - and invoice APIs
+- Any other API that queries database
+
+**Timeline:** 3-4 hours should complete this
+
+### 📋 After Task 2 Complete
+
+Once APIs filter by tenant_id, you can:
+- Task 3: Import `BookingManagement` component (1-2 hrs)
+- Task 4: Import `CustomerManagement` component (1-2 hrs)
+- Task 5: Import Service component (1-2 hrs)
+- Task 6-10: Finance, Analytics, Messages, Settings, Staff (all 1-2 hrs each)
+
+### 🚀 Getting Started Tonight
+
+1. Read Task 2 section carefully (lines ~110-150)
+2. Start with `app/api/bookings/route.ts`
+3. Add `.eq('tenant_id', tenantId)` filter
+4. Move to next file
+5. Test that APIs only return tenant data
+
+Good luck! 💪
+
+---
+
+**Next Action:** Start with Task 2 (API Tenant Filtering) to unblock all other feature integration! 🚀
