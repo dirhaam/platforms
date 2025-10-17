@@ -4,7 +4,15 @@ import { EdgeAuthMiddleware } from '@/lib/auth/edge-auth-middleware';
 
 function extractSubdomain(request: NextRequest): string | null {
   const url = request.url;
-  const host = request.headers.get('host') || '';
+  let host = request.headers.get('host') || '';
+  
+  // Check for x-forwarded-host header (used by Vercel for custom domains)
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  if (forwardedHost) {
+    console.log('[extractSubdomain] Found x-forwarded-host:', forwardedHost);
+    host = forwardedHost;
+  }
+  
   const hostname = host.split(':')[0];
   
   console.log('[extractSubdomain] URL:', url);
