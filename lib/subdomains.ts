@@ -6,18 +6,30 @@ export async function getSubdomainData(subdomain: string): Promise<EnhancedTenan
   const sanitizedSubdomain = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
   try {
+    console.log(`[getSubdomainData] Fetching for sanitized subdomain: ${sanitizedSubdomain}`);
+    
     const existing = await getTenant(sanitizedSubdomain);
+    
     if (!existing) {
+      console.error(`[getSubdomainData] No tenant found for subdomain: ${sanitizedSubdomain}`);
       return null;
     }
 
+    console.log(`[getSubdomainData] Tenant found, checking if enhanced:`, { 
+      hasBusinessName: 'businessName' in existing,
+      hasOwnerName: 'ownerName' in existing,
+      keys: Object.keys(existing).slice(0, 10)
+    });
+
     if (isEnhancedTenant(existing)) {
+      console.log(`[getSubdomainData] Tenant is enhanced format for: ${sanitizedSubdomain}`);
       return existing;
     }
 
+    console.log(`[getSubdomainData] Migrating from legacy format for: ${sanitizedSubdomain}`);
     return migrateFromLegacy(sanitizedSubdomain, existing);
   } catch (error) {
-    console.error('Error getting subdomain data:', error);
+    console.error('[getSubdomainData] Error getting subdomain data:', error);
     return null;
   }
 }

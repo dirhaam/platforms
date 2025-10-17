@@ -45,17 +45,24 @@ export class TenantService {
     return await PerformanceMonitor.monitorDatabaseQuery(
       'getTenantLandingData',
       async () => {
+        console.log(`[getTenantLandingData] Starting for subdomain: ${subdomain}`);
+        
         // Try to get from cache first
         const cached = await CacheService.getTenantBySubdomain(subdomain);
         if (cached) {
+          console.log(`[getTenantLandingData] Found in cache for subdomain: ${subdomain}`);
           return this.formatTenantLandingData(cached);
         }
 
+        console.log(`[getTenantLandingData] Not in cache, fetching from DB for subdomain: ${subdomain}`);
         const subdomainData = await getSubdomainData(subdomain);
         
         if (!subdomainData) {
+          console.error(`[getTenantLandingData] No data found for subdomain: ${subdomain}`);
           return null;
         }
+
+        console.log(`[getTenantLandingData] Data found:`, { subdomain, businessName: subdomainData.businessName });
 
         // Cache the result
         await CacheService.setTenantBySubdomain(subdomain, subdomainData);

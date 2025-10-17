@@ -62,6 +62,8 @@ export async function setTenant(subdomain: string, tenantData: any): Promise<boo
 
 export async function getTenant(subdomain: string): Promise<any | null> {
   try {
+    console.log(`[getTenant] Fetching from new tenants table for subdomain: ${subdomain}`);
+    
     // First try to get from tenants table (new schema)
     const { data: tenantData, error: tenantError } = await supabase
       .from('tenants')
@@ -70,7 +72,10 @@ export async function getTenant(subdomain: string): Promise<any | null> {
       .limit(1)
       .single();
     
+    console.log(`[getTenant] Query result - error: ${tenantError ? 'yes' : 'no'}, data: ${tenantData ? 'yes' : 'no'}`);
+    
     if (tenantData && !tenantError) {
+      console.log(`[getTenant] Converting database columns to camelCase`);
       // Convert snake_case database columns to camelCase for API consistency
       return {
         id: tenantData.id,
@@ -110,6 +115,8 @@ export async function getTenant(subdomain: string): Promise<any | null> {
       };
     }
     
+    console.log(`[getTenant] Data not found in tenants table, falling back to tenant_subdomains`);
+    
     // Fallback to tenant_subdomains table for legacy data
     const { data, error } = await supabase
       .from('tenant_subdomains')
@@ -125,9 +132,10 @@ export async function getTenant(subdomain: string): Promise<any | null> {
       return null;
     }
     
+    console.log(`[getTenant] Fallback query result - error: ${error ? 'yes' : 'no'}`);
     return data?.tenant_data || null;
   } catch (error) {
-    console.error('Error getting tenant from Supabase:', error);
+    console.error('[getTenant] Error getting tenant from Supabase:', error);
     return null;
   }
 }
