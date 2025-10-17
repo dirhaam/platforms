@@ -117,8 +117,12 @@ export const config = {
      * Match all paths except for:
      * 1. /api routes
      * 2. /_next (Next.js internals)
-     * 3. all root files inside /public (e.g. /favicon.ico)
+     * 3. Static files with extensions (e.g. /favicon.ico)
+     * 
+     * This needs to work for both root domain AND subdomain requests
      */
-    '/((?!api|_next|[\\w-]+\\.\\w+).*)'
+    '/((?!api|_next|.*\\.\\w+).*)',
+    // Explicitly ensure root path is matched on all domains
+    '/'
   ]
 };
