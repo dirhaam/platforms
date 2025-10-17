@@ -1,136 +1,94 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { rootDomain } from '@/lib/utils';
-import { EdgeAuthMiddleware } from '@/lib/auth/edge-auth-middleware';
+import { NextRequest, NextResponse } from 'next/server';
+import { AuthMiddleware } from '@/lib/auth/auth-middleware';
+
+// Get root domain from environment
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
 
 function extractSubdomain(request: NextRequest): string | null {
   const url = request.url;
   let host = request.headers.get('host') || '';
-  
+
   // Check for x-forwarded-host header (used by Vercel for custom domains)
   const forwardedHost = request.headers.get('x-forwarded-host');
   if (forwardedHost) {
     console.log('[extractSubdomain] Found x-forwarded-host:', forwardedHost);
     host = forwardedHost;
   }
-  
+
   const hostname = host.split(':')[0];
-  
+
   console.log('[extractSubdomain] URL:', url);
   console.log('[extractSubdomain] Host header:', host);
   console.log('[extractSubdomain] Hostname:', hostname);
-  console.log('[extractSubdomain] rootDomain:', rootDomain);
+  console.log('[extractSubdomain] rootDomain:', ROOT_DOMAIN);
 
-  // Local development environment
-  if (url.includes('localhost') || url.includes('127.0.0.1')) {
-    // Try to extract subdomain from the full URL
-    const fullUrlMatch = url.match(/http:\/\/([^.]+)\.localhost/);
-    if (fullUrlMatch && fullUrlMatch[1]) {
-      return fullUrlMatch[1];
-    }
+  const rootDomainFormatted = ROOT_DOMAIN.split(':')[0];
 
-    // Fallback to host header approach
-    if (hostname.includes('.localhost')) {
-      return hostname.split('.')[0];
-    }
-
-    return null;
-  }
-
-  // Production environment
-  const rootDomainFormatted = rootDomain.split(':')[0];
-
-  // Handle preview deployment URLs (tenant---branch-name.vercel.app)
-  if (hostname.includes('---') && hostname.endsWith('.vercel.app')) {
-    const parts = hostname.split('---');
-    return parts.length > 0 ? parts[0] : null;
-  }
-
-  // Regular subdomain detection
-  const isSubdomain =
-    hostname !== rootDomainFormatted &&
-    hostname !== `www.${rootDomainFormatted}` &&
-    hostname.endsWith(`.${rootDomainFormatted}`);
-
-  const result = isSubdomain ? hostname.replace(`.${rootDomainFormatted}`, '') : null;
-  console.log('[extractSubdomain] isSubdomain check:', { 
+  const isSubdomain = {
     isNotRoot: hostname !== rootDomainFormatted,
     isNotWWW: hostname !== `www.${rootDomainFormatted}`,
     endsWithRoot: hostname.endsWith(`.${rootDomainFormatted}`),
-    isSubdomain,
-    result
-  });
-  
-  return result;
+    isSubdomain:
+      hostname !== rootDomainFormatted &&
+      hostname !== `www.${rootDomainFormatted}` &&
+      hostname.endsWith(`.${rootDomainFormatted}`),
+    result: null as string | null,
+  };
+
+  if (isSubdomain.isSubdomain) {
+    isSubdomain.result = hostname.replace(`.${rootDomainFormatted}`, '');
+  }
+
+  console.log('[extractSubdomain] isSubdomain check:', isSubdomain);
+
+  return isSubdomain.result;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Extract subdomain
   const subdomain = extractSubdomain(request);
-  
-  console.log('[middleware] Host:', request.headers.get('host'));
-  console.log('[middleware] Pathname:', pathname);
-  console.log('[middleware] Extracted subdomain:', subdomain);
+  console.log(`[middleware] Pathname: ${pathname}`);
+  console.log(`[middleware] Extracted subdomain: ${subdomain}`);
 
-  if (subdomain) {
-    console.log('[middleware] Subdomain found, handling subdomain routing for:', subdomain);
+  // If there's a subdomain and path is /admin, route to tenant admin
+  if (subdomain && pathname.startsWith('/admin')) {
+    console.log(`[middleware] Routing to tenant admin for subdomain: ${subdomain}`);
     
-    // Block access to platform admin page from subdomains (unless superadmin)
-    if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
-      // Check if user is superadmin
-      const authResponse = await EdgeAuthMiddleware.authenticate(request, subdomain);
-      if (authResponse) {
-        // Check if this is a superadmin trying to access platform admin
-        const session = await EdgeAuthMiddleware.getSessionFromRequest(request);
-        if (session?.isSuperAdmin && pathname.startsWith('/admin')) {
-          // Allow superadmin to access platform admin from any domain
-          return NextResponse.next();
-        }
-        return authResponse;
+    // Route to tenant admin panel
+    const tenantAdminUrl = new URL(`/tenant/admin${pathname === '/admin' ? '' : pathname}`, request.url);
+    tenantAdminUrl.searchParams.set('subdomain', subdomain);
+    
+    // Preserve all query params
+    request.nextUrl.searchParams.forEach((value, key) => {
+      if (key !== 'subdomain') {
+        tenantAdminUrl.searchParams.set(key, value);
       }
-    }
+    });
 
-    // For the root path on a subdomain, rewrite to the subdomain page
-    if (pathname === '/') {
-      return NextResponse.rewrite(new URL(`/s/${subdomain}`, request.url));
-    }
+    return NextResponse.rewrite(tenantAdminUrl);
+  }
 
-    // For other subdomain paths, continue with authentication if needed
-    const authResponse = await EdgeAuthMiddleware.authenticate(request, subdomain);
+  // For root domain /admin - authenticate as super admin
+  if (!subdomain && pathname.startsWith('/admin')) {
+    const authResponse = await AuthMiddleware.authenticate(request, '');
     if (authResponse) {
       return authResponse;
     }
-  } else {
-    // On root domain - handle platform admin access
-    if (pathname.startsWith('/admin')) {
-      const authResponse = await EdgeAuthMiddleware.authenticatePlatformAdmin(request);
-      if (authResponse) {
-        return authResponse;
-      }
-    }
   }
 
-  // For testing, bypass authentication for all admin routes  
-  if (pathname.startsWith('/admin')) {
-    console.log('🔓 Admin route detected - bypassing EdgeAuthMiddleware for testing');
-    return NextResponse.next();
-  }
-
-  // On the root domain, allow normal access
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all paths except for:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. Static files with extensions (e.g. /favicon.ico)
-     * 
-     * This needs to work for both root domain AND subdomain requests
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
      */
-    '/((?!api|_next|.*\\.\\w+).*)',
-    // Explicitly ensure root path is matched on all domains
-    '/'
-  ]
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };
