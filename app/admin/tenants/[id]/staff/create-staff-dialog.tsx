@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Users, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+
 
 interface CreateStaffDialogProps {
   tenantId: string;
@@ -33,7 +33,6 @@ export default function CreateStaffDialog({
     role: 'staff',
   });
   const [error, setError] = useState('');
-  const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -102,10 +101,8 @@ export default function CreateStaffDialog({
         return;
       }
 
-      toast({
-        title: 'Success',
-        description: `Staff user ${formData.name} created successfully!`,
-      });
+      // Show success message and reload
+      alert(`Staff user ${formData.name} created successfully!`);
 
       // Reset form
       setFormData({
