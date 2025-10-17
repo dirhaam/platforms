@@ -1,7 +1,18 @@
 // lib/database-service.ts
 // Supabase-backed key-value helpers replacing the legacy D1/Redis layer
 
-import { supabase } from '@/lib/database';
+import { createClient } from '@supabase/supabase-js';
+
+const getSupabaseClient = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createClient(url, key);
+};
 
 interface TenantSubdomain {
   subdomain: string;
@@ -30,6 +41,7 @@ interface CacheEntry {
 
 export async function testSupabaseConnection(): Promise<boolean> {
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase.from('tenant_subdomains').select('subdomain').limit(1);
     if (error) {
       console.error('Supabase connection failed:', error);
@@ -63,8 +75,8 @@ export async function setTenant(subdomain: string, tenantData: any): Promise<boo
 export async function getTenant(subdomain: string): Promise<any | null> {
   try {
     console.log(`[getTenant] Fetching from new tenants table for subdomain: ${subdomain}`);
-    console.log(`[getTenant] Supabase URL exists: ${!!process.env.NEXT_PUBLIC_SUPABASE_URL}`);
-    console.log(`[getTenant] Supabase key exists: ${!!process.env.SUPABASE_SERVICE_ROLE_KEY}`);
+    
+    const supabase = getSupabaseClient();
     
     // First try to get from tenants table (new schema)
     const { data: tenantData, error: tenantError } = await supabase
