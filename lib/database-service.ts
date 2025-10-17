@@ -57,6 +57,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
 // Tenant helpers
 export async function setTenant(subdomain: string, tenantData: any): Promise<boolean> {
   try {
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('tenant_subdomains')
       .upsert({ subdomain, tenant_data: tenantData }, { onConflict: 'subdomain' });
@@ -139,7 +140,7 @@ export async function getTenant(subdomain: string): Promise<any | null> {
     console.log(`[getTenant] Data not found in tenants table, falling back to tenant_subdomains`);
     
     // Fallback to tenant_subdomains table for legacy data
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('tenant_subdomains')
       .select('tenant_data')
       .eq('subdomain', subdomain)
@@ -163,6 +164,7 @@ export async function getTenant(subdomain: string): Promise<any | null> {
 
 export async function deleteTenant(subdomain: string): Promise<boolean> {
   try {
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('tenant_subdomains')
       .delete()
@@ -205,6 +207,7 @@ export async function setSession(
       tenantId = crypto.randomUUID();
     }
     
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('sessions')
       .upsert({ 
@@ -240,6 +243,7 @@ export async function getSession(sessionId: string): Promise<any | null> {
       return null;
     }
     
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('sessions')
       .select('user_id, tenant_id, session_data, expires_at')
@@ -280,6 +284,7 @@ export async function deleteSession(sessionId: string): Promise<boolean> {
       return false;
     }
     
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('sessions')
       .delete()
@@ -301,6 +306,7 @@ export async function setCache(key: string, value: any, ttl: number = 3600): Pro
   try {
     const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
     
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('cache')
       .upsert({ key, value, expires_at: expiresAt }, { onConflict: 'key' });
@@ -318,6 +324,7 @@ export async function setCache(key: string, value: any, ttl: number = 3600): Pro
 
 export async function getCache(key: string): Promise<any | null> {
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('cache')
       .select('value, expires_at')
@@ -347,6 +354,7 @@ export async function getCache(key: string): Promise<any | null> {
 
 export async function deleteCache(key: string): Promise<boolean> {
   try {
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('cache')
       .delete()
@@ -366,6 +374,7 @@ export async function deleteCache(key: string): Promise<boolean> {
 // Cleanup helpers
 export async function cleanupExpiredData(): Promise<boolean> {
   try {
+    const supabase = getSupabaseClient();
     // Hapus session yang kadaluarsa
     const { error: sessionError } = await supabase
       .from('sessions')
@@ -400,6 +409,7 @@ export async function deleteCacheByPattern(pattern: string): Promise<number> {
     const sqlPattern = pattern.replace(/\*/g, '%');
     
     // First get keys matching the pattern
+    const supabase = getSupabaseClient();
     const { data: keys, error } = await supabase
       .from('cache')
       .select('key')
@@ -439,6 +449,7 @@ export async function listCacheKeys(pattern: string = '%'): Promise<string[]> {
     // Convert * to % for SQL LIKE
     const sqlPattern = pattern.replace(/\*/g, '%');
     
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('cache')
       .select('key')
@@ -461,6 +472,7 @@ export async function listTenantSubdomains(pattern: string = '%'): Promise<strin
     // Convert * to % for SQL LIKE
     const sqlPattern = pattern.replace(/\*/g, '%');
     
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('tenant_subdomains')
       .select('subdomain')
