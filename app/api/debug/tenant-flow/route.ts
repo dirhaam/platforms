@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       found: !!subdomainData,
       businessName: subdomainData?.businessName,
       ownerName: subdomainData?.ownerName,
-      hasTemplate: !!subdomainData?.template,
     });
 
     return NextResponse.json({
