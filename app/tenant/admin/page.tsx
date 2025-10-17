@@ -27,7 +27,7 @@ export default async function TenantAdminDashboard({
   const subdomain = params.subdomain;
 
   if (!subdomain) {
-    redirect('/login');
+    redirect('/tenant/login?subdomain=unknown');
   }
 
   const supabase = createClient(
@@ -43,7 +43,7 @@ export default async function TenantAdminDashboard({
     .single();
 
   if (tenantError || !tenant) {
-    redirect('/login');
+    redirect(`/tenant/login?subdomain=${subdomain}`);
   }
 
   // Get booking stats

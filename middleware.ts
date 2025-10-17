@@ -52,22 +52,50 @@ export async function middleware(request: NextRequest) {
   console.log(`[middleware] Pathname: ${pathname}`);
   console.log(`[middleware] Extracted subdomain: ${subdomain}`);
 
-  // If there's a subdomain and path is /admin, route to tenant admin
-  if (subdomain && pathname.startsWith('/admin')) {
-    console.log(`[middleware] Routing to tenant admin for subdomain: ${subdomain}`);
-    
-    // Route to tenant admin panel
-    const tenantAdminUrl = new URL(`/tenant/admin${pathname === '/admin' ? '' : pathname}`, request.url);
-    tenantAdminUrl.searchParams.set('subdomain', subdomain);
-    
-    // Preserve all query params
-    request.nextUrl.searchParams.forEach((value, key) => {
-      if (key !== 'subdomain') {
-        tenantAdminUrl.searchParams.set(key, value);
-      }
-    });
+  // TENANT ROUTES - Handle /tenant/* paths
+  if (pathname.startsWith('/tenant')) {
+    // Check if trying to access protected /tenant/admin routes
+    if (pathname.startsWith('/tenant/admin')) {
+      // Get session from cookie
+      const tenantSessionCookie = request.cookies.get('tenant_session');
+      const hasSession = !!tenantSessionCookie;
 
-    return NextResponse.rewrite(tenantAdminUrl);
+      if (!hasSession) {
+        // Redirect to login
+        const loginUrl = new URL(`/tenant/login`, request.url);
+        loginUrl.searchParams.set('subdomain', subdomain || 'unknown');
+        loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search);
+        console.log('[middleware] Redirecting to tenant login - no session');
+        return NextResponse.redirect(loginUrl);
+      }
+
+      // Add subdomain to query params if not already present
+      if (!request.nextUrl.searchParams.has('subdomain') && subdomain) {
+        const newUrl = new URL(request.url);
+        newUrl.searchParams.set('subdomain', subdomain);
+        return NextResponse.rewrite(newUrl);
+      }
+    }
+
+    // Allow /tenant/login without authentication
+    if (pathname.startsWith('/tenant/login')) {
+      // Add subdomain to query params if not already present
+      if (!request.nextUrl.searchParams.has('subdomain') && subdomain) {
+        const newUrl = new URL(request.url);
+        newUrl.searchParams.set('subdomain', subdomain);
+        return NextResponse.rewrite(newUrl);
+      }
+    }
+
+    return NextResponse.next();
+  }
+
+  // SUBDOMAIN ROUTING - If there's a subdomain and path is /admin, route to tenant login
+  if (subdomain && pathname.startsWith('/admin')) {
+    console.log(`[middleware] Subdomain admin access detected for: ${subdomain}, routing to tenant login`);
+    const loginUrl = new URL(`/tenant/login`, request.url);
+    loginUrl.searchParams.set('subdomain', subdomain);
+    return NextResponse.redirect(loginUrl);
   }
 
   // For root domain /admin - authenticate as super admin
