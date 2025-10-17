@@ -244,8 +244,17 @@ export async function POST(request: NextRequest) {
       .insert([newTenant])
       .select();
     
-    if (insertError || !result || result.length === 0) {
-      throw insertError || new Error('Failed to create tenant');
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      console.error('Insert error code:', insertError.code);
+      console.error('Insert error message:', insertError.message);
+      console.error('Insert error details:', insertError.details);
+      throw insertError;
+    }
+    
+    if (!result || result.length === 0) {
+      console.error('No result returned from insert');
+      throw new Error('Failed to create tenant - no result returned');
     }
 
     const createdTenant = result[0];
