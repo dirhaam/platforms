@@ -60,52 +60,56 @@ interface EnhancedTenant {
 
 // Helper function to convert database tenant to EnhancedTenant
 function convertDbToEnhancedTenant(dbTenant: any): EnhancedTenant {
+  const createdAtTime = dbTenant.created_at 
+    ? (typeof dbTenant.created_at === 'string' ? new Date(dbTenant.created_at).getTime() : dbTenant.created_at.getTime())
+    : Date.now();
+
   return {
     // Basic info
     subdomain: dbTenant.subdomain,
     emoji: dbTenant.emoji || '🏢',
-    createdAt: dbTenant.createdAt ? dbTenant.createdAt.getTime() : Date.now(),
+    createdAt: createdAtTime,
     
-    // New fields from database
+    // New fields from database (convert snake_case to camelCase)
     id: dbTenant.id,
-    businessName: dbTenant.businessName,
-    businessCategory: dbTenant.businessCategory,
-    ownerName: dbTenant.ownerName,
+    businessName: dbTenant.business_name,
+    businessCategory: dbTenant.business_category,
+    ownerName: dbTenant.owner_name,
     email: dbTenant.email,
     phone: dbTenant.phone,
     address: dbTenant.address,
-    businessDescription: dbTenant.businessDescription,
+    businessDescription: dbTenant.business_description,
     logo: dbTenant.logo,
     
     // Brand colors
-    brandColors: dbTenant.brandColors,
+    brandColors: dbTenant.brand_colors,
     
-    // Feature flags
-    whatsappEnabled: dbTenant.whatsappEnabled,
-    homeVisitEnabled: dbTenant.homeVisitEnabled,
-    analyticsEnabled: dbTenant.analyticsEnabled,
-    customTemplatesEnabled: dbTenant.customTemplatesEnabled,
-    multiStaffEnabled: dbTenant.multiStaffEnabled,
+    // Feature flags (convert snake_case to camelCase)
+    whatsappEnabled: dbTenant.whatsapp_enabled,
+    homeVisitEnabled: dbTenant.home_visit_enabled,
+    analyticsEnabled: dbTenant.analytics_enabled,
+    customTemplatesEnabled: dbTenant.custom_templates_enabled,
+    multiStaffEnabled: dbTenant.multi_staff_enabled,
     
-    // Subscription info
-    subscriptionPlan: dbTenant.subscriptionPlan,
-    subscriptionStatus: dbTenant.subscriptionStatus,
-    subscriptionExpiresAt: dbTenant.subscriptionExpiresAt,
+    // Subscription info (convert snake_case to camelCase)
+    subscriptionPlan: dbTenant.subscription_plan,
+    subscriptionStatus: dbTenant.subscription_status,
+    subscriptionExpiresAt: dbTenant.subscription_expires_at,
     
-    updatedAt: dbTenant.updatedAt,
+    updatedAt: dbTenant.updated_at ? new Date(dbTenant.updated_at) : new Date(),
     
     // Computed properties for backward compatibility
     features: {
-      whatsapp: dbTenant.whatsappEnabled,
-      homeVisit: dbTenant.homeVisitEnabled,
-      analytics: dbTenant.analyticsEnabled,
-      customTemplates: dbTenant.customTemplatesEnabled,
-      multiStaff: dbTenant.multiStaffEnabled,
+      whatsapp: dbTenant.whatsapp_enabled,
+      homeVisit: dbTenant.home_visit_enabled,
+      analytics: dbTenant.analytics_enabled,
+      customTemplates: dbTenant.custom_templates_enabled,
+      multiStaff: dbTenant.multi_staff_enabled,
     },
     subscription: {
-      plan: dbTenant.subscriptionPlan as 'basic' | 'premium' | 'enterprise',
-      status: dbTenant.subscriptionStatus as 'active' | 'suspended' | 'cancelled',
-      expiresAt: dbTenant.subscriptionExpiresAt,
+      plan: dbTenant.subscription_plan as 'basic' | 'premium' | 'enterprise',
+      status: dbTenant.subscription_status as 'active' | 'suspended' | 'cancelled',
+      expiresAt: dbTenant.subscription_expires_at,
     },
   };
 }
@@ -197,42 +201,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create tenant data
+    // Create tenant data - use snake_case for database columns
     const newTenant = {
       id: crypto.randomUUID(),
-      businessName: businessName.trim(),
+      business_name: businessName.trim(),
       subdomain: subdomain.trim().toLowerCase(),
-      businessCategory: businessCategory,
-      ownerName: ownerName.trim(),
+      business_category: businessCategory,
+      owner_name: ownerName.trim(),
       email: ownerEmail.trim().toLowerCase(),
       phone: phone.trim(),
       address: address?.trim() || null,
-      businessDescription: businessDescription?.trim() || null,
+      business_description: businessDescription?.trim() || null,
       emoji: emoji || '🏢',
-      website: website?.trim() || null,
       
-      // Feature flags
-      whatsappEnabled: Boolean(whatsappEnabled),
-      homeVisitEnabled: Boolean(homeVisitEnabled),
-      analyticsEnabled: Boolean(analyticsEnabled),
-      customTemplatesEnabled: Boolean(customTemplatesEnabled),
-      multiStaffEnabled: Boolean(multiStaffEnabled),
+      // Feature flags (snake_case)
+      whatsapp_enabled: Boolean(whatsappEnabled),
+      home_visit_enabled: Boolean(homeVisitEnabled),
+      analytics_enabled: Boolean(analyticsEnabled),
+      custom_templates_enabled: Boolean(customTemplatesEnabled),
+      multi_staff_enabled: Boolean(multiStaffEnabled),
       
-      // Subscription
-      subscriptionPlan: subscriptionPlan || 'basic',
-      subscriptionStatus: 'active',
-      subscriptionExpiresAt: null,
+      // Subscription (snake_case)
+      subscription_plan: subscriptionPlan || 'basic',
+      subscription_status: 'active',
+      subscription_expires_at: null,
       
-      // Metadata
-      passwordHash: '',
-      lastLoginAt: null,
-      loginAttempts: 0,
-      lockedUntil: null,
-      passwordResetToken: null,
-      passwordResetExpires: null,
+      // Metadata (snake_case)
+      password_hash: '',
+      last_login_at: null,
+      login_attempts: 0,
+      locked_until: null,
+      password_reset_token: null,
+      password_reset_expires: null,
       
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     // Insert tenant into database
