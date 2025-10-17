@@ -6,6 +6,11 @@ function extractSubdomain(request: NextRequest): string | null {
   const url = request.url;
   const host = request.headers.get('host') || '';
   const hostname = host.split(':')[0];
+  
+  console.log('[extractSubdomain] URL:', url);
+  console.log('[extractSubdomain] Host header:', host);
+  console.log('[extractSubdomain] Hostname:', hostname);
+  console.log('[extractSubdomain] rootDomain:', rootDomain);
 
   // Local development environment
   if (url.includes('localhost') || url.includes('127.0.0.1')) {
@@ -38,14 +43,29 @@ function extractSubdomain(request: NextRequest): string | null {
     hostname !== `www.${rootDomainFormatted}` &&
     hostname.endsWith(`.${rootDomainFormatted}`);
 
-  return isSubdomain ? hostname.replace(`.${rootDomainFormatted}`, '') : null;
+  const result = isSubdomain ? hostname.replace(`.${rootDomainFormatted}`, '') : null;
+  console.log('[extractSubdomain] isSubdomain check:', { 
+    isNotRoot: hostname !== rootDomainFormatted,
+    isNotWWW: hostname !== `www.${rootDomainFormatted}`,
+    endsWithRoot: hostname.endsWith(`.${rootDomainFormatted}`),
+    isSubdomain,
+    result
+  });
+  
+  return result;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const subdomain = extractSubdomain(request);
+  
+  console.log('[middleware] Host:', request.headers.get('host'));
+  console.log('[middleware] Pathname:', pathname);
+  console.log('[middleware] Extracted subdomain:', subdomain);
 
   if (subdomain) {
+    console.log('[middleware] Subdomain found, handling subdomain routing for:', subdomain);
+    
     // Block access to platform admin page from subdomains (unless superadmin)
     if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
       // Check if user is superadmin

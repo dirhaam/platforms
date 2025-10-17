@@ -40,10 +40,16 @@ export default async function SubdomainPage({
 }) {
   const { subdomain } = await params;
   
+  console.log('[SubdomainPage] Rendering for subdomain:', subdomain);
+  
   // Get tenant data
+  console.log('[SubdomainPage] Getting tenant landing data...');
   const tenantData = await TenantService.getTenantLandingData(subdomain);
   
+  console.log('[SubdomainPage] Tenant data received:', tenantData ? 'YES' : 'NO');
+  
   if (!tenantData) {
+    console.error('[SubdomainPage] No tenant data found, calling notFound()');
     notFound();
   }
 
