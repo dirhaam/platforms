@@ -151,7 +151,9 @@ export function TenantsList({ initialSession }: TenantsListProps) {
     if (isLocalhost) {
       return `http://${subdomain}.localhost:3000`;
     }
-    return `https://${subdomain}.${window.location.hostname}`;
+    // Remove www. prefix if present
+    const hostname = window.location.hostname.replace(/^www\./, '');
+    return `https://${subdomain}.${hostname}`;
   };
 
   if (isLoading) {
