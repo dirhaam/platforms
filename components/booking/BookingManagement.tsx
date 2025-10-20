@@ -631,6 +631,29 @@ export function BookingManagement({
                 </div>
               </div>
 
+              {/* Payment Details */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-3">Payment Details</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-600">Total Amount:</span>
+                    <span className="ml-2 font-medium">PKR {selectedBooking.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Payment Status:</span>
+                    <span className="ml-2 capitalize">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                        selectedBooking.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedBooking.paymentStatus}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Status Management */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-semibold mb-3">Status Management</h3>
@@ -791,6 +814,25 @@ export function BookingManagement({
                     onChange={(e) => setEditingBooking({ ...editingBooking, totalAmount: parseFloat(e.target.value) || 0 })}
                     disabled={updating}
                   />
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <Label htmlFor="paymentMethod">Payment Method (Optional)</Label>
+                  <Select
+                    value={(editingBooking as any).paymentMethod || ''}
+                    onValueChange={(method) => setEditingBooking({ ...editingBooking, paymentMethod: method as any })}
+                  >
+                    <SelectTrigger id="paymentMethod">
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="qris">QRIS</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Notes */}
