@@ -5,6 +5,7 @@ import { Calendar, Clock, Users, Settings, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookingCalendar } from './BookingCalendar';
 import { TimeSlotPicker } from './TimeSlotPicker';
 import { RecurringBookingManager } from './RecurringBookingManager';
@@ -34,6 +35,8 @@ export function BookingManagement({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | undefined>();
   const [selectedService, setSelectedService] = useState<Service | undefined>();
+  const [selectedBooking, setSelectedBooking] = useState<Booking | undefined>();
+  const [showBookingDetails, setShowBookingDetails] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
 
@@ -79,8 +82,8 @@ export function BookingManagement({
 
   // Handle booking click
   const handleBookingClick = (booking: Booking) => {
-    // Open booking details or edit modal
-    console.log('Booking clicked:', booking);
+    setSelectedBooking(booking);
+    setShowBookingDetails(true);
   };
 
   // Handle service selection
@@ -334,6 +337,107 @@ export function BookingManagement({
           />
         </TabsContent>
       </Tabs>
+
+      {/* Booking Details Dialog */}
+      <Dialog open={showBookingDetails} onOpenChange={setShowBookingDetails}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+            <DialogDescription>
+              View and manage booking information
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedBooking && (
+            <div className="space-y-6">
+              {/* Customer Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-3">Customer</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-600">Name:</span>
+                    <span className="ml-2 font-medium">{selectedBooking.customer?.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Phone:</span>
+                    <span className="ml-2">{selectedBooking.customer?.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Email:</span>
+                    <span className="ml-2">{selectedBooking.customer?.email || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Booking Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-3">Booking Details</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-600">Service:</span>
+                    <span className="ml-2 font-medium">{selectedBooking.service?.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Date & Time:</span>
+                    <span className="ml-2">{new Date(selectedBooking.scheduledAt).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Duration:</span>
+                    <span className="ml-2">{selectedBooking.duration} minutes</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Total Amount:</span>
+                    <span className="ml-2 font-medium">PKR {selectedBooking.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Status:</span>
+                    <span className="ml-2 capitalize">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                        selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedBooking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedBooking.status}
+                      </span>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Payment Status:</span>
+                    <span className="ml-2 capitalize">{selectedBooking.paymentStatus}</span>
+                  </div>
+                  {selectedBooking.notes && (
+                    <div>
+                      <span className="text-gray-600">Notes:</span>
+                      <span className="ml-2">{selectedBooking.notes}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end border-t pt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBookingDetails(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    onBookingUpdate?.(selectedBooking.id, {
+                      status: selectedBooking.status === 'pending' ? 'confirmed' : 'pending'
+                    });
+                    setShowBookingDetails(false);
+                  }}
+                >
+                  {selectedBooking.status === 'pending' ? 'Confirm' : 'Set Pending'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
