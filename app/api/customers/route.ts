@@ -70,10 +70,38 @@ export async function GET(request: NextRequest) {
 // POST /api/customers - Create a new customer
 export async function POST(request: NextRequest) {
   try {
-    const tenantId = request.headers.get('x-tenant-id');
+    const { searchParams } = new URL(request.url);
+    let tenantId = request.headers.get('x-tenant-id');
+    
+    // Fallback: also check query params
+    if (!tenantId) {
+      tenantId = searchParams.get('tenantId');
+    }
     
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
+    // If tenantId is subdomain (not UUID), lookup the actual tenant ID
+    const isUUID = tenantId.length === 36;
+    
+    if (!isUUID) {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('subdomain', tenantId)
+        .single();
+      
+      if (!tenant) {
+        return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+      }
+      tenantId = tenant.id;
     }
     
     const body = await request.json();
