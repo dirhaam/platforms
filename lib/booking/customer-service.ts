@@ -15,6 +15,24 @@ const randomUUID = () => {
   return Math.random().toString(36).slice(2);
 };
 
+// Map database snake_case fields to camelCase Customer interface
+const mapToCustomer = (dbData: any): Customer => {
+  return {
+    id: dbData.id,
+    tenantId: dbData.tenant_id,
+    name: dbData.name,
+    email: dbData.email,
+    phone: dbData.phone,
+    address: dbData.address,
+    notes: dbData.notes,
+    totalBookings: dbData.total_bookings,
+    lastBookingAt: dbData.last_booking_at ? new Date(dbData.last_booking_at) : null,
+    whatsappNumber: dbData.whatsapp_number,
+    createdAt: new Date(dbData.created_at),
+    updatedAt: new Date(dbData.updated_at)
+  };
+};
+
 export class CustomerService {
   static async createCustomer(tenantId: string, data: CreateCustomerRequest): Promise<{ customer?: Customer; error?: string }> {
     try {

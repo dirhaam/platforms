@@ -27,6 +27,28 @@ const randomUUID = () => {
   return Math.random().toString(36).slice(2);
 };
 
+// Map database snake_case fields to camelCase Booking interface
+const mapToBooking = (dbData: any): Booking => {
+  return {
+    id: dbData.id,
+    tenantId: dbData.tenant_id,
+    customerId: dbData.customer_id,
+    serviceId: dbData.service_id,
+    status: dbData.status,
+    scheduledAt: new Date(dbData.scheduled_at),
+    duration: dbData.duration,
+    isHomeVisit: dbData.is_home_visit,
+    homeVisitAddress: dbData.home_visit_address,
+    homeVisitCoordinates: dbData.home_visit_coordinates,
+    notes: dbData.notes,
+    totalAmount: dbData.total_amount,
+    paymentStatus: dbData.payment_status,
+    remindersSent: dbData.reminders_sent,
+    createdAt: new Date(dbData.created_at),
+    updatedAt: new Date(dbData.updated_at)
+  };
+};
+
 export class BookingService {
   // Create a new booking - THIS METHOD IS WORKING
   static async createBooking(
