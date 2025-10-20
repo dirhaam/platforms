@@ -125,8 +125,8 @@ Dev server runs at: `http://localhost:3000`
 
 #### View Invoices
 - [ ] Navigate to `/tenant/admin/finance`
-- [ ] See 2 test invoices
-- [ ] One paid (120,000 IDR), one pending (50,000 IDR)
+- [ ] Invoice list loads
+- [ ] Page is ready for creating invoices from bookings
 
 #### Filter Invoices
 - [ ] Filter by "paid" status → only shows paid invoices
@@ -149,7 +149,7 @@ Dev server runs at: `http://localhost:3000`
 
 - [ ] Navigate to `/tenant/admin/analytics`
 - [ ] See 4 KPI cards:
-  - Total Revenue (170,000 IDR = 50k + 120k)
+  - Total Revenue (from bookings: 50k + 150k + 120k = 320,000 IDR)
   - Total Bookings (3)
   - Total Customers (3)
   - Avg Booking Value

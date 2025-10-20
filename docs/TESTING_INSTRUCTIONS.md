@@ -70,7 +70,7 @@ SELECT
 - services_count: 3
 - customers_count: 3
 - bookings_count: 3
-- invoices_count: 2
+- Note: Invoices are created via API, not included in test setup
 
 ---
 

@@ -95,24 +95,8 @@ BEGIN
   )
   ON CONFLICT DO NOTHING;
 
-  -- Test Invoices
-  INSERT INTO public.invoices (
-    tenant_id, booking_id, customer_id, amount, status,
-    due_date, created_at
-  ) VALUES
-  (
-    test_tenant_id,
-    (SELECT id FROM public.bookings WHERE status = 'confirmed' AND tenant_id = test_tenant_id LIMIT 1),
-    (SELECT id FROM public.customers WHERE email = 'john@example.com' AND tenant_id = test_tenant_id LIMIT 1),
-    50000, 'pending', NOW() + INTERVAL '7 days', NOW()
-  ),
-  (
-    test_tenant_id,
-    (SELECT id FROM public.bookings WHERE status = 'completed' AND tenant_id = test_tenant_id LIMIT 1),
-    (SELECT id FROM public.customers WHERE email = 'bob@example.com' AND tenant_id = test_tenant_id LIMIT 1),
-    120000, 'paid', NOW() - INTERVAL '7 days', NOW()
-  )
-  ON CONFLICT DO NOTHING;
+  -- Note: Invoices are created via API with items, so skipping direct insert
+  -- They can be created through the Finance UI with bookings as reference
 
 END $$;
 
@@ -122,4 +106,3 @@ SELECT 'Test Staff Created' as status, COUNT(*) as count FROM public.staff WHERE
 SELECT 'Test Services Created' as status, COUNT(*) as count FROM public.services WHERE tenant_id = (SELECT id FROM public.tenants WHERE subdomain = 'test-demo');
 SELECT 'Test Customers Created' as status, COUNT(*) as count FROM public.customers WHERE tenant_id = (SELECT id FROM public.tenants WHERE subdomain = 'test-demo');
 SELECT 'Test Bookings Created' as status, COUNT(*) as count FROM public.bookings WHERE tenant_id = (SELECT id FROM public.tenants WHERE subdomain = 'test-demo');
-SELECT 'Test Invoices Created' as status, COUNT(*) as count FROM public.invoices WHERE tenant_id = (SELECT id FROM public.tenants WHERE subdomain = 'test-demo');
