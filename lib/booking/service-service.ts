@@ -25,19 +25,19 @@ export class ServiceService {
       
       const newService = {
         id: randomUUID(),
-        tenantId,
+        tenant_id: tenantId,
         name: data.name,
         description: data.description || '',
         duration: data.duration,
         price: data.price,
         category: data.category || 'general',
-        isActive: true,
-        homeVisitAvailable: data.homeVisitAvailable || false,
-        homeVisitSurcharge: data.homeVisitSurcharge || null,
+        is_active: true,
+        home_visit_available: data.homeVisitAvailable || false,
+        home_visit_surcharge: data.homeVisitSurcharge || null,
         images: data.images || [],
         requirements: data.requirements || [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
       const { data: service, error } = await supabase
@@ -71,7 +71,7 @@ export class ServiceService {
       }
       
       const updateData: any = {
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       };
       
       if (data.name !== undefined) updateData.name = data.name;
@@ -89,7 +89,7 @@ export class ServiceService {
         .from('services')
         .update(updateData)
         .eq('id', serviceId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .select()
         .single();
       
@@ -120,7 +120,7 @@ export class ServiceService {
       let query = supabase
         .from('services')
         .select('*')
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       if (options.category) {
         query = query.eq('category', options.category);
@@ -169,7 +169,7 @@ export class ServiceService {
         .from('services')
         .select('*')
         .eq('id', serviceId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .single();
       
       if (error || !service) {
@@ -199,7 +199,7 @@ export class ServiceService {
         .from('services')
         .delete()
         .eq('id', serviceId)
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       if (error) {
         return { success: false, error: 'Failed to delete service' };
@@ -219,8 +219,8 @@ export class ServiceService {
       const { data: services, error } = await supabase
         .from('services')
         .select('category')
-        .eq('tenantId', tenantId)
-        .eq('isActive', true);
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
       
       if (error || !services) {
         return [];
@@ -250,10 +250,10 @@ export class ServiceService {
       let query = supabase
         .from('bookings')
         .select('*')
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       if (serviceId) {
-        query = query.eq('serviceId', serviceId);
+        query = query.eq('service_id', serviceId);
       }
       
       const { data: bookings, error } = await query;
