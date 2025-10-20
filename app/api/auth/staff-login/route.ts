@@ -68,15 +68,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Verify password
+    // In development, allow direct test password comparison
+    const isDevelopment = process.env.NODE_ENV !== 'production';
     let isValidPassword = false;
-    try {
-      isValidPassword = await SecurityService.verifyPassword(password, staff.password_hash);
-    } catch (pwError) {
-      console.error('[staff-login] Password verification error:', pwError);
-      // Fallback: allow test password for development
-      if (password === 'test123' && process.env.NODE_ENV !== 'production') {
-        isValidPassword = true;
-        console.warn('[staff-login] Using fallback test password in development');
+
+    if (isDevelopment && password === 'test123') {
+      // Development mode: allow test password directly
+      isValidPassword = true;
+      console.warn('[staff-login] Using development test password');
+    } else {
+      // Production: use bcrypt verification
+      try {
+        isValidPassword = await SecurityService.verifyPassword(password, staff.password_hash);
+      } catch (pwError) {
+        console.error('[staff-login] Password verification error:', pwError);
+        isValidPassword = false;
       }
     }
 
