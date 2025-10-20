@@ -28,17 +28,24 @@ export async function GET(request: NextRequest) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       
-      const { data: tenant } = await supabase
+      console.log('[services GET] Looking up tenant with subdomain:', tenantId);
+      
+      const { data: tenant, error: tenantErr } = await supabase
         .from('tenants')
         .select('id')
         .eq('subdomain', tenantId)
         .single();
       
+      console.log('[services GET] Tenant lookup result:', { tenant, error: tenantErr });
+      
       if (!tenant) {
-        return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Tenant not found', debug: { subdomain: tenantId } }, { status: 404 });
       }
       tenantId = tenant.id;
+      console.log('[services GET] Resolved UUID:', tenantId);
     }
+    
+    console.log('[services GET] Fetching services for tenantId:', tenantId);
 
     // Parse query parameters
     const category = searchParams.get('category');

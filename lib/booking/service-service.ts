@@ -117,6 +117,8 @@ export class ServiceService {
     try {
       const supabase = getSupabaseClient();
       
+      console.log('[ServiceService.getServices] Called with tenantId:', tenantId, 'options:', options);
+      
       let query = supabase
         .from('services')
         .select('*')
@@ -145,6 +147,8 @@ export class ServiceService {
       }
       
       const { data: services, error } = await query;
+      
+      console.log('[ServiceService.getServices] Query result:', { servicesCount: services?.length, error });
       
       if (error || !services) {
         console.error('Error fetching services:', error);
