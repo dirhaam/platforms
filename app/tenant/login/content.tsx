@@ -11,11 +11,24 @@ import { Loader2, AlertCircle } from 'lucide-react';
 export default function TenantLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
-  const redirectUrl = searchParams.get('redirect');
+  let subdomain = searchParams?.get('subdomain');
+  const redirectUrl = searchParams?.get('redirect');
+
+  // For development: if no subdomain, try to extract from window location
+  if (typeof window !== 'undefined' && !subdomain) {
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && !hostname.includes('127.0.0.1')) {
+      // Extract subdomain from hostname (e.g., test-demo.example.com -> test-demo)
+      const parts = hostname.split('.');
+      if (parts.length > 2) {
+        subdomain = parts[0];
+      }
+    }
+  }
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [subdomainInput, setSubdomainInput] = useState(subdomain || '');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -34,8 +47,9 @@ export default function TenantLoginContent() {
     e.preventDefault();
     setError('');
 
-    if (!subdomain) {
-      setError('Subdomain is missing');
+    const finalSubdomain = subdomainInput || subdomain;
+    if (!finalSubdomain) {
+      setError('Subdomain is required');
       return;
     }
 
@@ -51,7 +65,7 @@ export default function TenantLoginContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': subdomain,
+          'x-tenant-id': finalSubdomain,
         },
         body: JSON.stringify({
           email: formData.email,
@@ -67,7 +81,7 @@ export default function TenantLoginContent() {
       }
 
       // Redirect to dashboard or specified redirect URL
-      const redirectPath = redirectUrl || `/tenant/admin?subdomain=${subdomain}`;
+      const redirectPath = redirectUrl || `/tenant/admin?subdomain=${finalSubdomain}`;
       router.push(redirectPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -94,6 +108,22 @@ export default function TenantLoginContent() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!subdomain && (
+              <div className="space-y-2">
+                <label htmlFor="subdomain" className="text-sm font-medium">
+                  Subdomain / Tenant
+                </label>
+                <Input
+                  id="subdomain"
+                  type="text"
+                  placeholder="e.g., test-demo"
+                  value={subdomainInput}
+                  onChange={(e) => setSubdomainInput(e.target.value)}
+                  disabled={loading}
+                  required={!subdomain}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email
@@ -143,7 +173,7 @@ export default function TenantLoginContent() {
           </form>
 
           <p className="text-xs text-gray-500 text-center">
-            Subdomain: <span className="font-mono">{subdomain}</span>
+            Tenant: <span className="font-mono">{subdomainInput || subdomain || 'not set'}</span>
           </p>
         </CardContent>
       </Card>
