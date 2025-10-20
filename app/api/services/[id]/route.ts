@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { ServiceService } from '@/lib/booking/service-service';
 import { updateServiceSchema } from '@/lib/validation/booking-validation';
+import type { UpdateServiceRequest } from '@/types/booking';
 import { createClient } from '@supabase/supabase-js';
 
 // Helper function to resolve tenant ID
@@ -95,7 +96,11 @@ export async function PUT(
     }
     
     const { id } = await context.params;
-    const result = await ServiceService.updateService(tenantId, id, validation.data);
+    const updatePayload: UpdateServiceRequest = {
+      ...validation.data,
+      homeVisitSurcharge: validation.data.homeVisitSurcharge ?? undefined
+    };
+    const result = await ServiceService.updateService(tenantId, id, updatePayload);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });

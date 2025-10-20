@@ -10,21 +10,19 @@ import { createClient } from '@supabase/supabase-js';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    let tenantId = request.headers.get('x-tenant-id');
-    
-    // Fallback: also check query params and body
-    if (!tenantId) {
-      tenantId = searchParams.get('tenantId');
-    }
-    
-    if (!tenantId) {
+    const headerTenantId = request.headers.get('x-tenant-id');
+    const queryTenantId = searchParams.get('tenantId');
+    const tenantIdentifier = headerTenantId ?? queryTenantId;
+
+    if (!tenantIdentifier) {
       console.warn('[bookings GET] No tenantId found in headers or params');
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
     // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    const isUUID = tenantId.length === 36;
+    let resolvedTenantId = tenantIdentifier;
+    const isUUID = resolvedTenantId.length === 36;
     
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
@@ -36,13 +34,13 @@ export async function GET(request: NextRequest) {
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', tenantId)
+        .eq('subdomain', resolvedTenantId)
         .single();
       
       if (!tenant) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
       }
-      tenantId = tenant.id;
+      resolvedTenantId = tenant.id;
     }
     
     // Parse query parameters
@@ -54,7 +52,7 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : undefined;
     
-    const bookings = await BookingService.getBookings(tenantId, {
+    const bookings = await BookingService.getBookings(resolvedTenantId, {
       status: status || undefined,
       customerId: customerId || undefined,
       serviceId: serviceId || undefined,
@@ -75,21 +73,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    let tenantId = request.headers.get('x-tenant-id');
-    
-    // Fallback: also check query params
-    if (!tenantId) {
-      tenantId = searchParams.get('tenantId');
-    }
-    
-    if (!tenantId) {
+    const headerTenantId = request.headers.get('x-tenant-id');
+    const queryTenantId = searchParams.get('tenantId');
+    const tenantIdentifier = headerTenantId ?? queryTenantId;
+
+    if (!tenantIdentifier) {
       console.warn('[bookings POST] No tenantId found in headers or params');
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
     // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    const isUUID = tenantId.length === 36;
+    let resolvedTenantId = tenantIdentifier;
+    const isUUID = resolvedTenantId.length === 36;
     
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
@@ -101,13 +97,13 @@ export async function POST(request: NextRequest) {
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', tenantId)
+        .eq('subdomain', resolvedTenantId)
         .single();
       
       if (!tenant) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
       }
-      tenantId = tenant.id;
+      resolvedTenantId = tenant.id;
     }
     
     const body = await request.json();
@@ -128,7 +124,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    const result = await BookingService.createBooking(tenantId, validation.data);
+    const result = await BookingService.createBooking(resolvedTenantId, validation.data);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });

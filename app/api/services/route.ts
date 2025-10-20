@@ -9,20 +9,18 @@ import { createClient } from '@supabase/supabase-js';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    let tenantId = request.headers.get('x-tenant-id');
+    const headerTenantId = request.headers.get('x-tenant-id');
+    const queryTenantId = searchParams.get('tenantId');
+    const tenantIdentifier = headerTenantId ?? queryTenantId;
 
-    // Fallback: also check query params
-    if (!tenantId) {
-      tenantId = searchParams.get('tenantId');
-    }
-
-    if (!tenantId) {
+    if (!tenantIdentifier) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
     // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    const isUUID = tenantId.length === 36;
+    let resolvedTenantId = tenantIdentifier;
+    const isUUID = resolvedTenantId.length === 36;
     
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
@@ -31,24 +29,24 @@ export async function GET(request: NextRequest) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       
-      console.log('[services GET] Looking up tenant with subdomain:', tenantId);
+      console.log('[services GET] Looking up tenant with subdomain:', resolvedTenantId);
       
       const { data: tenant, error: tenantErr } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', tenantId)
+        .eq('subdomain', resolvedTenantId)
         .single();
       
       console.log('[services GET] Tenant lookup result:', { tenant, error: tenantErr });
       
       if (!tenant) {
-        return NextResponse.json({ error: 'Tenant not found', debug: { subdomain: tenantId } }, { status: 404 });
+        return NextResponse.json({ error: 'Tenant not found', debug: { subdomain: resolvedTenantId } }, { status: 404 });
       }
-      tenantId = tenant.id;
-      console.log('[services GET] Resolved UUID:', tenantId);
+      resolvedTenantId = tenant.id;
+      console.log('[services GET] Resolved UUID:', resolvedTenantId);
     }
     
-    console.log('[services GET] Fetching services for tenantId:', tenantId);
+    console.log('[services GET] Fetching services for tenantId:', resolvedTenantId);
 
     // Parse query parameters
     const category = searchParams.get('category');
@@ -57,7 +55,7 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : undefined;
 
-    const services = await ServiceService.getServices(tenantId, {
+    const services = await ServiceService.getServices(resolvedTenantId, {
       category: category || undefined,
       isActive,
       homeVisitAvailable,
@@ -76,20 +74,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    let tenantId = request.headers.get('x-tenant-id');
+    const headerTenantId = request.headers.get('x-tenant-id');
+    const queryTenantId = searchParams.get('tenantId');
+    const tenantIdentifier = headerTenantId ?? queryTenantId;
 
-    // Fallback: also check query params
-    if (!tenantId) {
-      tenantId = searchParams.get('tenantId');
-    }
-
-    if (!tenantId) {
+    if (!tenantIdentifier) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
     // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    const isUUID = tenantId.length === 36;
+    let resolvedTenantId = tenantIdentifier;
+    const isUUID = resolvedTenantId.length === 36;
     
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
@@ -101,13 +97,13 @@ export async function POST(request: NextRequest) {
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', tenantId)
+        .eq('subdomain', resolvedTenantId)
         .single();
       
       if (!tenant) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
       }
-      tenantId = tenant.id;
+      resolvedTenantId = tenant.id;
     }
 
     const body = await request.json();
@@ -121,7 +117,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const result = await ServiceService.createService(tenantId, validation.data);
+    const createPayload = {
+      ...validation.data,
+      homeVisitSurcharge: validation.data.homeVisitSurcharge ?? undefined
+    };
+
+    const result = await ServiceService.createService(resolvedTenantId, createPayload);
 
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });

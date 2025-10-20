@@ -11,19 +11,17 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    let tenantId = request.headers.get('x-tenant-id');
-    
-    // Fallback: also check query params
-    if (!tenantId) {
-      tenantId = searchParams.get('tenantId');
-    }
-    
-    if (!tenantId) {
+    const headerTenantId = request.headers.get('x-tenant-id');
+    const queryTenantId = searchParams.get('tenantId');
+    const tenantIdentifier = headerTenantId ?? queryTenantId;
+
+    if (!tenantIdentifier) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
-    const isUUID = tenantId.length === 36;
+    let resolvedTenantId = tenantIdentifier;
+    const isUUID = resolvedTenantId.length === 36;
     
     if (!isUUID) {
       const { createClient } = await import('@supabase/supabase-js');
@@ -35,17 +33,17 @@ export async function GET(
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', tenantId)
+        .eq('subdomain', resolvedTenantId)
         .single();
       
       if (!tenant) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
       }
-      tenantId = tenant.id;
+      resolvedTenantId = tenant.id;
     }
     
     const { id } = await context.params;
-    const customer = await CustomerService.getCustomer(tenantId, id);
+    const customer = await CustomerService.getCustomer(resolvedTenantId, id);
     
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
@@ -65,20 +63,18 @@ export async function PUT(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    let tenantId = request.headers.get('x-tenant-id');
-    
-    // Fallback: also check query params
-    if (!tenantId) {
-      tenantId = searchParams.get('tenantId');
-    }
-    
-    if (!tenantId) {
+    const headerTenantId = request.headers.get('x-tenant-id');
+    const queryTenantId = searchParams.get('tenantId');
+    const tenantIdentifier = headerTenantId ?? queryTenantId;
+
+    if (!tenantIdentifier) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
     // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    const isUUID = tenantId.length === 36;
+    let resolvedTenantId = tenantIdentifier;
+    const isUUID = resolvedTenantId.length === 36;
     
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
@@ -91,13 +87,13 @@ export async function PUT(
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', tenantId)
+        .eq('subdomain', resolvedTenantId)
         .single();
       
       if (!tenant) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
       }
-      tenantId = tenant.id;
+      resolvedTenantId = tenant.id;
     }
     
     const body = await request.json();
@@ -112,7 +108,7 @@ export async function PUT(
     }
     
     const { id } = await context.params;
-    const result = await CustomerService.updateCustomer(tenantId, id, validation.data);
+    const result = await CustomerService.updateCustomer(resolvedTenantId, id, validation.data);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -132,19 +128,17 @@ export async function DELETE(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    let tenantId = request.headers.get('x-tenant-id');
-    
-    // Fallback: also check query params
-    if (!tenantId) {
-      tenantId = searchParams.get('tenantId');
-    }
-    
-    if (!tenantId) {
+    const headerTenantId = request.headers.get('x-tenant-id');
+    const queryTenantId = searchParams.get('tenantId');
+    const tenantIdentifier = headerTenantId ?? queryTenantId;
+
+    if (!tenantIdentifier) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
-    const isUUID = tenantId.length === 36;
+    let resolvedTenantId = tenantIdentifier;
+    const isUUID = resolvedTenantId.length === 36;
     
     if (!isUUID) {
       const { createClient } = await import('@supabase/supabase-js');
@@ -156,17 +150,17 @@ export async function DELETE(
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', tenantId)
+        .eq('subdomain', resolvedTenantId)
         .single();
       
       if (!tenant) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
       }
-      tenantId = tenant.id;
+      resolvedTenantId = tenant.id;
     }
     
     const { id } = await context.params;
-    const result = await CustomerService.deleteCustomer(tenantId, id);
+    const result = await CustomerService.deleteCustomer(resolvedTenantId, id);
     
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });

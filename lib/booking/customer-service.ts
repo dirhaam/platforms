@@ -26,7 +26,7 @@ const mapToCustomer = (dbData: any): Customer => {
     address: dbData.address,
     notes: dbData.notes,
     totalBookings: dbData.total_bookings,
-    lastBookingAt: dbData.last_booking_at ? new Date(dbData.last_booking_at) : null,
+    lastBookingAt: dbData.last_booking_at ? new Date(dbData.last_booking_at) : undefined,
     whatsappNumber: dbData.whatsapp_number,
     createdAt: new Date(dbData.created_at),
     updatedAt: new Date(dbData.updated_at)

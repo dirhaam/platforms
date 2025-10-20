@@ -15,7 +15,7 @@ import { BookingCalendar } from './BookingCalendar';
 import { TimeSlotPicker } from './TimeSlotPicker';
 import { RecurringBookingManager } from './RecurringBookingManager';
 import { BlackoutDatesManager } from './BlackoutDatesManager';
-import { Booking, Service, Customer, TimeSlot } from '@/types/booking';
+import { Booking, Service, Customer, TimeSlot, PaymentStatus } from '@/types/booking';
 
 interface BookingManagementProps {
   tenantId: string;
@@ -201,17 +201,17 @@ export function BookingManagement({
   };
 
   // Handle update payment status
-  const handleUpdatePayment = async (newPaymentStatus: string) => {
+  const handleUpdatePayment = async (newPaymentStatus: PaymentStatus) => {
     if (!selectedBooking) return;
     
     setUpdating(true);
     try {
       onBookingUpdate?.(selectedBooking.id, {
-        paymentStatus: newPaymentStatus as any
+        paymentStatus: newPaymentStatus
       });
       
       // Update local state
-      setSelectedBooking({ ...selectedBooking, paymentStatus: newPaymentStatus as any });
+      setSelectedBooking({ ...selectedBooking, paymentStatus: newPaymentStatus });
       setEditingBooking(null);
       
       toast.success(`Payment status updated to ${newPaymentStatus}`);
@@ -263,13 +263,13 @@ export function BookingManagement({
     setUpdating(true);
     try {
       onBookingUpdate?.(selectedBooking.id, {
-        paymentStatus: 'refunded',
+        paymentStatus: PaymentStatus.REFUNDED,
         notes: `${refundData.refundType} refund: PKR ${refundData.amount}. Reason: ${refundData.notes || 'N/A'}`
       });
 
       setSelectedBooking({
         ...selectedBooking,
-        paymentStatus: 'refunded'
+        paymentStatus: PaymentStatus.REFUNDED
       });
 
       setShowRefundForm(false);
@@ -740,7 +740,7 @@ export function BookingManagement({
                   <div>
                     <label className="text-sm text-gray-600">Payment Status</label>
                     <div className="flex gap-2 mt-2">
-                      {['pending', 'paid', 'refunded'].map(status => (
+                      {[PaymentStatus.PENDING, PaymentStatus.PAID, PaymentStatus.REFUNDED].map(status => (
                         <Button
                           key={status}
                           size="sm"

@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
   Home,
 } from 'lucide-react';
 
-export default function TenantAdminLayout({
+function TenantAdminLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -105,5 +106,17 @@ export default function TenantAdminLayout({
         {children}
       </main>
     </div>
+  );
+}
+
+export default function TenantAdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <TenantAdminLayoutContent>{children}</TenantAdminLayoutContent>
+    </Suspense>
   );
 }

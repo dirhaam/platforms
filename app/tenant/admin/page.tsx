@@ -23,8 +23,9 @@ export default async function TenantAdminDashboard({
 }: {
   searchParams: Promise<{ subdomain?: string }>;
 }) {
+  // Properly handle searchParams to avoid Suspense boundary issues
   const params = await searchParams;
-  const subdomain = params.subdomain;
+  const subdomain = params?.subdomain;
 
   if (!subdomain) {
     redirect('/tenant/login?subdomain=unknown');
