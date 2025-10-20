@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,45 +13,31 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Service } from '@/types/booking';
 
 interface ServiceEditContentProps {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ subdomain?: string }>;
+  serviceId: string;
 }
 
-export function ServiceEditContent({
-  params: paramsPromise,
-  searchParams: searchParamsPromise,
-}: ServiceEditContentProps) {
+export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
   const router = useRouter();
-  const [params, setParams] = useState<{ id: string } | null>(null);
-  const [searchParams, setSearchParams] = useState<{ subdomain?: string } | null>(null);
+  const searchParams = useSearchParams();
+  const subdomain = searchParams.get('subdomain');
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Resolve params and searchParams
-  useEffect(() => {
-    (async () => {
-      const resolvedParams = await paramsPromise;
-      const resolvedSearchParams = await searchParamsPromise;
-      setParams(resolvedParams);
-      setSearchParams(resolvedSearchParams);
-    })();
-  }, [paramsPromise, searchParamsPromise]);
-
   // Fetch service data
   useEffect(() => {
-    if (!params || !searchParams?.subdomain) return;
+    if (!serviceId || !subdomain) return;
 
     const fetchService = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/services/${params.id}`, {
+        const response = await fetch(`/api/services/${serviceId}`, {
           headers: {
-            'x-tenant-id': searchParams.subdomain!
+            'x-tenant-id': subdomain
           }
         });
 
@@ -69,22 +55,22 @@ export function ServiceEditContent({
     };
 
     fetchService();
-  }, [params, searchParams]);
+  }, [serviceId, subdomain]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!service || !params || !searchParams?.subdomain) return;
+    if (!service || !serviceId || !subdomain) return;
 
     try {
       setSubmitting(true);
       setError(null);
       setSuccess(false);
 
-      const response = await fetch(`/api/services/${params.id}`, {
+      const response = await fetch(`/api/services/${serviceId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': searchParams.subdomain!
+          'x-tenant-id': subdomain
         },
         body: JSON.stringify({
           name: service.name,
@@ -105,7 +91,7 @@ export function ServiceEditContent({
 
       setSuccess(true);
       setTimeout(() => {
-        router.push(`/tenant/admin/services?subdomain=${searchParams.subdomain}`);
+        router.push(`/tenant/admin/services?subdomain=${subdomain}`);
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update service');
@@ -114,7 +100,7 @@ export function ServiceEditContent({
     }
   };
 
-  if (!params || !searchParams?.subdomain) {
+  if (!serviceId || !subdomain) {
     return null;
   }
 
