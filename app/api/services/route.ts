@@ -9,10 +9,35 @@ import { createClient } from '@supabase/supabase-js';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = request.headers.get('x-tenant-id');
+    let tenantId = request.headers.get('x-tenant-id');
+
+    // Fallback: also check query params
+    if (!tenantId) {
+      tenantId = searchParams.get('tenantId');
+    }
 
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
+    // If tenantId is subdomain (not UUID), lookup the actual tenant ID
+    if (!tenantId.includes('-')) {
+      // It's a subdomain, lookup the UUID
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('subdomain', tenantId)
+        .single();
+      
+      if (!tenant) {
+        return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+      }
+      tenantId = tenant.id;
     }
 
     // Parse query parameters
@@ -40,10 +65,36 @@ export async function GET(request: NextRequest) {
 // POST /api/services - Create a new service
 export async function POST(request: NextRequest) {
   try {
-    const tenantId = request.headers.get('x-tenant-id');
+    const { searchParams } = new URL(request.url);
+    let tenantId = request.headers.get('x-tenant-id');
+
+    // Fallback: also check query params
+    if (!tenantId) {
+      tenantId = searchParams.get('tenantId');
+    }
 
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
+    // If tenantId is subdomain (not UUID), lookup the actual tenant ID
+    if (!tenantId.includes('-')) {
+      // It's a subdomain, lookup the UUID
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('subdomain', tenantId)
+        .single();
+      
+      if (!tenant) {
+        return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+      }
+      tenantId = tenant.id;
     }
 
     const body = await request.json();
