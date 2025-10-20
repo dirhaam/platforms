@@ -137,9 +137,34 @@ export function BookingManagement({
     }
   };
 
+  // Check if time slot is available
+  const isSlotAvailable = (newDateTime: Date, excludeBookingId?: string): boolean => {
+    const newStart = new Date(newDateTime);
+    const newEnd = new Date(newStart.getTime() + (editingBooking?.duration || selectedBooking?.duration || 60) * 60000);
+
+    return !bookings.some(booking => {
+      // Skip current booking being edited
+      if (excludeBookingId && booking.id === excludeBookingId) return false;
+      
+      // Skip cancelled bookings
+      if (booking.status === 'cancelled') return false;
+
+      const bookingStart = new Date(booking.scheduledAt);
+      const bookingEnd = new Date(bookingStart.getTime() + booking.duration * 60000);
+
+      // Check for time conflict
+      return newStart < bookingEnd && newEnd > bookingStart;
+    });
+  };
+
   // Handle reschedule
   const handleReschedule = async (newDateTime: Date) => {
     if (!selectedBooking) return;
+    
+    if (!isSlotAvailable(newDateTime, selectedBooking.id)) {
+      alert('This time slot is not available. Please choose another time.');
+      return;
+    }
     
     setUpdating(true);
     try {
@@ -150,6 +175,18 @@ export function BookingManagement({
       // Update local state
       setSelectedBooking({ ...selectedBooking, scheduledAt: newDateTime });
       setEditingBooking(null);
+      
+      // Send WhatsApp notification if booking is confirmed
+      if (selectedBooking.status === 'confirmed' && selectedBooking.customer?.phone) {
+        await fetch('/api/notifications/whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phoneNumber: selectedBooking.customer.phone,
+            message: `Your booking for ${selectedBooking.service?.name} has been rescheduled to ${new Date(newDateTime).toLocaleString()}`
+          })
+        }).catch(err => console.error('Failed to send WhatsApp notification:', err));
+      }
     } catch (error) {
       console.error('Error rescheduling:', error);
     } finally {
@@ -218,6 +255,20 @@ export function BookingManagement({
   const handleSaveEdit = async () => {
     if (!selectedBooking || !editingBooking) return;
     
+    // Validate amount is greater than 0
+    if (editingBooking.totalAmount && editingBooking.totalAmount <= 0) {
+      alert('Amount must be greater than 0');
+      return;
+    }
+    
+    // Check if datetime changed and validate availability
+    if (editingBooking.scheduledAt && new Date(editingBooking.scheduledAt).getTime() !== new Date(selectedBooking.scheduledAt).getTime()) {
+      if (!isSlotAvailable(new Date(editingBooking.scheduledAt), selectedBooking.id)) {
+        alert('This time slot is not available. Please choose another time.');
+        return;
+      }
+    }
+    
     setUpdating(true);
     try {
       onBookingUpdate?.(selectedBooking.id, editingBooking);
@@ -230,6 +281,20 @@ export function BookingManagement({
       
       setIsEditMode(false);
       setEditingBooking(null);
+      
+      // Send WhatsApp notification if datetime changed and booking is confirmed
+      if (editingBooking.scheduledAt && new Date(editingBooking.scheduledAt).getTime() !== new Date(selectedBooking.scheduledAt).getTime()) {
+        if (selectedBooking.status === 'confirmed' && selectedBooking.customer?.phone) {
+          await fetch('/api/notifications/whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phoneNumber: selectedBooking.customer.phone,
+              message: `Your booking for ${selectedBooking.service?.name} has been rescheduled to ${new Date(editingBooking.scheduledAt).toLocaleString()}`
+            })
+          }).catch(err => console.error('Failed to send WhatsApp notification:', err));
+        }
+      }
     } catch (error) {
       console.error('Error saving edit:', error);
     } finally {
