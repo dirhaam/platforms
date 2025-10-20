@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
     }
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
-    if (!tenantId.includes('-')) {
+    // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    const isUUID = tenantId.length === 36;
+    
+    if (!isUUID) {
       // It's a subdomain, lookup the UUID
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
