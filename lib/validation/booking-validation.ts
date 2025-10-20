@@ -25,8 +25,12 @@ export const createBookingSchema = z.object({
 });
 
 export const updateBookingSchema = z.object({
+  customerId: z.string().optional(),
+  serviceId: z.string().optional(),
   status: z.nativeEnum(BookingStatus).optional(),
-  scheduledAt: z.string().datetime('Invalid date format').optional(),
+  scheduledAt: z.union([z.string().datetime('Invalid date format'), z.date()]).optional(),
+  duration: z.number().min(15).max(480).optional(),
+  totalAmount: z.number().min(0, 'Amount must be >= 0').optional(),
   isHomeVisit: z.boolean().optional(),
   homeVisitAddress: z.string().optional(),
   homeVisitCoordinates: z.object({
@@ -34,7 +38,8 @@ export const updateBookingSchema = z.object({
     lng: z.number().min(-180).max(180)
   }).optional(),
   notes: z.string().optional(),
-  paymentStatus: z.nativeEnum(PaymentStatus).optional()
+  paymentStatus: z.nativeEnum(PaymentStatus).optional(),
+  paymentMethod: z.enum(['cash', 'card', 'transfer', 'qris']).optional()
 });
 
 // Service validation schemas

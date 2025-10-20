@@ -32,6 +32,7 @@ export interface Booking {
   notes?: string;
   totalAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
   remindersSent: Date[];
   createdAt: Date;
   updatedAt: Date;
@@ -97,8 +98,12 @@ export interface CreateBookingRequest {
 
 // Update booking request
 export interface UpdateBookingRequest {
+  customerId?: string;
+  serviceId?: string;
   status?: BookingStatus;
-  scheduledAt?: string; // ISO string
+  scheduledAt?: string | Date; // ISO string or Date object
+  duration?: number; // minutes
+  totalAmount?: number;
   isHomeVisit?: boolean;
   homeVisitAddress?: string;
   homeVisitCoordinates?: {
@@ -107,6 +112,7 @@ export interface UpdateBookingRequest {
   };
   notes?: string;
   paymentStatus?: PaymentStatus;
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
 }
 
 // Create service request

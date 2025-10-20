@@ -297,8 +297,34 @@ export class BookingService {
         updated_at: new Date().toISOString()
       };
       
-      if (data.status) {
+      // Update all provided fields
+      if (data.customerId !== undefined) {
+        updateData.customer_id = data.customerId;
+      }
+      
+      if (data.serviceId !== undefined) {
+        updateData.service_id = data.serviceId;
+      }
+      
+      if (data.status !== undefined) {
         updateData.status = data.status;
+      }
+      
+      if (data.paymentStatus !== undefined) {
+        updateData.payment_status = data.paymentStatus;
+      }
+      
+      if (data.scheduledAt !== undefined) {
+        const scheduledDate = data.scheduledAt instanceof Date ? data.scheduledAt : new Date(data.scheduledAt as string);
+        updateData.scheduled_at = scheduledDate.toISOString();
+      }
+      
+      if (data.duration !== undefined) {
+        updateData.duration = data.duration;
+      }
+      
+      if (data.totalAmount !== undefined) {
+        updateData.total_amount = data.totalAmount;
       }
       
       if (data.notes !== undefined) {
@@ -311,6 +337,16 @@ export class BookingService {
       
       if (data.homeVisitAddress !== undefined) {
         updateData.home_visit_address = data.homeVisitAddress;
+      }
+      
+      if (data.homeVisitCoordinates !== undefined) {
+        updateData.home_visit_coordinates = data.homeVisitCoordinates;
+      }
+      
+      // Store payment method in notes if provided
+      if ((data as any).paymentMethod !== undefined) {
+        const methodNote = `Payment method: ${(data as any).paymentMethod}`;
+        updateData.notes = updateData.notes ? `${updateData.notes}\n${methodNote}` : methodNote;
       }
       
       const { data: updatedBooking, error } = await supabase
