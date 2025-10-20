@@ -102,20 +102,20 @@ export class BookingService {
         .from('bookings')
         .insert({
           id: randomUUID(),
-          tenantId,
-          customerId: data.customerId,
-          serviceId: data.serviceId,
-          scheduledAt: scheduledAt.toISOString(),
+          tenant_id: tenantId,
+          customer_id: data.customerId,
+          service_id: data.serviceId,
+          scheduled_at: scheduledAt.toISOString(),
           duration: service.duration,
-          isHomeVisit: data.isHomeVisit || false,
-          homeVisitAddress: data.homeVisitAddress,
-          homeVisitCoordinates: data.homeVisitCoordinates,
+          is_home_visit: data.isHomeVisit || false,
+          home_visit_address: data.homeVisitAddress,
+          home_visit_coordinates: data.homeVisitCoordinates,
           notes: data.notes,
-          totalAmount,
+          total_amount: totalAmount,
           status: BookingStatus.PENDING,
-          remindersSent: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          reminders_sent: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -166,7 +166,7 @@ export class BookingService {
       // Update customer's total bookings count
       const { data: currentCustomer } = await supabase
         .from('customers')
-        .select('totalBookings')
+        .select('total_bookings')
         .eq('id', data.customerId)
         .single();
       
@@ -174,8 +174,8 @@ export class BookingService {
         await supabase
           .from('customers')
           .update({
-            totalBookings: (currentCustomer.totalBookings || 0) + 1,
-            lastBookingAt: new Date().toISOString()
+            total_bookings: (currentCustomer.total_bookings || 0) + 1,
+            last_booking_at: new Date().toISOString()
           })
           .eq('id', data.customerId);
       }
@@ -201,19 +201,19 @@ export class BookingService {
       }
       
       if (options.customerId) {
-        query = query.eq('customerId', options.customerId);
+        query = query.eq('customer_id', options.customerId);
       }
       
       if (options.serviceId) {
-        query = query.eq('serviceId', options.serviceId);
+        query = query.eq('service_id', options.serviceId);
       }
       
       if (options.startDate) {
-        query = query.gte('scheduledAt', options.startDate.toISOString());
+        query = query.gte('scheduled_at', options.startDate.toISOString());
       }
       
       if (options.endDate) {
-        query = query.lte('scheduledAt', options.endDate.toISOString());
+        query = query.lte('scheduled_at', options.endDate.toISOString());
       }
       
       query = query.order('scheduled_at', { ascending: false });
@@ -272,7 +272,7 @@ export class BookingService {
       }
       
       const updateData: any = {
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       };
       
       if (data.status) {
@@ -284,11 +284,11 @@ export class BookingService {
       }
       
       if (data.isHomeVisit !== undefined) {
-        updateData.isHomeVisit = data.isHomeVisit;
+        updateData.is_home_visit = data.isHomeVisit;
       }
       
       if (data.homeVisitAddress !== undefined) {
-        updateData.homeVisitAddress = data.homeVisitAddress;
+        updateData.home_visit_address = data.homeVisitAddress;
       }
       
       const { data: updatedBooking, error } = await supabase
@@ -363,10 +363,10 @@ export class BookingService {
         .from('bookings')
         .select('*')
         .eq('tenant_id', tenantId)
-        .eq('serviceId', request.serviceId)
+        .eq('service_id', request.serviceId)
         .eq('status', BookingStatus.CONFIRMED)
-        .gte('scheduledAt', startOfDay.toISOString())
-        .lte('scheduledAt', endOfDay.toISOString());
+        .gte('scheduled_at', startOfDay.toISOString())
+        .lte('scheduled_at', endOfDay.toISOString());
       
       if (error) {
         console.error('Error fetching bookings for availability:', error);
@@ -378,8 +378,8 @@ export class BookingService {
       }
       
       const bookedSlots = (bookings || []).map(b => ({
-        start: new Date(b.scheduledAt),
-        end: new Date(new Date(b.scheduledAt).getTime() + b.duration * 60000),
+        start: new Date(b.scheduled_at),
+        end: new Date(new Date(b.scheduled_at).getTime() + b.duration * 60000),
         available: false
       }));
       
