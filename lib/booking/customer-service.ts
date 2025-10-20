@@ -63,7 +63,7 @@ export class CustomerService {
         return { error: 'Failed to create customer' };
       }
       
-      return { customer: customer as Customer };
+      return { customer: mapToCustomer(customer) };
     } catch (error) {
       console.error('Error in createCustomer:', error);
       return { error: 'Internal server error' };
@@ -101,7 +101,7 @@ export class CustomerService {
         return { error: 'Failed to update customer' };
       }
       
-      return { customer: updatedCustomer as Customer };
+      return { customer: mapToCustomer(updatedCustomer) };
     } catch (error) {
       console.error('Error in updateCustomer:', error);
       return { error: 'Internal server error' };
@@ -123,7 +123,7 @@ export class CustomerService {
         return null;
       }
       
-      return customer as Customer;
+      return mapToCustomer(customer);
     } catch (error) {
       console.error('Error in getCustomer:', error);
       return null;
@@ -171,7 +171,7 @@ export class CustomerService {
         return { customers: [], count: 0, error: error.message };
       }
       
-      return { customers: (customers || []) as Customer[], count: count || 0 };
+      return { customers: (customers || []).map(mapToCustomer), count: count || 0 };
     } catch (error) {
       console.error('Error in getCustomers:', error);
       return { customers: [], count: 0, error: 'Internal server error' };
@@ -216,7 +216,7 @@ export class CustomerService {
         .single();
       
       if (!fetchError && existingCustomer) {
-        return { customer: existingCustomer as Customer, created: false };
+        return { customer: mapToCustomer(existingCustomer), created: false };
       }
       
       return await this.createCustomer(tenantId, data);
@@ -246,7 +246,7 @@ export class CustomerService {
         return [];
       }
       
-      return customers as Customer[];
+      return customers.map(mapToCustomer);
     } catch (error) {
       console.error('Error in searchCustomers:', error);
       return [];

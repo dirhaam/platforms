@@ -202,7 +202,7 @@ export class BookingService {
           .eq('id', data.customerId);
       }
       
-      return { booking: booking as Booking };
+      return { booking: mapToBooking(booking) };
     } catch (error) {
       console.error('Error creating booking:', error);
       return { error: 'Failed to create booking' };
@@ -255,7 +255,7 @@ export class BookingService {
         return [];
       }
       
-      return bookings as Booking[];
+      return bookings.map(mapToBooking);
     } catch (error) {
       console.error('Error in getBookings:', error);
       return [];
@@ -277,7 +277,7 @@ export class BookingService {
         return null;
       }
       
-      return booking as Booking;
+      return mapToBooking(booking);
     } catch (error) {
       console.error('Error in getBooking:', error);
       return null;
@@ -325,7 +325,7 @@ export class BookingService {
         return { error: 'Failed to update booking' };
       }
       
-      return { booking: updatedBooking as Booking };
+      return { booking: mapToBooking(updatedBooking) };
     } catch (error) {
       console.error('Error in updateBooking:', error);
       return { error: 'Internal server error' };
