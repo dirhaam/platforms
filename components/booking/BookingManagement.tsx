@@ -1,11 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Settings, Plus } from 'lucide-react';
+import { Calendar, Clock, Users, Settings, Plus, Edit2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { BookingCalendar } from './BookingCalendar';
 import { TimeSlotPicker } from './TimeSlotPicker';
 import { RecurringBookingManager } from './RecurringBookingManager';
@@ -37,6 +41,7 @@ export function BookingManagement({
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [selectedBooking, setSelectedBooking] = useState<Booking | undefined>();
   const [showBookingDetails, setShowBookingDetails] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Partial<Booking> | null>(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -185,6 +190,48 @@ export function BookingManagement({
       setSelectedBooking(undefined);
     } catch (error) {
       console.error('Error deleting booking:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handle edit mode
+  const handleEditClick = () => {
+    if (selectedBooking) {
+      setEditingBooking({
+        customerId: selectedBooking.customerId,
+        serviceId: selectedBooking.serviceId,
+        scheduledAt: selectedBooking.scheduledAt,
+        duration: selectedBooking.duration,
+        totalAmount: selectedBooking.totalAmount,
+        notes: selectedBooking.notes
+      });
+      setIsEditMode(true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditingBooking(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedBooking || !editingBooking) return;
+    
+    setUpdating(true);
+    try {
+      onBookingUpdate?.(selectedBooking.id, editingBooking);
+      
+      // Update local state
+      setSelectedBooking({
+        ...selectedBooking,
+        ...editingBooking
+      });
+      
+      setIsEditMode(false);
+      setEditingBooking(null);
+    } catch (error) {
+      console.error('Error saving edit:', error);
     } finally {
       setUpdating(false);
     }
@@ -452,7 +499,7 @@ export function BookingManagement({
             </DialogDescription>
           </DialogHeader>
           
-          {selectedBooking && (
+          {selectedBooking && !isEditMode && (
             <div className="space-y-6">
               {/* Customer Info */}
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -572,6 +619,13 @@ export function BookingManagement({
                 </Button>
                 <div className="flex gap-3">
                   <Button
+                    onClick={handleEditClick}
+                    disabled={updating}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Booking
+                  </Button>
+                  <Button
                     variant="outline"
                     onClick={() => setShowBookingDetails(false)}
                     disabled={updating}
@@ -579,6 +633,132 @@ export function BookingManagement({
                     Close
                   </Button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Form */}
+          {selectedBooking && isEditMode && editingBooking && (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                {/* Customer Selection */}
+                <div>
+                  <Label htmlFor="customer">Customer</Label>
+                  <Select
+                    value={editingBooking.customerId || ''}
+                    onValueChange={(customerId) => setEditingBooking({ ...editingBooking, customerId })}
+                  >
+                    <SelectTrigger id="customer">
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map(customer => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name} ({customer.phone})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Service Selection */}
+                <div>
+                  <Label htmlFor="service">Service</Label>
+                  <Select
+                    value={editingBooking.serviceId || ''}
+                    onValueChange={(serviceId) => {
+                      const service = services.find(s => s.id === serviceId);
+                      setEditingBooking({
+                        ...editingBooking,
+                        serviceId,
+                        duration: service?.duration || editingBooking.duration
+                      });
+                    }}
+                  >
+                    <SelectTrigger id="service">
+                      <SelectValue placeholder="Select service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.map(service => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name} ({service.duration} min)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Date & Time */}
+                <div>
+                  <Label htmlFor="datetime">Date & Time</Label>
+                  <Input
+                    id="datetime"
+                    type="datetime-local"
+                    value={editingBooking.scheduledAt ? new Date(editingBooking.scheduledAt).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => setEditingBooking({ ...editingBooking, scheduledAt: new Date(e.target.value) })}
+                    disabled={updating}
+                  />
+                </div>
+
+                {/* Duration */}
+                <div>
+                  <Label htmlFor="duration">Duration (minutes)</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    min="15"
+                    step="15"
+                    value={editingBooking.duration || ''}
+                    onChange={(e) => setEditingBooking({ ...editingBooking, duration: parseInt(e.target.value) || 0 })}
+                    disabled={updating}
+                  />
+                </div>
+
+                {/* Total Amount */}
+                <div>
+                  <Label htmlFor="amount">Total Amount (PKR)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={editingBooking.totalAmount || ''}
+                    onChange={(e) => setEditingBooking({ ...editingBooking, totalAmount: parseFloat(e.target.value) || 0 })}
+                    disabled={updating}
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Add any notes about this booking..."
+                    value={editingBooking.notes || ''}
+                    onChange={(e) => setEditingBooking({ ...editingBooking, notes: e.target.value })}
+                    disabled={updating}
+                    className="resize-none"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end border-t pt-6">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={updating}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={updating}
+                >
+                  Save Changes
+                </Button>
               </div>
             </div>
           )}
