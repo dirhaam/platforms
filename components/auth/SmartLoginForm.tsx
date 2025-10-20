@@ -46,7 +46,7 @@ export default function SmartLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>('superadmin');
 
-  const redirectTo = searchParams.get('redirect') || '/admin/success';
+  const redirectTo = searchParams?.get('redirect') || '/admin/success';
 
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('🚀 handleSubmit Called!');

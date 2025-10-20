@@ -1,33 +1,11 @@
-'use client';
-
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { rootDomain, protocol } from '@/lib/utils';
 
-function NotFoundContent() {
-  const [subdomain, setSubdomain] = useState<string | null>(null);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    // Extract subdomain from URL if we're on a subdomain page
-    if (pathname?.startsWith('/subdomain/')) {
-      const extractedSubdomain = pathname.split('/')[2];
-      if (extractedSubdomain) {
-        setSubdomain(extractedSubdomain);
-      }
-    } else {
-      // Try to extract from hostname for direct subdomain access
-      const hostname = window.location.hostname;
-      if (hostname.includes(`.${rootDomain.split(':')[0]}`)) {
-        const extractedSubdomain = hostname.split('.')[0];
-        setSubdomain(extractedSubdomain);
-      }
-    }
-  }, [pathname]);
+export default function NotFound() {
+  // Static fallback for server-side rendering
+  const subdomain = null;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
@@ -56,8 +34,4 @@ function NotFoundContent() {
       </div>
     </div>
   );
-}
-
-export default function NotFound() {
-  return <NotFoundContent />;
 }

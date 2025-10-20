@@ -19,7 +19,7 @@ export default function TenantAdminLayout({
   children: React.ReactNode;
 }) {
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain') || '';
+  const subdomain = searchParams?.get('subdomain') || '';
 
   const navigationItems = [
     {

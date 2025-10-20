@@ -6,7 +6,6 @@ import TenantDashboardLayout from '@/components/dashboard/TenantDashboardLayout'
 import SuperAdminLayout from '@/components/admin/SuperAdminLayout';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export default async function AdminLayout({
   children,

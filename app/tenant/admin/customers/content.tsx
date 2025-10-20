@@ -7,7 +7,7 @@ import { CustomerManagement } from '@/components/customer/CustomerManagement';
 export default function CustomersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
 
   useEffect(() => {
     if (!subdomain) {

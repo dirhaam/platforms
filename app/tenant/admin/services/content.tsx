@@ -12,7 +12,7 @@ import { Service } from '@/types/booking';
 export default function ServicesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
   
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);

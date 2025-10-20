@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { ServiceService } from '@/lib/booking/service-service';
 import { createServiceSchema } from '@/lib/validation/booking-validation';
+import { createClient } from '@supabase/supabase-js';
 
 // GET /api/services - Get services for a tenant
 export async function GET(request: NextRequest) {

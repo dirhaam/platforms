@@ -57,6 +57,12 @@ const nextConfig: NextConfig = {
   //     },
   //   ];
   // },
+
+  // Suppress static generation errors for special routes
+  onDemandEntries: {
+    maxInactiveAge: 60000,
+    pagesBufferLength: 5,
+  },
 };
 
 export default nextConfig;

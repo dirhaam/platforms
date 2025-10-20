@@ -29,7 +29,7 @@ interface TenantData {
 export default function EditTenantPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.id as string;
+  const tenantId = (params?.id as string) || '';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

@@ -22,17 +22,17 @@ export class CustomerService {
       
       const newCustomer = {
         id: randomUUID(),
-        tenantId,
+        tenant_id: tenantId,
         name: data.name,
         email: data.email || null,
         phone: data.phone,
         address: data.address || null,
         notes: data.notes || null,
-        whatsappNumber: data.phone,
-        totalBookings: 0,
-        lastBookingAt: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        whatsapp_number: data.phone,
+        total_bookings: 0,
+        last_booking_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
       const { data: customer, error } = await supabase
@@ -62,7 +62,7 @@ export class CustomerService {
       }
       
       const updateData: any = {
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       };
       
       if (data.name !== undefined) updateData.name = data.name;
@@ -75,7 +75,7 @@ export class CustomerService {
         .from('customers')
         .update(updateData)
         .eq('id', customerId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .select()
         .single();
       
@@ -98,7 +98,7 @@ export class CustomerService {
         .from('customers')
         .select('*')
         .eq('id', customerId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .single();
       
       if (error || !customer) {
@@ -119,7 +119,7 @@ export class CustomerService {
       let query = supabase
         .from('customers')
         .select('*')
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       if (options.search) {
         query = query.or(`name.ilike.%${options.search}%,phone.ilike.%${options.search}%,email.ilike.%${options.search}%`);
@@ -173,7 +173,7 @@ export class CustomerService {
         .from('customers')
         .delete()
         .eq('id', customerId)
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       if (error) {
         return { success: false, error: 'Failed to delete customer' };
@@ -193,7 +193,7 @@ export class CustomerService {
       const { data: existingCustomer, error: fetchError } = await supabase
         .from('customers')
         .select('*')
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .eq('phone', data.phone)
         .single();
       
@@ -215,7 +215,7 @@ export class CustomerService {
       let searchQuery = supabase
         .from('customers')
         .select('*')
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`);
       
       if (limit) {
@@ -242,7 +242,7 @@ export class CustomerService {
       const { count: totalCustomers } = await supabase
         .from('customers')
         .select('*', { count: 'exact', head: true })
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       const now = new Date();
       const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -250,15 +250,15 @@ export class CustomerService {
       const { count: newCustomersThisMonth } = await supabase
         .from('customers')
         .select('*', { count: 'exact', head: true })
-        .eq('tenantId', tenantId)
-        .gte('createdAt', monthAgo.toISOString());
+        .eq('tenant_id', tenantId)
+        .gte('created_at', monthAgo.toISOString());
       
       const { data: customers } = await supabase
         .from('customers')
-        .select('totalBookings')
-        .eq('tenantId', tenantId);
+        .select('total_bookings')
+        .eq('tenant_id', tenantId);
       
-      const totalBookings = (customers || []).reduce((sum, c) => sum + (c.totalBookings || 0), 0);
+      const totalBookings = (customers || []).reduce((sum, c: any) => sum + (c.total_bookings || 0), 0);
       
       return {
         totalCustomers: totalCustomers || 0,
