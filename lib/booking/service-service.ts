@@ -15,6 +15,26 @@ const randomUUID = () => {
   return Math.random().toString(36).slice(2);
 };
 
+// Map database snake_case fields to camelCase Service interface
+const mapToService = (dbData: any): Service => {
+  return {
+    id: dbData.id,
+    tenantId: dbData.tenant_id,
+    name: dbData.name,
+    description: dbData.description,
+    duration: dbData.duration,
+    price: dbData.price,
+    category: dbData.category,
+    isActive: dbData.is_active,
+    homeVisitAvailable: dbData.home_visit_available,
+    homeVisitSurcharge: dbData.home_visit_surcharge,
+    images: dbData.images,
+    requirements: dbData.requirements,
+    createdAt: dbData.created_at,
+    updatedAt: dbData.updated_at
+  };
+};
+
 export class ServiceService {
   static async createService(
     tenantId: string, 
@@ -50,7 +70,7 @@ export class ServiceService {
         return { error: 'Failed to create service' };
       }
       
-      return { service: service as Service };
+      return { service: mapToService(service) };
     } catch (error) {
       console.error('Error in createService:', error);
       return { error: 'Internal server error' };
@@ -97,7 +117,7 @@ export class ServiceService {
         return { error: 'Failed to update service' };
       }
       
-      return { service: updatedService as Service };
+      return { service: mapToService(updatedService) };
     } catch (error) {
       console.error('Error in updateService:', error);
       return { error: 'Internal server error' };
@@ -155,7 +175,7 @@ export class ServiceService {
         return [];
       }
       
-      return services as Service[];
+      return services.map(mapToService);
     } catch (error) {
       console.error('Error in getServices:', error);
       return [];
@@ -180,7 +200,7 @@ export class ServiceService {
         return null;
       }
       
-      return service as Service;
+      return mapToService(service);
     } catch (error) {
       console.error('Error in getService:', error);
       return null;
