@@ -75,6 +75,41 @@ export default function ServicesPageContent() {
     }
   };
 
+  const handleToggleStatus = async (service: Service) => {
+    try {
+      const response = await fetch(`/api/services/${service.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': subdomain!
+        },
+        body: JSON.stringify({
+          name: service.name,
+          description: service.description,
+          duration: service.duration,
+          price: service.price,
+          category: service.category,
+          isActive: !service.isActive,
+          homeVisitAvailable: service.homeVisitAvailable,
+          homeVisitSurcharge: service.homeVisitSurcharge
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update service status');
+      }
+
+      const updated = await response.json();
+      setServices(
+        services.map(s =>
+          s.id === service.id ? (updated.service || { ...s, isActive: !s.isActive }) : s
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update status');
+    }
+  };
+
   if (!subdomain) {
     return null;
   }
@@ -101,7 +136,12 @@ export default function ServicesPageContent() {
           <h1 className="text-3xl font-bold text-gray-900">Services</h1>
           <p className="text-gray-600 mt-2">Manage your business services and pricing</p>
         </div>
-        <Button className="gap-2">
+        <Button 
+          className="gap-2"
+          onClick={() => {
+            router.push(`/tenant/admin/services/create?subdomain=${subdomain}`);
+          }}
+        >
           <Plus className="w-4 h-4" />
           Add Service
         </Button>
@@ -143,7 +183,11 @@ export default function ServicesPageContent() {
                       <td className="py-3 px-4">{service.duration} min</td>
                       <td className="py-3 px-4">PKR {service.price}</td>
                       <td className="py-3 px-4">
-                        <Badge variant={service.isActive ? 'default' : 'outline'}>
+                        <Badge 
+                          variant={service.isActive ? 'default' : 'outline'}
+                          className="cursor-pointer hover:opacity-80"
+                          onClick={() => handleToggleStatus(service)}
+                        >
                           {service.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
