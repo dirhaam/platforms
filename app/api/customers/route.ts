@@ -8,7 +8,12 @@ import { createCustomerSchema } from '@/lib/validation/booking-validation';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = request.headers.get('x-tenant-id');
+    let tenantId = request.headers.get('x-tenant-id');
+    
+    // Fallback: also check query params
+    if (!tenantId) {
+      tenantId = searchParams.get('tenantId');
+    }
     
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });

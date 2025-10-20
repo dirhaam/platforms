@@ -9,9 +9,15 @@ import { BookingStatus } from '@/types/booking';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = request.headers.get('x-tenant-id');
+    let tenantId = request.headers.get('x-tenant-id');
+    
+    // Fallback: also check query params and body
+    if (!tenantId) {
+      tenantId = searchParams.get('tenantId');
+    }
     
     if (!tenantId) {
+      console.warn('[bookings GET] No tenantId found in headers or params');
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
@@ -44,9 +50,16 @@ export async function GET(request: NextRequest) {
 // POST /api/bookings - Create a new booking
 export async function POST(request: NextRequest) {
   try {
-    const tenantId = request.headers.get('x-tenant-id');
+    const { searchParams } = new URL(request.url);
+    let tenantId = request.headers.get('x-tenant-id');
+    
+    // Fallback: also check query params
+    if (!tenantId) {
+      tenantId = searchParams.get('tenantId');
+    }
     
     if (!tenantId) {
+      console.warn('[bookings POST] No tenantId found in headers or params');
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     

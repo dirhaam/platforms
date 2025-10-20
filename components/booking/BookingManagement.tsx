@@ -45,7 +45,8 @@ export function BookingManagement({
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/bookings', {
+      // Add tenantId as both header and query param for maximum compatibility
+      const response = await fetch(`/api/bookings?tenantId=${encodeURIComponent(tenantId)}`, {
         headers: {
           'x-tenant-id': tenantId
         }
@@ -54,6 +55,9 @@ export function BookingManagement({
       if (response.ok) {
         const data = await response.json();
         setBookings(data.bookings || []);
+      } else {
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
