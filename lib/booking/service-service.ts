@@ -79,9 +79,9 @@ export class ServiceService {
       if (data.duration !== undefined) updateData.duration = data.duration;
       if (data.price !== undefined) updateData.price = data.price;
       if (data.category !== undefined) updateData.category = data.category;
-      if (data.isActive !== undefined) updateData.isActive = data.isActive;
-      if (data.homeVisitAvailable !== undefined) updateData.homeVisitAvailable = data.homeVisitAvailable;
-      if (data.homeVisitSurcharge !== undefined) updateData.homeVisitSurcharge = data.homeVisitSurcharge;
+      if (data.isActive !== undefined) updateData.is_active = data.isActive;
+      if (data.homeVisitAvailable !== undefined) updateData.home_visit_available = data.homeVisitAvailable;
+      if (data.homeVisitSurcharge !== undefined) updateData.home_visit_surcharge = data.homeVisitSurcharge;
       if (data.images !== undefined) updateData.images = data.images;
       if (data.requirements !== undefined) updateData.requirements = data.requirements;
       
@@ -127,14 +127,14 @@ export class ServiceService {
       }
       
       if (options.isActive !== undefined) {
-        query = query.eq('isActive', options.isActive);
+        query = query.eq('is_active', options.isActive);
       }
       
       if (options.homeVisitAvailable !== undefined) {
-        query = query.eq('homeVisitAvailable', options.homeVisitAvailable);
+        query = query.eq('home_visit_available', options.homeVisitAvailable);
       }
       
-      query = query.order('createdAt', { ascending: false });
+      query = query.order('created_at', { ascending: false });
       
       if (options.limit) {
         query = query.limit(options.limit);
