@@ -29,6 +29,40 @@ const randomUUID = () => {
 
 // Map database snake_case fields to camelCase Booking interface
 const mapToBooking = (dbData: any): Booking => {
+  // Map customer if included in query
+  const customer = dbData.customer ? {
+    id: dbData.customer.id,
+    tenantId: dbData.tenant_id,
+    name: dbData.customer.name,
+    email: dbData.customer.email,
+    phone: dbData.customer.phone,
+    address: '',
+    notes: null,
+    totalBookings: 0,
+    lastBookingAt: null,
+    whatsappNumber: null,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  } : undefined;
+
+  // Map service if included in query
+  const service = dbData.service ? {
+    id: dbData.service.id,
+    tenantId: dbData.tenant_id,
+    name: dbData.service.name,
+    description: '',
+    duration: dbData.service.duration,
+    price: dbData.service.price,
+    category: '',
+    isActive: true,
+    homeVisitAvailable: false,
+    homeVisitSurcharge: null,
+    images: [],
+    requirements: [],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  } : undefined;
+
   return {
     id: dbData.id,
     tenantId: dbData.tenant_id,
@@ -45,7 +79,9 @@ const mapToBooking = (dbData: any): Booking => {
     paymentStatus: dbData.payment_status,
     remindersSent: dbData.reminders_sent,
     createdAt: new Date(dbData.created_at),
-    updatedAt: new Date(dbData.updated_at)
+    updatedAt: new Date(dbData.updated_at),
+    customer,
+    service
   };
 };
 
@@ -215,7 +251,11 @@ export class BookingService {
       
       let query = supabase
         .from('bookings')
-        .select('*')
+        .select(`
+          *,
+          customer:customers(id, name, email, phone),
+          service:services(id, name, price, duration)
+        `)
         .eq('tenant_id', tenantId);
       
       if (options.status) {
@@ -268,7 +308,11 @@ export class BookingService {
       
       const { data: booking, error } = await supabase
         .from('bookings')
-        .select('*')
+        .select(`
+          *,
+          customer:customers(id, name, email, phone),
+          service:services(id, name, price, duration)
+        `)
         .eq('id', bookingId)
         .eq('tenant_id', tenantId)
         .single();
