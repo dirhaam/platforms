@@ -86,7 +86,14 @@ export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to update service');
+        
+        // Show detailed validation errors if available
+        let errorMessage = errorData.error || 'Failed to update service';
+        if (errorData.details && Array.isArray(errorData.details)) {
+          errorMessage = errorData.details.map((d: any) => d.message).join(', ');
+        }
+        
+        throw new Error(errorMessage);
       }
 
       setSuccess(true);

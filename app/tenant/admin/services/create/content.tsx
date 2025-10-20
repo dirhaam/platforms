@@ -68,7 +68,14 @@ export function ServiceCreateContent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to create service');
+        
+        // Show detailed validation errors if available
+        let errorMessage = errorData.error || 'Failed to create service';
+        if (errorData.details && Array.isArray(errorData.details)) {
+          errorMessage = errorData.details.map((d: any) => d.message).join(', ');
+        }
+        
+        throw new Error(errorMessage);
       }
 
       setSuccess(true);

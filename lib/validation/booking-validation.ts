@@ -52,15 +52,15 @@ export const createServiceSchema = z.object({
 
 export const updateServiceSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  description: z.string().min(1).max(500).optional(),
+  description: z.string().max(500).optional(),
   duration: z.number().min(15).max(480).optional(),
   price: z.number().min(0).optional(),
-  category: z.string().min(1).optional(),
+  category: z.string().optional(),
   isActive: z.boolean().optional(),
   homeVisitAvailable: z.boolean().optional(),
   homeVisitSurcharge: z.number().min(0).optional(),
-  images: z.array(z.string().url()).optional(),
-  requirements: z.array(z.string()).optional()
+  images: z.array(z.string().url()).optional().default([]),
+  requirements: z.array(z.string()).optional().default([])
 });
 
 // Customer validation schemas
