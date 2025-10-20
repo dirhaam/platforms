@@ -37,7 +37,9 @@ export function BookingManagement({
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [selectedBooking, setSelectedBooking] = useState<Booking | undefined>();
   const [showBookingDetails, setShowBookingDetails] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Partial<Booking> | null>(null);
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
 
   // Fetch bookings
@@ -106,7 +108,86 @@ export function BookingManagement({
   // Handle booking click
   const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking);
+    setEditingBooking(null);
     setShowBookingDetails(true);
+  };
+
+  // Handle update booking status
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!selectedBooking) return;
+    
+    setUpdating(true);
+    try {
+      onBookingUpdate?.(selectedBooking.id, {
+        status: newStatus as any
+      });
+      
+      // Update local state
+      setSelectedBooking({ ...selectedBooking, status: newStatus as any });
+      setEditingBooking(null);
+    } catch (error) {
+      console.error('Error updating status:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handle reschedule
+  const handleReschedule = async (newDateTime: Date) => {
+    if (!selectedBooking) return;
+    
+    setUpdating(true);
+    try {
+      onBookingUpdate?.(selectedBooking.id, {
+        scheduledAt: newDateTime
+      });
+      
+      // Update local state
+      setSelectedBooking({ ...selectedBooking, scheduledAt: newDateTime });
+      setEditingBooking(null);
+    } catch (error) {
+      console.error('Error rescheduling:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handle update payment status
+  const handleUpdatePayment = async (newPaymentStatus: string) => {
+    if (!selectedBooking) return;
+    
+    setUpdating(true);
+    try {
+      onBookingUpdate?.(selectedBooking.id, {
+        paymentStatus: newPaymentStatus as any
+      });
+      
+      // Update local state
+      setSelectedBooking({ ...selectedBooking, paymentStatus: newPaymentStatus as any });
+      setEditingBooking(null);
+    } catch (error) {
+      console.error('Error updating payment:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handle delete booking
+  const handleDeleteBooking = async () => {
+    if (!selectedBooking) return;
+    
+    if (!confirm('Are you sure you want to delete this booking?')) return;
+    
+    setUpdating(true);
+    try {
+      onBookingDelete?.(selectedBooking.id);
+      setShowBookingDetails(false);
+      setSelectedBooking(undefined);
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // Handle service selection
@@ -438,24 +519,66 @@ export function BookingManagement({
                 </div>
               </div>
 
+              {/* Status Management */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-3">Status Management</h3>
+                <div className="space-y-3">
+                  {/* Booking Status */}
+                  <div>
+                    <label className="text-sm text-gray-600">Booking Status</label>
+                    <div className="flex gap-2 mt-2">
+                      {['pending', 'confirmed', 'completed', 'cancelled'].map(status => (
+                        <Button
+                          key={status}
+                          size="sm"
+                          variant={selectedBooking.status === status ? 'default' : 'outline'}
+                          onClick={() => handleUpdateStatus(status)}
+                          disabled={updating || selectedBooking.status === status}
+                        >
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Payment Status */}
+                  <div>
+                    <label className="text-sm text-gray-600">Payment Status</label>
+                    <div className="flex gap-2 mt-2">
+                      {['pending', 'paid', 'refunded'].map(status => (
+                        <Button
+                          key={status}
+                          size="sm"
+                          variant={selectedBooking.paymentStatus === status ? 'default' : 'outline'}
+                          onClick={() => handleUpdatePayment(status)}
+                          disabled={updating || selectedBooking.paymentStatus === status}
+                        >
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Actions */}
-              <div className="flex gap-3 justify-end border-t pt-6">
+              <div className="flex gap-3 justify-between border-t pt-6">
                 <Button
-                  variant="outline"
-                  onClick={() => setShowBookingDetails(false)}
+                  variant="destructive"
+                  onClick={handleDeleteBooking}
+                  disabled={updating}
                 >
-                  Close
+                  Delete Booking
                 </Button>
-                <Button
-                  onClick={() => {
-                    onBookingUpdate?.(selectedBooking.id, {
-                      status: selectedBooking.status === 'pending' ? 'confirmed' : 'pending'
-                    });
-                    setShowBookingDetails(false);
-                  }}
-                >
-                  {selectedBooking.status === 'pending' ? 'Confirm' : 'Set Pending'}
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowBookingDetails(false)}
+                    disabled={updating}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
             </div>
           )}
