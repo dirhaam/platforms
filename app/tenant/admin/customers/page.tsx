@@ -1,18 +1,23 @@
-export const runtime = 'nodejs';
+'use client';
 
-import { redirect } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users } from 'lucide-react';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { CustomerManagement } from '@/components/customer/CustomerManagement';
 
-export default async function CustomersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ subdomain?: string }>;
-}) {
-  const params = await searchParams;
-  const subdomain = params.subdomain;
+export default function CustomersPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const subdomain = searchParams.get('subdomain');
 
-  if (!subdomain) redirect('/tenant/login?subdomain=unknown');
+  useEffect(() => {
+    if (!subdomain) {
+      router.push('/tenant/login');
+    }
+  }, [subdomain, router]);
+
+  if (!subdomain) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
@@ -21,17 +26,18 @@ export default async function CustomersPage({
         <p className="text-gray-600 mt-2">Manage customer database and information</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Coming Soon
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">Customer management interface is being developed...</p>
-        </CardContent>
-      </Card>
+      <CustomerManagement
+        tenantId={subdomain}
+        onCustomerCreate={(customer) => {
+          console.log('Customer created:', customer);
+        }}
+        onCustomerUpdate={(customerId, updates) => {
+          console.log('Customer updated:', customerId, updates);
+        }}
+        onCustomerDelete={(customerId) => {
+          console.log('Customer deleted:', customerId);
+        }}
+      />
     </div>
   );
 }

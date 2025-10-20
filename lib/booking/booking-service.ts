@@ -187,21 +187,153 @@ export class BookingService {
     }
   }
   
-  // Placeholder methods - TODO: Convert these properly
-  static async updateBooking(tenantId: string, bookingId: string, data: any): Promise<{ booking?: Booking; error?: string }> {
-    return { error: 'Update method temporarily disabled during migration' };
-  }
-  
   static async getBookings(tenantId: string, options: any = {}): Promise<Booking[]> {
-    return [];
+    try {
+      const supabase = getSupabaseClient();
+      
+      let query = supabase
+        .from('bookings')
+        .select('*')
+        .eq('tenantId', tenantId);
+      
+      if (options.status) {
+        query = query.eq('status', options.status);
+      }
+      
+      if (options.customerId) {
+        query = query.eq('customerId', options.customerId);
+      }
+      
+      if (options.serviceId) {
+        query = query.eq('serviceId', options.serviceId);
+      }
+      
+      if (options.startDate) {
+        query = query.gte('scheduledAt', options.startDate.toISOString());
+      }
+      
+      if (options.endDate) {
+        query = query.lte('scheduledAt', options.endDate.toISOString());
+      }
+      
+      query = query.order('scheduledAt', { ascending: false });
+      
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+      
+      if (options.offset) {
+        query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+      }
+      
+      const { data: bookings, error } = await query;
+      
+      if (error || !bookings) {
+        console.error('Error fetching bookings:', error);
+        return [];
+      }
+      
+      return bookings as Booking[];
+    } catch (error) {
+      console.error('Error in getBookings:', error);
+      return [];
+    }
   }
   
   static async getBooking(tenantId: string, bookingId: string): Promise<Booking | null> {
-    return null;
+    try {
+      const supabase = getSupabaseClient();
+      
+      const { data: booking, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .eq('tenantId', tenantId)
+        .single();
+      
+      if (error || !booking) {
+        return null;
+      }
+      
+      return booking as Booking;
+    } catch (error) {
+      console.error('Error in getBooking:', error);
+      return null;
+    }
+  }
+  
+  static async updateBooking(tenantId: string, bookingId: string, data: UpdateBookingRequest): Promise<{ booking?: Booking; error?: string }> {
+    try {
+      const supabase = getSupabaseClient();
+      
+      const booking = await this.getBooking(tenantId, bookingId);
+      if (!booking) {
+        return { error: 'Booking not found' };
+      }
+      
+      const updateData: any = {
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (data.status) {
+        updateData.status = data.status;
+      }
+      
+      if (data.notes !== undefined) {
+        updateData.notes = data.notes;
+      }
+      
+      if (data.isHomeVisit !== undefined) {
+        updateData.isHomeVisit = data.isHomeVisit;
+      }
+      
+      if (data.homeVisitAddress !== undefined) {
+        updateData.homeVisitAddress = data.homeVisitAddress;
+      }
+      
+      const { data: updatedBooking, error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('id', bookingId)
+        .eq('tenantId', tenantId)
+        .select()
+        .single();
+      
+      if (error || !updatedBooking) {
+        return { error: 'Failed to update booking' };
+      }
+      
+      return { booking: updatedBooking as Booking };
+    } catch (error) {
+      console.error('Error in updateBooking:', error);
+      return { error: 'Internal server error' };
+    }
   }
   
   static async deleteBooking(tenantId: string, bookingId: string): Promise<{ success: boolean; error?: string }> {
-    return { success: false, error: 'Delete method temporarily disabled during migration' };
+    try {
+      const supabase = getSupabaseClient();
+      
+      const booking = await this.getBooking(tenantId, bookingId);
+      if (!booking) {
+        return { success: false, error: 'Booking not found' };
+      }
+      
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingId)
+        .eq('tenantId', tenantId);
+      
+      if (error) {
+        return { success: false, error: 'Failed to delete booking' };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error in deleteBooking:', error);
+      return { success: false, error: 'Internal server error' };
+    }
   }
   
   static async checkBookingConflicts(): Promise<BookingConflict> {
@@ -212,7 +344,104 @@ export class BookingService {
     };
   }
   
-  static async getAvailability(tenantId: string, request: any): Promise<AvailabilityResponse | null> {
-    return null;
+  static async getAvailability(tenantId: string, request: AvailabilityRequest): Promise<AvailabilityResponse | null> {
+    try {
+      const supabase = getSupabaseClient();
+      
+      const service = await this.getService(tenantId, request.serviceId);
+      if (!service) {
+        return null;
+      }
+      
+      const bookingDate = new Date(request.date);
+      const startOfDay = new Date(bookingDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(bookingDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('tenantId', tenantId)
+        .eq('serviceId', request.serviceId)
+        .eq('status', BookingStatus.CONFIRMED)
+        .gte('scheduledAt', startOfDay.toISOString())
+        .lte('scheduledAt', endOfDay.toISOString());
+      
+      if (error) {
+        console.error('Error fetching bookings for availability:', error);
+        return {
+          date: request.date,
+          slots: [],
+          businessHours: { isOpen: false }
+        };
+      }
+      
+      const bookedSlots = (bookings || []).map(b => ({
+        start: new Date(b.scheduledAt),
+        end: new Date(new Date(b.scheduledAt).getTime() + b.duration * 60000),
+        available: false
+      }));
+      
+      const slots: TimeSlot[] = [];
+      const slotDuration = request.duration || service.duration;
+      const startHour = 8;
+      const endHour = 17;
+      
+      for (let hour = startHour; hour < endHour; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const slotStart = new Date(bookingDate);
+          slotStart.setHours(hour, minute, 0, 0);
+          const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
+          
+          let isAvailable = true;
+          for (const booked of bookedSlots) {
+            if (slotStart < booked.end && slotEnd > booked.start) {
+              isAvailable = false;
+              break;
+            }
+          }
+          
+          if (isAvailable && slotEnd <= new Date(bookingDate.getTime() + 24 * 3600000)) {
+            slots.push({
+              start: slotStart,
+              end: slotEnd,
+              available: true
+            });
+          }
+        }
+      }
+      
+      return {
+        date: request.date,
+        slots,
+        businessHours: { isOpen: true, openTime: '08:00', closeTime: '17:00' }
+      };
+    } catch (error) {
+      console.error('Error in getAvailability:', error);
+      return null;
+    }
+  }
+  
+  static async getService(tenantId: string, serviceId: string): Promise<Service | null> {
+    try {
+      const supabase = getSupabaseClient();
+      
+      const { data: service, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', serviceId)
+        .eq('tenantId', tenantId)
+        .single();
+      
+      if (error || !service) {
+        return null;
+      }
+      
+      return service as Service;
+    } catch (error) {
+      console.error('Error in getService:', error);
+      return null;
+    }
   }
 }
