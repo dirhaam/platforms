@@ -42,6 +42,8 @@ export function BookingManagement({
   const [selectedBooking, setSelectedBooking] = useState<Booking | undefined>();
   const [showBookingDetails, setShowBookingDetails] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showRefundForm, setShowRefundForm] = useState(false);
+  const [refundData, setRefundData] = useState({ amount: 0, notes: '', refundType: 'full' });
   const [editingBooking, setEditingBooking] = useState<Partial<Booking> | null>(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -227,6 +229,43 @@ export function BookingManagement({
       setSelectedBooking(undefined);
     } catch (error) {
       console.error('Error deleting booking:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handle process refund
+  const handleProcessRefund = async () => {
+    if (!selectedBooking) return;
+    
+    if (!refundData.amount || refundData.amount <= 0) {
+      alert('Please enter a refund amount');
+      return;
+    }
+
+    if (refundData.refundType === 'partial' && refundData.amount > selectedBooking.totalAmount) {
+      alert('Refund amount cannot exceed total booking amount');
+      return;
+    }
+
+    if (!confirm(`Process ${refundData.refundType} refund of PKR ${refundData.amount}?`)) return;
+
+    setUpdating(true);
+    try {
+      onBookingUpdate?.(selectedBooking.id, {
+        paymentStatus: 'refunded',
+        notes: `${refundData.refundType} refund: PKR ${refundData.amount}. Reason: ${refundData.notes || 'N/A'}`
+      });
+
+      setSelectedBooking({
+        ...selectedBooking,
+        paymentStatus: 'refunded'
+      });
+
+      setShowRefundForm(false);
+      setRefundData({ amount: 0, notes: '', refundType: 'full' });
+    } catch (error) {
+      console.error('Error processing refund:', error);
     } finally {
       setUpdating(false);
     }
@@ -693,6 +732,93 @@ export function BookingManagement({
                       ))}
                     </div>
                   </div>
+
+                  {/* Refund Section */}
+                  {selectedBooking.paymentStatus === 'paid' && (
+                    <div className="border-t pt-3 mt-3">
+                      {!showRefundForm ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setRefundData({ amount: selectedBooking.totalAmount, notes: '', refundType: 'full' });
+                            setShowRefundForm(true);
+                          }}
+                          disabled={updating}
+                          className="text-orange-600 hover:text-orange-700"
+                        >
+                          Process Refund
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Refund Type</label>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant={refundData.refundType === 'full' ? 'default' : 'outline'}
+                                onClick={() => setRefundData({ ...refundData, refundType: 'full', amount: selectedBooking.totalAmount })}
+                              >
+                                Full
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={refundData.refundType === 'partial' ? 'default' : 'outline'}
+                                onClick={() => setRefundData({ ...refundData, refundType: 'partial' })}
+                              >
+                                Partial
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="refundAmount" className="text-sm">Refund Amount (PKR)</Label>
+                            <Input
+                              id="refundAmount"
+                              type="number"
+                              min="0"
+                              step="100"
+                              value={refundData.amount || ''}
+                              onChange={(e) => setRefundData({ ...refundData, amount: parseFloat(e.target.value) || 0 })}
+                              disabled={updating || refundData.refundType === 'full'}
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="refundReason" className="text-sm">Reason for Refund</Label>
+                            <Textarea
+                              id="refundReason"
+                              placeholder="Enter reason for refund..."
+                              value={refundData.notes}
+                              onChange={(e) => setRefundData({ ...refundData, notes: e.target.value })}
+                              disabled={updating}
+                              className="resize-none"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setShowRefundForm(false)}
+                              disabled={updating}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleProcessRefund}
+                              disabled={updating}
+                              className="bg-orange-600 hover:bg-orange-700"
+                            >
+                              Confirm Refund
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -782,8 +908,19 @@ export function BookingManagement({
                   <Input
                     id="datetime"
                     type="datetime-local"
-                    value={editingBooking.scheduledAt ? new Date(editingBooking.scheduledAt).toISOString().slice(0, 16) : ''}
-                    onChange={(e) => setEditingBooking({ ...editingBooking, scheduledAt: new Date(e.target.value) })}
+                    value={editingBooking.scheduledAt ? (() => {
+                      try {
+                        const date = editingBooking.scheduledAt instanceof Date ? editingBooking.scheduledAt : new Date(editingBooking.scheduledAt as string);
+                        return date.toISOString().slice(0, 16);
+                      } catch (e) {
+                        return '';
+                      }
+                    })() : ''}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setEditingBooking({ ...editingBooking, scheduledAt: new Date(e.target.value) });
+                      }
+                    }}
                     disabled={updating}
                   />
                 </div>
