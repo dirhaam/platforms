@@ -1,19 +1,9 @@
-export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageSquare } from 'lucide-react';
 
-export default async function MessagesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ subdomain?: string }>;
-}) {
-  const params = await searchParams;
-  const subdomain = params.subdomain;
-
-  if (!subdomain) redirect('/login');
-
+export default function MessagesPage() {
   return (
     <div className="space-y-6">
       <div>
