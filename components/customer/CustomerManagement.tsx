@@ -111,7 +111,13 @@ export function CustomerManagement({
 
       if (response.ok) {
         const data = await response.json();
-        setStats(data.stats);
+        // Ensure all values have defaults
+        setStats({
+          totalCustomers: data.stats?.totalCustomers ?? 0,
+          newCustomersThisMonth: data.stats?.newCustomersThisMonth ?? 0,
+          activeCustomers: data.stats?.activeCustomers ?? 0,
+          averageBookingsPerCustomer: data.stats?.averageBookingsPerCustomer ?? 0
+        });
       }
     } catch (error) {
       console.error('Error fetching customer stats:', error);
@@ -274,7 +280,7 @@ export function CustomerManagement({
             <div className="flex items-center space-x-2">
               <Users className="h-4 w-4 text-orange-600" />
               <div>
-                <div className="text-2xl font-bold">{stats.averageBookingsPerCustomer.toFixed(1)}</div>
+                <div className="text-2xl font-bold">{(stats.averageBookingsPerCustomer ?? 0).toFixed(1)}</div>
                 <div className="text-sm text-gray-600">Avg Bookings</div>
               </div>
             </div>
