@@ -43,7 +43,7 @@ export function BookingManagement({
   // Fetch bookings
   useEffect(() => {
     fetchBookings();
-  }, [tenantId]);
+  }, [tenantId, customers, services]);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -56,8 +56,31 @@ export function BookingManagement({
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setBookings(data.bookings || []);
+        let bookingsData = await response.json();
+        let bookings = bookingsData.bookings || [];
+        
+        // Fetch customer and service details for each booking
+        bookings = await Promise.all(
+          bookings.map(async (booking: Booking) => {
+            try {
+              // Find customer from customers array
+              const customer = customers.find(c => c.id === booking.customerId);
+              // Find service from services array
+              const service = services.find(s => s.id === booking.serviceId);
+              
+              return {
+                ...booking,
+                customer,
+                service
+              };
+            } catch (err) {
+              console.error('Error enriching booking:', err);
+              return booking;
+            }
+          })
+        );
+        
+        setBookings(bookings);
       } else {
         const errorData = await response.json();
         console.error('Error response:', errorData);
