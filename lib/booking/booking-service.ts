@@ -41,8 +41,8 @@ export class BookingService {
         .from('services')
         .select('*')
         .eq('id', data.serviceId)
-        .eq('tenantId', tenantId)
-        .eq('isActive', true)
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
         .single();
       
       if (serviceError || !serviceData) {
@@ -56,7 +56,7 @@ export class BookingService {
         .from('customers')
         .select('*')
         .eq('id', data.customerId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .single();
       
       if (customerError || !customerData) {
@@ -77,7 +77,7 @@ export class BookingService {
       const { data: businessHoursData, error: businessHoursError } = await supabase
         .from('businessHours')
         .select('*')
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .single();
       
       const businessHoursRecord = businessHoursError ? null : businessHoursData;
@@ -194,7 +194,7 @@ export class BookingService {
       let query = supabase
         .from('bookings')
         .select('*')
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       if (options.status) {
         query = query.eq('status', options.status);
@@ -216,7 +216,7 @@ export class BookingService {
         query = query.lte('scheduledAt', options.endDate.toISOString());
       }
       
-      query = query.order('scheduledAt', { ascending: false });
+      query = query.order('scheduled_at', { ascending: false });
       
       if (options.limit) {
         query = query.limit(options.limit);
@@ -248,7 +248,7 @@ export class BookingService {
         .from('bookings')
         .select('*')
         .eq('id', bookingId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .single();
       
       if (error || !booking) {
@@ -295,7 +295,7 @@ export class BookingService {
         .from('bookings')
         .update(updateData)
         .eq('id', bookingId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .select()
         .single();
       
@@ -323,7 +323,7 @@ export class BookingService {
         .from('bookings')
         .delete()
         .eq('id', bookingId)
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
       
       if (error) {
         return { success: false, error: 'Failed to delete booking' };
@@ -362,7 +362,7 @@ export class BookingService {
       const { data: bookings, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .eq('serviceId', request.serviceId)
         .eq('status', BookingStatus.CONFIRMED)
         .gte('scheduledAt', startOfDay.toISOString())
@@ -431,7 +431,7 @@ export class BookingService {
         .from('services')
         .select('*')
         .eq('id', serviceId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .single();
       
       if (error || !service) {
