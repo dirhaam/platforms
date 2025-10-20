@@ -4,10 +4,10 @@
 -- Test Tenant 1
 INSERT INTO public.tenants (
   subdomain, business_name, owner_name, email, phone, 
-  subscription_plan, subscription_status, created_at
+  subscription_plan, subscription_status, business_category, created_at
 ) VALUES (
   'test-demo', 'Test Demo Business', 'Test Owner', 
-  'owner@testdemo.com', '+62812345678', 'basic', 'active', NOW()
+  'owner@testdemo.com', '+62812345678', 'basic', 'active', 'salon', NOW()
 ) ON CONFLICT DO NOTHING;
 
 -- Get test tenant ID

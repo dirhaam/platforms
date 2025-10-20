@@ -170,8 +170,8 @@ Dev server runs at: `http://localhost:3000`
 #### Create Second Test Tenant
 1. Run this SQL in Supabase:
    ```sql
-   INSERT INTO public.tenants (subdomain, business_name, owner_name, email, phone, subscription_plan, subscription_status) 
-   VALUES ('test-tenant-2', 'Second Business', 'Another Owner', 'owner2@test.com', '+6287654321', 'basic', 'active');
+   INSERT INTO public.tenants (subdomain, business_name, owner_name, email, phone, subscription_plan, subscription_status, business_category) 
+   VALUES ('test-tenant-2', 'Second Business', 'Another Owner', 'owner2@test.com', '+6287654321', 'basic', 'active', 'salon');
    
    INSERT INTO public.staff (tenant_id, name, email, role, password_hash, is_active) 
    VALUES ((SELECT id FROM tenants WHERE subdomain = 'test-tenant-2'), 'Staff 2', 'staff2@test.com', 'admin', '$2b$10$YEHzJ9/B3QXFVQyH6Qe1.uIFLHe5x/qJDBvyLpCFDjAeH9ywkCPLK', true);

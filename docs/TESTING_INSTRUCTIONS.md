@@ -141,8 +141,8 @@ Quick overview:
 #### Setup Second Tenant (in Supabase SQL Editor):
 ```sql
 -- Create tenant 2
-INSERT INTO public.tenants (subdomain, business_name, owner_name, email, phone, subscription_plan, subscription_status) 
-VALUES ('test-tenant-2', 'Second Business', 'Owner 2', 'owner2@test.com', '+6287654321', 'basic', 'active');
+INSERT INTO public.tenants (subdomain, business_name, owner_name, email, phone, subscription_plan, subscription_status, business_category) 
+VALUES ('test-tenant-2', 'Second Business', 'Owner 2', 'owner2@test.com', '+6287654321', 'basic', 'active', 'salon');
 
 -- Create tenant 2 staff
 INSERT INTO public.staff (tenant_id, name, email, role, password_hash, is_active) 
