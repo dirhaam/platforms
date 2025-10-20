@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, Settings, Plus, Edit2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -132,8 +133,11 @@ export function BookingManagement({
       // Update local state
       setSelectedBooking({ ...selectedBooking, status: newStatus as any });
       setEditingBooking(null);
+      
+      toast.success(`Booking status updated to ${newStatus}`);
     } catch (error) {
       console.error('Error updating status:', error);
+      toast.error('Failed to update booking status');
     } finally {
       setUpdating(false);
     }
@@ -209,8 +213,11 @@ export function BookingManagement({
       // Update local state
       setSelectedBooking({ ...selectedBooking, paymentStatus: newPaymentStatus as any });
       setEditingBooking(null);
+      
+      toast.success(`Payment status updated to ${newPaymentStatus}`);
     } catch (error) {
       console.error('Error updating payment:', error);
+      toast.error('Failed to update payment status');
     } finally {
       setUpdating(false);
     }
@@ -227,8 +234,11 @@ export function BookingManagement({
       onBookingDelete?.(selectedBooking.id);
       setShowBookingDetails(false);
       setSelectedBooking(undefined);
+      
+      toast.success('Booking deleted successfully');
     } catch (error) {
       console.error('Error deleting booking:', error);
+      toast.error('Failed to delete booking');
     } finally {
       setUpdating(false);
     }
@@ -264,8 +274,11 @@ export function BookingManagement({
 
       setShowRefundForm(false);
       setRefundData({ amount: 0, notes: '', refundType: 'full' });
+      
+      toast.success(`${refundData.refundType.charAt(0).toUpperCase() + refundData.refundType.slice(1)} refund of PKR ${refundData.amount} processed`);
     } catch (error) {
       console.error('Error processing refund:', error);
+      toast.error('Failed to process refund');
     } finally {
       setUpdating(false);
     }
@@ -321,6 +334,8 @@ export function BookingManagement({
       setIsEditMode(false);
       setEditingBooking(null);
       
+      toast.success('Booking updated successfully');
+      
       // Send WhatsApp notification if datetime changed and booking is confirmed
       if (editingBooking.scheduledAt && new Date(editingBooking.scheduledAt).getTime() !== new Date(selectedBooking.scheduledAt).getTime()) {
         if (selectedBooking.status === 'confirmed' && selectedBooking.customer?.phone) {
@@ -331,11 +346,17 @@ export function BookingManagement({
               phoneNumber: selectedBooking.customer.phone,
               message: `Your booking for ${selectedBooking.service?.name} has been rescheduled to ${new Date(editingBooking.scheduledAt).toLocaleString()}`
             })
-          }).catch(err => console.error('Failed to send WhatsApp notification:', err));
+          }).catch(err => {
+            console.error('Failed to send WhatsApp notification:', err);
+            toast.error('Booking updated but WhatsApp notification failed');
+          });
+          
+          toast.success('WhatsApp notification sent to customer');
         }
       }
     } catch (error) {
       console.error('Error saving edit:', error);
+      toast.error('Failed to update booking');
     } finally {
       setUpdating(false);
     }
