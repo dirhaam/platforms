@@ -43,7 +43,7 @@ export function BookingManagement({
   // Fetch bookings
   useEffect(() => {
     fetchBookings();
-  }, [tenantId, customers, services]);
+  }, [tenantId]);
 
   const fetchBookings = async () => {
     setLoading(true);
