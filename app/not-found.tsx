@@ -1,13 +1,14 @@
 'use client';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { rootDomain, protocol } from '@/lib/utils';
 
-export default function NotFound() {
+function NotFoundContent() {
   const [subdomain, setSubdomain] = useState<string | null>(null);
   const pathname = usePathname();
 
@@ -55,4 +56,8 @@ export default function NotFound() {
       </div>
     </div>
   );
+}
+
+export default function NotFound() {
+  return <NotFoundContent />;
 }
