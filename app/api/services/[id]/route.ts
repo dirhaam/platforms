@@ -3,6 +3,47 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { ServiceService } from '@/lib/booking/service-service';
 import { updateServiceSchema } from '@/lib/validation/booking-validation';
+import { createClient } from '@supabase/supabase-js';
+
+// Helper function to resolve tenant ID
+async function resolveTenantId(request: NextRequest): Promise<string | null> {
+  const { searchParams } = new URL(request.url);
+  let tenantId = request.headers.get('x-tenant-id');
+
+  // Fallback: also check query params
+  if (!tenantId) {
+    tenantId = searchParams.get('tenantId');
+  }
+
+  if (!tenantId) {
+    return null;
+  }
+
+  // If tenantId is subdomain (not UUID), lookup the actual tenant ID
+  // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  const isUUID = tenantId.length === 36;
+
+  if (!isUUID) {
+    // It's a subdomain, lookup the UUID
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('subdomain', tenantId)
+      .single();
+
+    if (!tenant) {
+      return null;
+    }
+    return tenant.id;
+  }
+
+  return tenantId;
+}
 
 // GET /api/services/[id] - Get a specific service
 export async function GET(
@@ -10,10 +51,10 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tenantId = request.headers.get('x-tenant-id');
+    const tenantId = await resolveTenantId(request);
     
     if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Tenant ID required or invalid' }, { status: 400 });
     }
     
     const { id } = await context.params;
@@ -36,10 +77,10 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tenantId = request.headers.get('x-tenant-id');
+    const tenantId = await resolveTenantId(request);
     
     if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Tenant ID required or invalid' }, { status: 400 });
     }
     
     const body = await request.json();
@@ -73,10 +114,10 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tenantId = request.headers.get('x-tenant-id');
+    const tenantId = await resolveTenantId(request);
     
     if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Tenant ID required or invalid' }, { status: 400 });
     }
     
     const { id } = await context.params;
