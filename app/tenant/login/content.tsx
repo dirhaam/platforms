@@ -70,10 +70,19 @@ export default function TenantLoginContent() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
+          subdomain: finalSubdomain,
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        const text = await response.text();
+        console.error('Failed to parse response:', text);
+        setError('Server error - please check console');
+        return;
+      }
 
       if (!response.ok) {
         setError(data.error || 'Login failed');
