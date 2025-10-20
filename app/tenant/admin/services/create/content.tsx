@@ -63,7 +63,10 @@ export function ServiceCreateContent() {
           'Content-Type': 'application/json',
           'x-tenant-id': subdomain
         },
-        body: JSON.stringify(service)
+        body: JSON.stringify({
+          ...service,
+          homeVisitSurcharge: service.homeVisitSurcharge || 0
+        })
       });
 
       if (!response.ok) {

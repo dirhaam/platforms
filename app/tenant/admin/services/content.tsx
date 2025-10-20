@@ -91,7 +91,7 @@ export default function ServicesPageContent() {
           category: service.category,
           isActive: !service.isActive,
           homeVisitAvailable: service.homeVisitAvailable,
-          homeVisitSurcharge: service.homeVisitSurcharge
+          homeVisitSurcharge: service.homeVisitSurcharge || 0
         })
       });
 

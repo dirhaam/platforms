@@ -80,7 +80,7 @@ export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
           category: service.category,
           isActive: service.isActive,
           homeVisitAvailable: service.homeVisitAvailable,
-          homeVisitSurcharge: service.homeVisitSurcharge
+          homeVisitSurcharge: service.homeVisitSurcharge || 0
         })
       });
 

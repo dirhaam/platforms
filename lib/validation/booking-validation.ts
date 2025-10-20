@@ -45,7 +45,7 @@ export const createServiceSchema = z.object({
   price: z.number().min(0, 'Price must be positive'),
   category: z.string().min(1, 'Category is required'),
   homeVisitAvailable: z.boolean().optional().default(false),
-  homeVisitSurcharge: z.number().min(0).optional(),
+  homeVisitSurcharge: z.number().min(0).optional().nullable(),
   images: z.array(z.string().url()).optional().default([]),
   requirements: z.array(z.string()).optional().default([])
 });
@@ -58,7 +58,7 @@ export const updateServiceSchema = z.object({
   category: z.string().optional(),
   isActive: z.boolean().optional(),
   homeVisitAvailable: z.boolean().optional(),
-  homeVisitSurcharge: z.number().min(0).optional(),
+  homeVisitSurcharge: z.number().min(0).optional().nullable(),
   images: z.array(z.string().url()).optional().default([]),
   requirements: z.array(z.string()).optional().default([])
 });
