@@ -5,6 +5,10 @@ import { notFound } from 'next/navigation';
 import { TenantService } from '@/lib/subdomain/tenant-service';
 import TenantLandingPage from '@/components/subdomain/TenantLandingPage';
 import ModernTemplate from '@/components/subdomain/templates/ModernTemplate';
+import ClassicTemplate from '@/components/subdomain/templates/ClassicTemplate';
+import MinimalTemplate from '@/components/subdomain/templates/MinimalTemplate';
+import BeautyTemplate from '@/components/subdomain/templates/BeautyTemplate';
+import HealthcareTemplate from '@/components/subdomain/templates/HealthcareTemplate';
 
 export async function generateMetadata({
   params
@@ -60,8 +64,8 @@ export default async function SubdomainPage({
       TenantService.getTenantBusinessHours(tenantData.id),
     ]);
 
-    // Select template based on tenant preferences or business category
-    const templateId = tenantData.template.id;
+    // Select template based on tenant preferences
+    const templateId = tenantData.template?.id || 'modern';
 
     // Render appropriate template
     switch (templateId) {
@@ -75,18 +79,48 @@ export default async function SubdomainPage({
         );
       
       case 'classic':
-      case 'minimal':
-      case 'beauty':
-      case 'healthcare':
-      default:
-        // For now, use the default TenantLandingPage for other templates
-        // Additional template components can be created later
         return (
-          <TenantLandingPage
+          <ClassicTemplate
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
-            template={templateId as 'modern' | 'classic' | 'minimal'}
+          />
+        );
+      
+      case 'minimal':
+        return (
+          <MinimalTemplate
+            tenant={tenantData}
+            services={services}
+            businessHours={businessHours || undefined}
+          />
+        );
+      
+      case 'beauty':
+        return (
+          <BeautyTemplate
+            tenant={tenantData}
+            services={services}
+            businessHours={businessHours || undefined}
+          />
+        );
+      
+      case 'healthcare':
+        return (
+          <HealthcareTemplate
+            tenant={tenantData}
+            services={services}
+            businessHours={businessHours || undefined}
+          />
+        );
+      
+      default:
+        // Fallback to Modern if template not found
+        return (
+          <ModernTemplate
+            tenant={tenantData}
+            services={services}
+            businessHours={businessHours || undefined}
           />
         );
     }
