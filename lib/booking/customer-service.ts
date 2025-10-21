@@ -144,16 +144,21 @@ export class CustomerService {
       }
       
       if (options.hasBookings === true) {
-        query = query.gt('totalBookings', 0);
+        query = query.gt('total_bookings', 0);
       } else if (options.hasBookings === false) {
-        query = query.eq('totalBookings', 0);
+        query = query.eq('total_bookings', 0);
       }
       
       if (options.sortBy) {
         const ascending = options.sortOrder !== 'desc';
-        query = query.order(options.sortBy, { ascending });
+        // Convert camelCase to snake_case for database column names
+        const columnName = options.sortBy
+          .replace(/([A-Z])/g, '_$1')
+          .toLowerCase()
+          .replace(/^_/, '');
+        query = query.order(columnName, { ascending });
       } else {
-        query = query.order('createdAt', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
       
       if (options.limit) {

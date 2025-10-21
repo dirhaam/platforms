@@ -50,9 +50,6 @@ export default function BookingsPageContent() {
       const servicesData = await servicesRes.json();
       const customersData = await customersRes.json();
 
-      console.log('[Bookings] Services:', servicesData);
-      console.log('[Bookings] Customers:', customersData);
-
       setServices(servicesData.services || []);
       setCustomers(customersData.customers || []);
     } catch (err) {
