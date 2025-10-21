@@ -111,10 +111,46 @@ export default function BookingsPageContent() {
           await fetchTenantData();
         }}
         onBookingUpdate={async (bookingId, updates) => {
-          await fetchTenantData();
+          try {
+            const response = await fetch(`/api/bookings/${bookingId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-tenant-id': subdomain!
+              },
+              body: JSON.stringify(updates)
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to update booking');
+            }
+
+            await fetchTenantData();
+          } catch (error) {
+            console.error('Error updating booking:', error);
+            throw error;
+          }
         }}
         onBookingDelete={async (bookingId) => {
-          await fetchTenantData();
+          try {
+            const response = await fetch(`/api/bookings/${bookingId}`, {
+              method: 'DELETE',
+              headers: {
+                'x-tenant-id': subdomain!
+              }
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to delete booking');
+            }
+
+            await fetchTenantData();
+          } catch (error) {
+            console.error('Error deleting booking:', error);
+            throw error;
+          }
         }}
       />
     </div>
