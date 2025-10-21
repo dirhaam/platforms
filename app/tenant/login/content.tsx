@@ -29,6 +29,7 @@ export default function TenantLoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subdomainInput, setSubdomainInput] = useState(subdomain || '');
+  const [loginType, setLoginType] = useState<'owner' | 'staff' | 'superadmin'>('owner');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -61,17 +62,33 @@ export default function TenantLoginContent() {
     try {
       setLoading(true);
 
-      const response = await fetch('/api/auth/staff-login', {
+      let endpoint = '/api/auth/staff-login';
+      let body: any = {
+        email: formData.email,
+        password: formData.password,
+        subdomain: finalSubdomain,
+      };
+
+      // Route to appropriate endpoint based on login type
+      if (loginType === 'owner' || loginType === 'superadmin') {
+        endpoint = '/api/auth/authenticate';
+        body = {
+          email: formData.email,
+          password: formData.password,
+          loginType: loginType,
+        };
+      } else {
+        // Staff login uses staff-login endpoint
+        body.loginType = 'staff';
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-tenant-id': finalSubdomain,
         },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          subdomain: finalSubdomain,
-        }),
+        body: JSON.stringify(body),
       });
 
       let data;
@@ -117,6 +134,49 @@ export default function TenantLoginContent() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Login Type Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Login As</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLoginType('owner')}
+                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
+                    loginType === 'owner'
+                      ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                  }`}
+                  disabled={loading}
+                >
+                  Owner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('staff')}
+                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
+                    loginType === 'staff'
+                      ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                  }`}
+                  disabled={loading}
+                >
+                  Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('superadmin')}
+                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
+                    loginType === 'superadmin'
+                      ? 'bg-purple-50 border-purple-300 text-purple-700 font-medium'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                  }`}
+                  disabled={loading}
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
+
             {!subdomain && (
               <div className="space-y-2">
                 <label htmlFor="subdomain" className="text-sm font-medium">

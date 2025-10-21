@@ -1,6 +1,8 @@
 'use server';
 
 import { setTenant, getTenant, deleteTenant } from '@/lib/database-service';
+import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 
 import { isValidIcon, type TenantRegistrationData, type BusinessCategory, BUSINESS_CATEGORIES } from '@/lib/subdomain-constants';
 import { createEnhancedTenant } from '@/lib/subdomains';
@@ -145,8 +147,58 @@ export async function createSubdomainAction(
   // Create enhanced tenant data
   const enhancedTenant = await createEnhancedTenant(registrationData);
 
-  // Store in Supabase
+  // Store in Supabase - both to tenants table and backup storage
   await setTenant(sanitizedSubdomain, enhancedTenant);
+
+  // Generate a temporary password for owner (they should change it after login)
+  const temporaryPassword = Math.random().toString(36).slice(-12).toUpperCase();
+  const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+  // Also create in tenants table with owner credentials for authentication
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .insert({
+        id: enhancedTenant.id,
+        subdomain: sanitizedSubdomain,
+        email: email,
+        owner_name: ownerName,
+        business_name: businessName,
+        business_category: businessCategory,
+        business_description: businessDescription,
+        phone: phone,
+        address: address,
+        emoji: icon,
+        password_hash: passwordHash, // Owner can login with this
+        subscription_plan: 'basic',
+        subscription_status: 'active',
+        whatsapp_enabled: false,
+        home_visit_enabled: false,
+        analytics_enabled: true,
+        custom_templates_enabled: false,
+        multi_staff_enabled: false,
+        login_attempts: 0,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (!tenantError && tenant) {
+      console.log('✅ Tenant created in Supabase with owner credentials:', sanitizedSubdomain);
+      console.log('🔐 Temporary Owner Password:', temporaryPassword);
+    } else {
+      console.warn('⚠️ Failed to create tenant in Supabase tenants table:', tenantError?.message);
+      // Continue anyway - legacy storage still worked
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to create tenant credentials in Supabase:', error);
+    // Continue anyway - registration still succeeds
+  }
 
   // Log the tenant creation activity
   try {
@@ -156,7 +208,9 @@ export async function createSubdomainAction(
     console.warn('Failed to log tenant creation activity:', error);
   }
 
-  redirect(`${protocol}://${sanitizedSubdomain}.${rootDomain}`);
+  // Redirect to success page with credentials
+  const encodedPassword = btoa(temporaryPassword); // Base64 encode for URL safety
+  redirect(`${protocol}://${sanitizedSubdomain}.${rootDomain}/setup?success=true&pass=${encodedPassword}&email=${encodeURIComponent(email)}`);
 }
 
 
