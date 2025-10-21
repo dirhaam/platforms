@@ -114,29 +114,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', staff.id);
 
-    // 6. Create session token
-    const sessionToken = await SecurityService.hashPassword(
-      `${staff.id}:${Date.now()}:${Math.random()}`
-    );
-
-    // Store session in database (optional - for reference)
-    await supabase
-      .from('sessions')
-      .insert({
-        id: `staff_${staff.id}_${Date.now()}`,
-        user_id: staff.id,
-        tenant_id: tenant.id,
-        session_data: {
-          type: 'staff',
-          staffId: staff.id,
-          staffName: staff.name,
-          staffRole: staff.role,
-          tenantId: tenant.id,
-          tenantSubdomain: tenant.subdomain,
-          tenantName: tenant.business_name,
-        },
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-      });
+    // 6. Session will be set via cookie (no need for token)
 
     // 7. Set secure cookie with session using inline encoding
     const sessionData = {
