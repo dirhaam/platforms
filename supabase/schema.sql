@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS tenants (
 
     brand_colors JSONB,
 
+    template_id TEXT DEFAULT 'modern',
+
     whatsapp_enabled BOOLEAN DEFAULT FALSE,
     home_visit_enabled BOOLEAN DEFAULT FALSE,
     analytics_enabled BOOLEAN DEFAULT FALSE,
