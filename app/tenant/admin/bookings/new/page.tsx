@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -15,6 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Customer, Service } from '@/types/booking';
 
 interface NewBooking {
@@ -22,6 +29,14 @@ interface NewBooking {
   serviceId: string;
   scheduledAt: string;
   scheduledTime: string;
+  notes: string;
+}
+
+interface NewCustomer {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
   notes: string;
 }
 
@@ -37,11 +52,21 @@ export default function BookingNewPage() {
     scheduledTime: '',
     notes: ''
   });
+
+  const [newCustomer, setNewCustomer] = useState<NewCustomer>({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    notes: ''
+  });
   
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,6 +95,60 @@ export default function BookingNewPage() {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!subdomain) return;
+
+    if (!newCustomer.name.trim() || !newCustomer.phone.trim()) {
+      alert('Name and phone are required');
+      return;
+    }
+
+    setCreatingCustomer(true);
+
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': subdomain
+        },
+        body: JSON.stringify(newCustomer)
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create customer');
+      }
+
+      const data = await response.json();
+      const createdCustomer = data.customer;
+
+      // Add new customer to list
+      setCustomers([...customers, createdCustomer]);
+
+      // Auto-select the new customer
+      setBooking({ ...booking, customerId: createdCustomer.id });
+
+      // Reset form and close dialog
+      setNewCustomer({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        notes: ''
+      });
+      setShowCustomerDialog(false);
+
+      // Show success feedback
+      alert(`${createdCustomer.name} added successfully!`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create customer');
+    } finally {
+      setCreatingCustomer(false);
     }
   };
 
@@ -145,17 +224,33 @@ export default function BookingNewPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="customer">Customer *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="customer">Customer *</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCustomerDialog(true)}
+                    className="gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add New
+                  </Button>
+                </div>
                 <Select value={booking.customerId} onValueChange={(value) => setBooking({ ...booking, customerId: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map(customer => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name} ({customer.phone})
-                      </SelectItem>
-                    ))}
+                    {customers.length === 0 ? (
+                      <div className="p-2 text-sm text-gray-600">No customers available</div>
+                    ) : (
+                      customers.map(customer => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name} ({customer.phone})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -228,6 +323,91 @@ export default function BookingNewPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add New Customer Dialog */}
+      <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogDescription>
+              Create a new customer and they'll be automatically selected for this booking
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateCustomer} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newcust-name">Customer Name *</Label>
+              <Input
+                id="newcust-name"
+                placeholder="John Doe"
+                value={newCustomer.name}
+                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newcust-email">Email</Label>
+              <Input
+                id="newcust-email"
+                type="email"
+                placeholder="john@example.com"
+                value={newCustomer.email}
+                onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newcust-phone">Phone Number *</Label>
+              <Input
+                id="newcust-phone"
+                placeholder="+92 300 1234567"
+                value={newCustomer.phone}
+                onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newcust-address">Address</Label>
+              <Input
+                id="newcust-address"
+                placeholder="Customer's address"
+                value={newCustomer.address}
+                onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newcust-notes">Notes</Label>
+              <Textarea
+                id="newcust-notes"
+                placeholder="Additional notes about the customer"
+                value={newCustomer.notes}
+                onChange={(e) => setNewCustomer({ ...newCustomer, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCustomerDialog(false)}
+                disabled={creatingCustomer}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={creatingCustomer}
+              >
+                {creatingCustomer ? 'Creating...' : 'Add & Select'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
