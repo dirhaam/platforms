@@ -141,21 +141,25 @@ export async function POST(request: NextRequest) {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
       });
 
-    // 7. Set secure cookie with session
+    // 7. Set secure cookie with session using inline encoding
+    const sessionData = {
+      staffId: staff.id,
+      staffName: staff.name,
+      staffRole: staff.role,
+      tenantId: tenant.id,
+      tenantSubdomain: tenant.subdomain,
+      tenantName: tenant.business_name,
+      loginTime: Date.now(),
+    };
+
     const cookieStore = await cookies();
+    // Use inline encoding like superadmin
+    const inlineSession = 'inline.' + btoa(JSON.stringify(sessionData));
     cookieStore.set({
       name: 'tenant_session',
-      value: JSON.stringify({
-        staffId: staff.id,
-        staffName: staff.name,
-        staffRole: staff.role,
-        tenantId: tenant.id,
-        tenantSubdomain: tenant.subdomain,
-        tenantName: tenant.business_name,
-        loginTime: Date.now(),
-      }),
+      value: inlineSession,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Always use true in production
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });

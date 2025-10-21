@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { TenantAuth } from '@/lib/auth/tenant-auth';
 
 export async function POST(request: NextRequest) {
@@ -16,6 +17,10 @@ export async function POST(request: NextRequest) {
 
     // Logout with security logging
     await TenantAuth.logout(session || undefined, ipAddress, userAgent);
+
+    // Also clear tenant_session cookie (for staff/tenant logins)
+    const cookieStore = await cookies();
+    cookieStore.delete('tenant_session');
 
     return NextResponse.json({ success: true });
   } catch (error) {

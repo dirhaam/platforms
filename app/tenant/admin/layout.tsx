@@ -93,7 +93,7 @@ function TenantAdminLayoutContent({
         {/* Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
           <Button asChild variant="outline" className="w-full justify-start text-red-600 hover:text-red-700">
-            <Link href="/login">
+            <Link href={`/tenant/login?subdomain=${subdomain}`}>
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Link>

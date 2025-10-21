@@ -7,35 +7,39 @@ import { RBAC, RouteGuard, type RouteProtection } from './rbac';
 const PROTECTED_ROUTES: Record<string, RouteProtection> = {
   '/admin': {
     permissions: ['manage_bookings'],
-    roles: ['owner', 'admin', 'staff'],
+    roles: ['superadmin', 'owner', 'admin', 'staff'],
   },
   '/admin/dashboard': {
     permissions: ['manage_bookings'],
+    roles: ['superadmin', 'owner', 'admin', 'staff'],
   },
   '/admin/bookings': {
     permissions: ['manage_bookings'],
+    roles: ['superadmin', 'owner', 'admin', 'staff'],
   },
   '/admin/customers': {
     permissions: ['manage_customers', 'view_customers'],
+    roles: ['superadmin', 'owner', 'admin', 'staff'],
   },
   '/admin/services': {
     permissions: ['manage_services'],
-    roles: ['owner', 'admin'],
+    roles: ['superadmin', 'owner', 'admin'],
   },
   '/admin/staff': {
     permissions: ['manage_staff'],
-    roles: ['owner', 'admin'],
+    roles: ['superadmin', 'owner', 'admin'],
   },
   '/admin/analytics': {
     permissions: ['view_analytics'],
-    roles: ['owner', 'admin'],
+    roles: ['superadmin', 'owner', 'admin'],
   },
   '/admin/messages': {
     permissions: ['send_messages'],
+    roles: ['superadmin', 'owner', 'admin', 'staff'],
   },
   '/admin/settings': {
     permissions: ['manage_settings'],
-    roles: ['owner', 'admin'],
+    roles: ['superadmin', 'owner', 'admin'],
   },
 };
 

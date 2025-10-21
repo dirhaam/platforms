@@ -1,9 +1,18 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldX, ArrowLeft, Home } from 'lucide-react';
 
 export default function UnauthorizedPage() {
+  const router = useRouter();
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
@@ -34,11 +43,9 @@ export default function UnauthorizedPage() {
               </Link>
             </Button>
             
-            <Button asChild variant="outline">
-              <Link href="javascript:history.back()">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Go Back
-              </Link>
+            <Button variant="outline" onClick={handleGoBack}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back
             </Button>
           </div>
 

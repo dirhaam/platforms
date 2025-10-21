@@ -68,16 +68,24 @@ export async function POST(request: NextRequest) {
         isSuperAdmin: true,
       };
 
-      // Set response with auth cookie
+      // Set response with auth cookie using inline session encoding
       const response = NextResponse.json({
         success: true,
         message: 'SuperAdmin login successful',
-        user: sessionData
+        user: {
+          name: sessionData.name,
+          email: sessionData.email,
+          role: sessionData.role,
+          tenantId: sessionData.tenantId,
+          isSuperAdmin: sessionData.isSuperAdmin,
+        }
       });
 
-      response.cookies.set('tenant-auth', JSON.stringify(sessionData), {
+      // Use inline session encoding like in /api/auth/login
+      const inlineSession = 'inline.' + btoa(JSON.stringify(sessionData));
+      response.cookies.set('tenant-auth', inlineSession, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use true in production
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/',
@@ -179,16 +187,23 @@ async function handleTenantAuth(
         name: tenant.owner_name,
       };
 
-      // Set response with auth cookie
+      // Set response with auth cookie using inline session encoding
       const response = NextResponse.json({
         success: true,
         message: 'Business owner login successful',
-        user: sessionData
+        user: {
+          name: sessionData.name,
+          email: sessionData.email,
+          role: sessionData.role,
+          tenantId: sessionData.tenantId,
+        }
       });
 
-      response.cookies.set('tenant-auth', JSON.stringify(sessionData), {
+      // Use inline session encoding
+      const inlineSession = 'inline.' + btoa(JSON.stringify(sessionData));
+      response.cookies.set('tenant-auth', inlineSession, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use true in production
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/',
@@ -261,16 +276,23 @@ async function handleTenantAuth(
         name: staffMember.name,
       };
 
-      // Set response with auth cookie
+      // Set response with auth cookie using inline session encoding
       const response = NextResponse.json({
         success: true,
         message: 'Staff member login successful',
-        user: sessionData
+        user: {
+          name: sessionData.name,
+          email: sessionData.email,
+          role: sessionData.role,
+          tenantId: sessionData.tenantId,
+        }
       });
 
-      response.cookies.set('tenant-auth', JSON.stringify(sessionData), {
+      // Use inline session encoding
+      const inlineSession = 'inline.' + btoa(JSON.stringify(sessionData));
+      response.cookies.set('tenant-auth', inlineSession, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use true in production
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/',
