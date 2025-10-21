@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { SecurityService } from '@/lib/security/security-service';
+import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
@@ -67,23 +67,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Verify password
-    // In development, allow direct test password comparison
-    const isDevelopment = process.env.NODE_ENV !== 'production';
+    // 4. Verify password using bcrypt
     let isValidPassword = false;
 
-    if (isDevelopment && password === 'test123') {
-      // Development mode: allow test password directly
-      isValidPassword = true;
-      console.warn('[staff-login] Using development test password');
-    } else {
-      // Production: use bcrypt verification
+    if (staff.password_hash) {
       try {
-        isValidPassword = await SecurityService.verifyPassword(password, staff.password_hash);
+        isValidPassword = await bcrypt.compare(password, staff.password_hash);
+        console.log('[staff-login] Password verification result:', isValidPassword, 'for', email);
       } catch (pwError) {
         console.error('[staff-login] Password verification error:', pwError);
         isValidPassword = false;
       }
+    } else {
+      console.warn('[staff-login] No password hash set for staff:', email);
+      isValidPassword = false;
     }
 
     if (!isValidPassword) {
