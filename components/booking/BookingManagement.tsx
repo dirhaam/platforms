@@ -49,6 +49,7 @@ export function BookingManagement({
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
+  const [scheduleViewMode, setScheduleViewMode] = useState<'day' | 'week'>('day');
 
   // Fetch bookings
   useEffect(() => {
@@ -391,6 +392,59 @@ export function BookingManagement({
     return getBookingsForDateRange(today, nextWeek);
   };
 
+  // Get bookings grouped by day
+  const getBookingsGroupedByDay = (): Map<string, Booking[]> => {
+    const grouped = new Map<string, Booking[]>();
+    const today = new Date();
+    
+    // Get bookings for next 30 days
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+      
+      const dayBookings = getBookingsForDateRange(startOfDay, endOfDay);
+      if (dayBookings.length > 0) {
+        const dateKey = startOfDay.toLocaleDateString();
+        grouped.set(dateKey, dayBookings.sort((a, b) => 
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+        ));
+      }
+    }
+    
+    return grouped;
+  };
+
+  // Get bookings grouped by week
+  const getBookingsGroupedByWeek = (): Map<string, Booking[]> => {
+    const grouped = new Map<string, Booking[]>();
+    const today = new Date();
+    
+    // Get current week start (Monday)
+    const monday = new Date(today);
+    monday.setDate(monday.getDate() - monday.getDay() + (monday.getDay() === 0 ? -6 : 1));
+    
+    // Get bookings for next 12 weeks
+    for (let week = 0; week < 12; week++) {
+      const weekStart = new Date(monday);
+      weekStart.setDate(weekStart.getDate() + week * 7);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59);
+      
+      const weekBookings = getBookingsForDateRange(weekStart, weekEnd);
+      if (weekBookings.length > 0) {
+        const weekKey = `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
+        grouped.set(weekKey, weekBookings.sort((a, b) => 
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+        ));
+      }
+    }
+    
+    return grouped;
+  };
+
   const todayBookings = getTodayBookings();
   const upcomingBookings = getUpcomingBookings();
 
@@ -537,53 +591,145 @@ export function BookingManagement({
         </TabsContent>
 
         <TabsContent value="schedule" className="space-y-6">
+          {/* View Mode Filter */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex gap-2">
+                <Button
+                  variant={scheduleViewMode === 'day' ? 'default' : 'outline'}
+                  onClick={() => setScheduleViewMode('day')}
+                  size="sm"
+                >
+                  Day View
+                </Button>
+                <Button
+                  variant={scheduleViewMode === 'week' ? 'default' : 'outline'}
+                  onClick={() => setScheduleViewMode('week')}
+                  size="sm"
+                >
+                  Week View
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Schedule Content */}
           <Card>
             <CardHeader>
-              <CardTitle>Daily Schedule</CardTitle>
+              <CardTitle>{scheduleViewMode === 'day' ? 'Daily' : 'Weekly'} Schedule</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {todayBookings.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No bookings scheduled for today
-                  </div>
+              <div className="space-y-6">
+                {scheduleViewMode === 'day' ? (
+                  // Day View
+                  (() => {
+                    const dayBookings = getBookingsGroupedByDay();
+                    return dayBookings.size === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No bookings scheduled
+                      </div>
+                    ) : (
+                      Array.from(dayBookings.entries()).map(([dateKey, bookingsForDay]) => (
+                        <div key={dateKey} className="border rounded-lg p-4">
+                          <h4 className="font-semibold mb-4 text-gray-900">{dateKey}</h4>
+                          <div className="space-y-3">
+                            {bookingsForDay.map(booking => (
+                              <div
+                                key={booking.id}
+                                className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200"
+                              >
+                                <div>
+                                  <div className="font-medium text-sm">{booking.customer?.name}</div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {booking.service?.name} • {booking.duration} min
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {new Date(booking.scheduledAt).toLocaleTimeString([], { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className={`
+                                    px-2 py-1 text-xs rounded-full font-medium
+                                    ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
+                                    ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                    ${booking.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
+                                    ${booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                  `}>
+                                    {booking.status}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleBookingClick(booking)}
+                                  >
+                                    View
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    );
+                  })()
                 ) : (
-                  todayBookings.map(booking => (
-                    <div
-                      key={booking.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div>
-                        <div className="font-medium">{booking.customer?.name}</div>
-                        <div className="text-sm text-gray-600">
-                          {booking.service?.name} • {booking.duration} min
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {new Date(booking.scheduledAt).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </div>
+                  // Week View
+                  (() => {
+                    const weekBookings = getBookingsGroupedByWeek();
+                    return weekBookings.size === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No bookings scheduled
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`
-                          px-2 py-1 text-xs rounded-full
-                          ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
-                          ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                          ${booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                        `}>
-                          {booking.status}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleBookingClick(booking)}
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  ))
+                    ) : (
+                      Array.from(weekBookings.entries()).map(([weekKey, bookingsForWeek]) => (
+                        <div key={weekKey} className="border rounded-lg p-4">
+                          <h4 className="font-semibold mb-4 text-gray-900">{weekKey}</h4>
+                          <div className="space-y-3">
+                            {bookingsForWeek.map(booking => (
+                              <div
+                                key={booking.id}
+                                className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200"
+                              >
+                                <div>
+                                  <div className="font-medium text-sm">{booking.customer?.name}</div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {booking.service?.name} • {booking.duration} min
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {new Date(booking.scheduledAt).toLocaleDateString()} {new Date(booking.scheduledAt).toLocaleTimeString([], { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className={`
+                                    px-2 py-1 text-xs rounded-full font-medium
+                                    ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
+                                    ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                    ${booking.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
+                                    ${booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                  `}>
+                                    {booking.status}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleBookingClick(booking)}
+                                  >
+                                    View
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    );
+                  })()
                 )}
               </div>
             </CardContent>
