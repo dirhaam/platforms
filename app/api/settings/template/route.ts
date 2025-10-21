@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Update tenant template
+    console.log('[template POST] Updating tenant:', { resolvedTenantId, template });
+    
     const { data, error } = await supabase
       .from('tenants')
       .update({
@@ -62,9 +64,15 @@ export async function POST(request: NextRequest) {
       .eq('id', resolvedTenantId)
       .select();
 
+    console.log('[template POST] Update result:', { data, error });
+
     if (error || !data || data.length === 0) {
       console.error('Error updating template:', error);
-      return NextResponse.json({ error: 'Failed to update template' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Failed to update template',
+        details: error?.message || 'Unknown error',
+        resolvedTenantId
+      }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -74,7 +82,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in template update:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
 
@@ -87,6 +98,8 @@ export async function GET(request: NextRequest) {
       const url = new URL(request.url);
       tenantId = url.searchParams.get('subdomain') || url.searchParams.get('tenant');
     }
+
+    console.log('[template GET] Request with tenantId:', tenantId);
 
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
@@ -103,14 +116,22 @@ export async function GET(request: NextRequest) {
 
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
-      const { data: tenant } = await supabase
+      console.log('[template GET] Looking up subdomain:', tenantId);
+      
+      const { data: tenant, error } = await supabase
         .from('tenants')
         .select('id, template_id')
         .eq('subdomain', tenantId.toLowerCase())
         .single();
 
-      if (!tenant) {
-        return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+      console.log('[template GET] Subdomain lookup result:', { tenant, error });
+
+      if (!tenant || error) {
+        return NextResponse.json({ 
+          error: 'Tenant not found',
+          details: error?.message || 'No tenant found',
+          subdomain: tenantId
+        }, { status: 404 });
       }
       
       return NextResponse.json({
@@ -119,14 +140,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Direct UUID lookup
-    const { data: tenant } = await supabase
+    console.log('[template GET] Direct UUID lookup:', tenantId);
+    
+    const { data: tenant, error } = await supabase
       .from('tenants')
       .select('template_id')
       .eq('id', tenantId)
       .single();
 
-    if (!tenant) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    console.log('[template GET] UUID lookup result:', { tenant, error });
+
+    if (!tenant || error) {
+      return NextResponse.json({ 
+        error: 'Tenant not found',
+        details: error?.message || 'No tenant found',
+        tenantId
+      }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -134,6 +163,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching template:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }

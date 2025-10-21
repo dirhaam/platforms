@@ -91,14 +91,18 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate = 
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        const errorMsg = errorData.details || errorData.error || 'Failed to save template';
+        
         // If API returns 404 or error, show warning but still let user proceed
         if (response.status === 404 || response.status === 500) {
-          toast.warning('Template selected but server is not responding. Will be saved when server is ready.');
+          console.warn('[TemplateSave] Server error:', { status: response.status, error: errorMsg });
+          toast.warning(`Server error: ${errorMsg}. Will save when ready.`);
           return;
         }
         
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save template');
+        console.warn('[TemplateSave] Request rejected:', { status: response.status, error: errorMsg });
+        throw new Error(errorMsg);
       }
 
       toast.success('Landing page style updated successfully!');
