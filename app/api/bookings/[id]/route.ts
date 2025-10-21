@@ -3,6 +3,43 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { BookingService } from '@/lib/booking/booking-service';
 import { updateBookingSchema } from '@/lib/validation/booking-validation';
+import { createClient } from '@supabase/supabase-js';
+
+// Helper function to resolve subdomain to tenant UUID
+async function resolveTenantId(tenantIdentifier: string): Promise<{ resolved: string | null; error?: string }> {
+  if (!tenantIdentifier) {
+    return { resolved: null, error: 'Tenant ID required' };
+  }
+
+  // If it's already a UUID (36 chars), return as is
+  const isUUID = tenantIdentifier.length === 36;
+  if (isUUID) {
+    return { resolved: tenantIdentifier };
+  }
+
+  // It's a subdomain, lookup the UUID
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: tenant, error } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('subdomain', tenantIdentifier.toLowerCase())
+      .single();
+
+    if (error || !tenant) {
+      return { resolved: null, error: 'Tenant not found' };
+    }
+
+    return { resolved: tenant.id };
+  } catch (error) {
+    console.error('Error resolving tenant:', error);
+    return { resolved: null, error: 'Failed to resolve tenant' };
+  }
+}
 
 // GET /api/bookings/[id] - Get a specific booking
 export async function GET(
@@ -16,8 +53,13 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
     
+    const { resolved, error: resolveError } = await resolveTenantId(tenantId);
+    if (!resolved) {
+      return NextResponse.json({ error: resolveError || 'Tenant not found' }, { status: 404 });
+    }
+
     const { id } = await context.params;
-    const booking = await BookingService.getBooking(tenantId, id);
+    const booking = await BookingService.getBooking(resolved, id);
     
     if (!booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
@@ -41,6 +83,11 @@ export async function PUT(
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
+
+    const { resolved, error: resolveError } = await resolveTenantId(tenantId);
+    if (!resolved) {
+      return NextResponse.json({ error: resolveError || 'Tenant not found' }, { status: 404 });
+    }
     
     const body = await request.json();
     
@@ -54,7 +101,7 @@ export async function PUT(
     }
     
     const { id } = await context.params;
-    const result = await BookingService.updateBooking(tenantId, id, validation.data);
+    const result = await BookingService.updateBooking(resolved, id, validation.data);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -78,9 +125,14 @@ export async function DELETE(
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
+
+    const { resolved, error: resolveError } = await resolveTenantId(tenantId);
+    if (!resolved) {
+      return NextResponse.json({ error: resolveError || 'Tenant not found' }, { status: 404 });
+    }
     
     const { id } = await context.params;
-    const result = await BookingService.deleteBooking(tenantId, id);
+    const result = await BookingService.deleteBooking(resolved, id);
     
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
