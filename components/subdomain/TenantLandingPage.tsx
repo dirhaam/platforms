@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MapPin, Clock, Star } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Star, CheckCircle, Award, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
@@ -160,51 +160,93 @@ export default function TenantLandingPage({
 
       {/* Services Section */}
       {services.length > 0 && (
-        <section id="services-section" className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <section id="services-section" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Services</h2>
-              <p className="text-lg text-gray-600">
-                Professional services tailored to your needs
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Services</h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                Professional, high-quality services designed to meet your needs. Browse our complete service offerings below.
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {services.slice(0, 6).map((service) => (
-                <Card key={service.id} className="hover:shadow-lg transition-shadow">
+                <Card 
+                  key={service.id} 
+                  className="hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden border-0"
+                >
+                  {/* Service Header with Category */}
+                  <div 
+                    className="h-2" 
+                    style={{ backgroundColor: primaryColor }}
+                  />
+                  
                   <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{service.name}</CardTitle>
-                      <Badge variant="secondary">{service.category}</Badge>
-                    </div>
-                    <CardDescription>{service.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Duration:</span>
-                        <span className="font-medium">{service.duration} min</span>
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl font-bold text-gray-900 line-clamp-2">
+                          {service.name}
+                        </CardTitle>
                       </div>
+                      <Badge 
+                        variant="secondary"
+                        className="flex-shrink-0"
+                      >
+                        {service.category}
+                      </Badge>
+                    </div>
+                    {service.description && (
+                      <CardDescription className="line-clamp-2 mt-2">
+                        {service.description}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    {/* Service Details */}
+                    <div className="space-y-3 py-3 border-t border-b border-gray-100">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Price:</span>
-                        <span className="font-bold text-lg" style={{ color: primaryColor }}>
-                          ${Number(service.price)}
+                        <div className="flex items-center space-x-2 text-gray-600">
+                          <Clock className="h-4 w-4" style={{ color: primaryColor }} />
+                          <span className="text-sm">Duration</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">
+                          {service.duration} min
                         </span>
                       </div>
-                      {service.homeVisitAvailable && (
-                        <div className="flex items-center space-x-2 text-sm text-green-600">
-                          <MapPin className="h-4 w-4" />
-                          <span>Home visit available</span>
+                      
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center space-x-2 text-gray-600">
+                          <Star className="h-4 w-4" style={{ color: primaryColor }} />
+                          <span className="text-sm">Price</span>
+                        </div>
+                        <span 
+                          className="font-bold text-2xl" 
+                          style={{ color: primaryColor }}
+                        >
+                          PKR {Number(service.price).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Home Visit Info */}
+                    {service.homeVisitAvailable && (
+                      <div className="flex items-center space-x-2 p-3 bg-green-50 rounded-lg border border-green-100">
+                        <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        <div className="text-sm text-green-700">
+                          <span className="font-medium">Home visit available</span>
                           {service.homeVisitSurcharge && (
-                            <span className="text-gray-500">
-                              (+${Number(service.homeVisitSurcharge)})
+                            <span className="text-green-600 ml-1">
+                              (+PKR {Number(service.homeVisitSurcharge).toLocaleString()})
                             </span>
                           )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Book Button */}
                     <Button 
-                      className="w-full mt-4" 
+                      className="w-full font-semibold py-2.5 text-base"
                       style={{ backgroundColor: primaryColor }}
                       onClick={() => handleBookService(service)}
                     >
@@ -216,8 +258,16 @@ export default function TenantLandingPage({
             </div>
             
             {services.length > 6 && (
-              <div className="text-center mt-8">
-                <Button variant="outline" size="lg">
+              <div className="text-center mt-12">
+                <p className="text-gray-600 mb-4">
+                  We offer {services.length} different services to serve you better.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="px-8 py-2.5"
+                  style={{ borderColor: primaryColor, color: primaryColor }}
+                >
                   View All Services ({services.length})
                 </Button>
               </div>
@@ -225,6 +275,60 @@ export default function TenantLandingPage({
           </div>
         </section>
       )}
+
+      {/* Why Choose Us Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Why Choose {tenant.businessName}?</h2>
+            <p className="text-xl text-gray-300">
+              Experience the difference with our professional team
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              { icon: Award, title: 'Professional Staff', desc: 'Highly trained and experienced professionals' },
+              { icon: Zap, title: 'Quick Booking', desc: 'Easy online scheduling at your convenience' },
+              { icon: CheckCircle, title: 'Quality Service', desc: 'Premium quality service guaranteed' },
+              { icon: Users, title: 'Customer Care', desc: 'Dedicated support for all your needs' }
+            ].map((feature, idx) => {
+              const Icon = feature.icon;
+              return (
+                <div key={idx} className="text-center">
+                  <div className="flex justify-center mb-4">
+                    <Icon 
+                      className="h-12 w-12" 
+                      style={{ color: primaryColor }}
+                    />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-gray-400">{feature.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-12 text-center text-white">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Ready to book your appointment?
+          </h2>
+          <p className="text-lg mb-8 text-blue-100">
+            Choose from our wide range of services and schedule your visit today
+          </p>
+          <Button 
+            size="lg" 
+            className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-8 py-3"
+            onClick={() => handleBookService()}
+          >
+            Book Now
+          </Button>
+        </div>
+      </section>
 
       {/* Contact Information */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
