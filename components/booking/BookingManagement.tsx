@@ -616,7 +616,7 @@ export function BookingManagement({
 
       {/* Booking Details Dialog */}
       <Dialog open={showBookingDetails} onOpenChange={setShowBookingDetails}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Booking Details</DialogTitle>
             <DialogDescription>
@@ -625,7 +625,7 @@ export function BookingManagement({
           </DialogHeader>
           
           {selectedBooking && !isEditMode && (
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-y-auto pr-4">
               {/* Customer Info */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-semibold mb-3">Customer</h3>
@@ -874,7 +874,7 @@ export function BookingManagement({
 
           {/* Edit Form */}
           {selectedBooking && isEditMode && editingBooking && (
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-y-auto pr-4">
               <div className="space-y-4">
                 {/* Customer Selection */}
                 <div>
