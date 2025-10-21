@@ -116,6 +116,8 @@ async function handleTenantAuth(
   password: string
 ) {
   try {
+    console.log('[handleTenantAuth] Login attempt:', { loginType, email });
+    
     // First, find the tenant by subdomain or email
     // Since we don't have subdomain context here, we'll need to determine the proper approach
     // For now, we'll look for a tenant with the given email
@@ -128,11 +130,17 @@ async function handleTenantAuth(
       .eq('email', email)
       .single();
 
+    if (error) {
+      console.error('[handleTenantAuth] Error finding tenant:', error.message);
+    }
+    
+    console.log('[handleTenantAuth] Tenant found:', existingTenant ? 'YES' : 'NO');
+    
     if (error || !existingTenant) {
-      console.error('Tenant not found:', error);
+      console.error('[handleTenantAuth] Tenant not found for email:', email);
       return NextResponse.json({
         success: false,
-        error: 'Tenant not found'
+        error: 'Invalid credentials'
       }, { status: 401 });
     }
 
@@ -141,23 +149,36 @@ async function handleTenantAuth(
     // Now find the user (owner or staff) based on loginType
     if (loginType === 'owner') {
       // Verify password hash for owner
+      console.log('[handleTenantAuth] Owner login - checking password_hash exists:', !!tenant.password_hash);
+      
       if (tenant.password_hash) {
-        const isValidPassword = await bcrypt.compare(password, tenant.password_hash);
-        if (!isValidPassword) {
-          // Increment login attempts
-          const newLoginAttempts = (tenant.login_attempts || 0) + 1;
-          const shouldLock = newLoginAttempts >= 5;
-          await supabase
-            .from('tenants')
-            .update({ 
-              login_attempts: newLoginAttempts,
-              locked_until: shouldLock ? new Date(Date.now() + 30 * 60 * 1000).toISOString() : null
-            })
-            .eq('id', tenant.id);
-            
+        try {
+          const isValidPassword = await bcrypt.compare(password, tenant.password_hash);
+          console.log('[handleTenantAuth] Password verification result:', isValidPassword);
+          
+          if (!isValidPassword) {
+            // Increment login attempts
+            const newLoginAttempts = (tenant.login_attempts || 0) + 1;
+            const shouldLock = newLoginAttempts >= 5;
+            await supabase
+              .from('tenants')
+              .update({ 
+                login_attempts: newLoginAttempts,
+                locked_until: shouldLock ? new Date(Date.now() + 30 * 60 * 1000).toISOString() : null
+              })
+              .eq('id', tenant.id);
+              
+            console.error('[handleTenantAuth] Invalid password for owner:', email);
+            return NextResponse.json({
+              success: false,
+              error: 'Invalid credentials'
+            }, { status: 401 });
+          }
+        } catch (bcryptError) {
+          console.error('[handleTenantAuth] Bcrypt compare error:', bcryptError);
           return NextResponse.json({
             success: false,
-            error: 'Invalid password'
+            error: 'Authentication error'
           }, { status: 401 });
         }
         
