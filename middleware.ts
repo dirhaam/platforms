@@ -52,6 +52,13 @@ export async function middleware(request: NextRequest) {
   console.log(`[middleware] Pathname: ${pathname}`);
   console.log(`[middleware] Extracted subdomain: ${subdomain}`);
 
+  // SUBDOMAIN ROOT PATH - If there's a subdomain and path is /, redirect to /s/[subdomain]
+  if (subdomain && pathname === '/') {
+    console.log(`[middleware] Subdomain root path detected for: ${subdomain}, redirecting to /s/${subdomain}`);
+    const newUrl = new URL(`/s/${subdomain}`, request.url);
+    return NextResponse.redirect(newUrl);
+  }
+
   // TENANT ROUTES - Handle /tenant/* paths
   if (pathname.startsWith('/tenant')) {
     // Check if trying to access protected /tenant/admin routes
