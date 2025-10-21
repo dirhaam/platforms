@@ -77,7 +77,7 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate = 
 
     setSaving(true);
     try {
-      const url = new URL('/api/tenant/settings/template', window.location.origin);
+      const url = new URL('/api/settings/template', window.location.origin);
       url.searchParams.set('subdomain', subdomain);
       
       const response = await fetch(url.toString(), {
