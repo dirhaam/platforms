@@ -7,8 +7,15 @@ const VALID_TEMPLATES = ['modern', 'classic', 'minimal', 'beauty', 'healthcare']
 
 export async function POST(request: NextRequest) {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    if (!headerTenantId) {
+    // Get tenant ID from header, query params, or body
+    let tenantId = request.headers.get('x-tenant-id');
+    
+    if (!tenantId) {
+      const url = new URL(request.url);
+      tenantId = url.searchParams.get('subdomain') || url.searchParams.get('tenant');
+    }
+
+    if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
@@ -28,15 +35,15 @@ export async function POST(request: NextRequest) {
     );
 
     // Resolve subdomain to tenant ID if needed
-    let resolvedTenantId = headerTenantId;
-    const isUUID = headerTenantId.length === 36;
+    let resolvedTenantId = tenantId;
+    const isUUID = tenantId.length === 36;
 
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
-        .eq('subdomain', headerTenantId.toLowerCase())
+        .eq('subdomain', tenantId.toLowerCase())
         .single();
 
       if (!tenant) {
@@ -73,8 +80,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const headerTenantId = request.headers.get('x-tenant-id');
-    if (!headerTenantId) {
+    // Get tenant ID from header, query params, or body
+    let tenantId = request.headers.get('x-tenant-id');
+    
+    if (!tenantId) {
+      const url = new URL(request.url);
+      tenantId = url.searchParams.get('subdomain') || url.searchParams.get('tenant');
+    }
+
+    if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
@@ -84,15 +98,15 @@ export async function GET(request: NextRequest) {
     );
 
     // Resolve subdomain to tenant ID if needed
-    let resolvedTenantId = headerTenantId;
-    const isUUID = headerTenantId.length === 36;
+    let resolvedTenantId = tenantId;
+    const isUUID = tenantId.length === 36;
 
     if (!isUUID) {
       // It's a subdomain, lookup the UUID
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id, template_id')
-        .eq('subdomain', headerTenantId.toLowerCase())
+        .eq('subdomain', tenantId.toLowerCase())
         .single();
 
       if (!tenant) {
@@ -108,7 +122,7 @@ export async function GET(request: NextRequest) {
     const { data: tenant } = await supabase
       .from('tenants')
       .select('template_id')
-      .eq('id', headerTenantId)
+      .eq('id', tenantId)
       .single();
 
     if (!tenant) {

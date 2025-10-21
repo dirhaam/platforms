@@ -24,18 +24,21 @@ export default function SettingsPageContent() {
 
   const fetchCurrentTemplate = async () => {
     try {
-      const response = await fetch('/api/tenant/settings/template', {
-        headers: {
-          'x-tenant-id': subdomain!
-        }
-      });
+      const url = new URL('/api/tenant/settings/template', window.location.origin);
+      url.searchParams.set('subdomain', subdomain!);
+      
+      const response = await fetch(url.toString());
 
       if (response.ok) {
         const data = await response.json();
         setCurrentTemplate(data.template || 'modern');
+      } else {
+        console.error('Failed to fetch template:', response.status);
+        setCurrentTemplate('modern');
       }
     } catch (error) {
       console.error('Error fetching template:', error);
+      setCurrentTemplate('modern');
     } finally {
       setLoading(false);
     }

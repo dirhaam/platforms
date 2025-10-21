@@ -77,11 +77,13 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate = 
 
     setSaving(true);
     try {
-      const response = await fetch('/api/tenant/settings/template', {
+      const url = new URL('/api/tenant/settings/template', window.location.origin);
+      url.searchParams.set('subdomain', subdomain);
+      
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': subdomain
         },
         body: JSON.stringify({
           template: selectedTemplate
