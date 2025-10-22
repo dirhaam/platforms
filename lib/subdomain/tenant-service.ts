@@ -136,9 +136,9 @@ export class TenantService {
           const { data: services, error } = await supabase
             .from('services')
             .select('*')
-            .eq('tenantId', tenantId)
-            .eq('isActive', true)
-            .order('createdAt', { ascending: false });
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
 
           if (error) {
             console.error('Error fetching services:', error);
@@ -146,21 +146,21 @@ export class TenantService {
           }
 
           const formattedServices: Service[] = (services || []).map(service => {
-            const createdAt = service.createdAt ? new Date(service.createdAt) : new Date();
-            const updatedAt = service.updatedAt ? new Date(service.updatedAt) : new Date();
+            const createdAt = service.created_at ? new Date(service.created_at) : new Date();
+            const updatedAt = service.updated_at ? new Date(service.updated_at) : new Date();
 
             return {
               id: service.id,
-              tenantId: service.tenantId,
+              tenantId: service.tenant_id,
               name: service.name,
               description: service.description,
               duration: service.duration,
               price: Number(service.price ?? 0),
               category: service.category,
-              isActive: service.isActive ?? true,
-              homeVisitAvailable: service.homeVisitAvailable ?? false,
-              homeVisitSurcharge: service.homeVisitSurcharge !== null && service.homeVisitSurcharge !== undefined
-                ? Number(service.homeVisitSurcharge)
+              isActive: service.is_active ?? true,
+              homeVisitAvailable: service.home_visit_available ?? false,
+              homeVisitSurcharge: service.home_visit_surcharge !== null && service.home_visit_surcharge !== undefined
+                ? Number(service.home_visit_surcharge)
                 : undefined,
               images: service.images ?? [],
               requirements: service.requirements ?? [],
@@ -204,9 +204,9 @@ export class TenantService {
           const supabase = getSupabaseClient();
           
           const { data: records, error } = await supabase
-            .from('businessHours')
+            .from('business_hours')
             .select('*')
-            .eq('tenantId', tenantId)
+            .eq('tenant_id', tenantId)
             .limit(1);
           
           if (error) {
