@@ -118,6 +118,11 @@ export default function BookingDialog({
         return;
       }
 
+      if (!tenant.subdomain) {
+        setError('Tenant subdomain is missing');
+        return;
+      }
+
       setIsLoading(true);
 
       // Combine date and time to create ISO datetime
