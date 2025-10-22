@@ -78,8 +78,11 @@ export class TenantService {
     if (isEnhancedTenant(subdomainData)) {
       // Use template from database if available, otherwise use recommended template
       let template;
-      if (subdomainData.templateId) {
-        template = getTemplateById(subdomainData.templateId) || getRecommendedTemplate(subdomainData.businessCategory);
+      // Check for templateId using type assertion since it's not part of EnhancedTenant interface
+      // but might be present in the raw database response
+      const templateId = (subdomainData as any).templateId;
+      if (templateId && typeof templateId === 'string') {
+        template = getTemplateById(templateId) || getRecommendedTemplate(subdomainData.businessCategory);
       } else {
         template = getRecommendedTemplate(subdomainData.businessCategory);
       }
