@@ -161,10 +161,11 @@ export class BookingService {
       const { data: customerDataResult, error: customerFetchError } = await supabase
         .from('customers')
         .select('*')
-        .eq('id', bookingData.customerId)
+        .eq('id', bookingData.customer_id)
         .single();
       
       if (customerFetchError || !customerDataResult) {
+        console.error('[BookingService.createBooking] Failed to fetch customer:', { customerId: bookingData.customer_id, error: customerFetchError });
         return { error: 'Failed to retrieve customer data' };
       }
       
@@ -172,10 +173,11 @@ export class BookingService {
       const { data: serviceDataResult, error: serviceFetchError } = await supabase
         .from('services')
         .select('*')
-        .eq('id', bookingData.serviceId)
+        .eq('id', bookingData.service_id)
         .single();
       
       if (serviceFetchError || !serviceDataResult) {
+        console.error('[BookingService.createBooking] Failed to fetch service:', { serviceId: bookingData.service_id, error: serviceFetchError });
         return { error: 'Failed to retrieve service data' };
       }
       
