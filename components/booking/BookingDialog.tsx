@@ -217,26 +217,31 @@ export default function BookingDialog({
         ? Number(selectedService.price) + Number(selectedService.homeVisitSurcharge || 0)
         : Number(selectedService.price);
 
+      const bookingPayload = {
+        customerId,
+        serviceId: selectedService.id,
+        scheduledAt: scheduledAt.toISOString(),
+        isHomeVisit: formData.isHomeVisit,
+        ...(formData.isHomeVisit && formData.homeVisitAddress ? { homeVisitAddress: formData.homeVisitAddress.trim() } : {}),
+        ...(formData.isHomeVisit && formData.homeVisitCoordinates ? { homeVisitCoordinates: formData.homeVisitCoordinates } : {}),
+        ...(formData.notes ? { notes: formData.notes.trim() } : {}),
+      };
+
+      console.log('[BookingDialog] Booking payload:', bookingPayload);
+
       const bookingRes = await fetch(
         `/api/bookings?subdomain=${tenant.subdomain}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customerId,
-            serviceId: selectedService.id,
-            scheduledAt: scheduledAt.toISOString(),
-            isHomeVisit: formData.isHomeVisit,
-            homeVisitAddress: formData.homeVisitAddress || undefined,
-            homeVisitCoordinates: formData.homeVisitCoordinates || undefined,
-            notes: formData.notes || undefined,
-          }),
+          body: JSON.stringify(bookingPayload),
         }
       );
 
       if (!bookingRes.ok) {
         const errData = await bookingRes.json();
-        throw new Error(errData.error || 'Failed to create booking');
+        console.error('[BookingDialog] Booking API error:', { status: bookingRes.status, error: errData });
+        throw new Error(errData.error || `Failed to create booking (${bookingRes.status})`);
       }
 
       const { booking } = await bookingRes.json();

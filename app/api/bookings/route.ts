@@ -75,12 +75,15 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const headerTenantId = request.headers.get('x-tenant-id');
     const queryTenantId = searchParams.get('tenantId');
-    const tenantIdentifier = headerTenantId ?? queryTenantId;
+    const querySubdomain = searchParams.get('subdomain');
+    const tenantIdentifier = headerTenantId ?? queryTenantId ?? querySubdomain;
 
     if (!tenantIdentifier) {
       console.warn('[bookings POST] No tenantId found in headers or params');
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Tenant ID required (via x-tenant-id header, tenantId or subdomain param)' }, { status: 400 });
     }
+    
+    console.log('[bookings POST] Tenant identifier:', { headerTenantId, queryTenantId, querySubdomain, resolved: tenantIdentifier });
 
     // If tenantId is subdomain (not UUID), lookup the actual tenant ID
     // UUIDs are always 36 chars long (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
@@ -107,15 +110,19 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
+    console.log('[bookings POST] Request body:', body);
     
     // Validate request body
     const validation = createBookingSchema.safeParse(body);
     if (!validation.success) {
+      console.error('[bookings POST] Validation failed:', validation.error.issues);
       return NextResponse.json({ 
         error: 'Validation failed', 
         details: validation.error.issues 
       }, { status: 400 });
     }
+    
+    console.log('[bookings POST] Validation passed, creating booking for tenant:', resolvedTenantId);
     
     // Additional validation for home visits
     if (validation.data.isHomeVisit && !validation.data.homeVisitAddress) {
