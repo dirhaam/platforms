@@ -64,7 +64,11 @@ export default function BookingDialog({
     return null;
   }
 
-  const [step, setStep] = useState<'service' | 'details' | 'confirmation'>('service');
+  // Determine initial step based on whether service is passed
+  const hasInitialService = !!service && service.id;
+  const initialStep: 'service' | 'details' | 'confirmation' = hasInitialService ? 'details' : 'service';
+  
+  const [step, setStep] = useState<'service' | 'details' | 'confirmation'>(initialStep);
   const [selectedService, setSelectedService] = useState<Service | undefined>(service);
   const [formData, setFormData] = useState<BookingFormData>({
     customerName: '',
@@ -82,6 +86,30 @@ export default function BookingDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Sync selectedService with props when service changes
+  React.useEffect(() => {
+    if (service && service.id) {
+      setSelectedService(service);
+      setCalculatedPrice(Number(service.price));
+      console.log('[BookingDialog] Service updated from props:', { id: service.id, name: service.name });
+    }
+  }, [service?.id]);
+
+  // Sync step based on whether service is selected and dialog is open
+  React.useEffect(() => {
+    if (isOpen) {
+      if (selectedService && selectedService.id) {
+        // If dialog is open and service is selected, go to details
+        setStep('details');
+        console.log('[BookingDialog] Dialog opened with service, jumping to details step');
+      } else {
+        // If dialog is open but no service, stay at service selection
+        setStep('service');
+        console.log('[BookingDialog] Dialog opened without service, showing service selection');
+      }
+    }
+  }, [isOpen]);
 
   const handleInputChange = (field: keyof BookingFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
