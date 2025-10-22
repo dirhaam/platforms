@@ -64,13 +64,55 @@ interface LandingPageStyleSettingsProps {
   currentTemplate?: string;
 }
 
-export default function LandingPageStyleSettings({ subdomain, currentTemplate = 'modern' }: LandingPageStyleSettingsProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<string>(currentTemplate);
+export default function LandingPageStyleSettings({ subdomain, currentTemplate }: LandingPageStyleSettingsProps) {
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
+  const [fetchedCurrentTemplate, setFetchedCurrentTemplate] = useState<string | null>(null);
+  const [initialTemplateLoaded, setInitialTemplateLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchCurrentTemplate = async () => {
+      try {
+        const url = new URL('/api/settings/template', window.location.origin);
+        url.searchParams.set('subdomain', subdomain);
+        
+        const response = await fetch(url.toString());
+        
+        if (!response.ok) {
+          // If API call fails, use the prop value as fallback
+          const fallbackTemplate = currentTemplate || 'modern';
+          setSelectedTemplate(fallbackTemplate);
+          setFetchedCurrentTemplate(fallbackTemplate);
+          return;
+        }
+        
+        const data = await response.json();
+        const template = data.template || 'modern';
+        setSelectedTemplate(template);
+        setFetchedCurrentTemplate(template);
+        setInitialTemplateLoaded(true);
+      } catch (error) {
+        console.error('Error fetching template:', error);
+        // Fallback to the prop value if API call fails
+        const fallbackTemplate = currentTemplate || 'modern';
+        setSelectedTemplate(fallbackTemplate);
+        setFetchedCurrentTemplate(fallbackTemplate);
+      }
+    };
+
+    if (subdomain) {
+      fetchCurrentTemplate();
+    } else {
+      // If no subdomain is provided, use the prop value
+      const fallbackTemplate = currentTemplate || 'modern';
+      setSelectedTemplate(fallbackTemplate);
+      setFetchedCurrentTemplate(fallbackTemplate);
+    }
+  }, [subdomain, currentTemplate]);
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const handleSaveTemplate = async () => {
-    if (selectedTemplate === currentTemplate) {
+    if (fetchedCurrentTemplate && selectedTemplate === fetchedCurrentTemplate) {
       toast.info('No changes to save');
       return;
     }
@@ -115,7 +157,7 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate = 
     }
   };
 
-  const currentTemplateData = TEMPLATES.find(t => t.id === currentTemplate);
+  const currentTemplateData = fetchedCurrentTemplate ? TEMPLATES.find(t => t.id === fetchedCurrentTemplate) : TEMPLATES.find(t => t.id === 'modern');
   const selectedTemplateData = TEMPLATES.find(t => t.id === selectedTemplate);
 
   return (

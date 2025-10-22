@@ -277,8 +277,10 @@ export default function HealthcareTemplate({
           <p className="text-xs opacity-75">
             © 2024 {tenant.businessName}. All rights reserved.
           </p>
-          <p className="text-xs opacity-75 mt-2">
+          <p className="text-xs opacity-75 mt-2 flex flex-wrap justify-center gap-2">
             Powered by <Link href={`${protocol}://${rootDomain}`} className="hover:underline">{rootDomain}</Link>
+            <span>•</span>
+            <Link href="/tenant/login" className="hover:underline text-blue-500 font-medium">Business Admin Login</Link>
           </p>
         </div>
       </footer>

@@ -254,6 +254,9 @@ export default function BeautyTemplate({
         <p className="text-sm opacity-80">
           Powered by <Link href={`${protocol}://${rootDomain}`} className="hover:underline">{rootDomain}</Link>
         </p>
+        <p className="text-sm opacity-80 mt-2">
+          <Link href="/tenant/login" className="hover:underline font-medium text-pink-200">Business Admin Login</Link>
+        </p>
       </footer>
 
       {/* Booking Dialog */}

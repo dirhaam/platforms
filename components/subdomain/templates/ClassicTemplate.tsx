@@ -199,8 +199,10 @@ export default function ClassicTemplate({
           <footer className="border-t border-gray-300 py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: primaryColor, color: 'white' }}>
             <div className="max-w-4xl mx-auto text-center text-sm">
               <p>© 2024 {tenant.businessName}. All rights reserved.</p>
-              <p className="opacity-75">
+              <p className="opacity-75 flex flex-wrap justify-center gap-2">
                 Powered by <Link href={`${protocol}://${rootDomain}`} className="hover:underline">{rootDomain}</Link>
+                <span>•</span>
+                <Link href="/tenant/login" className="hover:underline text-blue-300 font-medium">Business Admin Login</Link>
               </p>
             </div>
           </footer>

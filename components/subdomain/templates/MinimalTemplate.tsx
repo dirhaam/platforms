@@ -216,8 +216,10 @@ export default function MinimalTemplate({
       <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-gray-200">
         <div className="max-w-4xl mx-auto text-center text-sm text-gray-600">
           <p>© 2024 {tenant.businessName}</p>
-          <p className="text-xs">
+          <p className="text-xs flex flex-wrap justify-center gap-2">
             Powered by <Link href={`${protocol}://${rootDomain}`} className="hover:underline">{rootDomain}</Link>
+            <span>•</span>
+            <Link href="/tenant/login" className="hover:underline text-blue-600 font-medium">Business Admin Login</Link>
           </p>
         </div>
       </footer>

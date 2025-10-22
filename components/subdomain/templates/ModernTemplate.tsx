@@ -361,13 +361,19 @@ export default function ModernTemplate({
             <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
               {tenant.businessDescription || `Professional ${tenant.businessCategory} services`}
             </p>
-            <div className="flex justify-center space-x-8 text-sm text-gray-400">
+            <div className="flex justify-center flex-wrap gap-4 text-sm text-gray-400">
               <span>© 2024 {tenant.businessName}</span>
               <Link 
                 href={`${protocol}://${rootDomain}`}
                 className="hover:text-white transition-colors"
               >
                 Powered by {rootDomain}
+              </Link>
+              <Link
+                href="/tenant/login"
+                className="hover:text-white transition-colors font-medium text-blue-300"
+              >
+                Business Admin Login
               </Link>
             </div>
           </div>
