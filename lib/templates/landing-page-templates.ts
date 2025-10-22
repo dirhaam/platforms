@@ -132,6 +132,28 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
     },
     isActive: true,
   },
+  {
+    id: 'healthcarev2',
+    name: 'Healthcare V2',
+    category: 'Healthcare',
+    preview: '/templates/healthcarev2-preview.jpg',
+    description: 'Advanced healthcare template with professional features and enhanced UI',
+    sections: {
+      hero: true,
+      services: true,
+      about: true,
+      reviews: true,
+      contact: true,
+      gallery: true,
+      businessHours: true,
+    },
+    customization: {
+      colors: true,
+      fonts: true,
+      layout: true,
+    },
+    isActive: true,
+  },
 ];
 
 export function getTemplateById(templateId: string): LandingPageTemplate | null {
