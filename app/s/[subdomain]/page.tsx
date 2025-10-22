@@ -59,11 +59,23 @@ export default async function SubdomainPage({
       notFound();
     }
 
+    console.log('[SubdomainPage] Tenant ID:', tenantData.id);
+    console.log('[SubdomainPage] Tenant Name:', tenantData.businessName);
+
     // Get services and business hours
     const [services, businessHours] = await Promise.all([
       TenantService.getTenantServices(tenantData.id),
       TenantService.getTenantBusinessHours(tenantData.id),
     ]);
+    
+    console.log('[SubdomainPage] Services received - count:', services.length);
+    if (services.length > 0) {
+      console.log('[SubdomainPage] First service:', {
+        id: services[0].id,
+        name: services[0].name,
+        tenantId: services[0].tenantId
+      });
+    }
 
     // Select template based on tenant preferences
     const templateId = tenantData.template?.id || 'modern';

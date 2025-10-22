@@ -124,14 +124,19 @@ export class TenantService {
     return await PerformanceMonitor.monitorDatabaseQuery(
       'getTenantServices',
       async () => {
+        console.log('[getTenantServices] Starting for tenantId:', tenantId);
+        
         // Try to get from cache first
         const cached = await CacheService.getServicesByTenant(tenantId);
         if (cached && Array.isArray(cached)) {
+          console.log('[getTenantServices] Found in cache, count:', cached.length);
           return cached as Service[];
         }
 
         try {
           const supabase = getSupabaseClient();
+          
+          console.log('[getTenantServices] Querying database with tenant_id:', tenantId);
           
           const { data: services, error } = await supabase
             .from('services')
@@ -140,6 +145,8 @@ export class TenantService {
             .eq('is_active', true)
             .order('created_at', { ascending: false });
 
+          console.log('[getTenantServices] Query result - services count:', services?.length || 0, 'error:', error?.message || 'none');
+          
           if (error) {
             console.error('Error fetching services:', error);
             throw error;
