@@ -147,7 +147,7 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
         throw new Error(errorMsg);
       }
 
-      toast.success('Landing page style updated successfully!');
+      toast.success('Landing page style updated successfully! Refresh your landing page to see changes.');
     } catch (error) {
       // Silent fail for network errors - user already selected template in UI
       console.error('Save error:', error);
@@ -246,6 +246,9 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
               <p className="text-xs text-amber-700 mt-2">
                 <strong>Best for:</strong> {selectedTemplateData.bestFor}
               </p>
+              <p className="text-xs text-amber-700 mt-2">
+                <strong>Note:</strong> Changes will be visible on your landing page after saving and refreshing.
+              </p>
             </div>
           )}
 
@@ -255,7 +258,7 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
               variant="outline"
               onClick={() => {
                 setPreviewOpen(!previewOpen);
-                toast.info(`Preview opening in new tab...`);
+                toast.info(`Preview opening in new tab... Note: You'll see the current template, not the new selection until saved.`);
                 window.open(`https://${subdomain}.booqing.my.id/`, '_blank');
               }}
             >
