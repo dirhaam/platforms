@@ -416,8 +416,8 @@ export class CacheService {
       const { data: tenantServices, error: servicesError } = await supabase
         .from('services')
         .select('*')
-        .eq('tenantId', tenantId)
-        .eq('isActive', true);
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
 
       if (tenantServices && tenantServices.length) {
         await this.setServicesByTenant(tenantId, tenantServices);
@@ -426,17 +426,17 @@ export class CacheService {
       const { data: tenantStaff, error: staffError } = await supabase
         .from('staff')
         .select('*')
-        .eq('tenantId', tenantId)
-        .eq('isActive', true);
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
 
       if (tenantStaff && tenantStaff.length) {
         await this.setStaffByTenant(tenantId, tenantStaff);
       }
 
       const { data: businessHoursRow, error: businessHoursError } = await supabase
-        .from('businessHours')
+        .from('business_hours')
         .select('*')
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .limit(1)
         .single();
 

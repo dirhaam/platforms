@@ -126,12 +126,13 @@ export class TenantService {
       async () => {
         console.log('[getTenantServices] Starting for tenantId:', tenantId);
         
-        // Try to get from cache first
-        const cached = await CacheService.getServicesByTenant(tenantId);
-        if (cached && Array.isArray(cached)) {
-          console.log('[getTenantServices] Found in cache, count:', cached.length);
-          return cached as Service[];
-        }
+        // DISABLED CACHE FOR DEBUG - try to get from cache first
+        // const cached = await CacheService.getServicesByTenant(tenantId);
+        // if (cached && Array.isArray(cached)) {
+        //   console.log('[getTenantServices] Found in cache, count:', cached.length);
+        //   return cached as Service[];
+        // }
+        console.log('[getTenantServices] Cache check skipped (disabled for debug)');
 
         try {
           const supabase = getSupabaseClient();
@@ -148,7 +149,13 @@ export class TenantService {
           console.log('[getTenantServices] Query result - services count:', services?.length || 0, 'error:', error?.message || 'none');
           
           if (error) {
-            console.error('Error fetching services:', error);
+            console.error('[getTenantServices] Database error:', {
+              message: error.message,
+              code: error.code,
+              status: error.status,
+              details: error.details,
+              hint: error.hint
+            });
             throw error;
           }
 
@@ -181,7 +188,11 @@ export class TenantService {
 
           return formattedServices;
         } catch (error) {
-          console.warn('Could not fetch services from database:', error);
+          console.error('[getTenantServices] Exception caught:', {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            tenantId
+          });
           
           // Return empty array if no services found. This ensures 
           // we only show data that comes from admin dashboard
