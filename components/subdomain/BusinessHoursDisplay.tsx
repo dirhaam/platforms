@@ -12,7 +12,7 @@ interface BusinessHours {
 }
 
 interface BusinessHoursDisplayProps {
-  businessHours: BusinessHours;
+  businessHours: BusinessHours | null;
   className?: string;
   compact?: boolean;
 }
@@ -22,6 +22,66 @@ export default function BusinessHoursDisplay({
   className = '',
   compact = false 
 }: BusinessHoursDisplayProps) {
+  if (!businessHours) {
+    return compact ? (
+      <div className={`flex items-center space-x-2 ${className}`}>
+        <XCircle className="h-4 w-4 text-gray-400" />
+        <span className="text-sm text-gray-500">No hours set</span>
+      </div>
+    ) : (
+      <div className={`p-4 text-center text-gray-500 ${className}`}>
+        Business hours not set
+      </div>
+    );
+  }
+  
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const todayHours = businessHours[currentDay];
+  const isOpenToday = todayHours?.isOpen || false;
+
+  const getCurrentStatus = () => {
+    if (!isOpenToday || !todayHours) {
+      return { status: 'closed', message: 'Closed today' };
+    }
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    const [openHour, openMinute] = todayHours.openTime.split(':').map(Number);
+    const [closeHour, closeMinute] = todayHours.closeTime.split(':').map(Number);
+    
+    const openTime = openHour * 60 + openMinute;
+    const closeTime = closeHour * 60 + closeMinute;
+
+    if (currentTime < openTime) {
+      return { 
+        status: 'closed', 
+        message: `Opens at ${todayHours.openTime}` 
+      };
+    } else if (currentTime >= openTime && currentTime < closeTime) {
+      return { 
+        status: 'open', 
+        message: `Open until ${todayHours.closeTime}` 
+      };
+    } else {
+      return { 
+        status: 'closed', 
+        message: 'Closed for today' 
+      };
+    }
+  };
+
+  const currentStatus = getCurrentStatus();
+
+  const dayNames = {
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday',
+    sunday: 'Sunday',
+  };
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
   const todayHours = businessHours[currentDay];
   const isOpenToday = todayHours?.isOpen || false;
@@ -154,7 +214,11 @@ export default function BusinessHoursDisplay({
   );
 }
 
-function getNextOpening(businessHours: BusinessHours, currentDay: string): string {
+function getNextOpening(businessHours: BusinessHours | null, currentDay: string): string {
+  if (!businessHours) {
+    return 'Check back later';
+  }
+  
   const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const currentIndex = dayOrder.indexOf(currentDay);
   

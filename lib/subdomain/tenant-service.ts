@@ -176,13 +176,14 @@ export class TenantService {
         } catch (error) {
           console.warn('Could not fetch services from database:', error);
           
-          // Return sample services for demo purposes
-          const sampleServices = await this.getSampleServices();
+          // Return empty array if no services found. This ensures 
+          // we only show data that comes from admin dashboard
+          const emptyServices: Service[] = [];
           
-          // Cache sample services with shorter TTL
-          await CacheService.setServicesByTenant(tenantId, sampleServices);
+          // Cache empty result to prevent repeated failed calls
+          await CacheService.setServicesByTenant(tenantId, emptyServices);
           
-          return sampleServices;
+          return emptyServices;
         }
       },
       tenantId
@@ -224,13 +225,14 @@ export class TenantService {
         } catch (error) {
           console.warn('Could not fetch business hours from database:', error);
           
-          // Return default business hours
-          const defaultHours = this.getDefaultBusinessHours();
+          // Return null if no business hours found. This ensures 
+          // we only show data that comes from admin dashboard
+          const noHours: BusinessHours | null = null;
           
-          // Cache default hours with shorter TTL
-          await CacheService.setBusinessHours(tenantId, defaultHours);
+          // Cache null result to prevent repeated failed calls
+          await CacheService.setBusinessHours(tenantId, null);
           
-          return defaultHours;
+          return null;
         }
       },
       tenantId
