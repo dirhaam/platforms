@@ -58,6 +58,12 @@ export default function BookingDialog({
   isOpen,
   onOpenChange 
 }: BookingDialogProps) {
+  // Guard against missing tenant
+  if (!tenant || !tenant.id) {
+    console.error('BookingDialog: Missing tenant data', { tenant });
+    return null;
+  }
+
   const [step, setStep] = useState<'service' | 'details' | 'confirmation'>('service');
   const [selectedService, setSelectedService] = useState<Service | undefined>(service);
   const [formData, setFormData] = useState<BookingFormData>({
@@ -370,7 +376,11 @@ export default function BookingDialog({
                     value={formData.customerEmail}
                     onChange={(e) => handleInputChange('customerEmail', e.target.value)}
                     placeholder="Enter your email address"
+                    className={validationErrors.customerEmail ? 'border-red-500' : ''}
                   />
+                  {validationErrors.customerEmail && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.customerEmail}</p>
+                  )}
                 </div>
               </div>
             </div>
