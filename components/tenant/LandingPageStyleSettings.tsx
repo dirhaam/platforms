@@ -56,6 +56,14 @@ const TEMPLATES: Template[] = [
     bestFor: 'Hospitals, clinics, medical practices, therapy',
     icon: '🏥',
     colors: ['#0369a1', '#0284c7', '#0ea5e9']
+  },
+  {
+    id: 'healthcarev2',
+    name: 'Healthcare V2',
+    description: 'Advanced healthcare template with professional features and enhanced UI',
+    bestFor: 'Medical clinics, hospitals, therapy centers, wellness practices',
+    icon: '🏥',
+    colors: ['#0ea5e9', '#0369a1', '#22c55e']
   }
 ];
 

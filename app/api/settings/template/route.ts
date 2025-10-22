@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const VALID_TEMPLATES = ['modern', 'classic', 'minimal', 'beauty', 'healthcare'];
+const VALID_TEMPLATES = ['modern', 'classic', 'minimal', 'beauty', 'healthcare', 'healthcarev2'];
 
 export async function POST(request: NextRequest) {
   try {

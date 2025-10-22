@@ -9,6 +9,7 @@ import ClassicTemplate from '@/components/subdomain/templates/ClassicTemplate';
 import MinimalTemplate from '@/components/subdomain/templates/MinimalTemplate';
 import BeautyTemplate from '@/components/subdomain/templates/BeautyTemplate';
 import HealthcareTemplate from '@/components/subdomain/templates/HealthcareTemplate';
+import HealthcareV2Template from '@/components/subdomain/templates/HealthcareV2Template';
 
 export async function generateMetadata({
   params
@@ -108,6 +109,15 @@ export default async function SubdomainPage({
       case 'healthcare':
         return (
           <HealthcareTemplate
+            tenant={tenantData}
+            services={services}
+            businessHours={businessHours || undefined}
+          />
+        );
+      
+      case 'healthcarev2':
+        return (
+          <HealthcareV2Template
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
