@@ -34,54 +34,7 @@ export default function BusinessHoursDisplay({
       </div>
     );
   }
-  
-  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
-  const todayHours = businessHours[currentDay];
-  const isOpenToday = todayHours?.isOpen || false;
 
-  const getCurrentStatus = () => {
-    if (!isOpenToday || !todayHours) {
-      return { status: 'closed', message: 'Closed today' };
-    }
-
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    
-    const [openHour, openMinute] = todayHours.openTime.split(':').map(Number);
-    const [closeHour, closeMinute] = todayHours.closeTime.split(':').map(Number);
-    
-    const openTime = openHour * 60 + openMinute;
-    const closeTime = closeHour * 60 + closeMinute;
-
-    if (currentTime < openTime) {
-      return { 
-        status: 'closed', 
-        message: `Opens at ${todayHours.openTime}` 
-      };
-    } else if (currentTime >= openTime && currentTime < closeTime) {
-      return { 
-        status: 'open', 
-        message: `Open until ${todayHours.closeTime}` 
-      };
-    } else {
-      return { 
-        status: 'closed', 
-        message: 'Closed for today' 
-      };
-    }
-  };
-
-  const currentStatus = getCurrentStatus();
-
-  const dayNames = {
-    monday: 'Monday',
-    tuesday: 'Tuesday',
-    wednesday: 'Wednesday',
-    thursday: 'Thursday',
-    friday: 'Friday',
-    saturday: 'Saturday',
-    sunday: 'Sunday',
-  };
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
   const todayHours = businessHours[currentDay];
   const isOpenToday = todayHours?.isOpen || false;
@@ -138,9 +91,7 @@ export default function BusinessHoursDisplay({
         ) : (
           <XCircle className="h-4 w-4 text-red-600" />
         )}
-        <span className={`text-sm font-medium ${
-          currentStatus.status === 'open' ? 'text-green-600' : 'text-red-600'
-        }`}>
+        <span className={`text-sm font-medium ${currentStatus.status === 'open' ? 'text-green-600' : 'text-red-600'}`}>
           {currentStatus.message}
         </span>
       </div>
