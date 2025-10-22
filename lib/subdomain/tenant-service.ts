@@ -152,7 +152,6 @@ export class TenantService {
             console.error('[getTenantServices] Database error:', {
               message: error.message,
               code: error.code,
-              status: error.status,
               details: error.details,
               hint: error.hint
             });
