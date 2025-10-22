@@ -73,6 +73,9 @@ export default function BookingDialog({
   });
   const [calculatedPrice, setCalculatedPrice] = useState<number>(selectedService ? Number(selectedService.price) : 0);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: keyof BookingFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -82,16 +85,120 @@ export default function BookingDialog({
     return calculatedPrice;
   };
 
-  const handleSubmit = async () => {
-    // Here you would typically send the booking data to your API
-    console.log('Booking submitted:', {
-      service: selectedService,
-      customer: formData,
-      tenant: tenant.id,
-    });
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
     
-    // For now, just move to confirmation step
-    setStep('confirmation');
+    if (!formData.customerName.trim()) errors.customerName = 'Name is required';
+    if (!formData.customerPhone.trim()) errors.customerPhone = 'Phone is required';
+    if (formData.customerPhone.trim().length < 10) errors.customerPhone = 'Phone must be at least 10 digits';
+    if (formData.customerEmail && !formData.customerEmail.includes('@')) {
+      errors.customerEmail = 'Invalid email format';
+    }
+    if (!formData.preferredDate) errors.preferredDate = 'Date is required';
+    if (!formData.preferredTime) errors.preferredTime = 'Time is required';
+    if (formData.isHomeVisit && !formData.homeVisitAddress.trim()) {
+      errors.homeVisitAddress = 'Address is required for home visit';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setError(null);
+      setValidationErrors({});
+      
+      if (!validateForm()) {
+        return;
+      }
+
+      if (!selectedService) {
+        setError('Please select a service');
+        return;
+      }
+
+      setIsLoading(true);
+
+      // Combine date and time to create ISO datetime
+      const [year, month, day] = formData.preferredDate.split('-');
+      const [hour, minute] = formData.preferredTime.split(':');
+      const scheduledAt = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute)
+      );
+
+      // Step 1: Find or create customer
+      let customerId: string;
+      try {
+        const findRes = await fetch(
+          `/api/customers/find-or-create?subdomain=${tenant.subdomain}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: formData.customerName,
+              phone: formData.customerPhone,
+              email: formData.customerEmail || undefined,
+              address: formData.homeVisitAddress || undefined,
+            }),
+          }
+        );
+
+        if (!findRes.ok) {
+          const errData = await findRes.json();
+          throw new Error(errData.error || 'Failed to create/find customer');
+        }
+
+        const { customer } = await findRes.json();
+        customerId = customer.id;
+      } catch (err) {
+        setError(`Customer creation failed: ${err instanceof Error ? err.message : String(err)}`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Create booking
+      const totalAmount = formData.isHomeVisit 
+        ? Number(selectedService.price) + Number(selectedService.homeVisitSurcharge || 0)
+        : Number(selectedService.price);
+
+      const bookingRes = await fetch(
+        `/api/bookings?subdomain=${tenant.subdomain}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerId,
+            serviceId: selectedService.id,
+            scheduledAt: scheduledAt.toISOString(),
+            isHomeVisit: formData.isHomeVisit,
+            homeVisitAddress: formData.homeVisitAddress || undefined,
+            homeVisitCoordinates: formData.homeVisitCoordinates || undefined,
+            notes: formData.notes || undefined,
+          }),
+        }
+      );
+
+      if (!bookingRes.ok) {
+        const errData = await bookingRes.json();
+        throw new Error(errData.error || 'Failed to create booking');
+      }
+
+      const { booking } = await bookingRes.json();
+      console.log('Booking created successfully:', booking);
+      
+      setStep('confirmation');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      console.error('Booking error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -204,6 +311,13 @@ export default function BookingDialog({
               </CardContent>
             </Card>
 
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
             {/* Customer Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center">
@@ -219,8 +333,12 @@ export default function BookingDialog({
                     value={formData.customerName}
                     onChange={(e) => handleInputChange('customerName', e.target.value)}
                     placeholder="Enter your full name"
+                    className={validationErrors.customerName ? 'border-red-500' : ''}
                     required
                   />
+                  {validationErrors.customerName && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.customerName}</p>
+                  )}
                 </div>
                 
                 <div>
@@ -228,11 +346,15 @@ export default function BookingDialog({
                   <Input
                     id="customerPhone"
                     type="tel"
+                    className={validationErrors.customerPhone ? 'border-red-500' : ''}
                     value={formData.customerPhone}
                     onChange={(e) => handleInputChange('customerPhone', e.target.value)}
                     placeholder="Enter your phone number"
                     required
                   />
+                  {validationErrors.customerPhone && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.customerPhone}</p>
+                  )}
                 </div>
                 
                 <div className="md:col-span-2">
@@ -365,9 +487,9 @@ export default function BookingDialog({
               <Button 
                 onClick={handleSubmit}
                 className="flex-1"
-                disabled={!formData.customerName || !formData.customerPhone || !formData.preferredDate || !formData.preferredTime}
+                disabled={!formData.customerName || !formData.customerPhone || !formData.preferredDate || !formData.preferredTime || isLoading}
               >
-                Submit Booking Request
+                {isLoading ? 'Creating Booking...' : 'Submit Booking Request'}
               </Button>
             </div>
           </div>
