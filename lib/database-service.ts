@@ -129,6 +129,7 @@ export async function getTenant(subdomain: string): Promise<any | null> {
           status: tenantData.subscription_status,
           expiresAt: tenantData.subscription_expires_at,
         },
+        templateId: tenantData.template_id,
       };
     }
     

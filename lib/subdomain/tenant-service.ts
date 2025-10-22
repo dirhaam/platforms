@@ -1,5 +1,5 @@
 import { getSubdomainData, isEnhancedTenant } from '@/lib/subdomains';
-import { getRecommendedTemplate, type LandingPageTemplate } from '@/lib/templates/landing-page-templates';
+import { getRecommendedTemplate, getTemplateById, type LandingPageTemplate } from '@/lib/templates/landing-page-templates';
 import { CacheService } from '@/lib/cache/cache-service';
 import { PerformanceMonitor } from '@/lib/performance/performance-monitor';
 import { Service } from '@/types/booking';
@@ -76,7 +76,13 @@ export class TenantService {
   private static formatTenantLandingData(subdomainData: any): TenantLandingData {
     // Handle both legacy and enhanced tenant data
     if (isEnhancedTenant(subdomainData)) {
-      const template = getRecommendedTemplate(subdomainData.businessCategory);
+      // Use template from database if available, otherwise use recommended template
+      let template;
+      if (subdomainData.templateId) {
+        template = getTemplateById(subdomainData.templateId) || getRecommendedTemplate(subdomainData.businessCategory);
+      } else {
+        template = getRecommendedTemplate(subdomainData.businessCategory);
+      }
       
       return {
         id: subdomainData.id,
