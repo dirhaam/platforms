@@ -8,7 +8,7 @@ import { Palette, Check, Loader } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Template {
-  id: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare';
+  id: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare' | 'healthcarev2';
   name: string;
   description: string;
   bestFor: string;
