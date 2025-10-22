@@ -173,27 +173,39 @@ export default function BookingDialog({
       // Step 1: Find or create customer
       let customerId: string;
       try {
+        const customerPayload = {
+          name: formData.customerName.trim(),
+          phone: formData.customerPhone.trim(),
+          ...(formData.customerEmail ? { email: formData.customerEmail.trim() } : {}),
+          ...(formData.homeVisitAddress ? { address: formData.homeVisitAddress.trim() } : {}),
+        };
+
+        console.log('[BookingDialog] Customer payload:', customerPayload);
+
         const findRes = await fetch(
           `/api/customers/find-or-create?subdomain=${tenant.subdomain}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: formData.customerName,
-              phone: formData.customerPhone,
-              email: formData.customerEmail || undefined,
-              address: formData.homeVisitAddress || undefined,
-            }),
+            body: JSON.stringify(customerPayload),
           }
         );
 
         if (!findRes.ok) {
           const errData = await findRes.json();
-          throw new Error(errData.error || 'Failed to create/find customer');
+          console.error('[BookingDialog] Customer API error:', { status: findRes.status, error: errData });
+          throw new Error(errData.error || `Failed to create/find customer (${findRes.status})`);
         }
 
-        const { customer } = await findRes.json();
-        customerId = customer.id;
+        const findData = await findRes.json();
+        console.log('[BookingDialog] Customer found/created:', findData);
+        
+        if (!findData.customer || !findData.customer.id) {
+          throw new Error('Invalid customer response from API');
+        }
+
+        customerId = findData.customer.id;
+        console.log('[BookingDialog] Using customer ID:', customerId);
       } catch (err) {
         setError(`Customer creation failed: ${err instanceof Error ? err.message : String(err)}`);
         setIsLoading(false);
