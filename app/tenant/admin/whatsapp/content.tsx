@@ -49,9 +49,8 @@ export function WhatsAppContent() {
   const [newDeviceName, setNewDeviceName] = useState('');
   const [connectionResult, setConnectionResult] = useState<{ qrCode?: string; pairingCode?: string } | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<WhatsAppDevice | null>(null);
-  const [tenantId, setTenantId] = useState<string>('');
 
-  // Fetch endpoint and devices
+  // Fetch endpoint and devices using subdomain as tenantId
   useEffect(() => {
     if (!subdomain) return;
 
@@ -60,33 +59,33 @@ export function WhatsAppContent() {
         setLoading(true);
         setError(null);
 
-        // First get tenant ID from subdomain
-        const tenantRes = await fetch(`/api/tenants/by-subdomain?subdomain=${subdomain}`);
-        if (!tenantRes.ok) {
-          setError('Tenant not found');
-          setLoading(false);
-          return;
-        }
-        const tenantData = await tenantRes.json();
-        const newTenantId = tenantData.id;
-        setTenantId(newTenantId);
+        // Try to fetch from main domain API
+        const mainDomain = 'https://booqing.my.id';
 
-        // Fetch endpoint
-        const endpointRes = await fetch(`/api/whatsapp/endpoints/${newTenantId}`);
+        // Fetch endpoint using subdomain as tenantId
+        const endpointRes = await fetch(`${mainDomain}/api/whatsapp/endpoints/${subdomain}`, {
+          headers: {
+            'X-Tenant-Subdomain': subdomain,
+          },
+        });
         if (endpointRes.ok) {
           const endpointData = await endpointRes.json();
           setEndpoint(endpointData.endpoint);
         }
 
-        // Fetch devices
-        const devicesRes = await fetch(`/api/whatsapp/devices?tenantId=${newTenantId}`);
+        // Fetch devices using subdomain as tenantId
+        const devicesRes = await fetch(`${mainDomain}/api/whatsapp/devices?tenantId=${subdomain}`, {
+          headers: {
+            'X-Tenant-Subdomain': subdomain,
+          },
+        });
         if (devicesRes.ok) {
           const devicesData = await devicesRes.json();
           setDevices(devicesData.devices || []);
         }
       } catch (error) {
         console.error('Error fetching WhatsApp data:', error);
-        setError('Failed to load WhatsApp data');
+        setError('Failed to load WhatsApp data. Please ensure WhatsApp is configured.');
       } finally {
         setLoading(false);
       }
@@ -96,14 +95,18 @@ export function WhatsAppContent() {
   }, [subdomain]);
 
   const handleCreateDevice = async () => {
-    if (!newDeviceName || !endpoint) return;
+    if (!newDeviceName || !endpoint || !subdomain) return;
 
     try {
-      const response = await fetch('/api/whatsapp/devices', {
+      const mainDomain = 'https://booqing.my.id';
+      const response = await fetch(`${mainDomain}/api/whatsapp/devices`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Tenant-Subdomain': subdomain,
+        },
         body: JSON.stringify({
-          tenantId,
+          tenantId: subdomain,
           endpointId: endpoint.id,
           deviceName: newDeviceName,
         }),
@@ -122,8 +125,12 @@ export function WhatsAppContent() {
 
   const handleConnectDevice = async (deviceId: string) => {
     try {
-      const response = await fetch(`/api/whatsapp/devices/${deviceId}?action=connect`, {
+      const mainDomain = 'https://booqing.my.id';
+      const response = await fetch(`${mainDomain}/api/whatsapp/devices/${deviceId}?action=connect`, {
         method: 'POST',
+        headers: {
+          'X-Tenant-Subdomain': subdomain,
+        },
       });
 
       if (response.ok) {
@@ -138,8 +145,12 @@ export function WhatsAppContent() {
 
   const handleRefreshStatus = async (deviceId: string) => {
     try {
-      const response = await fetch(`/api/whatsapp/devices/${deviceId}?action=refresh-status`, {
+      const mainDomain = 'https://booqing.my.id';
+      const response = await fetch(`${mainDomain}/api/whatsapp/devices/${deviceId}?action=refresh-status`, {
         method: 'POST',
+        headers: {
+          'X-Tenant-Subdomain': subdomain,
+        },
       });
 
       if (response.ok) {
@@ -155,8 +166,12 @@ export function WhatsAppContent() {
     if (!confirm('Delete this device?')) return;
 
     try {
-      const response = await fetch(`/api/whatsapp/devices/${deviceId}`, {
+      const mainDomain = 'https://booqing.my.id';
+      const response = await fetch(`${mainDomain}/api/whatsapp/devices/${deviceId}`, {
         method: 'DELETE',
+        headers: {
+          'X-Tenant-Subdomain': subdomain,
+        },
       });
 
       if (response.ok) {
