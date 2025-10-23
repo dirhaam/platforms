@@ -197,7 +197,7 @@ export class SuperAdminService {
     const { data: rows, error } = await supabase
       .from('super_admins')
       .select('*')
-      .order('createdAt', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error || !rows) return [];
     return rows.map(mapRow);

@@ -99,6 +99,8 @@ export async function GET() {
     // Get all superadmins (excluding password hashes for security)
     const superAdmins = await SuperAdminService.list();
     
+    console.log(`[SuperAdmins GET] Found ${superAdmins.length} superadmins`);
+    
     const safeSuperAdmins = superAdmins.map(sa => ({
       id: sa.id,
       email: sa.email,
@@ -120,11 +122,12 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error fetching superadmins:', error);
+    console.error('[SuperAdmins GET] Error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch superadmins' 
+        error: error instanceof Error ? error.message : 'Failed to fetch superadmins',
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
       },
       { status: 500 }
     );

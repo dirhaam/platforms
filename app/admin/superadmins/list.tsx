@@ -26,17 +26,22 @@ export function SuperAdminsList({ currentUserEmail }: { currentUserEmail: string
   useEffect(() => {
     const fetchSuperAdmins = async () => {
       try {
+        console.log('[SuperAdminsList] Fetching superadmins...');
         const response = await fetch('/api/admin/superadmins');
         const data = await response.json();
+
+        console.log('[SuperAdminsList] Response status:', response.status);
+        console.log('[SuperAdminsList] Response data:', data);
 
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch superadmins');
         }
 
         setSuperadmins(data.superadmins || []);
+        console.log('[SuperAdminsList] Successfully loaded', data.superadmins?.length || 0, 'superadmins');
       } catch (err: any) {
         setError(err.message || 'Failed to fetch superadmins');
-        console.error('Error fetching superadmins:', err);
+        console.error('[SuperAdminsList] Error fetching superadmins:', err);
       } finally {
         setLoading(false);
       }
