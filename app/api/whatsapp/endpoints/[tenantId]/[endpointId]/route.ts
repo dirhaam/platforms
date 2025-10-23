@@ -19,7 +19,8 @@ export async function PUT(
 
     const updates = await request.json();
     
-    const endpoint = await whatsappService.updateEndpoint(tenantId, endpointId, updates);
+    // Simplified: each tenant has 1 endpoint, so endpointId is ignored
+    const endpoint = await whatsappService.updateEndpoint(tenantId, updates);
 
     // Sanitize response
     const sanitizedEndpoint = {
@@ -60,7 +61,8 @@ export async function DELETE(
       );
     }
 
-    await whatsappService.removeEndpoint(tenantId, endpointId);
+    // Simplified: each tenant has 1 endpoint, so endpointId is ignored
+    await whatsappService.removeEndpoint(tenantId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -99,7 +101,8 @@ export async function POST(
     const action = searchParams.get('action');
 
     if (action === 'test-health') {
-      const isHealthy = await whatsappService.testEndpointHealth(tenantId, endpointId);
+      // Simplified: each tenant has 1 endpoint, so endpointId is ignored
+      const isHealthy = await whatsappService.testEndpointHealth(tenantId);
       
       return NextResponse.json({
         healthy: isHealthy,
