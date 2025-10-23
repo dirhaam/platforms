@@ -6,8 +6,11 @@
 
 -- Tenant WhatsApp Configuration (secure - no credentials)
 CREATE TABLE IF NOT EXISTS tenant_whatsapp_config (
-    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
+    tenant_id TEXT NOT NULL UNIQUE,
+    
+    CONSTRAINT fk_tenant_whatsapp_config_tenant FOREIGN KEY (tenant_id) 
+        REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Reference to endpoint name defined in ENV (e.g., "Primary", "Backup")
     endpoint_name TEXT NOT NULL,
