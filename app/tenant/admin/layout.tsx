@@ -12,6 +12,7 @@ import {
   MessageSquare,
   LogOut,
   Home,
+  Smartphone,
 } from 'lucide-react';
 
 function TenantAdminLayoutContent({
@@ -48,6 +49,11 @@ function TenantAdminLayoutContent({
       href: `/tenant/admin/messages?subdomain=${subdomain}`,
       label: 'Messages',
       icon: MessageSquare,
+    },
+    {
+      href: `/tenant/admin/whatsapp?subdomain=${subdomain}`,
+      label: 'WhatsApp Devices',
+      icon: Smartphone,
     },
     {
       href: `/tenant/admin/staff?subdomain=${subdomain}`,
