@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Users, Settings, BarChart3, MessageSquare } from 'lucide-react';
+import { Building2, Users, Settings, BarChart3, MessageSquare, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function TenantDetailPage({
@@ -159,7 +159,7 @@ export default async function TenantDetailPage({
       </div>
 
       {/* Management Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* User Management */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
@@ -180,6 +180,32 @@ export default async function TenantDetailPage({
                 <Link href={`/admin/tenants/${tenantId}/users`}>
                   <Users className="w-4 h-4 mr-2" />
                   Manage Users
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp Configuration */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-green-600" />
+              WhatsApp Setup
+            </CardTitle>
+            <CardDescription>
+              Configure WhatsApp API endpoint
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                Configure WhatsApp integration for this tenant
+              </p>
+              <Button asChild className="w-full bg-green-600 hover:bg-green-700">
+                <Link href={`/admin/tenants/${tenantId}/whatsapp`}>
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Configure
                 </Link>
               </Button>
             </div>
