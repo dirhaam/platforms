@@ -316,6 +316,27 @@ export class WhatsAppEndpointManager {
       throw error;
     }
   }
+
+  /**
+   * Shutdown all health monitoring and cleanup resources
+   */
+  async shutdown(): Promise<void> {
+    try {
+      // Stop all health monitoring intervals
+      for (const [tenantId, interval] of this.healthCheckIntervals) {
+        clearInterval(interval);
+      }
+      this.healthCheckIntervals.clear();
+
+      // Clear all cached clients
+      this.clients.clear();
+
+      console.log('WhatsApp endpoint manager shutdown complete');
+    } catch (error) {
+      console.error('Error during endpoint manager shutdown:', error);
+      throw error;
+    }
+  }
 }
 
 export const whatsappEndpointManager = WhatsAppEndpointManager.getInstance();
