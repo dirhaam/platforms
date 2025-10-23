@@ -11,7 +11,14 @@ import { Shield, ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function CreateSuperAdminPage() {
-  const session = await getServerSession();
+  // Verify session in a try-catch to handle any session-related errors
+  let session;
+  try {
+    session = await getServerSession();
+  } catch (error) {
+    console.error('Session validation error:', error);
+    redirect('/login?type=superadmin');
+  }
 
   // Redirect if not authenticated or not superadmin
   if (!session || session.role !== 'superadmin' || !session.isSuperAdmin) {
@@ -29,9 +36,11 @@ export default async function CreateSuperAdminPage() {
     const confirmPassword = formData.get('confirmPassword') as string;
 
     // Validation
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+      throw new Error('All fields are required');
+    }
+
     if (password !== confirmPassword) {
-      // In a real app, you would want to pass this error to the client
-      // For now, we'll just throw an error that will be displayed
       throw new Error('Passwords do not match');
     }
 
@@ -46,7 +55,19 @@ export default async function CreateSuperAdminPage() {
     }
 
     try {
-      // Use SuperAdminService directly instead of making API call from server action
+      // Verify the current session is still valid
+      const currentSession = await getServerSession();
+      if (!currentSession || currentSession.role !== 'superadmin' || !currentSession.isSuperAdmin) {
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      // Check if superadmin already exists with this email
+      const existing = await SuperAdminService.findByEmail(email);
+      if (existing) {
+        throw new Error('A superadmin with this email already exists');
+      }
+
+      // Use SuperAdminService directly to create the new superadmin
       await SuperAdminService.create({
         email,
         name: `${firstName} ${lastName}`.trim(),
@@ -57,6 +78,7 @@ export default async function CreateSuperAdminPage() {
       redirect('/admin/superadmins');
     } catch (error: any) {
       console.error('Error creating superadmin:', error);
+      // Re-throw the error so it gets displayed properly
       throw error;
     }
   }
@@ -163,16 +185,6 @@ export default async function CreateSuperAdminPage() {
             </div>
           </div>
 
-          {/* Phone field is currently not supported in the database */}
-          {/* <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              name="phone"
-              placeholder="+1 (555) 123-4567"
-            />
-          </div> */}
-
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="text-sm font-medium text-blue-800 mb-2">
               SuperAdmin Permissions
@@ -193,7 +205,6 @@ export default async function CreateSuperAdminPage() {
               </Link>
             </Button>
             <Button type="submit" id="submit-button">
-              { /* Add loading state if needed */ }
               Create SuperAdmin
             </Button>
           </div>
