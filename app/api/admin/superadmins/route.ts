@@ -50,13 +50,13 @@ export async function POST(request: Request) {
     });
 
     // Update additional fields if provided
-    if (phone || permissions !== ['*'] || canAccessAllTenants !== true) {
-      const updates: any = {};
-      
-      if (phone) updates.phone = phone;
-      if (permissions) updates.permissions = permissions;
-      if (canAccessAllTenants !== undefined) updates.canAccessAllTenants = canAccessAllTenants;
-      
+    const updates: any = {};
+    
+    if (phone) updates.phone = phone;
+    if (permissions && JSON.stringify(permissions) !== JSON.stringify(['*'])) updates.permissions = permissions;
+    if (canAccessAllTenants !== undefined && canAccessAllTenants !== true) updates.canAccessAllTenants = canAccessAllTenants;
+    
+    if (Object.keys(updates).length > 0) {
       await SuperAdminService.update(newSuperAdmin.id, updates);
     }
 
