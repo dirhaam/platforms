@@ -361,7 +361,7 @@ export default function BookingNewPage() {
               <Label htmlFor="newcust-phone">Phone Number *</Label>
               <Input
                 id="newcust-phone"
-                placeholder="+92 300 1234567"
+                placeholder="+62 812 1234567"
                 value={newCustomer.phone}
                 onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                 required
