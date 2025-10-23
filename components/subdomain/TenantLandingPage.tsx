@@ -224,7 +224,7 @@ export default function TenantLandingPage({
                           className="font-bold text-2xl" 
                           style={{ color: primaryColor }}
                         >
-                          PKR {Number(service.price).toLocaleString()}
+                          IDR {Number(service.price).toLocaleString('id-ID')}
                         </span>
                       </div>
                     </div>
@@ -237,7 +237,7 @@ export default function TenantLandingPage({
                           <span className="font-medium">Home visit available</span>
                           {service.homeVisitSurcharge && (
                             <span className="text-green-600 ml-1">
-                              (+PKR {Number(service.homeVisitSurcharge).toLocaleString()})
+                              (+IDR {Number(service.homeVisitSurcharge).toLocaleString('id-ID')})
                             </span>
                           )}
                         </div>
