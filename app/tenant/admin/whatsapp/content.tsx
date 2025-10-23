@@ -41,64 +41,59 @@ export function WhatsAppContent() {
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain') || '';
   
-  const [tenantId, setTenantId] = useState<string>('');
   const [endpoint, setEndpoint] = useState<WhatsAppEndpoint | null>(null);
   const [devices, setDevices] = useState<WhatsAppDevice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [newDeviceName, setNewDeviceName] = useState('');
   const [connectionResult, setConnectionResult] = useState<{ qrCode?: string; pairingCode?: string } | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<WhatsAppDevice | null>(null);
-
-  // Get tenant ID from subdomain
-  useEffect(() => {
-    const fetchTenantId = async () => {
-      try {
-        const response = await fetch(`/api/tenants/by-subdomain?subdomain=${subdomain}`);
-        if (response.ok) {
-          const data = await response.json();
-          setTenantId(data.id);
-        }
-      } catch (error) {
-        console.error('Error fetching tenant:', error);
-      }
-    };
-
-    if (subdomain) {
-      fetchTenantId();
-    }
-  }, [subdomain]);
+  const [tenantId, setTenantId] = useState<string>('');
 
   // Fetch endpoint and devices
   useEffect(() => {
-    if (!tenantId) return;
+    if (!subdomain) return;
 
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+
+        // First get tenant ID from subdomain
+        const tenantRes = await fetch(`/api/tenants/by-subdomain?subdomain=${subdomain}`);
+        if (!tenantRes.ok) {
+          setError('Tenant not found');
+          setLoading(false);
+          return;
+        }
+        const tenantData = await tenantRes.json();
+        const newTenantId = tenantData.id;
+        setTenantId(newTenantId);
 
         // Fetch endpoint
-        const endpointRes = await fetch(`/api/whatsapp/endpoints/${tenantId}`);
+        const endpointRes = await fetch(`/api/whatsapp/endpoints/${newTenantId}`);
         if (endpointRes.ok) {
           const endpointData = await endpointRes.json();
           setEndpoint(endpointData.endpoint);
         }
 
         // Fetch devices
-        const devicesRes = await fetch(`/api/whatsapp/devices?tenantId=${tenantId}`);
+        const devicesRes = await fetch(`/api/whatsapp/devices?tenantId=${newTenantId}`);
         if (devicesRes.ok) {
           const devicesData = await devicesRes.json();
           setDevices(devicesData.devices || []);
         }
       } catch (error) {
         console.error('Error fetching WhatsApp data:', error);
+        setError('Failed to load WhatsApp data');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [tenantId]);
+  }, [subdomain]);
 
   const handleCreateDevice = async () => {
     if (!newDeviceName || !endpoint) return;
@@ -206,6 +201,24 @@ export function WhatsAppContent() {
           <h1 className="text-3xl font-bold text-gray-900">WhatsApp Integration</h1>
           <p className="text-gray-600 mt-2">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">WhatsApp Integration</h1>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              <p>{error}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
