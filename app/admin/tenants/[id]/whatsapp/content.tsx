@@ -16,20 +16,15 @@ import {
   CheckCircle,
   Smartphone,
   Save,
-  X,
+  Trash2,
+  Lock,
 } from 'lucide-react';
 
 interface WhatsAppConfig {
-  id: string;
   endpoint_name: string;
-  auto_reconnect: boolean;
-  reconnect_interval: number;
-  health_check_interval: number;
-  webhook_retries: number;
-  message_timeout: number;
   is_configured: boolean;
   health_status: 'healthy' | 'unhealthy' | 'unknown';
-  lastHealthCheck: string;
+  auto_reconnect: boolean;
 }
 
 interface Tenant {
@@ -38,11 +33,11 @@ interface Tenant {
   business_name: string;
 }
 
-interface WhatsAppConfigProps {
+interface Props {
   tenant: Tenant;
 }
 
-export function WhatsAppConfig({ tenant }: WhatsAppConfigProps) {
+export function WhatsAppConfig({ tenant }: Props) {
   const [config, setConfig] = useState<WhatsAppConfig | null>(null);
   const [availableEndpoints, setAvailableEndpoints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,31 +46,28 @@ export function WhatsAppConfig({ tenant }: WhatsAppConfigProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Fetch configuration and available endpoints
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Fetch available endpoints (from ENV)
         const endpointsRes = await fetch('/api/whatsapp/available-endpoints');
         if (endpointsRes.ok) {
-          const endpointsData = await endpointsRes.json();
-          setAvailableEndpoints(endpointsData.endpoints || []);
+          const data = await endpointsRes.json();
+          setAvailableEndpoints(data.endpoints || []);
         }
 
-        // Fetch current config
         const configRes = await fetch(`/api/whatsapp/tenant-config/${tenant.id}`);
         if (configRes.ok) {
-          const configData = await configRes.json();
-          if (configData.config) {
-            setConfig(configData.config);
-            setSelectedEndpoint(configData.config.endpoint_name || '');
+          const data = await configRes.json();
+          if (data.config) {
+            setConfig(data.config);
+            setSelectedEndpoint(data.config.endpoint_name || '');
           }
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load configuration');
+        console.error('Error loading data:', err);
+        setError('Failed to load WhatsApp configuration');
       } finally {
         setLoading(false);
       }
@@ -84,97 +76,63 @@ export function WhatsAppConfig({ tenant }: WhatsAppConfigProps) {
     fetchData();
   }, [tenant.id]);
 
-  const handleSave = async () => {
+  const handleAssignEndpoint = async () => {
+    if (!selectedEndpoint) {
+      setError('Please select an endpoint');
+      return;
+    }
+
     try {
+      setSaving(true);
       setError(null);
       setSuccess(null);
 
-      if (!formData.name || !formData.apiUrl) {
-        setError('Name and API URL are required');
-        return;
-      }
-
-      const generateSecret = () => {
-        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      };
-
-      const payload: any = {
-        id: endpoint?.id || `endpoint_${Date.now()}`,
-        tenantId: tenant.id,
-        name: formData.name,
-        apiUrl: formData.apiUrl,
-        webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://booqing.my.id'}/api/whatsapp/webhook/${tenant.id}`,
-        webhookSecret: `secret_${generateSecret()}`,
-        isActive: true,
-        healthStatus: 'unknown',
-        lastHealthCheck: new Date(),
-      };
-
-      // Only include apiKey if it was changed
-      if (formData.apiKey && formData.apiKey !== '***') {
-        payload.apiKey = formData.apiKey;
-      }
-
-      const response = await fetch(`/api/whatsapp/endpoints/${tenant.id}`, {
+      const res = await fetch(`/api/whatsapp/tenant-config/${tenant.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ endpoint_name: selectedEndpoint }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setEndpoint(data.endpoint);
-        setEditing(false);
-        setSuccess('WhatsApp endpoint configured successfully!');
-      } else {
-        setError('Failed to save endpoint');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to assign endpoint');
       }
+
+      const data = await res.json();
+      setConfig(data.config);
+      setSuccess('Endpoint assigned successfully!');
     } catch (err) {
-      console.error('Error saving endpoint:', err);
-      setError('An error occurred while saving');
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Delete this WhatsApp endpoint?')) return;
+  const handleRemoveEndpoint = async () => {
+    if (!confirm('Remove WhatsApp endpoint from this tenant?')) return;
 
     try {
       setError(null);
-      const response = await fetch(`/api/whatsapp/endpoints/${tenant.id}`, {
+      const res = await fetch(`/api/whatsapp/tenant-config/${tenant.id}`, {
         method: 'DELETE',
       });
 
-      if (response.ok) {
-        setEndpoint(null);
-        setFormData({ name: '', apiUrl: '', apiKey: '' });
-        setSuccess('WhatsApp endpoint deleted');
-      } else {
-        setError('Failed to delete endpoint');
-      }
-    } catch (err) {
-      console.error('Error deleting endpoint:', err);
-      setError('An error occurred while deleting');
-    }
-  };
+      if (!res.ok) throw new Error('Failed to remove endpoint');
 
-  const getHealthColor = (status: string) => {
-    switch (status) {
-      case 'healthy':
-        return 'text-green-600';
-      case 'unhealthy':
-        return 'text-red-600';
-      default:
-        return 'text-gray-600';
+      setConfig(null);
+      setSelectedEndpoint('');
+      setSuccess('Endpoint removed successfully');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
     }
   };
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">WhatsApp Configuration</h1>
-          <p className="text-gray-600 mt-2">{tenant.business_name}</p>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900">WhatsApp Configuration</h1>
         <Card>
           <CardContent className="pt-6">
             <p>Loading...</p>
@@ -186,20 +144,18 @@ export function WhatsAppConfig({ tenant }: WhatsAppConfigProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">WhatsApp Configuration</h1>
-          <p className="text-gray-600 mt-2">{tenant.business_name}</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">WhatsApp Configuration</h1>
+        <p className="text-gray-600 mt-2">{tenant.business_name}</p>
       </div>
 
-      {/* Messages */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <p className="text-red-800">{error}</p>
         </div>
       )}
+
       {success && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -207,178 +163,148 @@ export function WhatsAppConfig({ tenant }: WhatsAppConfigProps) {
         </div>
       )}
 
-      {/* Endpoint Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="w-5 h-5" />
-            WhatsApp Endpoint
+            Assign WhatsApp Endpoint
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!editing && endpoint ? (
-            // View Mode
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Name</label>
-                  <p className="mt-1 text-gray-900">{endpoint.name}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    {endpoint.healthStatus === 'healthy' ? (
-                      <>
-                        <CheckCircle className={`w-4 h-4 ${getHealthColor(endpoint.healthStatus)}`} />
-                        <span className="text-green-600 font-medium">Healthy</span>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className={`w-4 h-4 ${getHealthColor(endpoint.healthStatus)}`} />
-                        <span className="text-gray-600">
-                          {endpoint.healthStatus === 'unhealthy' ? 'Unhealthy' : 'Unknown'}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">API URL</label>
-                <p className="mt-1 text-gray-900 font-mono text-sm break-all">{endpoint.apiUrl}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Last Health Check</label>
-                <p className="mt-1 text-gray-600 text-sm">
-                  {new Date(endpoint.lastHealthCheck).toLocaleString()}
+          <div className="space-y-4">
+            {availableEndpoints.length === 0 ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-amber-800 text-sm">
+                  No endpoints available. Please configure endpoints in environment variables.
                 </p>
               </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Available Endpoints
+                  </label>
+                  <Select value={selectedEndpoint} onValueChange={setSelectedEndpoint}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an endpoint..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableEndpoints.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button
-                  onClick={() => setEditing(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleDelete}
-                  className="text-red-600 hover:text-red-700 flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </Button>
-              </div>
-            </div>
-          ) : editing || !endpoint ? (
-            // Edit/Create Mode
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Endpoint Name
-                </label>
-                <Input
-                  placeholder="e.g., Primary WhatsApp Server"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  API URL
-                </label>
-                <Input
-                  placeholder="https://api.whatsapp.example.com"
-                  value={formData.apiUrl}
-                  onChange={(e) => setFormData({ ...formData, apiUrl: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  API Key {endpoint && '(leave blank to keep current)'}
-                </label>
-                <Input
-                  type="password"
-                  placeholder="Your WhatsApp API key"
-                  value={formData.apiKey}
-                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                />
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
-                  <strong>Webhook URL:</strong>
-                </p>
-                <code className="text-xs text-blue-900 break-all">
-                  {process.env.NEXT_PUBLIC_APP_URL || 'https://booqing.my.id'}/api/whatsapp/webhook/{tenant.id}
-                </code>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  onClick={handleSave}
-                  className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  Save Endpoint
-                </Button>
-                {editing && (
+                <div>
                   <Button
-                    variant="outline"
-                    onClick={() => {
-                      setEditing(false);
-                      if (endpoint) {
-                        setFormData({
-                          name: endpoint.name,
-                          apiUrl: endpoint.apiUrl,
-                          apiKey: '',
-                        });
-                      }
-                    }}
+                    onClick={handleAssignEndpoint}
+                    disabled={saving || !selectedEndpoint}
                     className="flex items-center gap-2"
                   >
-                    <X className="w-4 h-4" />
-                    Cancel
+                    <Save className="w-4 h-4" />
+                    {saving ? 'Assigning...' : 'Assign Endpoint'}
                   </Button>
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          {!endpoint && !editing && (
-            <div className="text-center py-6">
-              <Smartphone className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-600 mb-4">No WhatsApp endpoint configured</p>
-              <Button onClick={() => setEditing(true)} className="flex items-center gap-2 mx-auto">
-                <Plus className="w-4 h-4" />
-                Configure Endpoint
-              </Button>
-            </div>
-          )}
+                </div>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Info Card */}
+      {config && config.is_configured && (
+        <Card className="border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="w-5 h-5" />
+              Current Configuration
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Endpoint Name</label>
+                <p className="mt-1 text-gray-900 font-semibold">{config.endpoint_name}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <div className="mt-1 flex items-center gap-2">
+                  {config.health_status === 'healthy' ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-green-600 font-semibold">Healthy</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-amber-600" />
+                      <span className="text-amber-600 font-semibold">
+                        {config.health_status === 'unhealthy' ? 'Unhealthy' : 'Unknown'}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={config.auto_reconnect}
+                  disabled
+                  className="w-4 h-4"
+                />
+                Auto-reconnect enabled
+              </label>
+            </div>
+
+            <Button
+              variant="destructive"
+              onClick={handleRemoveEndpoint}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Remove Endpoint
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="bg-blue-50 border-blue-200">
         <CardHeader>
-          <CardTitle className="text-blue-900">Information</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-blue-900">
+            <Lock className="w-5 h-5" />
+            Security
+          </CardTitle>
         </CardHeader>
-        <CardContent className="text-blue-800 space-y-2">
+        <CardContent className="text-blue-800 space-y-2 text-sm">
           <p>
-            <strong>Tenant Subdomain:</strong> <code className="bg-blue-100 px-2 py-1 rounded">{tenant.subdomain}.booqing.my.id</code>
+            ✓ <strong>WhatsApp credentials are stored securely</strong> in server environment variables
           </p>
           <p>
-            <strong>Tenant WhatsApp Page:</strong>{' '}
-            <code className="bg-blue-100 px-2 py-1 rounded">{tenant.subdomain}.booqing.my.id/admin/whatsapp</code>
+            ✓ Frontend only handles endpoint assignment, not credentials
           </p>
-          <p className="text-sm mt-3">
-            After configuring the endpoint, users can create and manage WhatsApp devices from their tenant WhatsApp page.
+          <p>
+            ✓ API keys never exposed to browser or client-side code
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gray-50 border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Tenant Access</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p>
+            <strong>Subdomain:</strong> <code className="bg-gray-100 px-2 py-1 rounded">{tenant.subdomain}.booqing.my.id</code>
+          </p>
+          <p>
+            <strong>WhatsApp Page:</strong> <code className="bg-gray-100 px-2 py-1 rounded">{tenant.subdomain}.booqing.my.id/admin/whatsapp</code>
+          </p>
+          <p className="text-gray-600 mt-3">
+            After assigning endpoint, tenant users can create and manage WhatsApp devices.
           </p>
         </CardContent>
       </Card>
