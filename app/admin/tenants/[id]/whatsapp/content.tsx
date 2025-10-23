@@ -3,25 +3,32 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertCircle,
   CheckCircle,
   Smartphone,
-  Plus,
-  Edit2,
-  Trash2,
   Save,
   X,
 } from 'lucide-react';
 
-interface WhatsAppEndpoint {
+interface WhatsAppConfig {
   id: string;
-  name: string;
-  apiUrl: string;
-  isActive: boolean;
-  healthStatus: 'healthy' | 'unhealthy' | 'unknown';
+  endpoint_name: string;
+  auto_reconnect: boolean;
+  reconnect_interval: number;
+  health_check_interval: number;
+  webhook_retries: number;
+  message_timeout: number;
+  is_configured: boolean;
+  health_status: 'healthy' | 'unhealthy' | 'unknown';
   lastHealthCheck: string;
 }
 
@@ -36,42 +43,45 @@ interface WhatsAppConfigProps {
 }
 
 export function WhatsAppConfig({ tenant }: WhatsAppConfigProps) {
-  const [endpoint, setEndpoint] = useState<WhatsAppEndpoint | null>(null);
+  const [config, setConfig] = useState<WhatsAppConfig | null>(null);
+  const [availableEndpoints, setAvailableEndpoints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    apiUrl: '',
-    apiKey: '',
-  });
+  const [saving, setSaving] = useState(false);
+  const [selectedEndpoint, setSelectedEndpoint] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Fetch endpoint
+  // Fetch configuration and available endpoints
   useEffect(() => {
-    const fetchEndpoint = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/whatsapp/endpoints/${tenant.id}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.endpoint) {
-            setEndpoint(data.endpoint);
-            setFormData({
-              name: data.endpoint.name,
-              apiUrl: data.endpoint.apiUrl,
-              apiKey: '', // Don't show key for security
-            });
+
+        // Fetch available endpoints (from ENV)
+        const endpointsRes = await fetch('/api/whatsapp/available-endpoints');
+        if (endpointsRes.ok) {
+          const endpointsData = await endpointsRes.json();
+          setAvailableEndpoints(endpointsData.endpoints || []);
+        }
+
+        // Fetch current config
+        const configRes = await fetch(`/api/whatsapp/tenant-config/${tenant.id}`);
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          if (configData.config) {
+            setConfig(configData.config);
+            setSelectedEndpoint(configData.config.endpoint_name || '');
           }
         }
       } catch (err) {
-        console.error('Error fetching endpoint:', err);
+        console.error('Error fetching data:', err);
+        setError('Failed to load configuration');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchEndpoint();
+    fetchData();
   }, [tenant.id]);
 
   const handleSave = async () => {
