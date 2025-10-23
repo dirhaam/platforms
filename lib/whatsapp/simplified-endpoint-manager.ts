@@ -71,6 +71,19 @@ export class WhatsAppEndpointManager {
     try {
       const config = await this.getConfiguration(tenantId) || {
         tenantId,
+        endpoint: {
+          id: '',
+          tenantId,
+          name: '',
+          apiUrl: '',
+          webhookUrl: '',
+          webhookSecret: '',
+          isActive: false,
+          healthStatus: 'unknown' as const,
+          lastHealthCheck: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
         autoReconnect: true,
         reconnectInterval: 30,
         healthCheckInterval: 60,
@@ -81,7 +94,7 @@ export class WhatsAppEndpointManager {
       };
 
       // Preserve original createdAt if endpoint already exists, otherwise use new Date
-      const existingCreatedAt = config.endpoint?.createdAt;
+      const existingCreatedAt = config.endpoint.createdAt;
 
       const newEndpoint: WhatsAppEndpoint = {
         ...endpoint,
