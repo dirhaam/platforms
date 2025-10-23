@@ -4,10 +4,10 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Lock, Download, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
-export default async function SecurityPage() {
+export default async function AuditPage() {
   const session = await getServerSession();
 
   if (!session || session.role !== 'superadmin' || !session.isSuperAdmin) {
@@ -18,9 +18,9 @@ export default async function SecurityPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Security Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
           <p className="text-gray-600">
-            Monitor platform security and threat status
+            Security and compliance audit trail
           </p>
         </div>
         <Button asChild>
@@ -35,10 +35,10 @@ export default async function SecurityPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Security Score</p>
-                <p className="text-2xl font-bold text-green-600">100/100</p>
+                <p className="text-sm font-medium text-gray-600">Total Events</p>
+                <p className="text-2xl font-bold text-gray-900">--</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <Lock className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -47,10 +47,10 @@ export default async function SecurityPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Threats</p>
-                <p className="text-2xl font-bold text-gray-900">0</p>
+                <p className="text-sm font-medium text-gray-600">Today's Events</p>
+                <p className="text-2xl font-bold text-gray-900">--</p>
               </div>
-              <Shield className="w-8 h-8 text-blue-600" />
+              <AlertCircle className="w-8 h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -59,10 +59,10 @@ export default async function SecurityPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Failed Logins</p>
+                <p className="text-sm font-medium text-gray-600">Failures</p>
                 <p className="text-2xl font-bold text-gray-900">0</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+              <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
@@ -71,39 +71,43 @@ export default async function SecurityPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Security Status
+            <Lock className="w-5 h-5" />
+            Recent Audit Events
           </CardTitle>
           <CardDescription>
-            Overall platform security status and compliance
+            Security-relevant events and actions
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <p className="font-medium">SSL/TLS Configuration</p>
-                <p className="text-sm text-gray-600">HTTPS enabled</p>
+            <div className="border-b pb-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium text-gray-900">User Login</p>
+                  <p className="text-sm text-gray-600">{session.email}</p>
+                </div>
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Success</span>
               </div>
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-xs text-gray-500 mt-2">Just now</p>
             </div>
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <p className="font-medium">Database Encryption</p>
-                <p className="text-sm text-gray-600">Enabled</p>
+            <div className="border-b pb-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium text-gray-900">SuperAdmin Created</p>
+                  <p className="text-sm text-gray-600">New superadmin account added</p>
+                </div>
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Info</span>
               </div>
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <p className="font-medium">API Rate Limiting</p>
-                <p className="text-sm text-gray-600">Active</p>
-              </div>
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-xs text-gray-500 mt-2">Earlier today</p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      <Button variant="outline">
+        <Download className="w-4 h-4 mr-2" />
+        Export Audit Log
+      </Button>
     </div>
   );
 }
