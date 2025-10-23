@@ -19,7 +19,7 @@ export default async function CreateSuperAdminPage() {
   }
 
   // Server action to handle form submission
-  const createSuperAdmin = async (formData: FormData) => {
+  async function createSuperAdmin(formData: FormData) {
     'use server';
     
     const firstName = formData.get('firstName') as string;
@@ -27,27 +27,22 @@ export default async function CreateSuperAdminPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const confirmPassword = formData.get('confirmPassword') as string;
-    const phone = formData.get('phone') as string;
 
     // Validation
     if (password !== confirmPassword) {
-      return {
-        error: 'Passwords do not match'
-      };
+      // In a real app, you would want to pass this error to the client
+      // For now, we'll just throw an error that will be displayed
+      throw new Error('Passwords do not match');
     }
 
     if (password.length < 6) {
-      return {
-        error: 'Password must be at least 6 characters'
-      };
+      throw new Error('Password must be at least 6 characters');
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return {
-        error: 'Invalid email format'
-      };
+      throw new Error('Invalid email format');
     }
 
     try {
@@ -62,11 +57,9 @@ export default async function CreateSuperAdminPage() {
       redirect('/admin/superadmins');
     } catch (error: any) {
       console.error('Error creating superadmin:', error);
-      return {
-        error: error.message || 'An error occurred while creating the superadmin',
-      };
+      throw error;
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
