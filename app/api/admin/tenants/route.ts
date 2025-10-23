@@ -57,20 +57,33 @@ export async function GET() {
     const { data: dbTenants, error } = await supabase
       .from('tenants')
       .select('*')
-      .order('createdAt', { ascending: true });
+      .order('created_at', { ascending: true });
     
     if (error) {
-      throw error;
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { error: error.message || 'Failed to fetch tenants from database' },
+        { status: 500 }
+      );
     }
     
     // Convert to EnhancedTenant format
-    const enhancedTenants = (dbTenants || []).map(mapDbTenantToEnhanced);
-    
-    return NextResponse.json({ tenants: enhancedTenants });
+    try {
+      const enhancedTenants = (dbTenants || []).map(mapDbTenantToEnhanced);
+      return NextResponse.json({ tenants: enhancedTenants });
+    } catch (mappingError) {
+      console.error('Error mapping tenants:', mappingError);
+      const mappingErrorMessage = mappingError instanceof Error ? mappingError.message : 'Mapping error';
+      return NextResponse.json(
+        { error: mappingErrorMessage, details: 'Error transforming tenant data', rawData: dbTenants?.[0] },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Failed to fetch tenants:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch tenants' },
+      { error: errorMessage, details: 'Failed to fetch tenants' },
       { status: 500 }
     );
   }
