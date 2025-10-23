@@ -50,7 +50,7 @@ export function WhatsAppContent() {
   const [connectionResult, setConnectionResult] = useState<{ qrCode?: string; pairingCode?: string } | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<WhatsAppDevice | null>(null);
 
-  // Fetch endpoint and devices using subdomain as tenantId
+  // Fetch configuration and devices
   useEffect(() => {
     if (!subdomain) return;
 
@@ -59,22 +59,41 @@ export function WhatsAppContent() {
         setLoading(true);
         setError(null);
 
-        // Fetch endpoint using subdomain as tenantId (use relative path)
-        const endpointRes = await fetch(`/api/whatsapp/endpoints/${subdomain}`);
-        if (endpointRes.ok) {
-          const endpointData = await endpointRes.json();
-          setEndpoint(endpointData.endpoint);
-        }
-
-        // Fetch devices using subdomain as tenantId (use relative path)
-        const devicesRes = await fetch(`/api/whatsapp/devices?tenantId=${subdomain}`);
-        if (devicesRes.ok) {
-          const devicesData = await devicesRes.json();
-          setDevices(devicesData.devices || []);
+        // Fetch tenant WhatsApp configuration
+        const configRes = await fetch(`/api/whatsapp/tenant-config/${subdomain}`);
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          if (configData.config && configData.config.is_configured) {
+            // Configuration exists - endpoint is assigned
+            // Now fetch devices
+            const devicesRes = await fetch(`/api/whatsapp/devices?tenantId=${subdomain}`);
+            if (devicesRes.ok) {
+              const devicesData = await devicesRes.json();
+              setDevices(devicesData.devices || []);
+            }
+            // Set endpoint name (actual credentials are server-side)
+            setEndpoint({
+              id: configData.config.endpoint_name,
+              name: configData.config.endpoint_name,
+              apiUrl: '', // Not exposed to frontend
+              webhookUrl: '',
+              webhookSecret: '',
+              apiKey: '',
+              isActive: true,
+              healthStatus: configData.config.health_status,
+              lastHealthCheck: new Date(),
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          } else {
+            setError('WhatsApp endpoint not configured. Please contact your administrator.');
+          }
+        } else {
+          setError('WhatsApp endpoint not configured. Please contact your administrator.');
         }
       } catch (error) {
         console.error('Error fetching WhatsApp data:', error);
-        setError('Failed to load WhatsApp data. Please ensure WhatsApp is configured.');
+        setError('Failed to load WhatsApp data. Please try again.');
       } finally {
         setLoading(false);
       }
