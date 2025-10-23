@@ -2,11 +2,12 @@ export const runtime = 'nodejs';
 
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
+import { SuperAdminService } from '@/lib/auth/superadmin-service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Shield, ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function CreateSuperAdminPage() {
@@ -16,6 +17,56 @@ export default async function CreateSuperAdminPage() {
   if (!session || session.role !== 'superadmin' || !session.isSuperAdmin) {
     redirect('/login?type=superadmin');
   }
+
+  // Server action to handle form submission
+  const createSuperAdmin = async (formData: FormData) => {
+    'use server';
+    
+    const firstName = formData.get('firstName') as string;
+    const lastName = formData.get('lastName') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+    const phone = formData.get('phone') as string;
+
+    // Validation
+    if (password !== confirmPassword) {
+      return {
+        error: 'Passwords do not match'
+      };
+    }
+
+    if (password.length < 6) {
+      return {
+        error: 'Password must be at least 6 characters'
+      };
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return {
+        error: 'Invalid email format'
+      };
+    }
+
+    try {
+      // Use SuperAdminService directly instead of making API call from server action
+      await SuperAdminService.create({
+        email,
+        name: `${firstName} ${lastName}`.trim(),
+        password,
+      });
+
+      // Redirect after successful creation
+      redirect('/admin/superadmins');
+    } catch (error: any) {
+      console.error('Error creating superadmin:', error);
+      return {
+        error: error.message || 'An error occurred while creating the superadmin',
+      };
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -59,12 +110,14 @@ export default async function CreateSuperAdminPage() {
             Enter the details for the new super administrator
           </CardDescription>
         </CardHeader>
+        <form action={createSuperAdmin}>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name *</Label>
               <Input
                 id="firstName"
+                name="firstName"
                 placeholder="Enter first name"
                 required
               />
@@ -73,6 +126,7 @@ export default async function CreateSuperAdminPage() {
               <Label htmlFor="lastName">Last Name *</Label>
               <Input
                 id="lastName"
+                name="lastName"
                 placeholder="Enter last name"
                 required
               />
@@ -83,6 +137,7 @@ export default async function CreateSuperAdminPage() {
             <Label htmlFor="email">Email Address *</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="admin@company.com"
               required
@@ -97,6 +152,7 @@ export default async function CreateSuperAdminPage() {
               <Label htmlFor="password">Password *</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 placeholder="Enter secure password"
                 required
@@ -106,6 +162,7 @@ export default async function CreateSuperAdminPage() {
               <Label htmlFor="confirmPassword">Confirm Password *</Label>
               <Input
                 id="confirmPassword"
+                name="confirmPassword"
                 type="password"
                 placeholder="Confirm password"
                 required
@@ -113,13 +170,15 @@ export default async function CreateSuperAdminPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
+          {/* Phone field is currently not supported in the database */}
+          {/* <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
             <Input
               id="phone"
+              name="phone"
               placeholder="+1 (555) 123-4567"
             />
-          </div>
+          </div> */}
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="text-sm font-medium text-blue-800 mb-2">
@@ -140,11 +199,13 @@ export default async function CreateSuperAdminPage() {
                 Cancel
               </Link>
             </Button>
-            <Button type="submit">
+            <Button type="submit" id="submit-button">
+              { /* Add loading state if needed */ }
               Create SuperAdmin
             </Button>
           </div>
         </CardContent>
+        </form>
       </Card>
     </div>
   );
