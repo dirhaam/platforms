@@ -81,7 +81,7 @@ export function WhatsAppContent() {
               apiKey: '',
               isActive: true,
               healthStatus: configData.config.health_status,
-              lastHealthCheck: new Date(),
+              lastHealthCheck: configData.config.last_health_check || new Date().toISOString(),
               createdAt: new Date(),
               updatedAt: new Date(),
             });
