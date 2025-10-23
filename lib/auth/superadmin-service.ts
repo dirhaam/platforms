@@ -99,7 +99,7 @@ export class SuperAdminService {
     const passwordHash = await TenantAuth.hashPassword(password);
 
     const { data: created, error: insertError } = await supabase
-      .from('superAdmins')
+      .from('super_admins')
       .insert({
         id: crypto.randomUUID(),
         email,
@@ -130,7 +130,7 @@ export class SuperAdminService {
     );
 
     const { data: row, error } = await supabase
-      .from('superAdmins')
+      .from('super_admins')
       .select('*')
       .eq('email', email)
       .limit(1)
@@ -147,7 +147,7 @@ export class SuperAdminService {
     );
 
     const { data: row, error } = await supabase
-      .from('superAdmins')
+      .from('super_admins')
       .select('*')
       .eq('id', id)
       .limit(1)
@@ -170,14 +170,14 @@ export class SuperAdminService {
 
     const data = buildUpdate(updates);
     const { error: updateError } = await supabase
-      .from('superAdmins')
+      .from('super_admins')
       .update(data)
       .eq('id', id);
 
     if (updateError) throw updateError;
 
     const { data: row, error: fetchError } = await supabase
-      .from('superAdmins')
+      .from('super_admins')
       .select('*')
       .eq('id', id)
       .limit(1)
@@ -195,7 +195,7 @@ export class SuperAdminService {
     );
 
     const { data: rows, error } = await supabase
-      .from('superAdmins')
+      .from('super_admins')
       .select('*')
       .order('createdAt', { ascending: false });
 
@@ -216,7 +216,7 @@ export class SuperAdminService {
     }
 
     const { error } = await supabase
-      .from('superAdmins')
+      .from('super_admins')
       .delete()
       .eq('id', id);
 
