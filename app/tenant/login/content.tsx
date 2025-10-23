@@ -29,7 +29,7 @@ export default function TenantLoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [subdomainInput, setSubdomainInput] = useState(subdomain || '');
-  const [loginType, setLoginType] = useState<'owner' | 'staff' | 'superadmin'>('owner');
+  const [loginType, setLoginType] = useState<'owner' | 'admin' | 'staff' | 'superadmin'>('owner');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -70,7 +70,7 @@ export default function TenantLoginContent() {
       };
 
       // Route to appropriate endpoint based on login type
-      if (loginType === 'owner' || loginType === 'superadmin') {
+      if (loginType === 'owner' || loginType === 'admin' || loginType === 'superadmin') {
         endpoint = '/api/auth/authenticate';
         body = {
           email: formData.email,
@@ -137,42 +137,54 @@ export default function TenantLoginContent() {
             {/* Login Type Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Login As</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setLoginType('owner')}
                   className={`py-2 px-2 text-sm rounded-md border transition-colors ${
                     loginType === 'owner'
-                      ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
+                      ? 'bg-yellow-50 border-yellow-300 text-yellow-700 font-medium'
                       : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                   disabled={loading}
                 >
-                  Owner
+                  👑 Owner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('admin')}
+                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
+                    loginType === 'admin'
+                      ? 'bg-purple-50 border-purple-300 text-purple-700 font-medium'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                  }`}
+                  disabled={loading}
+                >
+                  🛡️ Admin
                 </button>
                 <button
                   type="button"
                   onClick={() => setLoginType('staff')}
                   className={`py-2 px-2 text-sm rounded-md border transition-colors ${
                     loginType === 'staff'
-                      ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
+                      ? 'bg-green-50 border-green-300 text-green-700 font-medium'
                       : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                   disabled={loading}
                 >
-                  Staff
+                  👤 Staff
                 </button>
                 <button
                   type="button"
                   onClick={() => setLoginType('superadmin')}
                   className={`py-2 px-2 text-sm rounded-md border transition-colors ${
                     loginType === 'superadmin'
-                      ? 'bg-purple-50 border-purple-300 text-purple-700 font-medium'
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
                       : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                   disabled={loading}
                 >
-                  Admin
+                  🔐 SuperAdmin
                 </button>
               </div>
             </div>

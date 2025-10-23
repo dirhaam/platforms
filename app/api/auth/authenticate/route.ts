@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 interface AuthRequest {
   email: string;
   password: string;
-  loginType: 'owner' | 'staff' | 'superadmin';
+  loginType: 'owner' | 'admin' | 'staff' | 'superadmin';
 }
 
 export async function POST(request: NextRequest) {
@@ -93,6 +93,9 @@ export async function POST(request: NextRequest) {
 
       return response;
 
+    } else if (loginType === 'admin') {
+      // Admin authentication - admins are in staff table with role 'admin'
+      return handleAdminAuth(request, supabase, email, password);
     } else {
       // Owner/Staff authentication via tenants/staff tables  
       return handleTenantAuth(request, supabase, loginType, email, password);
@@ -106,6 +109,143 @@ export async function POST(request: NextRequest) {
       );
     }
   }
+
+// Helper function for Admin authentication (staff with role 'admin')
+async function handleAdminAuth(
+  request: NextRequest,
+  supabase: any,
+  email: string,
+  password: string
+) {
+  try {
+    console.log('[handleAdminAuth] Admin login attempt:', { email });
+
+    // Find admin user in staff table with role 'admin'
+    const { data: adminUser, error: adminError } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('email', email)
+      .eq('role', 'admin')
+      .eq('is_active', true)
+      .single();
+
+    if (adminError) {
+      console.error('[handleAdminAuth] Error finding admin:', adminError.message);
+    }
+
+    if (!adminUser) {
+      console.error('[handleAdminAuth] Admin not found for email:', email);
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid credentials'
+      }, { status: 401 });
+    }
+
+    // Get tenant details
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id, subdomain, business_name')
+      .eq('id', adminUser.tenant_id)
+      .single();
+
+    if (!tenant) {
+      console.error('[handleAdminAuth] Tenant not found');
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid credentials'
+      }, { status: 401 });
+    }
+
+    // Verify password
+    if (adminUser.password_hash) {
+      try {
+        const isValidPassword = await bcrypt.compare(password, adminUser.password_hash);
+        console.log('[handleAdminAuth] Password verification result:', isValidPassword);
+
+        if (!isValidPassword) {
+          // Increment login attempts
+          const newLoginAttempts = (adminUser.login_attempts || 0) + 1;
+          const shouldLock = newLoginAttempts >= 5;
+          await supabase
+            .from('staff')
+            .update({
+              login_attempts: newLoginAttempts,
+              locked_until: shouldLock ? new Date(Date.now() + 30 * 60 * 1000).toISOString() : null
+            })
+            .eq('id', adminUser.id);
+
+          console.error('[handleAdminAuth] Invalid password for admin:', email);
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid credentials'
+          }, { status: 401 });
+        }
+      } catch (bcryptError) {
+        console.error('[handleAdminAuth] Bcrypt compare error:', bcryptError);
+        return NextResponse.json({
+          success: false,
+          error: 'Authentication error'
+        }, { status: 401 });
+      }
+
+      // Reset login attempts and update last login on success
+      await supabase
+        .from('staff')
+        .update({
+          login_attempts: 0,
+          locked_until: null,
+          last_login_at: new Date().toISOString()
+        })
+        .eq('id', adminUser.id);
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'No password set for this admin'
+      }, { status: 400 });
+    }
+
+    // Create session data for admin
+    const sessionData = {
+      userId: adminUser.id,
+      tenantId: adminUser.tenant_id,
+      role: 'admin',
+      permissions: Array.isArray(adminUser.permissions) ? adminUser.permissions : [],
+      email: adminUser.email,
+      name: adminUser.name,
+    };
+
+    // Set response with auth cookie using inline session encoding
+    const response = NextResponse.json({
+      success: true,
+      message: 'Admin login successful',
+      user: {
+        name: sessionData.name,
+        email: sessionData.email,
+        role: sessionData.role,
+        tenantId: sessionData.tenantId,
+      }
+    });
+
+    // Use inline session encoding
+    const inlineSession = 'inline.' + btoa(JSON.stringify(sessionData));
+    response.cookies.set('tenant-auth', inlineSession, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Admin auth error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return NextResponse.json({
+      success: false,
+      error: `Authentication failed: ${errorMessage}`
+    }, { status: 500 });
+  }
+}
 
 // Helper function for Owner/Staff authentication
 async function handleTenantAuth(
