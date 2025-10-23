@@ -315,13 +315,25 @@ export function TenantsList({ initialSession }: TenantsListProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
+                              <Link href={`/admin/tenants/${tenant.id}`} className="flex items-center w-full">
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/tenants/${tenant.id}/users`} className="flex items-center w-full">
+                                <Users className="w-4 h-4 mr-2" />
+                                Manage Users
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
                               <a 
                                 href={getTenantUrl(tenant.subdomain)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center w-full"
                               >
-                                <Eye className="w-4 h-4 mr-2" />
+                                <Globe className="w-4 h-4 mr-2" />
                                 View Site
                               </a>
                             </DropdownMenuItem>
