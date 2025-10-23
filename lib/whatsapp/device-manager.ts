@@ -161,7 +161,8 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
 
       await this.updateDevice(deviceId, { status: 'connecting' });
 
-      const client = await this.endpointManager.getClient(device.tenantId, device.endpointId);
+      // Simplified: each tenant has 1 endpoint
+      const client = await this.endpointManager.getClient(device.tenantId);
       if (!client) {
         throw new Error('WhatsApp client not available');
       }
@@ -207,7 +208,8 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
         throw new Error('Device not found');
       }
 
-      const client = await this.endpointManager.getClient(device.tenantId, device.endpointId);
+      // Simplified: each tenant has 1 endpoint
+      const client = await this.endpointManager.getClient(device.tenantId);
       if (client) {
         await client.disconnectDevice(deviceId);
       }
@@ -283,7 +285,8 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
         throw new Error('Device not found');
       }
 
-      const client = await this.endpointManager.getClient(device.tenantId, device.endpointId);
+      // Simplified: each tenant has 1 endpoint
+      const client = await this.endpointManager.getClient(device.tenantId);
       if (!client) {
         throw new Error('WhatsApp client not available');
       }
