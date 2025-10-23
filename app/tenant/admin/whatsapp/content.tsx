@@ -43,6 +43,7 @@ export function WhatsAppContent() {
   
   const [endpoint, setEndpoint] = useState<WhatsAppEndpoint | null>(null);
   const [devices, setDevices] = useState<WhatsAppDevice[]>([]);
+  const [tenantId, setTenantId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -50,7 +51,6 @@ export function WhatsAppContent() {
   const [connectionResult, setConnectionResult] = useState<{ qrCode?: string; pairingCode?: string } | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<WhatsAppDevice | null>(null);
 
-  // Fetch configuration and devices
   useEffect(() => {
     if (!subdomain) return;
 
@@ -58,33 +58,49 @@ export function WhatsAppContent() {
       try {
         setLoading(true);
         setError(null);
+        const tenantRes = await fetch(`/api/tenants/${subdomain}`);
+        if (!tenantRes.ok) {
+          setError('Tenant not found. Please contact support.');
+          setEndpoint(null);
+          setDevices([]);
+          setTenantId('');
+          return;
+        }
 
-        // Fetch tenant WhatsApp configuration
-        const configRes = await fetch(`/api/whatsapp/tenant-config/${subdomain}`);
-        if (configRes.ok) {
-          const configData = await configRes.json();
-          if (configData.config && configData.config.is_configured) {
-            // Configuration exists - endpoint is assigned
-            // Now fetch devices
-            const devicesRes = await fetch(`/api/whatsapp/devices?tenantId=${subdomain}`);
-            if (devicesRes.ok) {
-              const devicesData = await devicesRes.json();
-              setDevices(devicesData.devices || []);
-            }
-            // Set endpoint (credentials are server-side only)
-            setEndpoint({
-              id: configData.config.endpoint_name,
-              name: configData.config.endpoint_name,
-              apiUrl: '', // Not exposed to frontend
-              isActive: true,
-              healthStatus: configData.config.health_status,
-              lastHealthCheck: configData.config.last_health_check || new Date().toISOString(),
-            });
-          } else {
-            setError('WhatsApp endpoint not configured. Please contact your administrator.');
-          }
-        } else {
+        const tenantData = await tenantRes.json();
+        const resolvedTenantId = tenantData.id as string;
+        setTenantId(resolvedTenantId);
+
+        const configRes = await fetch(`/api/whatsapp/tenant-config/${resolvedTenantId}`);
+        if (!configRes.ok) {
           setError('WhatsApp endpoint not configured. Please contact your administrator.');
+          setEndpoint(null);
+          setDevices([]);
+          return;
+        }
+
+        const configData = await configRes.json();
+        if (!configData?.config || !configData.config.is_configured) {
+          setError('WhatsApp endpoint not configured. Please contact your administrator.');
+          setEndpoint(null);
+          setDevices([]);
+          return;
+        }
+
+        const endpointRes = await fetch(`/api/whatsapp/endpoints/${resolvedTenantId}`);
+        if (endpointRes.ok) {
+          const endpointData = await endpointRes.json();
+          setEndpoint(endpointData.endpoint);
+        } else {
+          setEndpoint(null);
+        }
+
+        const devicesRes = await fetch(`/api/whatsapp/devices?tenantId=${resolvedTenantId}`);
+        if (devicesRes.ok) {
+          const devicesData = await devicesRes.json();
+          setDevices(devicesData.devices || []);
+        } else {
+          setDevices([]);
         }
       } catch (error) {
         console.error('Error fetching WhatsApp data:', error);
@@ -98,7 +114,7 @@ export function WhatsAppContent() {
   }, [subdomain]);
 
   const handleCreateDevice = async () => {
-    if (!newDeviceName || !endpoint || !subdomain) return;
+    if (!newDeviceName || !endpoint || !tenantId) return;
 
     try {
       const response = await fetch(`/api/whatsapp/devices`, {
@@ -107,7 +123,7 @@ export function WhatsAppContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tenantId: subdomain,
+          tenantId,
           endpointId: endpoint.id,
           deviceName: newDeviceName,
         }),
