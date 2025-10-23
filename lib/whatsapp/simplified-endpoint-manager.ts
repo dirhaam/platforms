@@ -5,6 +5,7 @@ import {
 } from '@/types/whatsapp';
 import { WhatsAppClient } from './whatsapp-client';
 import { kvGet, kvSet, kvDelete } from '@/lib/cache/key-value-store';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Simplified endpoint manager: 1 Tenant = 1 Endpoint
@@ -19,6 +20,10 @@ export class WhatsAppEndpointManager {
   private static instance: WhatsAppEndpointManager;
   private clients: Map<string, WhatsAppClient> = new Map(); // key: tenantId
   private healthCheckIntervals: Map<string, NodeJS.Timeout> = new Map(); // key: tenantId
+  private supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   static getInstance(): WhatsAppEndpointManager {
     if (!WhatsAppEndpointManager.instance) {
@@ -57,11 +62,63 @@ export class WhatsAppEndpointManager {
   }
 
   /**
-   * Get endpoint for a specific tenant
+   * Get endpoint for a specific tenant (from database first, then cache)
    */
   async getEndpoint(tenantId: string): Promise<WhatsAppEndpoint | null> {
-    const config = await this.getConfiguration(tenantId);
-    return config?.endpoint || null;
+    try {
+      // Try database first (persistent storage)
+      const { data: dbEndpoint, error } = await this.supabase
+        .from('whatsapp_endpoints')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (!error && dbEndpoint) {
+        // Map database endpoint to WhatsAppEndpoint type
+        const endpoint: WhatsAppEndpoint = {
+          id: dbEndpoint.id,
+          tenantId: dbEndpoint.tenant_id,
+          name: dbEndpoint.name,
+          apiUrl: dbEndpoint.api_url,
+          apiKey: dbEndpoint.api_key,
+          webhookUrl: dbEndpoint.webhook_url,
+          webhookSecret: dbEndpoint.webhook_secret,
+          isActive: dbEndpoint.is_active,
+          healthStatus: dbEndpoint.health_status,
+          lastHealthCheck: dbEndpoint.last_health_check ? new Date(dbEndpoint.last_health_check) : new Date(),
+          createdAt: new Date(dbEndpoint.created_at),
+          updatedAt: new Date(dbEndpoint.updated_at),
+        };
+
+        // Also update cache for faster subsequent access
+        const config = await this.getConfiguration(tenantId);
+        if (!config || !config.endpoint) {
+          await this.setEndpoint(tenantId, {
+            id: endpoint.id,
+            tenantId: endpoint.tenantId,
+            name: endpoint.name,
+            apiUrl: endpoint.apiUrl,
+            apiKey: endpoint.apiKey,
+            webhookUrl: endpoint.webhookUrl,
+            webhookSecret: endpoint.webhookSecret,
+            isActive: endpoint.isActive,
+            healthStatus: endpoint.healthStatus,
+            lastHealthCheck: endpoint.lastHealthCheck,
+          });
+        }
+
+        return endpoint;
+      }
+
+      // Fallback to cache if database lookup fails
+      const config = await this.getConfiguration(tenantId);
+      return config?.endpoint || null;
+    } catch (error) {
+      console.error('Error getting endpoint from database:', error);
+      // Fallback to cache
+      const config = await this.getConfiguration(tenantId);
+      return config?.endpoint || null;
+    }
   }
 
   /**
@@ -83,44 +140,88 @@ export class WhatsAppEndpointManager {
 
   /**
    * Set or update endpoint for a tenant (replaces existing if any)
+   * Saves to database for persistence
    */
   async setEndpoint(tenantId: string, endpoint: Omit<WhatsAppEndpoint, 'createdAt' | 'updatedAt'>): Promise<WhatsAppEndpoint> {
     try {
+      // Check if endpoint already exists
+      const { data: existingEndpoint } = await this.supabase
+        .from('whatsapp_endpoints')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .single();
+
+      const now = new Date();
+      const endpointData = {
+        id: endpoint.id || existingEndpoint?.id || `ep_${Date.now()}`,
+        tenant_id: tenantId,
+        name: endpoint.name,
+        api_url: endpoint.apiUrl,
+        api_key: endpoint.apiKey,
+        webhook_url: endpoint.webhookUrl,
+        webhook_secret: endpoint.webhookSecret,
+        is_active: endpoint.isActive ?? true,
+        health_status: endpoint.healthStatus || 'unknown',
+        last_health_check: endpoint.lastHealthCheck || now,
+        updated_at: now,
+      };
+
+      let savedEndpoint;
+
+      if (existingEndpoint) {
+        // Update existing
+        const { data, error } = await this.supabase
+          .from('whatsapp_endpoints')
+          .update(endpointData)
+          .eq('tenant_id', tenantId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        savedEndpoint = data;
+      } else {
+        // Create new
+        const { data, error } = await this.supabase
+          .from('whatsapp_endpoints')
+          .insert([{ ...endpointData, created_at: now }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        savedEndpoint = data;
+      }
+
+      // Map database record back to WhatsAppEndpoint
+      const newEndpoint: WhatsAppEndpoint = {
+        id: savedEndpoint.id,
+        tenantId: savedEndpoint.tenant_id,
+        name: savedEndpoint.name,
+        apiUrl: savedEndpoint.api_url,
+        apiKey: savedEndpoint.api_key,
+        webhookUrl: savedEndpoint.webhook_url,
+        webhookSecret: savedEndpoint.webhook_secret,
+        isActive: savedEndpoint.is_active,
+        healthStatus: savedEndpoint.health_status,
+        lastHealthCheck: new Date(savedEndpoint.last_health_check),
+        createdAt: new Date(savedEndpoint.created_at),
+        updatedAt: new Date(savedEndpoint.updated_at),
+      };
+
+      // Also update cache
       const config = await this.getConfiguration(tenantId) || {
         tenantId,
-        endpoint: {
-          id: '',
-          tenantId,
-          name: '',
-          apiUrl: '',
-          webhookUrl: '',
-          webhookSecret: '',
-          isActive: false,
-          healthStatus: 'unknown' as const,
-          lastHealthCheck: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+        endpoint: newEndpoint,
         autoReconnect: true,
         reconnectInterval: 30,
         healthCheckInterval: 60,
         webhookRetries: 3,
         messageTimeout: 30,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Preserve original createdAt if endpoint already exists, otherwise use new Date
-      const existingCreatedAt = config.endpoint.createdAt;
-
-      const newEndpoint: WhatsAppEndpoint = {
-        ...endpoint,
-        createdAt: existingCreatedAt || new Date(),
-        updatedAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
       };
 
       config.endpoint = newEndpoint;
-      config.updatedAt = new Date();
+      config.updatedAt = now;
 
       const configKey = `whatsapp:config:${tenantId}`;
       await kvSet(configKey, config);
@@ -141,6 +242,15 @@ export class WhatsAppEndpointManager {
    */
   async deleteEndpoint(tenantId: string): Promise<void> {
     try {
+      // Delete from database
+      const { error } = await this.supabase
+        .from('whatsapp_endpoints')
+        .delete()
+        .eq('tenant_id', tenantId);
+
+      if (error) throw error;
+
+      // Delete from cache
       const configKey = `whatsapp:config:${tenantId}`;
       await kvDelete(configKey);
 
