@@ -8,42 +8,57 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 
 function mapDbTenantToEnhanced(dbTenant: any): EnhancedTenant {
-  return {
-    subdomain: dbTenant.subdomain,
-    emoji: dbTenant.emoji || '🏢',
-    createdAt: dbTenant.created_at ? new Date(dbTenant.created_at).getTime() : Date.now(),
-    id: dbTenant.id,
-    businessName: dbTenant.business_name,
-    businessCategory: dbTenant.business_category,
-    ownerName: dbTenant.owner_name,
-    email: dbTenant.email,
-    phone: dbTenant.phone,
-    address: dbTenant.address ?? undefined,
-    businessDescription: dbTenant.business_description ?? undefined,
-    logo: dbTenant.logo ?? undefined,
-    brandColors: dbTenant.brand_colors ?? undefined,
-    whatsappEnabled: dbTenant.whatsapp_enabled ?? false,
-    homeVisitEnabled: dbTenant.home_visit_enabled ?? false,
-    analyticsEnabled: dbTenant.analytics_enabled ?? false,
-    customTemplatesEnabled: dbTenant.custom_templates_enabled ?? false,
-    multiStaffEnabled: dbTenant.multi_staff_enabled ?? false,
-    subscriptionPlan: dbTenant.subscription_plan,
-    subscriptionStatus: dbTenant.subscription_status,
-    subscriptionExpiresAt: dbTenant.subscription_expires_at ?? undefined,
-    updatedAt: dbTenant.updated_at ? new Date(dbTenant.updated_at) : new Date(),
-    features: {
-      whatsapp: dbTenant.whatsapp_enabled ?? false,
-      homeVisit: dbTenant.home_visit_enabled ?? false,
-      analytics: dbTenant.analytics_enabled ?? false,
-      customTemplates: dbTenant.custom_templates_enabled ?? false,
-      multiStaff: dbTenant.multi_staff_enabled ?? false,
-    },
-    subscription: {
-      plan: dbTenant.subscription_plan as 'basic' | 'premium' | 'enterprise',
-      status: dbTenant.subscription_status as 'active' | 'suspended' | 'cancelled',
-      expiresAt: dbTenant.subscription_expires_at ?? undefined,
-    },
-  };
+  try {
+    const expiresAt = dbTenant.subscription_expires_at 
+      ? new Date(dbTenant.subscription_expires_at)
+      : undefined;
+    
+    const updatedAt = dbTenant.updated_at 
+      ? new Date(dbTenant.updated_at)
+      : new Date();
+
+    return {
+      subdomain: String(dbTenant.subdomain || ''),
+      emoji: String(dbTenant.emoji || '🏢'),
+      createdAt: dbTenant.created_at ? new Date(dbTenant.created_at).getTime() : Date.now(),
+      id: String(dbTenant.id || ''),
+      businessName: String(dbTenant.business_name || ''),
+      businessCategory: String(dbTenant.business_category || ''),
+      ownerName: String(dbTenant.owner_name || ''),
+      email: String(dbTenant.email || ''),
+      phone: String(dbTenant.phone || ''),
+      address: dbTenant.address ? String(dbTenant.address) : undefined,
+      businessDescription: dbTenant.business_description ? String(dbTenant.business_description) : undefined,
+      logo: dbTenant.logo ? String(dbTenant.logo) : undefined,
+      brandColors: dbTenant.brand_colors && typeof dbTenant.brand_colors === 'object' 
+        ? dbTenant.brand_colors 
+        : undefined,
+      whatsappEnabled: Boolean(dbTenant.whatsapp_enabled),
+      homeVisitEnabled: Boolean(dbTenant.home_visit_enabled),
+      analyticsEnabled: Boolean(dbTenant.analytics_enabled),
+      customTemplatesEnabled: Boolean(dbTenant.custom_templates_enabled),
+      multiStaffEnabled: Boolean(dbTenant.multi_staff_enabled),
+      subscriptionPlan: String(dbTenant.subscription_plan || 'basic'),
+      subscriptionStatus: String(dbTenant.subscription_status || 'active'),
+      subscriptionExpiresAt: expiresAt,
+      updatedAt,
+      features: {
+        whatsapp: Boolean(dbTenant.whatsapp_enabled),
+        homeVisit: Boolean(dbTenant.home_visit_enabled),
+        analytics: Boolean(dbTenant.analytics_enabled),
+        customTemplates: Boolean(dbTenant.custom_templates_enabled),
+        multiStaff: Boolean(dbTenant.multi_staff_enabled),
+      },
+      subscription: {
+        plan: (dbTenant.subscription_plan || 'basic') as 'basic' | 'premium' | 'enterprise',
+        status: (dbTenant.subscription_status || 'active') as 'active' | 'suspended' | 'cancelled',
+        expiresAt,
+      },
+    };
+  } catch (error) {
+    console.error('Error in mapDbTenantToEnhanced:', error, 'Tenant:', dbTenant);
+    throw error;
+  }
 }
 
 export async function GET() {
@@ -66,6 +81,10 @@ export async function GET() {
         { status: 500 }
       );
     }
+
+    if (!dbTenants || dbTenants.length === 0) {
+      return NextResponse.json({ tenants: [] });
+    }
     
     // Convert to EnhancedTenant format
     try {
@@ -74,8 +93,16 @@ export async function GET() {
     } catch (mappingError) {
       console.error('Error mapping tenants:', mappingError);
       const mappingErrorMessage = mappingError instanceof Error ? mappingError.message : 'Mapping error';
+      
+      // Log first tenant for debugging
+      console.error('First tenant raw data:', JSON.stringify(dbTenants[0], null, 2));
+      
       return NextResponse.json(
-        { error: mappingErrorMessage, details: 'Error transforming tenant data', rawData: dbTenants?.[0] },
+        { 
+          error: mappingErrorMessage, 
+          details: 'Error transforming tenant data',
+          tenantCount: dbTenants.length
+        },
         { status: 500 }
       );
     }
