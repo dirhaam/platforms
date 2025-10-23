@@ -76,20 +76,6 @@ export function StaffCreateContent() {
       setError(null);
       setSuccess(false);
 
-      // First, get tenant ID from subdomain
-      const tenantRes = await fetch('/api/tenants/lookup', {
-        headers: {
-          'x-subdomain': subdomain,
-        },
-      });
-
-      if (!tenantRes.ok) {
-        throw new Error('Failed to find tenant');
-      }
-
-      const tenantData = await tenantRes.json();
-      const tenantId = tenantData.id;
-
       // Create staff
       const response = await fetch('/api/admin/staff/create', {
         method: 'POST',
@@ -98,7 +84,7 @@ export function StaffCreateContent() {
           'x-tenant-id': subdomain,
         },
         body: JSON.stringify({
-          tenantId,
+          tenantId: subdomain,
           name: formData.name,
           email: formData.email,
           password: formData.password,

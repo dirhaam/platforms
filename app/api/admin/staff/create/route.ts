@@ -5,7 +5,7 @@ import { SecurityService } from '@/lib/security/security-service';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tenantId, email, name, role = 'staff', password } = body;
+    let { tenantId, email, name, role = 'staff', password } = body;
 
     // Validate inputs
     if (!tenantId || !email || !name || !password) {
@@ -27,18 +27,36 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Check if tenant exists
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants')
-      .select('id, subdomain')
-      .eq('id', tenantId)
-      .single();
+    // Check if tenantId is a subdomain (not UUID), if so, lookup the actual ID
+    const isUUID = tenantId.length === 36;
+    if (!isUUID) {
+      const { data: tenantLookup } = await supabase
+        .from('tenants')
+        .select('id, subdomain')
+        .eq('subdomain', tenantId.toLowerCase())
+        .single();
 
-    if (tenantError || !tenant) {
-      return NextResponse.json(
-        { error: 'Tenant not found' },
-        { status: 404 }
-      );
+      if (!tenantLookup) {
+        return NextResponse.json(
+          { error: 'Tenant not found' },
+          { status: 404 }
+        );
+      }
+      tenantId = tenantLookup.id;
+    } else {
+      // Check if tenant exists
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .select('id, subdomain')
+        .eq('id', tenantId)
+        .single();
+
+      if (tenantError || !tenant) {
+        return NextResponse.json(
+          { error: 'Tenant not found' },
+          { status: 404 }
+        );
+      }
     }
 
     // Check if staff with this email already exists
