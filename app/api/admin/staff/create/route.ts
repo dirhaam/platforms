@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Check if tenantId is a subdomain (not UUID), if so, lookup the actual ID
+    let tenantSubdomain: string;
     const isUUID = tenantId.length === 36;
     if (!isUUID) {
       const { data: tenantLookup } = await supabase
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
         );
       }
       tenantId = tenantLookup.id;
+      tenantSubdomain = tenantLookup.subdomain;
     } else {
       // Check if tenant exists
       const { data: tenant, error: tenantError } = await supabase
@@ -57,6 +59,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
+      tenantSubdomain = tenant.subdomain;
     }
 
     // Check if staff with this email already exists
@@ -106,9 +109,9 @@ export async function POST(request: NextRequest) {
         email: staff.email,
         name: staff.name,
         role: staff.role,
-        tenantSubdomain: tenant.subdomain,
+        tenantSubdomain,
       },
-      message: `Staff user created successfully. Can access ${tenant.subdomain}.booqing.my.id/admin`,
+      message: `Staff user created successfully. Can access ${tenantSubdomain}.booqing.my.id/admin`,
     });
   } catch (error) {
     console.error('[create-staff] Error:', error);

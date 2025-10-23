@@ -4,7 +4,7 @@ import {
   WhatsAppEndpointConfig,
 } from '@/types/whatsapp';
 import { WhatsAppClient } from './whatsapp-client';
-import { kvGet, kvSet, kvDel } from '@/lib/cache/key-value-store';
+import { kvGet, kvSet, kvDelete } from '@/lib/cache/key-value-store';
 
 /**
  * Simplified endpoint manager: 1 Tenant = 1 Endpoint
@@ -109,7 +109,7 @@ export class WhatsAppEndpointManager {
   async deleteEndpoint(tenantId: string): Promise<void> {
     try {
       const configKey = `whatsapp:config:${tenantId}`;
-      await kvDel(configKey);
+      await kvDelete(configKey);
 
       this.clients.delete(tenantId);
       await this.stopHealthMonitoring(tenantId);
