@@ -4,7 +4,7 @@ import {
   WhatsAppReconnectionStrategy,
   WhatsAppEvent,
 } from '@/types/whatsapp';
-import { WhatsAppEndpointManager } from './endpoint-manager';
+import { WhatsAppEndpointManager } from './simplified-endpoint-manager';
 import {
   kvAddToSet,
   kvDelete,

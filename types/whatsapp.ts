@@ -9,7 +9,6 @@ export interface WhatsAppEndpoint {
   webhookUrl: string;
   webhookSecret: string;
   isActive: boolean;
-  isPrimary: boolean;
   healthStatus: 'healthy' | 'unhealthy' | 'unknown';
   lastHealthCheck: Date;
   createdAt: Date;
@@ -33,11 +32,10 @@ export interface WhatsAppDevice {
   updatedAt: Date;
 }
 
+// Simplified: Each tenant has exactly ONE endpoint
 export interface WhatsAppConfiguration {
   tenantId: string;
-  endpoints: WhatsAppEndpoint[];
-  primaryEndpointId?: string;
-  failoverEnabled: boolean;
+  endpoint: WhatsAppEndpoint;
   autoReconnect: boolean;
   reconnectInterval: number; // seconds
   healthCheckInterval: number; // seconds

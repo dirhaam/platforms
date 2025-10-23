@@ -7,7 +7,7 @@ import {
   WhatsAppConversation,
   WhatsAppEvent,
 } from '@/types/whatsapp';
-import { WhatsAppEndpointManager } from './endpoint-manager';
+import { WhatsAppEndpointManager } from './simplified-endpoint-manager';
 import { WhatsAppDeviceManager } from './device-manager';
 import { WhatsAppWebhookHandler } from './webhook-handler';
 import { kvGet } from '@/lib/cache/key-value-store';
@@ -45,39 +45,38 @@ export class WhatsAppService {
   }
 
   // Endpoint Management
+  // Simplified: 1 Tenant = 1 Endpoint
   async addEndpoint(
     tenantId: string, 
-    endpointData: Omit<WhatsAppEndpoint, 'id' | 'createdAt' | 'updatedAt'>
+    endpointData: Omit<WhatsAppEndpoint, 'createdAt' | 'updatedAt'>
   ): Promise<WhatsAppEndpoint> {
-    return await this.endpointManager.addEndpoint(tenantId, endpointData);
+    return await this.endpointManager.setEndpoint(tenantId, endpointData);
   }
 
   async updateEndpoint(
     tenantId: string, 
-    endpointId: string, 
     updates: Partial<WhatsAppEndpoint>
   ): Promise<WhatsAppEndpoint> {
-    return await this.endpointManager.updateEndpoint(tenantId, endpointId, updates);
+    const existing = await this.endpointManager.getEndpoint(tenantId);
+    if (!existing) {
+      throw new Error('Endpoint not found');
+    }
+    return await this.endpointManager.setEndpoint(tenantId, {
+      ...existing,
+      ...updates,
+    });
   }
 
-  async removeEndpoint(tenantId: string, endpointId: string): Promise<void> {
-    await this.endpointManager.removeEndpoint(tenantId, endpointId);
+  async removeEndpoint(tenantId: string): Promise<void> {
+    await this.endpointManager.deleteEndpoint(tenantId);
   }
 
-  async getEndpoints(tenantId: string): Promise<WhatsAppEndpoint[]> {
-    const config = await this.endpointManager.getConfiguration(tenantId);
-    return config?.endpoints || [];
+  async getEndpoint(tenantId: string): Promise<WhatsAppEndpoint | null> {
+    return await this.endpointManager.getEndpoint(tenantId);
   }
 
-  async testEndpointHealth(tenantId: string, endpointId: string): Promise<boolean> {
-    const config = await this.endpointManager.getConfiguration(tenantId);
-    if (!config) return false;
-
-    const endpoint = config.endpoints.find(ep => ep.id === endpointId);
-    if (!endpoint) return false;
-
-    const healthCheck = await this.endpointManager.performHealthCheck(endpoint);
-    return healthCheck.status === 'healthy';
+  async testEndpointHealth(tenantId: string): Promise<boolean> {
+    return await this.endpointManager.testEndpointHealth(tenantId);
   }
 
   // Device Management
@@ -114,6 +113,7 @@ export class WhatsAppService {
   }
 
   // Messaging
+  // Simplified: Each tenant has 1 endpoint
   async sendMessage(
     tenantId: string, 
     deviceId: string, 
@@ -129,16 +129,16 @@ export class WhatsAppService {
       throw new Error('Device is not connected');
     }
 
-    const client = await this.endpointManager.getHealthyClient(tenantId);
+    const client = await this.endpointManager.getClient(tenantId);
     if (!client) {
-      throw new Error('No healthy WhatsApp client available');
+      throw new Error('WhatsApp endpoint not configured or unavailable');
     }
 
     return await client.sendMessage(deviceId, to, message);
   }
 
   async getConversations(tenantId: string): Promise<WhatsAppConversation[]> {
-    const client = await this.endpointManager.getHealthyClient(tenantId);
+    const client = await this.endpointManager.getClient(tenantId);
     if (!client) {
       return [];
     }
@@ -154,7 +154,7 @@ export class WhatsAppService {
       return [];
     }
 
-    const client = await this.endpointManager.getHealthyClient(conversation.tenantId);
+    const client = await this.endpointManager.getClient(conversation.tenantId);
     if (!client) {
       return [];
     }
@@ -163,7 +163,7 @@ export class WhatsAppService {
   }
 
   async markMessageAsRead(messageId: string, tenantId: string): Promise<void> {
-    const client = await this.endpointManager.getHealthyClient(tenantId);
+    const client = await this.endpointManager.getClient(tenantId);
     if (!client) {
       throw new Error('No healthy WhatsApp client available');
     }

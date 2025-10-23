@@ -5,7 +5,7 @@ import {
   WhatsAppEvent,
 } from '@/types/whatsapp';
 import { WhatsAppDeviceManager } from './device-manager';
-import { WhatsAppEndpointManager } from './endpoint-manager';
+import { WhatsAppEndpointManager } from './simplified-endpoint-manager';
 import {
   kvAddToSet,
   kvExpire,
