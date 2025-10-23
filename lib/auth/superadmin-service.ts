@@ -25,35 +25,35 @@ const mapRow = (row: any): SuperAdmin => ({
   id: row.id,
   email: row.email,
   name: row.name,
-  isActive: row.isActive ?? true,
-  passwordHash: row.passwordHash,
-  lastLoginAt: row.lastLoginAt ?? null,
-  loginAttempts: row.loginAttempts ?? 0,
-  lockedUntil: row.lockedUntil ?? null,
-  passwordResetToken: row.passwordResetToken ?? null,
-  passwordResetExpires: row.passwordResetExpires ?? null,
+  isActive: row.is_active ?? true,
+  passwordHash: row.password_hash,
+  lastLoginAt: row.last_login_at ?? null,
+  loginAttempts: row.login_attempts ?? 0,
+  lockedUntil: row.locked_until ?? null,
+  passwordResetToken: row.password_reset_token ?? null,
+  passwordResetExpires: row.password_reset_expires ?? null,
   permissions: Array.isArray(row.permissions) ? row.permissions : [],
-  canAccessAllTenants: row.canAccessAllTenants ?? true,
-  createdAt: row.createdAt ?? new Date(),
-  updatedAt: row.updatedAt ?? new Date(),
+  canAccessAllTenants: row.can_access_all_tenants ?? true,
+  createdAt: row.created_at ?? new Date(),
+  updatedAt: row.updated_at ?? new Date(),
 });
 
 const buildUpdate = (updates: Partial<SuperAdmin>) => {
   const data: any = {
-    updatedAt: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   if (updates.email !== undefined) data.email = updates.email;
   if (updates.name !== undefined) data.name = updates.name;
-  if (updates.isActive !== undefined) data.isActive = updates.isActive;
-  if (updates.passwordHash !== undefined) data.passwordHash = updates.passwordHash;
-  if (updates.lastLoginAt !== undefined) data.lastLoginAt = updates.lastLoginAt?.toISOString() ?? null;
-  if (updates.loginAttempts !== undefined) data.loginAttempts = updates.loginAttempts;
-  if (updates.lockedUntil !== undefined) data.lockedUntil = updates.lockedUntil?.toISOString() ?? null;
-  if (updates.passwordResetToken !== undefined) data.passwordResetToken = updates.passwordResetToken ?? null;
-  if (updates.passwordResetExpires !== undefined) data.passwordResetExpires = updates.passwordResetExpires?.toISOString() ?? null;
+  if (updates.isActive !== undefined) data.is_active = updates.isActive;
+  if (updates.passwordHash !== undefined) data.password_hash = updates.passwordHash;
+  if (updates.lastLoginAt !== undefined) data.last_login_at = updates.lastLoginAt?.toISOString() ?? null;
+  if (updates.loginAttempts !== undefined) data.login_attempts = updates.loginAttempts;
+  if (updates.lockedUntil !== undefined) data.locked_until = updates.lockedUntil?.toISOString() ?? null;
+  if (updates.passwordResetToken !== undefined) data.password_reset_token = updates.passwordResetToken ?? null;
+  if (updates.passwordResetExpires !== undefined) data.password_reset_expires = updates.passwordResetExpires?.toISOString() ?? null;
   if (updates.permissions !== undefined) data.permissions = updates.permissions ?? [];
-  if (updates.canAccessAllTenants !== undefined) data.canAccessAllTenants = updates.canAccessAllTenants;
+  if (updates.canAccessAllTenants !== undefined) data.can_access_all_tenants = updates.canAccessAllTenants;
 
   return data;
 };
@@ -104,13 +104,13 @@ export class SuperAdminService {
         id: crypto.randomUUID(),
         email,
         name,
-        isActive: true,
-        passwordHash,
-        loginAttempts: 0,
+        is_active: true,
+        password_hash: passwordHash,
+        login_attempts: 0,
         permissions: ['*'],
-        canAccessAllTenants: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        can_access_all_tenants: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();
