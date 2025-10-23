@@ -160,26 +160,26 @@ export default async function TenantDetailPage({
 
       {/* Management Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Staff Management */}
+        {/* User Management */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-600" />
-              Staff Management
+              User Management
             </CardTitle>
             <CardDescription>
-              Create and manage staff members for this tenant
+              Manage users and permissions (Owner, Admin, Staff)
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <p className="text-sm text-gray-600">
-                {staffMembers?.length || 0} staff member(s)
+                {staffMembers?.length || 0} user(s)
               </p>
               <Button asChild className="w-full">
-                <Link href={`/admin/tenants/${tenantId}/staff`}>
+                <Link href={`/admin/tenants/${tenantId}/users`}>
                   <Users className="w-4 h-4 mr-2" />
-                  Manage Staff
+                  Manage Users
                 </Link>
               </Button>
             </div>
