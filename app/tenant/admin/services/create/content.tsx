@@ -200,7 +200,7 @@ export function ServiceCreateContent() {
                 />
               </div>
               <div>
-                <Label htmlFor="price">Price (PKR) *</Label>
+                <Label htmlFor="price">Price (IDR) *</Label>
                 <Input
                   id="price"
                   type="number"
@@ -260,7 +260,7 @@ export function ServiceCreateContent() {
               {service.homeVisitAvailable && (
                 <div>
                   <Label htmlFor="homeVisitSurcharge">
-                    Home Visit Surcharge (PKR)
+                    Home Visit Surcharge (IDR)
                   </Label>
                   <Input
                     id="homeVisitSurcharge"

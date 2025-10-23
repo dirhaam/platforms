@@ -181,7 +181,7 @@ export default function ServicesPageContent() {
                         <Badge variant="secondary">{service.category}</Badge>
                       </td>
                       <td className="py-3 px-4">{service.duration} min</td>
-                      <td className="py-3 px-4">PKR {service.price}</td>
+                      <td className="py-3 px-4">IDR {service.price.toLocaleString('id-ID')}</td>
                       <td className="py-3 px-4">
                         <Badge 
                           variant={service.isActive ? 'default' : 'outline'}
