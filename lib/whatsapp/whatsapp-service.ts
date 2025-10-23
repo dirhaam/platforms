@@ -188,12 +188,12 @@ export class WhatsAppService {
   // Health and Monitoring
   async getTenantHealthStatus(tenantId: string): Promise<{
     overallHealth: 'healthy' | 'degraded' | 'unhealthy';
-    endpoints: Array<{
+    endpoint: {
       id: string;
       name: string;
       status: 'healthy' | 'unhealthy' | 'unknown';
       lastCheck: Date;
-    }>;
+    } | null;
     devices: Array<{
       id: string;
       name: string;
@@ -207,17 +207,17 @@ export class WhatsAppService {
     if (!config) {
       return {
         overallHealth: 'unhealthy',
-        endpoints: [],
+        endpoint: null,
         devices: []
       };
     }
 
-    const endpointStatuses = config.endpoints.map(endpoint => ({
-      id: endpoint.id,
-      name: endpoint.name,
-      status: endpoint.healthStatus,
-      lastCheck: endpoint.lastHealthCheck
-    }));
+    const endpointStatus = config.endpoint ? {
+      id: config.endpoint.id,
+      name: config.endpoint.name,
+      status: config.endpoint.healthStatus,
+      lastCheck: config.endpoint.lastHealthCheck
+    } : null;
 
     const deviceStatuses = devices.map(device => ({
       id: device.id,
@@ -227,17 +227,16 @@ export class WhatsAppService {
     }));
 
     // Determine overall health
-    const healthyEndpoints = endpointStatuses.filter(ep => ep.status === 'healthy').length;
-    const totalEndpoints = endpointStatuses.length;
+    const endpointHealthy = endpointStatus?.status === 'healthy';
     const connectedDevices = deviceStatuses.filter(dev => dev.status === 'connected').length;
 
     let overallHealth: 'healthy' | 'degraded' | 'unhealthy';
     
-    if (totalEndpoints === 0) {
+    if (!endpointStatus) {
       overallHealth = 'unhealthy';
-    } else if (healthyEndpoints === totalEndpoints && connectedDevices > 0) {
+    } else if (endpointHealthy && connectedDevices > 0) {
       overallHealth = 'healthy';
-    } else if (healthyEndpoints > 0) {
+    } else if (endpointHealthy || connectedDevices > 0) {
       overallHealth = 'degraded';
     } else {
       overallHealth = 'unhealthy';
@@ -245,7 +244,7 @@ export class WhatsAppService {
 
     return {
       overallHealth,
-      endpoints: endpointStatuses,
+      endpoint: endpointStatus,
       devices: deviceStatuses
     };
   }

@@ -66,9 +66,8 @@ export async function GET(
       const { tenantId, endpointId } = await context.params;
       const config = await whatsappService.getTenantConfiguration(tenantId);
       
-      if (config) {
-        const endpoint = config.endpoints.find(ep => ep.id === endpointId);
-        if (endpoint && endpoint.webhookSecret === token) {
+      if (config && config.endpoint && config.endpoint.id === endpointId) {
+        if (config.endpoint.webhookSecret === token) {
           return new NextResponse(challenge, { status: 200 });
         }
       }

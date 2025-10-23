@@ -358,14 +358,16 @@ export class WhatsAppWebhookHandler {
   ): Promise<boolean> {
     try {
       const config = await this.endpointManager.getConfiguration(tenantId);
-      if (!config) {
+      if (!config || !config.endpoint) {
         return false;
       }
 
-      const endpoint = config.endpoints.find(ep => ep.id === endpointId);
-      if (!endpoint || !endpoint.webhookSecret) {
+      // Simplified: each tenant has exactly one endpoint
+      if (config.endpoint.id !== endpointId || !config.endpoint.webhookSecret) {
         return false;
       }
+      
+      const endpoint = config.endpoint;
 
       const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
       const expectedSignatureHex = await computeHmacSha256Hex(endpoint.webhookSecret, payloadString);

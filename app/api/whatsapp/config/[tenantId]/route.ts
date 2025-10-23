@@ -30,11 +30,11 @@ export async function GET(
     // Remove sensitive data before sending to client
     const sanitizedConfig = {
       ...config,
-      endpoints: config.endpoints.map(endpoint => ({
-        ...endpoint,
-        apiKey: endpoint.apiKey ? '***' : undefined,
-        webhookSecret: endpoint.webhookSecret ? '***' : undefined
-      }))
+      endpoint: {
+        ...config.endpoint,
+        apiKey: config.endpoint.apiKey ? '***' : undefined,
+        webhookSecret: config.endpoint.webhookSecret ? '***' : undefined
+      }
     };
 
     return NextResponse.json(sanitizedConfig);
@@ -86,11 +86,11 @@ export async function PUT(
     // Return sanitized configuration
     const sanitizedConfig = {
       ...updatedConfig,
-      endpoints: updatedConfig.endpoints.map(endpoint => ({
-        ...endpoint,
-        apiKey: endpoint.apiKey ? '***' : undefined,
-        webhookSecret: endpoint.webhookSecret ? '***' : undefined
-      }))
+      endpoint: {
+        ...updatedConfig.endpoint,
+        apiKey: updatedConfig.endpoint.apiKey ? '***' : undefined,
+        webhookSecret: updatedConfig.endpoint.webhookSecret ? '***' : undefined
+      }
     };
 
     return NextResponse.json(sanitizedConfig);
@@ -123,25 +123,23 @@ export async function POST(
     const config = await whatsappService.getTenantConfiguration(tenantId);
     
     if (!config) {
-      // Create default configuration
-      const defaultConfig: WhatsAppConfiguration = {
-        tenantId,
-        endpoints: [],
-        failoverEnabled: true,
-        autoReconnect: true,
-        reconnectInterval: 30,
-        healthCheckInterval: 60,
-        webhookRetries: 3,
-        messageTimeout: 30,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      await whatsappService.updateTenantConfiguration(defaultConfig);
-      return NextResponse.json(defaultConfig);
+      return NextResponse.json(
+        { error: 'Failed to initialize configuration' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json(config);
+    // Return sanitized configuration
+    const sanitizedConfig = {
+      ...config,
+      endpoint: {
+        ...config.endpoint,
+        apiKey: config.endpoint.apiKey ? '***' : undefined,
+        webhookSecret: config.endpoint.webhookSecret ? '***' : undefined
+      }
+    };
+
+    return NextResponse.json(sanitizedConfig);
   } catch (error) {
     console.error('Error initializing WhatsApp configuration:', error);
     return NextResponse.json(
