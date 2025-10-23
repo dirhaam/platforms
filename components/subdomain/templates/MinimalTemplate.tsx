@@ -129,7 +129,7 @@ export default function MinimalTemplate({
                   )}
                   <div className="flex justify-between items-center mb-4">
                     <div className="text-sm text-gray-600">
-                      {service.duration} min • PKR {Number(service.price).toLocaleString()}
+                      {service.duration} min • IDR {Number(service.price).toLocaleString('id-ID')}
                     </div>
                     <Button 
                       variant="ghost"

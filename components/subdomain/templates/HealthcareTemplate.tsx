@@ -166,13 +166,13 @@ export default function HealthcareTemplate({
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-700">Price</span>
                       <span className="text-xl font-bold" style={{ color: primaryColor }}>
-                        PKR {Number(service.price).toLocaleString()}
+                        IDR {Number(service.price).toLocaleString('id-ID')}
                       </span>
                     </div>
 
                     {service.homeVisitAvailable && (
                       <div className="p-3 bg-blue-50 rounded text-sm text-blue-800 border border-blue-200">
-                        🏥 Home visit available (PKR {Number(service.homeVisitSurcharge || 0).toLocaleString()})
+                        🏥 Home visit available (IDR {Number(service.homeVisitSurcharge || 0).toLocaleString('id-ID')})
                       </div>
                     )}
 

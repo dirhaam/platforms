@@ -175,7 +175,7 @@ export default function ClassicTemplate({
                           )}
                           <div className="flex gap-6 text-sm text-gray-600">
                             <span>⏱ {service.duration} min</span>
-                            <span>💰 PKR {Number(service.price).toLocaleString()}</span>
+                            <span>💰 IDR {Number(service.price).toLocaleString('id-ID')}</span>
                             {service.homeVisitAvailable && (
                               <span className="text-green-600">📍 Home visit available</span>
                             )}

@@ -259,13 +259,13 @@ export function BookingManagement({
       return;
     }
 
-    if (!confirm(`Process ${refundData.refundType} refund of PKR ${refundData.amount}?`)) return;
+    if (!confirm(`Process ${refundData.refundType} refund of IDR ${refundData.amount.toLocaleString('id-ID')}?`)) return;
 
     setUpdating(true);
     try {
       onBookingUpdate?.(selectedBooking.id, {
         paymentStatus: PaymentStatus.REFUNDED,
-        notes: `${refundData.refundType} refund: PKR ${refundData.amount}. Reason: ${refundData.notes || 'N/A'}`
+        notes: `${refundData.refundType} refund: IDR ${refundData.amount.toLocaleString('id-ID')}. Reason: ${refundData.notes || 'N/A'}`
       });
 
       setSelectedBooking({
@@ -276,7 +276,7 @@ export function BookingManagement({
       setShowRefundForm(false);
       setRefundData({ amount: 0, notes: '', refundType: 'full' });
       
-      toast.success(`${refundData.refundType.charAt(0).toUpperCase() + refundData.refundType.slice(1)} refund of PKR ${refundData.amount} processed`);
+      toast.success(`${refundData.refundType.charAt(0).toUpperCase() + refundData.refundType.slice(1)} refund of IDR ${refundData.amount.toLocaleString('id-ID')} processed`);
     } catch (error) {
       console.error('Error processing refund:', error);
       toast.error('Failed to process refund');
@@ -809,7 +809,7 @@ export function BookingManagement({
                   </div>
                   <div>
                     <span className="text-gray-600">Total Amount:</span>
-                    <span className="ml-2 font-medium">PKR {selectedBooking.totalAmount.toLocaleString()}</span>
+                    <span className="ml-2 font-medium">IDR {selectedBooking.totalAmount.toLocaleString('id-ID')}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Status:</span>
@@ -843,7 +843,7 @@ export function BookingManagement({
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="text-gray-600">Total Amount:</span>
-                    <span className="ml-2 font-medium">PKR {selectedBooking.totalAmount.toLocaleString()}</span>
+                    <span className="ml-2 font-medium">IDR {selectedBooking.totalAmount.toLocaleString('id-ID')}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Payment Status:</span>
@@ -939,7 +939,7 @@ export function BookingManagement({
                           </div>
 
                           <div>
-                            <Label htmlFor="refundAmount" className="text-sm">Refund Amount (PKR)</Label>
+                            <Label htmlFor="refundAmount" className="text-sm">Refund Amount (IDR)</Label>
                             <Input
                               id="refundAmount"
                               type="number"
@@ -1108,7 +1108,7 @@ export function BookingManagement({
 
                 {/* Total Amount */}
                 <div>
-                  <Label htmlFor="amount">Total Amount (PKR)</Label>
+                  <Label htmlFor="amount">Total Amount (IDR)</Label>
                   <Input
                     id="amount"
                     type="number"

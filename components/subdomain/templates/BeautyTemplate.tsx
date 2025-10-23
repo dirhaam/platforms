@@ -152,14 +152,14 @@ export default function BeautyTemplate({
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium">Price</span>
                         <span className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                          PKR {Number(service.price).toLocaleString()}
+                          IDR {Number(service.price).toLocaleString('id-ID')}
                         </span>
                       </div>
                     </div>
 
                     {service.homeVisitAvailable && (
                       <div className="p-2 bg-pink-50 rounded text-sm text-pink-700 font-medium">
-                        ✨ Home visit available (+PKR {Number(service.homeVisitSurcharge || 0).toLocaleString()})
+                        ✨ Home visit available (+IDR {Number(service.homeVisitSurcharge || 0).toLocaleString('id-ID')})
                       </div>
                     )}
 

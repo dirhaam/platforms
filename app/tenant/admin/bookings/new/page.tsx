@@ -264,7 +264,7 @@ export default function BookingNewPage() {
                   <SelectContent>
                     {services.map(service => (
                       <SelectItem key={service.id} value={service.id}>
-                        {service.name} ({service.duration} min - PKR {service.price})
+                        {service.name} ({service.duration} min - IDR {service.price.toLocaleString('id-ID')})
                       </SelectItem>
                     ))}
                   </SelectContent>
