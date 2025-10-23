@@ -65,6 +65,23 @@ export class WhatsAppEndpointManager {
   }
 
   /**
+   * Save entire configuration (for updating settings like reconnectInterval, autoReconnect, etc)
+   */
+  async saveConfiguration(config: WhatsAppConfiguration): Promise<void> {
+    try {
+      const configKey = `whatsapp:config:${config.tenantId}`;
+      config.updatedAt = new Date();
+      await kvSet(configKey, config);
+      
+      // Invalidate clients if needed
+      await this.invalidateClient(config.tenantId);
+    } catch (error) {
+      console.error('Error saving WhatsApp configuration:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Set or update endpoint for a tenant (replaces existing if any)
    */
   async setEndpoint(tenantId: string, endpoint: Omit<WhatsAppEndpoint, 'createdAt' | 'updatedAt'>): Promise<WhatsAppEndpoint> {
