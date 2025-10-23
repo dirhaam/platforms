@@ -50,7 +50,10 @@ export default function StaffPageContent() {
           <h1 className="text-3xl font-bold text-gray-900">Staff</h1>
           <p className="text-gray-600 mt-2">Manage team members and permissions</p>
         </div>
-        <Button className="gap-2">
+        <Button 
+          className="gap-2"
+          onClick={() => router.push(`/tenant/admin/staff/create?subdomain=${subdomain}`)}
+        >
           <Plus className="w-4 h-4" />
           Add Staff
         </Button>
