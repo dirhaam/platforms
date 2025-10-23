@@ -84,15 +84,19 @@ export function WhatsAppConfig({ tenant }: WhatsAppConfigProps) {
         return;
       }
 
+      const generateSecret = () => {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      };
+
       const payload: any = {
         id: endpoint?.id || `endpoint_${Date.now()}`,
         tenantId: tenant.id,
         name: formData.name,
         apiUrl: formData.apiUrl,
         webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://booqing.my.id'}/api/whatsapp/webhook/${tenant.id}`,
-        webhookSecret: endpoint?.webhookSecret || `secret_${Date.now()}`,
+        webhookSecret: `secret_${generateSecret()}`,
         isActive: true,
-        healthStatus: endpoint?.healthStatus || 'unknown',
+        healthStatus: 'unknown',
         lastHealthCheck: new Date(),
       };
 
