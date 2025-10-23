@@ -93,7 +93,6 @@ export async function POST(
       webhookUrl,
       healthStatus: endpointData.healthStatus || 'unknown',
       lastHealthCheck: new Date(),
-      createdAt: endpointData.createdAt || new Date(),
     });
 
     // Sanitize response

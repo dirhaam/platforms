@@ -80,9 +80,12 @@ export class WhatsAppEndpointManager {
         updatedAt: new Date(),
       };
 
+      // Preserve original createdAt if endpoint already exists, otherwise use new Date
+      const existingCreatedAt = config.endpoint?.createdAt;
+
       const newEndpoint: WhatsAppEndpoint = {
         ...endpoint,
-        createdAt: endpoint.createdAt || new Date(),
+        createdAt: existingCreatedAt || new Date(),
         updatedAt: new Date(),
       };
 
