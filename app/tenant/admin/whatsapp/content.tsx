@@ -71,19 +71,14 @@ export function WhatsAppContent() {
               const devicesData = await devicesRes.json();
               setDevices(devicesData.devices || []);
             }
-            // Set endpoint name (actual credentials are server-side)
+            // Set endpoint (credentials are server-side only)
             setEndpoint({
               id: configData.config.endpoint_name,
               name: configData.config.endpoint_name,
               apiUrl: '', // Not exposed to frontend
-              webhookUrl: '',
-              webhookSecret: '',
-              apiKey: '',
               isActive: true,
               healthStatus: configData.config.health_status,
               lastHealthCheck: configData.config.last_health_check || new Date().toISOString(),
-              createdAt: new Date(),
-              updatedAt: new Date(),
             });
           } else {
             setError('WhatsApp endpoint not configured. Please contact your administrator.');
