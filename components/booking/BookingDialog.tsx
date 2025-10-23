@@ -317,12 +317,12 @@ export default function BookingDialog({
                       <span>{selectedService.duration} minutes</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-lg">${Number(selectedService.price)}</span>
+                      <span className="font-bold text-lg">IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
                     </div>
                     {selectedService.homeVisitAvailable && (
                       <div className="col-span-2 flex items-center space-x-2 text-green-600">
                         <MapPin className="h-4 w-4" />
-                        <span>Home visit available (+${selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge) : 0})</span>
+                        <span>Home visit available (+IDR {selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID') : '0'})</span>
                       </div>
                     )}
                   </div>
@@ -356,10 +356,10 @@ export default function BookingDialog({
                     <p className="text-sm text-gray-600">{selectedService.duration} minutes</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">${calculateTotal()}</p>
+                    <p className="font-bold">IDR {Number(calculateTotal()).toLocaleString('id-ID')}</p>
                     {formData.isHomeVisit && selectedService.homeVisitSurcharge && (
                       <p className="text-xs text-gray-500">
-                        Includes home visit (+${Number(selectedService.homeVisitSurcharge)})
+                        Includes home visit (+IDR {Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID')})
                       </p>
                     )}
                   </div>
@@ -474,7 +474,7 @@ export default function BookingDialog({
                   />
                   <Label htmlFor="homeVisit" className="flex items-center">
                     <MapPin className="h-4 w-4 mr-1" />
-                    Request home visit (+${selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge) : 0})
+                    Request home visit (+IDR {selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID') : '0'})
                   </Label>
                 </div>
                 
@@ -598,7 +598,7 @@ export default function BookingDialog({
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span>${calculateTotal()}</span>
+                  <span>IDR {Number(calculateTotal()).toLocaleString('id-ID')}</span>
                 </div>
               </CardContent>
             </Card>
