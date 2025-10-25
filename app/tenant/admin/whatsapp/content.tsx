@@ -142,18 +142,33 @@ export function WhatsAppContent() {
   };
 
   const handleConnectDevice = async (deviceId: string) => {
+    setError(null);
     try {
       const response = await fetch(`/api/whatsapp/devices/${deviceId}?action=connect`, {
         method: 'POST',
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setConnectionResult(result);
-        setSelectedDevice(devices.find(d => d.id === deviceId) || null);
+      const payload = await response.json().catch(() => null);
+
+      if (response.ok && payload?.success) {
+        if (payload.device) {
+          setDevices(devices.map((d) => (d.id === deviceId ? payload.device : d)));
+        }
+        setConnectionResult(payload.result || null);
+        setSelectedDevice(payload.device || null);
+        setError(null);
+        return;
+      }
+
+      const errorMessage = payload?.error || 'Failed to connect device. Please try again.';
+      setError(errorMessage);
+
+      if (payload?.device) {
+        setDevices(devices.map((d) => (d.id === deviceId ? payload.device : d)));
       }
     } catch (error) {
       console.error('Error connecting device:', error);
+      setError('Failed to connect device. Please try again.');
     }
   };
 

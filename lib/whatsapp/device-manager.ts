@@ -174,7 +174,8 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
         await this.updateDevice(deviceId, { 
           status: 'pairing', 
           qrCode,
-          pairingCode: undefined 
+          pairingCode: undefined,
+          lastError: undefined
         });
         
         await this.emitDeviceEvent(device, 'qr_code_generated');
@@ -186,14 +187,21 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
           await this.updateDevice(deviceId, { 
             status: 'pairing', 
             pairingCode,
-            qrCode: undefined 
+            qrCode: undefined,
+            lastError: undefined
           });
           
           await this.emitDeviceEvent(device, 'pairing_code_generated');
           return { pairingCode };
         } catch (pairingError) {
-          await this.updateDevice(deviceId, { status: 'error' });
-          throw new Error('Failed to generate QR code or pairing code');
+          const message = this.extractConnectionErrorMessage(qrError, pairingError);
+          await this.updateDevice(deviceId, { 
+            status: 'error',
+            qrCode: undefined,
+            pairingCode: undefined,
+            lastError: message
+          });
+          throw new Error(message);
         }
       }
     } catch (error) {
@@ -413,6 +421,20 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
       clearTimeout(timer);
       this.reconnectionTimers.delete(deviceId);
     }
+  }
+
+  private extractConnectionErrorMessage(
+    qrError: unknown,
+    pairingError: unknown
+  ): string {
+    const primary = pairingError || qrError;
+    if (primary instanceof Error) {
+      return primary.message;
+    }
+    if (typeof primary === 'string') {
+      return primary;
+    }
+    return 'Failed to generate QR code or pairing code';
   }
 
   private async emitDeviceEvent(device: WhatsAppDevice, eventType: WhatsAppEvent['type']): Promise<void> {

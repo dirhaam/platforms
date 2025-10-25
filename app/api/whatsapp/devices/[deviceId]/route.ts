@@ -117,8 +117,43 @@ export async function POST(
 
     switch (action) {
       case 'connect':
-        const connectionResult = await whatsappService.connectDevice(deviceId);
-        return NextResponse.json(connectionResult);
+        try {
+          const connectionResult = await whatsappService.connectDevice(deviceId);
+          const deviceState = await whatsappService.getDevice(deviceId);
+          return NextResponse.json({ success: true, result: connectionResult, device: deviceState });
+        } catch (connectError) {
+          const message =
+            connectError instanceof Error
+              ? connectError.message
+              : 'Failed to connect device';
+
+          if (message.includes('not found')) {
+            return NextResponse.json(
+              { success: false, error: message },
+              { status: 404 }
+            );
+          }
+
+          if (message.includes('WhatsApp client not available')) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'WhatsApp endpoint is not configured or unavailable',
+              },
+              { status: 503 }
+            );
+          }
+
+          const deviceState = await whatsappService.getDevice(deviceId);
+          return NextResponse.json(
+            {
+              success: false,
+              error: message,
+              device: deviceState,
+            },
+            { status: 200 }
+          );
+        }
 
       case 'disconnect':
         await whatsappService.disconnectDevice(deviceId);
