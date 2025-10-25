@@ -408,7 +408,7 @@ async function syncTenantEndpoint(
 ) {
   const existingEndpoint = await whatsappEndpointManager.getEndpoint(tenantId);
 
-  const endpointId = existingEndpoint?.id ?? `endpoint_${tenantId}`;
+  const endpointId = existingEndpoint?.id ?? randomUUID();
   const webhookSecret = existingEndpoint?.webhookSecret ?? randomUUID();
   const webhookUrl =
     existingEndpoint?.webhookUrl ??
