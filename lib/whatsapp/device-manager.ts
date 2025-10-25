@@ -53,6 +53,7 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
         endpointId,
         deviceName,
         status: 'disconnected',
+        lastError: undefined,
         reconnectAttempts: 0,
         maxReconnectAttempts: 5,
         createdAt: new Date(),
@@ -296,11 +297,22 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
       return await this.updateDevice(deviceId, {
         status: remoteDevice.status,
         phoneNumber: remoteDevice.phoneNumber,
-        lastSeen: remoteDevice.lastSeen
+        lastSeen: remoteDevice.lastSeen,
+        lastError: undefined
       });
     } catch (error) {
       console.error('Error refreshing device status:', error);
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error refreshing device status';
+      try {
+        return await this.updateDevice(deviceId, {
+          status: 'error',
+          lastError: message,
+          lastSeen: new Date()
+        });
+      } catch (updateError) {
+        console.error('Failed to update device after refresh error:', updateError);
+        throw error;
+      }
     }
   }
 

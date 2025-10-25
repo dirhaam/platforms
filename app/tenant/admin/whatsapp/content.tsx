@@ -34,6 +34,7 @@ interface WhatsAppDevice {
   status: 'connected' | 'disconnected' | 'connecting' | 'pairing' | 'error';
   qrCode?: string;
   pairingCode?: string;
+  lastError?: string;
   lastSeen?: string;
 }
 
@@ -348,6 +349,11 @@ export function WhatsAppContent() {
                     <p className="text-sm text-gray-600 mt-1">
                       Phone: {device.phoneNumber || 'Not connected'}
                     </p>
+                    {device.lastError && (
+                      <p className="text-xs text-red-600 mt-1">
+                        Last error: {device.lastError}
+                      </p>
+                    )}
                     {device.lastSeen && (
                       <p className="text-xs text-gray-500 mt-1">
                         Last seen: {new Date(device.lastSeen).toLocaleString()}

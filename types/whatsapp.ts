@@ -24,6 +24,7 @@ export interface WhatsAppDevice {
   status: 'connected' | 'disconnected' | 'connecting' | 'pairing' | 'error';
   qrCode?: string;
   pairingCode?: string;
+  lastError?: string;
   lastSeen?: Date;
   sessionData?: string; // Encrypted session data
   reconnectAttempts: number;
