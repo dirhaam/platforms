@@ -16,6 +16,8 @@ import {
   Clock,
   AlertCircle,
   Loader2,
+  FileText,
+  MessageSquarePlus,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -93,6 +95,12 @@ export function MessagesContent() {
   const [error, setError] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [hasHistoricalData, setHasHistoricalData] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [newChatPhone, setNewChatPhone] = useState('');
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [logFilter, setLogFilter] = useState('all');
+  const [logCategories, setLogCategories] = useState<any>({});
 
   const fetchConversations = useCallback(async (tenant: string, options?: { silent?: boolean }) => {
     if (!tenant) return;
@@ -299,6 +307,81 @@ export function MessagesContent() {
     }
   };
 
+  const handleShowLogs = async () => {
+    if (!tenantId) return;
+
+    try {
+      setError(null);
+      const response = await fetch(`/api/whatsapp/logs?tenantId=${tenantId}&filter=${logFilter}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to fetch logs');
+      }
+
+      const data = await response.json();
+      setLogs(data.logs || []);
+      setLogCategories(data.categories || {});
+      setShowLogs(true);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load logs.');
+    }
+  };
+
+  const handleLogFilterChange = async (newFilter: string) => {
+    setLogFilter(newFilter);
+    if (!tenantId) return;
+
+    try {
+      setError(null);
+      const response = await fetch(`/api/whatsapp/logs?tenantId=${tenantId}&filter=${newFilter}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to fetch logs');
+      }
+
+      const data = await response.json();
+      setLogs(data.logs || []);
+      setLogCategories(data.categories || {});
+    } catch (error) {
+      console.error('Error filtering logs:', error);
+      setError(error instanceof Error ? error.message : 'Failed to filter logs.');
+    }
+  };
+
+  const handleStartNewChat = async () => {
+    if (!newChatPhone.trim() || !tenantId) return;
+
+    try {
+      setError(null);
+      const payload = {
+        tenantId,
+        customerPhone: newChatPhone.trim(),
+        message: 'Hello! How can we help you today?',
+      };
+
+      const response = await fetch('/api/whatsapp/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to start new chat');
+      }
+
+      setShowNewChatDialog(false);
+      setNewChatPhone('');
+      await fetchConversations(tenantId, { silent: true });
+    } catch (error) {
+      console.error('Error starting new chat:', error);
+      setError(error instanceof Error ? error.message : 'Failed to start new chat.');
+    }
+  };
+
   useEffect(() => {
     if (!subdomain) {
       return;
@@ -480,6 +563,14 @@ export function MessagesContent() {
                         </>
                       )}
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleShowLogs}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      View Logs
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowNewChatDialog(true)}>
+                      <MessageSquarePlus className="w-4 h-4 mr-2" />
+                      Start New Chat
+                    </DropdownMenuItem>
                     <DropdownMenuItem>Archive</DropdownMenuItem>
                     <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
                     <DropdownMenuItem>Clear History</DropdownMenuItem>
@@ -597,6 +688,168 @@ export function MessagesContent() {
             </CardContent>
           </Card>
         )}
+
+      {/* Logs Dialog */}
+      {showLogs && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">WhatsApp Logs</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLogs(false)}
+              >
+                ×
+              </Button>
+            </div>
+            
+            {/* Filter Buttons */}
+            <div className="flex gap-2 mb-4 flex-wrap">
+              <Button
+                size="sm"
+                variant={logFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => handleLogFilterChange('all')}
+              >
+                All ({logCategories.all || 0})
+              </Button>
+              <Button
+                size="sm"
+                variant={logFilter === 'booking' ? 'default' : 'outline'}
+                onClick={() => handleLogFilterChange('booking')}
+              >
+                Booking ({logCategories.booking || 0})
+              </Button>
+              <Button
+                size="sm"
+                variant={logFilter === 'payment' ? 'default' : 'outline'}
+                onClick={() => handleLogFilterChange('payment')}
+              >
+                Payment ({logCategories.payment || 0})
+              </Button>
+              <Button
+                size="sm"
+                variant={logFilter === 'general' ? 'default' : 'outline'}
+                onClick={() => handleLogFilterChange('general')}
+              >
+                General ({logCategories.general || 0})
+              </Button>
+              <Button
+                size="sm"
+                variant={logFilter === 'system' ? 'default' : 'outline'}
+                onClick={() => handleLogFilterChange('system')}
+              >
+                System ({logCategories.system || 0})
+              </Button>
+            </div>
+
+            <div className="overflow-y-auto max-h-[50vh]">
+              {logs.length > 0 ? (
+                <div className="space-y-2">
+                  {logs.map((log, index) => {
+                    // Determine log color based on content
+                    let bgColor = 'bg-gray-100';
+                    if (log.includes('ERROR') || log.includes('error')) {
+                      bgColor = 'bg-red-100';
+                    } else if (log.includes('WARN') || log.includes('warning')) {
+                      bgColor = 'bg-yellow-100';
+                    } else if (log.includes('booking') || log.includes('reminder') || log.includes('jadwal')) {
+                      bgColor = 'bg-blue-100';
+                    } else if (log.includes('payment') || log.includes('invoice') || log.includes('pembayaran')) {
+                      bgColor = 'bg-green-100';
+                    } else if (log.includes('System health') || log.includes('INFO:')) {
+                      bgColor = 'bg-purple-100';
+                    }
+
+                    return (
+                      <div key={index} className={`p-2 ${bgColor} rounded text-sm font-mono break-all`}>
+                        {log}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center">
+                  {logFilter === 'all' ? 'No logs available' : `No ${logFilter} logs available`}
+                </p>
+              )}
+            </div>
+
+            {/* Legend */}
+            <div className="mt-4 pt-4 border-t text-xs text-gray-600">
+              <div className="font-semibold mb-2">Color Legend:</div>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-100 rounded"></div>
+                  <span>Errors</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-yellow-100 rounded"></div>
+                  <span>Warnings</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-blue-100 rounded"></div>
+                  <span>Booking/Reminders</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-100 rounded"></div>
+                  <span>Payment</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-purple-100 rounded"></div>
+                  <span>System</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Chat Dialog */}
+      {showNewChatDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Start New Chat</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNewChatDialog(false)}
+              >
+                ×
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Customer Phone Number
+                </label>
+                <Input
+                  placeholder="+1234567890"
+                  value={newChatPhone}
+                  onChange={(e) => setNewChatPhone(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleStartNewChat}
+                  disabled={!newChatPhone.trim()}
+                  className="flex-1"
+                >
+                  Start Chat
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowNewChatDialog(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

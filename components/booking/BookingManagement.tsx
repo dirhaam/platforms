@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Settings, Plus, Edit2, X } from 'lucide-react';
+import { Calendar, Clock, Users, Settings, Plus, Edit2, X, Bell, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { BookingCalendar } from './BookingCalendar';
 import { TimeSlotPicker } from './TimeSlotPicker';
 import { RecurringBookingManager } from './RecurringBookingManager';
 import { BlackoutDatesManager } from './BlackoutDatesManager';
 import { Booking, Service, Customer, TimeSlot, PaymentStatus } from '@/types/booking';
+import { ReminderTemplate, reminderService } from '@/lib/reminder/reminder-service';
 
 interface BookingManagementProps {
   tenantId: string;
@@ -50,10 +52,24 @@ export function BookingManagement({
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
   const [scheduleViewMode, setScheduleViewMode] = useState<'day' | 'week'>('day');
+  
+  // Reminder states
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [reminderTemplates, setReminderTemplates] = useState<ReminderTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<ReminderTemplate | null>(null);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderSettings, setReminderSettings] = useState<any>(null);
+  const [showReminderSettings, setShowReminderSettings] = useState(false);
 
   // Fetch bookings
   useEffect(() => {
     fetchBookings();
+  }, [tenantId]);
+
+  // Fetch reminder templates and settings
+  useEffect(() => {
+    fetchReminderTemplates();
+    fetchReminderSettings();
   }, [tenantId]);
 
   const fetchBookings = async () => {
@@ -100,6 +116,30 @@ export function BookingManagement({
       console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReminderTemplates = async () => {
+    try {
+      const response = await fetch(`/api/reminders?tenantId=${tenantId}&action=templates`);
+      if (response.ok) {
+        const data = await response.json();
+        setReminderTemplates(data.templates || []);
+      }
+    } catch (error) {
+      console.error('Error fetching reminder templates:', error);
+    }
+  };
+
+  const fetchReminderSettings = async () => {
+    try {
+      const response = await fetch(`/api/reminders?tenantId=${tenantId}&action=settings`);
+      if (response.ok) {
+        const data = await response.json();
+        setReminderSettings(data.settings);
+      }
+    } catch (error) {
+      console.error('Error fetching reminder settings:', error);
     }
   };
 
@@ -363,6 +403,134 @@ export function BookingManagement({
     }
   };
 
+  // Handle reminder functions
+  const handleSendReminder = async () => {
+    if (!selectedBooking || !selectedTemplate) return;
+
+    setSendingReminder(true);
+    try {
+      const response = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenantId,
+          action: 'send_immediate',
+          templateId: selectedTemplate.id,
+          booking: selectedBooking,
+          customer: selectedBooking.customer,
+          service: selectedBooking.service
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          toast.success('Reminder sent successfully');
+          setShowReminderDialog(false);
+          setSelectedTemplate(null);
+        } else {
+          toast.error(result.error || 'Failed to send reminder');
+        }
+      } else {
+        toast.error('Failed to send reminder');
+      }
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      toast.error('Failed to send reminder');
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
+  const handleScheduleReminders = async (booking: Booking) => {
+    try {
+      const response = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenantId,
+          action: 'schedule_reminders',
+          booking,
+          customer: booking.customer,
+          service: booking.service
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          toast.success(`${result.total} reminders scheduled successfully`);
+        } else {
+          toast.error('Failed to schedule reminders');
+        }
+      } else {
+        toast.error('Failed to schedule reminders');
+      }
+    } catch (error) {
+      console.error('Error scheduling reminders:', error);
+      toast.error('Failed to schedule reminders');
+    }
+  };
+
+  const handleUpdateReminderSettings = async (newSettings: any) => {
+    try {
+      const response = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenantId,
+          action: 'update_settings',
+          settings: newSettings
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setReminderSettings(result.settings);
+          toast.success('Reminder settings updated successfully');
+          setShowReminderSettings(false);
+        } else {
+          toast.error('Failed to update settings');
+        }
+      } else {
+        toast.error('Failed to update settings');
+      }
+    } catch (error) {
+      console.error('Error updating reminder settings:', error);
+      toast.error('Failed to update settings');
+    }
+  };
+
+  const getTemplatesForBooking = (booking: Booking): ReminderTemplate[] => {
+    const templates: ReminderTemplate[] = [];
+    
+    // Add templates based on booking status
+    if (booking.status === 'confirmed') {
+      templates.push(...reminderTemplates.filter(t => t.type === 'booking_confirmation'));
+    }
+    
+    if (booking.paymentStatus === 'pending') {
+      templates.push(...reminderTemplates.filter(t => t.type === 'payment_reminder'));
+    }
+    
+    if (booking.status === 'confirmed') {
+      templates.push(...reminderTemplates.filter(t => t.type === 'arrival_reminder'));
+    }
+    
+    if (booking.status === 'completed') {
+      templates.push(...reminderTemplates.filter(t => t.type === 'follow_up'));
+    }
+    
+    return templates;
+  };
+
   // Handle service selection
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
@@ -503,10 +671,11 @@ export function BookingManagement({
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
           <TabsTrigger value="recurring">Recurring</TabsTrigger>
+          <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -742,6 +911,158 @@ export function BookingManagement({
               console.log('Recurring pattern changed:', pattern);
             }}
           />
+        </TabsContent>
+        
+        <TabsContent value="reminders" className="space-y-6">
+          {/* Reminder Settings */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-5 h-5" />
+                  Reminder Settings
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowReminderSettings(true)}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configure
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm font-medium">Booking Confirmation</span>
+                  <Badge variant={reminderSettings?.enableBookingConfirmation ? 'default' : 'secondary'}>
+                    {reminderSettings?.enableBookingConfirmation ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm font-medium">Payment Reminder</span>
+                  <Badge variant={reminderSettings?.enablePaymentReminder ? 'default' : 'secondary'}>
+                    {reminderSettings?.enablePaymentReminder ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm font-medium">Arrival Reminder</span>
+                  <Badge variant={reminderSettings?.enableArrivalReminder ? 'default' : 'secondary'}>
+                    {reminderSettings?.enableArrivalReminder ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm font-medium">Reschedule Notification</span>
+                  <Badge variant={reminderSettings?.enableRescheduleNotification ? 'default' : 'secondary'}>
+                    {reminderSettings?.enableRescheduleNotification ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm font-medium">Cancellation Notification</span>
+                  <Badge variant={reminderSettings?.enableCancellationNotification ? 'default' : 'secondary'}>
+                    {reminderSettings?.enableCancellationNotification ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm font-medium">Follow Up</span>
+                  <Badge variant={reminderSettings?.enableFollowUp ? 'default' : 'secondary'}>
+                    {reminderSettings?.enableFollowUp ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Send Manual Reminder</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Select a booking and send a custom reminder immediately.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      if (selectedBooking) {
+                        setShowReminderDialog(true);
+                      } else {
+                        toast.error('Please select a booking first');
+                      }
+                    }}
+                    disabled={!selectedBooking}
+                    className="gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Send Reminder
+                  </Button>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Schedule All Reminders</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Schedule automatic reminders for all confirmed bookings.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
+                      if (confirmedBookings.length === 0) {
+                        toast.error('No confirmed bookings found');
+                        return;
+                      }
+                      
+                      confirmedBookings.forEach(booking => {
+                        handleScheduleReminders(booking);
+                      });
+                    }}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    Schedule All Reminders
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Template Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Templates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {['booking_confirmation', 'payment_reminder', 'arrival_reminder', 'follow_up'].map(type => (
+                  <div key={type} className="border rounded-lg p-4">
+                    <h4 className="font-medium mb-2 capitalize">
+                      {type.replace('_', ' ')} Templates
+                    </h4>
+                    <div className="space-y-2">
+                      {reminderTemplates
+                        .filter(t => t.type === type)
+                        .slice(0, 2) // Show only first 2 templates of each type
+                        .map(template => (
+                          <div key={template.id} className="p-2 bg-gray-50 rounded text-sm">
+                            <div className="font-medium">{template.name}</div>
+                            <div className="text-gray-600 mt-1 line-clamp-2">
+                              {template.template.substring(0, 100)}...
+                            </div>
+                          </div>
+                        ))}
+                      {reminderTemplates.filter(t => t.type === type).length === 0 && (
+                        <div className="text-sm text-gray-500">No templates available</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
@@ -1169,6 +1490,286 @@ export function BookingManagement({
                   disabled={updating}
                 >
                   Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reminder Dialog */}
+      <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Send Reminder</DialogTitle>
+            <DialogDescription>
+              Send a reminder to {selectedBooking?.customer?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedBooking && (
+            <div className="space-y-4">
+              {/* Booking Info */}
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="text-sm">
+                  <div><strong>Service:</strong> {selectedBooking.service?.name}</div>
+                  <div><strong>Date:</strong> {new Date(selectedBooking.scheduledAt).toLocaleDateString()}</div>
+                  <div><strong>Time:</strong> {new Date(selectedBooking.scheduledAt).toLocaleTimeString()}</div>
+                  <div><strong>Customer:</strong> {selectedBooking.customer?.name} ({selectedBooking.customer?.phone})</div>
+                </div>
+              </div>
+
+              {/* Template Selection */}
+              <div>
+                <Label className="text-sm font-medium">Select Template</Label>
+                <div className="grid grid-cols-1 gap-2 mt-2 max-h-60 overflow-y-auto">
+                  {getTemplatesForBooking(selectedBooking).map(template => (
+                    <div
+                      key={template.id}
+                      className={`p-3 border rounded cursor-pointer transition-colors ${
+                        selectedTemplate?.id === template.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedTemplate(template)}
+                    >
+                      <div className="font-medium text-sm">{template.name}</div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {template.template.substring(0, 150)}...
+                      </div>
+                    </div>
+                  ))}
+                  {getTemplatesForBooking(selectedBooking).length === 0 && (
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      No templates available for this booking status
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Message Preview */}
+              {selectedTemplate && (
+                <div>
+                  <Label className="text-sm font-medium">Message Preview</Label>
+                  <div className="mt-2 p-3 bg-gray-100 rounded text-sm whitespace-pre-line">
+                    {(() => {
+                      const variables = {
+                        customerName: selectedBooking.customer?.name || 'Pelanggan',
+                        serviceName: selectedBooking.service?.name || 'Layanan',
+                        bookingDate: new Date(selectedBooking.scheduledAt).toLocaleDateString('id-ID'),
+                        bookingTime: new Date(selectedBooking.scheduledAt).toLocaleTimeString('id-ID', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        }),
+                        location: selectedBooking.isHomeVisit ? selectedBooking.homeVisitAddress || 'Alamat Pelanggan' : 'Klinik/Kami',
+                        totalAmount: selectedBooking.totalAmount.toLocaleString('id-ID'),
+                        paymentStatus: selectedBooking.paymentStatus,
+                      };
+                      
+                      let processed = selectedTemplate.template;
+                      Object.entries(variables).forEach(([key, value]) => {
+                        const regex = new RegExp(`{{${key}}}`, 'g');
+                        processed = processed.replace(regex, value || `{{${key}}}`);
+                      });
+                      
+                      return processed;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowReminderDialog(false);
+                    setSelectedTemplate(null);
+                  }}
+                  disabled={sendingReminder}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendReminder}
+                  disabled={!selectedTemplate || sendingReminder}
+                >
+                  {sendingReminder ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Reminder
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reminder Settings Dialog */}
+      <Dialog open={showReminderSettings} onOpenChange={setShowReminderSettings}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Reminder Settings</DialogTitle>
+            <DialogDescription>
+              Configure automatic reminder settings for your bookings
+            </DialogDescription>
+          </DialogHeader>
+          
+          {reminderSettings && (
+            <div className="space-y-6">
+              {/* Enable/Disable Reminders */}
+              <div>
+                <h3 className="text-lg font-medium mb-4">Reminder Types</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <div className="font-medium">Booking Confirmation</div>
+                      <div className="text-sm text-gray-600">Send when booking is confirmed</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reminderSettings.enableBookingConfirmation}
+                      onChange={(e) => setReminderSettings({
+                        ...reminderSettings,
+                        enableBookingConfirmation: e.target.checked
+                      })}
+                      className="w-4 h-4"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <div className="font-medium">Payment Reminder</div>
+                      <div className="text-sm text-gray-600">Remind about pending payments</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reminderSettings.enablePaymentReminder}
+                      onChange={(e) => setReminderSettings({
+                        ...reminderSettings,
+                        enablePaymentReminder: e.target.checked
+                      })}
+                      className="w-4 h-4"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <div className="font-medium">Arrival Reminder</div>
+                      <div className="text-sm text-gray-600">Remind before appointment</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reminderSettings.enableArrivalReminder}
+                      onChange={(e) => setReminderSettings({
+                        ...reminderSettings,
+                        enableArrivalReminder: e.target.checked
+                      })}
+                      className="w-4 h-4"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <div className="font-medium">Follow Up</div>
+                      <div className="text-sm text-gray-600">Follow up after service</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reminderSettings.enableFollowUp}
+                      onChange={(e) => setReminderSettings({
+                        ...reminderSettings,
+                        enableFollowUp: e.target.checked
+                      })}
+                      className="w-4 h-4"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Timing Settings */}
+              <div>
+                <h3 className="text-lg font-medium mb-4">Timing Settings</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium">Payment Reminder (hours before)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="168"
+                      value={reminderSettings.paymentReminderTiming}
+                      onChange={(e) => setReminderSettings({
+                        ...reminderSettings,
+                        paymentReminderTiming: parseInt(e.target.value) || 24
+                      })}
+                      className="w-20 mt-1"
+                    />
+                    <span className="text-sm text-gray-600 ml-2">hours before booking time</span>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium">Arrival Reminders</Label>
+                    <div className="space-y-2 mt-1">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={reminderSettings.arrivalReminder1Day}
+                          onChange={(e) => setReminderSettings({
+                            ...reminderSettings,
+                            arrivalReminder1Day: e.target.checked
+                          })}
+                          className="w-4 h-4 mr-2"
+                        />
+                        <span className="text-sm">1 day before</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={reminderSettings.arrivalReminder2Hours}
+                          onChange={(e) => setReminderSettings({
+                            ...reminderSettings,
+                            arrivalReminder2Hours: e.target.checked
+                          })}
+                          className="w-4 h-4 mr-2"
+                        />
+                        <span className="text-sm">2 hours before</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={reminderSettings.arrivalReminder30Minutes}
+                          onChange={(e) => setReminderSettings({
+                            ...reminderSettings,
+                            arrivalReminder30Minutes: e.target.checked
+                          })}
+                          className="w-4 h-4 mr-2"
+                        />
+                        <span className="text-sm">30 minutes before</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowReminderSettings(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleUpdateReminderSettings(reminderSettings)}
+                >
+                  Save Settings
                 </Button>
               </div>
             </div>
