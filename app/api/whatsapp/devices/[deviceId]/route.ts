@@ -137,10 +137,24 @@ export async function POST(
   } catch (error) {
     console.error('Error performing device action:', error);
     
-    if (error instanceof Error && error.message.includes('not found')) {
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 404 }
+        );
+      }
+
+      if (error.message.includes('WhatsApp client not available')) {
+        return NextResponse.json(
+          { error: 'WhatsApp endpoint is not configured or unavailable' },
+          { status: 503 }
+        );
+      }
+
       return NextResponse.json(
         { error: error.message },
-        { status: 404 }
+        { status: 502 }
       );
     }
 

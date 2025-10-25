@@ -237,11 +237,26 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
       clearTimeout(timeoutId);
 
+      const responseText = await response.text();
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const trimmed = responseText.trim();
+        throw new Error(
+          `HTTP ${response.status}: ${response.statusText}${trimmed ? ` - ${trimmed}` : ''}`
+        );
       }
 
-      return await response.json();
+      if (!responseText) {
+        return {};
+      }
+
+      try {
+        return JSON.parse(responseText);
+      } catch (jsonError) {
+        throw new Error(
+          `Failed to parse JSON response from ${endpoint}: ${(jsonError as Error).message} | Body: ${responseText}`
+        );
+      }
     } catch (error) {
       clearTimeout(timeoutId);
       
