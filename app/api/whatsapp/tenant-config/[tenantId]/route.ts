@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import { envEndpointManager } from '@/lib/whatsapp/env-endpoint-manager';
+import { whatsappEndpointManager } from '@/lib/whatsapp/simplified-endpoint-manager';
 
 export const runtime = 'nodejs';
 
@@ -131,6 +133,17 @@ export async function POST(
       );
     }
 
+    const endpointConfig = envEndpointManager.getEndpointConfig(endpoint_name);
+
+    if (!endpointConfig) {
+      return NextResponse.json(
+        { error: `Endpoint "${endpoint_name}" not found in configuration` },
+        { status: 400 }
+      );
+    }
+
+    // Ensure endpoint record exists in persistent storage
+    const syncedEndpoint = await syncTenantEndpoint(resolvedTenantId, endpointConfig);
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -178,7 +191,18 @@ export async function POST(
       config = data;
     }
 
-    return NextResponse.json({ config }, { status: 201 });
+    return NextResponse.json(
+      {
+        config,
+        endpoint: {
+          id: syncedEndpoint.id,
+          name: endpointConfig.name,
+          apiUrl: endpointConfig.apiUrl,
+          webhookUrl: syncedEndpoint.webhookUrl,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error updating tenant config:', error);
     return NextResponse.json(
@@ -221,6 +245,8 @@ export async function DELETE(
 
     if (error) throw error;
 
+    await whatsappEndpointManager.deleteEndpoint(resolvedTenantId);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting tenant config:', error);
@@ -229,4 +255,35 @@ export async function DELETE(
       { status: 500 }
     );
   }
+}
+
+async function syncTenantEndpoint(
+  tenantId: string,
+  endpointConfig: { name: string; apiUrl: string; apiKey: string }
+) {
+  const existingEndpoint = await whatsappEndpointManager.getEndpoint(tenantId);
+
+  const endpointId = existingEndpoint?.id ?? `endpoint_${tenantId}`;
+  const webhookSecret = existingEndpoint?.webhookSecret ?? randomUUID();
+  const webhookUrl =
+    existingEndpoint?.webhookUrl ??
+    `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/whatsapp/webhook/${tenantId}/${endpointId}`;
+
+  const synced = await whatsappEndpointManager.setEndpoint(tenantId, {
+    id: endpointId,
+    tenantId,
+    name: endpointConfig.name,
+    apiUrl: endpointConfig.apiUrl,
+    apiKey: endpointConfig.apiKey,
+    webhookUrl,
+    webhookSecret,
+    isActive: true,
+    healthStatus: existingEndpoint?.healthStatus ?? 'unknown',
+    lastHealthCheck: existingEndpoint?.lastHealthCheck ?? new Date(),
+  });
+
+  return {
+    id: synced.id,
+    webhookUrl: synced.webhookUrl,
+  };
 }
