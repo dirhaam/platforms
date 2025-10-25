@@ -1,10 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, PostgrestError } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { envEndpointManager } from '@/lib/whatsapp/env-endpoint-manager';
 import { whatsappEndpointManager } from '@/lib/whatsapp/simplified-endpoint-manager';
 
 export const runtime = 'nodejs';
+
+class WhatsAppConfigError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+    this.name = 'WhatsAppConfigError';
+  }
+}
+
+function createServiceRoleClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl) {
+    throw new WhatsAppConfigError(
+      'SUPABASE_URL_MISSING',
+      'Server misconfiguration: NEXT_PUBLIC_SUPABASE_URL is not set.'
+    );
+  }
+
+  if (!serviceRoleKey) {
+    throw new WhatsAppConfigError(
+      'SUPABASE_SERVICE_ROLE_KEY_MISSING',
+      'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set.'
+    );
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
+
+function extractPostgrestError(error: unknown): PostgrestError | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const maybeError = error as Partial<PostgrestError>;
+  if (typeof maybeError.code === 'string' && typeof maybeError.message === 'string') {
+    return maybeError as PostgrestError;
+  }
+
+  return null;
+}
+
+function mapSupabaseError(error: PostgrestError | null, action: string): WhatsAppConfigError {
+  if (!error) {
+    return new WhatsAppConfigError('SUPABASE_ERROR', `[${action}] Unknown database error`);
+  }
+
+  if (
+    error.code === '42P01' ||
+    error.message.includes('whatsapp_endpoints') ||
+    error.message.includes('tenant_whatsapp_config')
+  ) {
+    return new WhatsAppConfigError(
+      'WHATSAPP_TABLES_MISSING',
+      'Required WhatsApp tables are missing. Run fix-whatsapp-endpoints-types.sql on Supabase.'
+    );
+  }
+
+  if (error.code === '23503') {
+    return new WhatsAppConfigError(
+      'TENANT_FOREIGN_KEY_VIOLATION',
+      'Tenant record could not be linked. Ensure the tenant exists and WhatsApp tables use UUID types.'
+    );
+  }
+
+  if (error.code === '42501') {
+    return new WhatsAppConfigError(
+      'SUPABASE_PERMISSION_DENIED',
+      'Supabase service role is missing required permissions for WhatsApp tables.'
+    );
+  }
+
+  return new WhatsAppConfigError('SUPABASE_ERROR', `[${action}] ${error.message}`);
+}
 
 /**
  * IMPORTANT: Requires these Supabase tables to be created:
@@ -30,10 +104,7 @@ async function resolveTenantId(tenantIdentifier: string): Promise<{ resolved: st
 
   // It's a subdomain, lookup the UUID
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     const { data: tenant, error } = await supabase
       .from('tenants')
@@ -41,12 +112,24 @@ async function resolveTenantId(tenantIdentifier: string): Promise<{ resolved: st
       .eq('subdomain', tenantIdentifier.toLowerCase())
       .single();
 
-    if (error || !tenant) {
+    if (error) {
+      console.warn('[WhatsApp] Supabase error resolving tenant:', error);
+      if (error.code === '42P01') {
+        throw mapSupabaseError(error, 'resolving tenant subdomain');
+      }
+      return { resolved: null, error: 'Tenant not found' };
+    }
+
+    if (!tenant) {
       return { resolved: null, error: 'Tenant not found' };
     }
 
     return { resolved: tenant.id };
   } catch (error) {
+    if (error instanceof WhatsAppConfigError) {
+      throw error;
+    }
+    console.error('[WhatsApp] Failed to resolve tenant:', error);
     return { resolved: null, error: 'Failed to resolve tenant' };
   }
 }
@@ -72,10 +155,7 @@ export async function GET(
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     const { data: config, error } = await supabase
       .from('tenant_whatsapp_config')
@@ -96,6 +176,13 @@ export async function GET(
 
     return NextResponse.json({ config });
   } catch (error) {
+    if (error instanceof WhatsAppConfigError) {
+      console.error('[WhatsApp GET] Config error:', error);
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: 500 }
+      );
+    }
     console.error('Error fetching tenant config:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -169,10 +256,7 @@ export async function POST(
     console.log('[WhatsApp POST] Syncing endpoint to database...');
     const syncedEndpoint = await syncTenantEndpoint(resolvedTenantId, endpointConfig);
     console.log('[WhatsApp POST] Endpoint synced ✓');
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     // Check if config already exists
     const { data: existingConfig } = await supabase
@@ -202,7 +286,10 @@ export async function POST(
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[WhatsApp POST] Supabase error updating tenant config:', error);
+        throw mapSupabaseError(error, 'updating tenant_whatsapp_config');
+      }
       config = data;
     } else {
       // Create new
@@ -212,7 +299,10 @@ export async function POST(
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[WhatsApp POST] Supabase error inserting tenant config:', error);
+        throw mapSupabaseError(error, 'inserting tenant_whatsapp_config');
+      }
       config = data;
     }
 
@@ -236,12 +326,24 @@ export async function POST(
     const errorStack = error instanceof Error ? error.stack : '';
     console.error('[WhatsApp POST] ERROR:', errorMsg);
     console.error('[WhatsApp POST] Stack:', errorStack);
-    
+
+    let publicMessage = 'Internal server error';
+    let code: string | undefined;
+
+    if (error instanceof WhatsAppConfigError) {
+      publicMessage = error.message;
+      code = error.code;
+    } else if (error instanceof Error && error.message.includes('SUPABASE_ENV_MISSING')) {
+      publicMessage = 'Supabase environment variables are missing.';
+      code = 'SUPABASE_ENV_MISSING';
+    }
+
     return NextResponse.json(
-      { 
-        error: 'Internal server error',
+      {
+        error: publicMessage,
+        code,
         details: process.env.NODE_ENV === 'development' ? errorMsg : undefined,
-        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
       },
       { status: 500 }
     );
@@ -269,22 +371,29 @@ export async function DELETE(
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
       .from('tenant_whatsapp_config')
       .delete()
       .eq('tenant_id', resolvedTenantId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[WhatsApp DELETE] Supabase error deleting tenant config:', error);
+      throw mapSupabaseError(error, 'deleting tenant_whatsapp_config');
+    }
 
     await whatsappEndpointManager.deleteEndpoint(resolvedTenantId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof WhatsAppConfigError) {
+      console.error('[WhatsApp DELETE] Config error:', error);
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: 500 }
+      );
+    }
     console.error('Error deleting tenant config:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -306,18 +415,32 @@ async function syncTenantEndpoint(
     `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/whatsapp/webhook/${tenantId}/${endpointId}`;
 
   const now = new Date().toISOString();
-  const synced = await whatsappEndpointManager.setEndpoint(tenantId, {
-    id: endpointId,
-    tenantId,
-    name: endpointConfig.name,
-    apiUrl: endpointConfig.apiUrl,
-    apiKey: endpointConfig.apiKey,
-    webhookUrl,
-    webhookSecret,
-    isActive: true,
-    healthStatus: existingEndpoint?.healthStatus ?? 'unknown',
-    lastHealthCheck: existingEndpoint?.lastHealthCheck ?? new Date(now),
-  });
+  let synced;
+  try {
+    synced = await whatsappEndpointManager.setEndpoint(tenantId, {
+      id: endpointId,
+      tenantId,
+      name: endpointConfig.name,
+      apiUrl: endpointConfig.apiUrl,
+      apiKey: endpointConfig.apiKey,
+      webhookUrl,
+      webhookSecret,
+      isActive: true,
+      healthStatus: existingEndpoint?.healthStatus ?? 'unknown',
+      lastHealthCheck: existingEndpoint?.lastHealthCheck ?? new Date(now),
+    });
+  } catch (error) {
+    if (error instanceof WhatsAppConfigError) {
+      throw error;
+    }
+
+    const supabaseError = extractPostgrestError(error);
+    if (supabaseError) {
+      throw mapSupabaseError(supabaseError, 'syncing whatsapp_endpoints');
+    }
+
+    throw error;
+  }
 
   return {
     id: synced.id,

@@ -5,7 +5,7 @@ import {
 } from '@/types/whatsapp';
 import { WhatsAppClient } from './whatsapp-client';
 import { kvGet, kvSet, kvDelete } from '@/lib/cache/key-value-store';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Simplified endpoint manager: 1 Tenant = 1 Endpoint
@@ -20,16 +20,30 @@ export class WhatsAppEndpointManager {
   private static instance: WhatsAppEndpointManager;
   private clients: Map<string, WhatsAppClient> = new Map(); // key: tenantId
   private healthCheckIntervals: Map<string, NodeJS.Timeout> = new Map(); // key: tenantId
-  private supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  private supabase: SupabaseClient | null = null;
 
   static getInstance(): WhatsAppEndpointManager {
     if (!WhatsAppEndpointManager.instance) {
       WhatsAppEndpointManager.instance = new WhatsAppEndpointManager();
     }
     return WhatsAppEndpointManager.instance;
+  }
+
+  private getSupabase(): SupabaseClient {
+    if (!this.supabase) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error(
+          'SUPABASE_ENV_MISSING: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.'
+        );
+      }
+
+      this.supabase = createClient(supabaseUrl, serviceRoleKey);
+    }
+
+    return this.supabase;
   }
 
   /**
@@ -66,8 +80,9 @@ export class WhatsAppEndpointManager {
    */
   async getEndpoint(tenantId: string): Promise<WhatsAppEndpoint | null> {
     try {
+      const supabase = this.getSupabase();
       // Try database first (persistent storage)
-      const { data: dbEndpoint, error } = await this.supabase
+      const { data: dbEndpoint, error } = await supabase
         .from('whatsapp_endpoints')
         .select('*')
         .eq('tenant_id', tenantId)
@@ -155,8 +170,9 @@ export class WhatsAppEndpointManager {
    */
   async setEndpoint(tenantId: string, endpoint: Omit<WhatsAppEndpoint, 'createdAt' | 'updatedAt'>): Promise<WhatsAppEndpoint> {
     try {
+      const supabase = this.getSupabase();
       // Check if endpoint already exists
-      const { data: existingEndpoint } = await this.supabase
+      const { data: existingEndpoint } = await supabase
         .from('whatsapp_endpoints')
         .select('*')
         .eq('tenant_id', tenantId)
@@ -181,7 +197,7 @@ export class WhatsAppEndpointManager {
 
       if (existingEndpoint) {
         // Update existing
-        const { data, error } = await this.supabase
+        const { data, error } = await supabase
           .from('whatsapp_endpoints')
           .update(endpointData)
           .eq('tenant_id', tenantId)
@@ -197,7 +213,7 @@ export class WhatsAppEndpointManager {
           delete insertData.id; // Let Postgres auto-generate UUID
         }
         
-        const { data, error } = await this.supabase
+        const { data, error } = await supabase
           .from('whatsapp_endpoints')
           .insert([insertData])
           .select()
@@ -259,8 +275,9 @@ export class WhatsAppEndpointManager {
    */
   async deleteEndpoint(tenantId: string): Promise<void> {
     try {
+      const supabase = this.getSupabase();
       // Delete from database
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('whatsapp_endpoints')
         .delete()
         .eq('tenant_id', tenantId);
