@@ -295,9 +295,11 @@ export async function deleteSession(sessionId: string): Promise<boolean> {
 }
 
 // Cache helpers
-export async function setCache(key: string, value: any, ttl: number = 3600): Promise<boolean> {
+export async function setCache(key: string, value: any, ttl?: number): Promise<boolean> {
   try {
-    const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
+    const expiresAt = typeof ttl === 'number'
+      ? new Date(Date.now() + ttl * 1000).toISOString()
+      : null;
     
     const supabase = getSupabaseClient();
     const { error } = await supabase
