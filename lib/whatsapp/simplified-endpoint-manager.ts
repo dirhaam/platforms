@@ -164,7 +164,7 @@ export class WhatsAppEndpointManager {
 
       const now = new Date().toISOString();
       const endpointData = {
-        id: endpoint.id || existingEndpoint?.id || `ep_${Date.now()}`,
+        id: endpoint.id || existingEndpoint?.id,
         tenant_id: tenantId,
         name: endpoint.name,
         api_url: endpoint.apiUrl,
@@ -191,10 +191,15 @@ export class WhatsAppEndpointManager {
         if (error) throw error;
         savedEndpoint = data;
       } else {
-        // Create new
+        // Create new - let database auto-generate id if not provided
+        const insertData = { ...endpointData, created_at: now };
+        if (!insertData.id) {
+          delete insertData.id; // Let Postgres auto-generate UUID
+        }
+        
         const { data, error } = await this.supabase
           .from('whatsapp_endpoints')
-          .insert([{ ...endpointData, created_at: now }])
+          .insert([insertData])
           .select()
           .single();
 

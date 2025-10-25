@@ -7,6 +7,14 @@ import { whatsappEndpointManager } from '@/lib/whatsapp/simplified-endpoint-mana
 export const runtime = 'nodejs';
 
 /**
+ * IMPORTANT: Requires these Supabase tables to be created:
+ * - whatsapp_endpoints (UUID tenant_id, api_url, api_key, webhook_url, webhook_secret)
+ * - tenant_whatsapp_config (UUID tenant_id, endpoint_name, is_configured, health_status)
+ * 
+ * Run: fix-whatsapp-endpoints-types.sql to create/fix these tables with proper UUID types
+ */
+
+/**
  * Helper function to resolve tenant ID from either UUID or subdomain
  */
 async function resolveTenantId(tenantIdentifier: string): Promise<{ resolved: string | null; error?: string }> {
