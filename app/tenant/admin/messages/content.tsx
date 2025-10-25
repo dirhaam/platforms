@@ -91,6 +91,8 @@ export function MessagesContent() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [hasHistoricalData, setHasHistoricalData] = useState(false);
 
   const fetchConversations = useCallback(async (tenant: string, options?: { silent?: boolean }) => {
     if (!tenant) return;
@@ -153,15 +155,21 @@ export function MessagesContent() {
     }
   }, []);
 
-  const fetchMessages = useCallback(async (tenant: string, conversationId: string) => {
+  const fetchMessages = useCallback(async (tenant: string, conversationId: string, loadHistory = false) => {
     if (!tenant) return;
 
     try {
       setMessagesLoading(true);
       setError(null);
 
+      const params = new URLSearchParams({
+        tenantId: tenant,
+        loadHistory: loadHistory.toString(),
+        limit: '200'
+      });
+
       const response = await fetch(
-        `/api/whatsapp/messages/${conversationId}?tenantId=${tenant}`
+        `/api/whatsapp/messages/${conversationId}?${params}`
       );
 
       if (!response.ok) {
@@ -198,6 +206,11 @@ export function MessagesContent() {
           ? { ...previous, unreadCount: 0 }
           : previous
       );
+
+      // If historical data was loaded, show a notification
+      if (data.hasHistoricalData && data.totalMessages > mapped.length) {
+        console.log(`Loaded ${mapped.length} messages with historical data`);
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
       setError(error instanceof Error ? error.message : 'Failed to load messages.');
@@ -262,6 +275,28 @@ export function MessagesContent() {
   const handleQuickReply = (template: QuickReply) => {
     setError(null);
     setMessageInput(template.message);
+  };
+
+  // Reset historical data state when switching conversations
+  useEffect(() => {
+    setHasHistoricalData(false);
+  }, [selectedConversation?.id]);
+
+  const handleLoadHistory = async () => {
+    if (!selectedConversation || !tenantId) return;
+
+    try {
+      setLoadingHistory(true);
+      setError(null);
+      
+      await fetchMessages(tenantId, selectedConversation.id, true);
+      setHasHistoricalData(true);
+    } catch (error) {
+      console.error('Error loading historical messages:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load historical messages.');
+    } finally {
+      setLoadingHistory(false);
+    }
   };
 
   useEffect(() => {
@@ -427,6 +462,24 @@ export function MessagesContent() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleLoadHistory} disabled={loadingHistory || hasHistoricalData}>
+                      {loadingHistory ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Loading History...
+                        </>
+                      ) : hasHistoricalData ? (
+                        <>
+                          <CheckCheck className="w-4 h-4 mr-2" />
+                          History Loaded
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4 mr-2" />
+                          Load History
+                        </>
+                      )}
+                    </DropdownMenuItem>
                     <DropdownMenuItem>Archive</DropdownMenuItem>
                     <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
                     <DropdownMenuItem>Clear History</DropdownMenuItem>

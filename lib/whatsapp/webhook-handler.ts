@@ -856,7 +856,8 @@ export class WhatsAppWebhookHandler {
   async getConversationMessages(
     tenantId: string,
     conversationId: string,
-    limit = 100
+    limit = 100,
+    offset = 0
   ): Promise<WhatsAppMessage[]> {
     try {
       const conversation = await this.getConversationById(conversationId);
@@ -865,7 +866,7 @@ export class WhatsAppWebhookHandler {
       }
 
       const messagesKey = `whatsapp:messages:${conversationId}`;
-      const messageIds = await kvGetList<string>(messagesKey, 0, limit - 1);
+      const messageIds = await kvGetList<string>(messagesKey, offset, limit + offset - 1);
 
       const messages = await Promise.all(
         messageIds.map(async (id: string) => {
@@ -880,6 +881,98 @@ export class WhatsAppWebhookHandler {
     } catch (error) {
       console.error('Error getting conversation messages:', error);
       return [];
+    }
+  }
+
+  async getHistoricalMessages(
+    tenantId: string,
+    conversationId: string,
+    limit = 100,
+    offset = 0
+  ): Promise<WhatsAppMessage[]> {
+    try {
+      // Try to load from legacy webhook events or stored historical data
+      const historicalEventsKey = `whatsapp:historical:events:${tenantId}:${conversationId}`;
+      const eventIds = await kvGetList<string>(historicalEventsKey, offset, limit + offset - 1);
+
+      if (eventIds.length === 0) {
+        // If no historical events found, try to load from legacy database
+        return await this.loadLegacyMessages(tenantId, conversationId, limit, offset);
+      }
+
+      const messages = await Promise.all(
+        eventIds.map(async (eventId: string) => {
+          const eventData = await kvGet<any>(`whatsapp:historical:event:${eventId}`);
+          if (eventData && eventData.type === 'message') {
+            return this.convertWebhookEventToMessage(eventData, conversationId);
+          }
+          return null;
+        })
+      );
+
+      return messages
+        .filter((msg): msg is WhatsAppMessage => msg !== null)
+        .sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
+    } catch (error) {
+      console.error('Error getting historical messages:', error);
+      return [];
+    }
+  }
+
+  private async loadLegacyMessages(
+    tenantId: string,
+    conversationId: string,
+    limit = 100,
+    offset = 0
+  ): Promise<WhatsAppMessage[]> {
+    try {
+      // This would integrate with the migration script to load legacy messages
+      // For now, return empty array as placeholder
+      console.log(`Loading legacy messages for tenant ${tenantId}, conversation ${conversationId}`);
+      return [];
+    } catch (error) {
+      console.error('Error loading legacy messages:', error);
+      return [];
+    }
+  }
+
+  private convertWebhookEventToMessage(eventData: any, conversationId: string): WhatsAppMessage | null {
+    try {
+      const messageData = eventData.data || eventData;
+      const identifiers = this.resolveChatIdentifier(messageData);
+      
+      if (!identifiers) {
+        return null;
+      }
+
+      const normalizedPhone = this.normalizePhone(identifiers.chatId);
+      const fromMe = this.isMessageFromMe(messageData);
+      const messageDetails = this.extractMessageDetails(messageData);
+      const messageId = this.resolveMessageId(messageData);
+      const sentAt = this.resolveMessageTimestamp(messageData, new Date(eventData.timestamp));
+
+      return {
+        id: messageId,
+        tenantId: eventData.tenantId,
+        deviceId: eventData.deviceId || 'historical-device',
+        conversationId,
+        type: messageDetails.type,
+        content: messageDetails.content,
+        mediaUrl: messageDetails.mediaUrl,
+        mediaCaption: messageDetails.mediaCaption,
+        isFromCustomer: !fromMe,
+        customerPhone: normalizedPhone,
+        deliveryStatus: fromMe ? 'sent' : 'delivered',
+        metadata: {
+          ...messageDetails.metadata,
+          historical: true,
+          raw: messageData,
+        },
+        sentAt,
+      };
+    } catch (error) {
+      console.error('Error converting webhook event to message:', error);
+      return null;
     }
   }
 

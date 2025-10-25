@@ -20,9 +20,25 @@ export async function GET(
     }
 
     const limitParam = searchParams.get('limit');
-    const limit = limitParam ? Number.parseInt(limitParam, 10) : undefined;
+    const offsetParam = searchParams.get('offset');
+    const loadHistoryParam = searchParams.get('loadHistory');
+    
+    const limit = limitParam ? Number.parseInt(limitParam, 10) : 100;
+    const offset = offsetParam ? Number.parseInt(offsetParam, 10) : 0;
+    const loadHistory = loadHistoryParam === 'true';
 
-    const messages = await whatsappService.getMessages(conversationId, limit);
+    const messages = await whatsappService.getMessages(conversationId, limit, offset);
+
+    // If loadHistory is true, also try to load historical messages from webhook data
+    let historicalMessages: any[] = [];
+    if (loadHistory) {
+      try {
+        historicalMessages = await whatsappService.getHistoricalMessages(tenantId, conversationId, limit, offset);
+      } catch (historyError) {
+        console.warn('Failed to load historical messages:', historyError);
+        // Continue with current messages even if historical loading fails
+      }
+    }
 
     await whatsappService.markConversationRead(tenantId, conversationId);
 
@@ -42,9 +58,18 @@ export async function GET(
       deliveredAt: message.deliveredAt ? message.deliveredAt.toISOString() : null,
       readAt: message.readAt ? message.readAt.toISOString() : null,
       metadata: message.metadata || {},
+      source: 'current'
     }));
 
-    return NextResponse.json({ messages: responseMessages });
+    // Combine current and historical messages
+    const allMessages = [...responseMessages, ...historicalMessages.map(msg => ({ ...msg, source: 'historical' }))]
+      .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+
+    return NextResponse.json({ 
+      messages: allMessages,
+      hasHistoricalData: historicalMessages.length > 0,
+      totalMessages: allMessages.length
+    });
   } catch (error) {
     console.error('Error fetching WhatsApp messages:', error);
     return NextResponse.json(

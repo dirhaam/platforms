@@ -153,7 +153,7 @@ export class WhatsAppService {
     return await this.webhookHandler.getTenantConversations(tenantId);
   }
 
-  async getMessages(conversationId: string, limit?: number): Promise<WhatsAppMessage[]> {
+  async getMessages(conversationId: string, limit?: number, offset?: number): Promise<WhatsAppMessage[]> {
     const conversation = await this.getConversationById(conversationId);
     if (!conversation) {
       return [];
@@ -162,7 +162,22 @@ export class WhatsAppService {
     return await this.webhookHandler.getConversationMessages(
       conversation.tenantId,
       conversationId,
-      limit
+      limit,
+      offset
+    );
+  }
+
+  async getHistoricalMessages(
+    tenantId: string, 
+    conversationId: string, 
+    limit?: number, 
+    offset?: number
+  ): Promise<WhatsAppMessage[]> {
+    return await this.webhookHandler.getHistoricalMessages(
+      tenantId,
+      conversationId,
+      limit,
+      offset
     );
   }
 
