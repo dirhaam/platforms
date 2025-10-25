@@ -85,7 +85,7 @@ export interface WhatsAppWebhookPayload {
   tenantId: string;
   endpointId: string;
   deviceId: string;
-  event: 'message' | 'status' | 'device_status' | 'qr_code' | 'pairing_code';
+  event: 'message' | 'status' | 'device_status' | 'qr_code' | 'pairing_code' | 'group';
   data: Record<string, any>;
   timestamp: Date;
 }

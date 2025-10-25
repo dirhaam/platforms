@@ -11,6 +11,7 @@ import {
   kvExpire,
   kvGet,
   kvGetList,
+  kvGetSet,
   kvPushToList,
   kvSet,
 } from '@/lib/cache/key-value-store';
@@ -120,14 +121,19 @@ export class WhatsAppWebhookHandler {
         }
       }
 
+      const eventType = this.determineEventType(payload);
+      const eventData = this.normalizeEventData(payload, eventType);
+      const deviceId = this.resolveDeviceId(payload, eventData);
+      const timestamp = this.resolveTimestamp(payload, eventData);
+
       // Route webhook based on event type
       const webhookPayload: WhatsAppWebhookPayload = {
         tenantId,
         endpointId,
-        deviceId: payload.deviceId || payload.device_id,
-        event: payload.event || payload.type,
-        data: payload.data || payload,
-        timestamp: new Date()
+        deviceId,
+        event: eventType,
+        data: eventData,
+        timestamp,
       };
 
       await this.routeWebhook(webhookPayload);
@@ -140,6 +146,100 @@ export class WhatsAppWebhookHandler {
         message: error instanceof Error ? error.message : 'Unknown error' 
       };
     }
+  }
+
+  private determineEventType(raw: Record<string, any>): WhatsAppWebhookPayload['event'] {
+    const explicitEvent = raw?.event || raw?.type;
+    if (explicitEvent === 'message.ack') {
+      return 'status';
+    }
+    if (explicitEvent === 'group.participants') {
+      return 'group';
+    }
+    if (explicitEvent === 'device_status') {
+      return 'device_status';
+    }
+    if (explicitEvent === 'qr_code') {
+      return 'qr_code';
+    }
+    if (explicitEvent === 'pairing_code') {
+      return 'pairing_code';
+    }
+
+    if (raw?.receipt_type || raw?.payload?.receipt_type) {
+      return 'status';
+    }
+
+    if (raw?.qrCode || raw?.qr_code) {
+      return 'qr_code';
+    }
+
+    if (raw?.pairingCode || raw?.pairing_code) {
+      return 'pairing_code';
+    }
+
+    if (raw?.status === 'connected' || raw?.status === 'disconnected') {
+      return 'device_status';
+    }
+
+    if (
+      raw?.message ||
+      raw?.text ||
+      raw?.image ||
+      raw?.video ||
+      raw?.audio ||
+      raw?.document ||
+      raw?.sticker ||
+      raw?.location ||
+      raw?.contact ||
+      raw?.reaction ||
+      raw?.forwarded ||
+      raw?.action
+    ) {
+      return 'message';
+    }
+
+    return 'message';
+  }
+
+  private normalizeEventData(
+    raw: Record<string, any>,
+    eventType: WhatsAppWebhookPayload['event']
+  ): Record<string, any> {
+    if (eventType === 'status' && raw?.payload) {
+      return raw;
+    }
+    return raw;
+  }
+
+  private resolveDeviceId(raw: Record<string, any>, data: Record<string, any>): string {
+    const candidates = [
+      raw?.deviceId,
+      raw?.device_id,
+      data?.deviceId,
+      data?.device_id,
+      data?.payload?.deviceId,
+      data?.payload?.device_id,
+    ];
+
+    const deviceId = candidates.find((value) => typeof value === 'string' && value.trim().length > 0);
+    return deviceId ? String(deviceId) : 'unknown-device';
+  }
+
+  private resolveTimestamp(raw: Record<string, any>, data: Record<string, any>): Date {
+    const timestampValue =
+      raw?.timestamp ||
+      data?.timestamp ||
+      data?.payload?.timestamp;
+
+    if (typeof timestampValue === 'string' || typeof timestampValue === 'number') {
+      const parsed = new Date(timestampValue);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    return new Date();
   }
 
   private async routeWebhook(payload: WhatsAppWebhookPayload): Promise<void> {
@@ -159,6 +259,9 @@ export class WhatsAppWebhookHandler {
       case 'pairing_code':
         await this.handlePairingCodeWebhook(payload);
         break;
+      case 'group':
+        await this.handleGroupWebhook(payload);
+        break;
       default:
         console.warn('Unknown webhook event type:', payload.event);
     }
@@ -167,42 +270,65 @@ export class WhatsAppWebhookHandler {
   private async handleMessageWebhook(payload: WhatsAppWebhookPayload): Promise<void> {
     try {
       const messageData = payload.data;
-      
-      // Create or update conversation
+      const identifiers = this.resolveChatIdentifier(messageData);
+
+      if (!identifiers) {
+        console.warn('Message webhook missing chat identifier');
+        return;
+      }
+
+      const normalizedPhone = this.normalizePhone(identifiers.chatId);
+      const fromMe = this.isMessageFromMe(messageData);
       const conversation = await this.createOrUpdateConversation(
         payload.tenantId,
-        messageData.from || messageData.customerPhone,
-        messageData.fromName || messageData.customerName
+        normalizedPhone,
+        identifiers.customerName
       );
 
-      // Store the message
+      const messageDetails = this.extractMessageDetails(messageData);
+      const messageId = this.resolveMessageId(messageData);
+      const sentAt = this.resolveMessageTimestamp(messageData, payload.timestamp);
+
       const message: WhatsAppMessage = {
-        id: messageData.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: messageId,
         tenantId: payload.tenantId,
         deviceId: payload.deviceId,
         conversationId: conversation.id,
-        type: messageData.type || 'text',
-        content: messageData.body || messageData.content || '',
-        mediaUrl: messageData.mediaUrl,
-        mediaCaption: messageData.caption,
-        isFromCustomer: messageData.isFromCustomer !== false, // Default to true for incoming
-        customerPhone: messageData.from || messageData.customerPhone,
-        deliveryStatus: 'delivered',
-        sentAt: new Date(messageData.timestamp || Date.now())
+        type: messageDetails.type,
+        content: messageDetails.content,
+        mediaUrl: messageDetails.mediaUrl,
+        mediaCaption: messageDetails.mediaCaption,
+        isFromCustomer: !fromMe,
+        customerPhone: normalizedPhone,
+        deliveryStatus: fromMe ? 'sent' : 'delivered',
+        metadata: {
+          ...messageDetails.metadata,
+          raw: messageData,
+        },
+        sentAt,
       };
 
       await this.storeMessage(message);
 
-      // Update conversation with latest message
+      const conversationMetadata = {
+        ...(conversation.metadata || {}),
+        chatId: identifiers.chatId,
+        senderId: identifiers.senderId || (conversation.metadata?.senderId as string | undefined),
+        pushname: identifiers.customerName || conversation.metadata?.pushname,
+      };
+
+      const unreadCount = !fromMe ? conversation.unreadCount + 1 : conversation.unreadCount;
+
       await this.updateConversation(conversation.id, {
+        customerName: identifiers.customerName || conversation.customerName,
         lastMessageAt: message.sentAt,
         lastMessagePreview: this.getMessagePreview(message),
-        unreadCount: conversation.unreadCount + (message.isFromCustomer ? 1 : 0)
+        unreadCount,
+        metadata: conversationMetadata,
       });
 
-      // Emit message received event
       await this.emitEvent({
-        type: 'message_received',
+        type: fromMe ? 'message_sent' : 'message_received',
         tenantId: payload.tenantId,
         deviceId: payload.deviceId,
         data: {
@@ -210,11 +336,10 @@ export class WhatsAppWebhookHandler {
           conversationId: conversation.id,
           customerPhone: message.customerPhone,
           content: message.content,
-          type: message.type
+          type: message.type,
         },
-        timestamp: new Date()
+        timestamp: message.sentAt,
       });
-
     } catch (error) {
       console.error('Error handling message webhook:', error);
     }
@@ -222,40 +347,205 @@ export class WhatsAppWebhookHandler {
 
   private async handleStatusWebhook(payload: WhatsAppWebhookPayload): Promise<void> {
     try {
-      const statusData = payload.data;
-      const messageId = statusData.messageId || statusData.id;
-      
-      if (!messageId) {
-        console.warn('Status webhook missing message ID');
+      const statusSource = payload.data?.payload ? payload.data.payload : payload.data;
+      const messageIds: string[] = Array.isArray(statusSource?.ids)
+        ? statusSource.ids.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+        : [];
+
+      const fallbackId = statusSource?.id || statusSource?.messageId || payload.data?.messageId || payload.data?.id;
+      if (!messageIds.length && typeof fallbackId === 'string') {
+        messageIds.push(fallbackId);
+      }
+
+      if (!messageIds.length) {
+        console.warn('Status webhook missing message IDs');
         return;
       }
 
-      // Update message delivery status
-      await this.updateMessageStatus(
-        messageId,
-        statusData.status,
-        statusData.timestamp ? new Date(statusData.timestamp) : new Date()
+      const receiptType = statusSource?.receipt_type || statusSource?.status;
+      let normalizedStatus: WhatsAppMessage['deliveryStatus'] = 'sent';
+      if (receiptType === 'delivered') {
+        normalizedStatus = 'delivered';
+      } else if (receiptType === 'read') {
+        normalizedStatus = 'read';
+      }
+
+      const timestamp = statusSource?.timestamp
+        ? new Date(statusSource.timestamp)
+        : payload.timestamp;
+
+      await Promise.all(
+        messageIds.map((id: string) => this.updateMessageStatus(id, normalizedStatus, timestamp))
       );
 
-      // Emit status event
-      const eventType = statusData.status === 'delivered' ? 'message_delivered' : 
-                       statusData.status === 'read' ? 'message_read' : 'message_sent';
+      const eventType: WhatsAppEvent['type'] =
+        normalizedStatus === 'delivered'
+          ? 'message_delivered'
+          : normalizedStatus === 'read'
+            ? 'message_read'
+            : 'message_sent';
 
       await this.emitEvent({
-        type: eventType as WhatsAppEvent['type'],
+        type: eventType,
         tenantId: payload.tenantId,
         deviceId: payload.deviceId,
         data: {
-          messageId,
-          status: statusData.status,
-          timestamp: statusData.timestamp
+          messageIds,
+          status: normalizedStatus,
+          timestamp,
         },
-        timestamp: new Date()
+        timestamp,
       });
-
     } catch (error) {
       console.error('Error handling status webhook:', error);
     }
+  }
+
+  private resolveChatIdentifier(messageData: Record<string, any>): {
+    chatId: string;
+    senderId?: string;
+    customerName?: string;
+  } | null {
+    const chatId = messageData?.chat_id || messageData?.chatId || messageData?.from || messageData?.sender_id;
+    if (!chatId) {
+      return null;
+    }
+
+    return {
+      chatId: String(chatId),
+      senderId: messageData?.sender_id ? String(messageData.sender_id) : undefined,
+      customerName:
+        messageData?.pushname ||
+        messageData?.fromName ||
+        messageData?.customerName ||
+        undefined,
+    };
+  }
+
+  private normalizePhone(identifier: string): string {
+    const trimmed = identifier.trim();
+    const withoutDomain = trimmed.replace(/@.+$/, '');
+    return withoutDomain || trimmed;
+  }
+
+  private isMessageFromMe(messageData: Record<string, any>): boolean {
+    return (
+      messageData?.from_me === true ||
+      messageData?.fromMe === true ||
+      messageData?.message?.from_me === true ||
+      messageData?.message?.fromMe === true
+    );
+  }
+
+  private extractMessageDetails(messageData: Record<string, any>): {
+    type: WhatsAppMessage['type'];
+    content: string;
+    mediaUrl?: string;
+    mediaCaption?: string;
+    metadata: Record<string, any>;
+  } {
+    const metadata: Record<string, any> = {};
+    let type: WhatsAppMessage['type'] = 'text';
+    let content = '';
+    let mediaUrl: string | undefined;
+    let mediaCaption: string | undefined;
+
+    const textContent =
+      messageData?.message?.text ||
+      messageData?.text ||
+      messageData?.body ||
+      '';
+
+    if (messageData?.image) {
+      type = 'image';
+      mediaUrl = messageData.image.media_path || messageData.image.url;
+      mediaCaption = messageData.image.caption;
+      content = mediaCaption || '[Image]';
+      metadata.image = messageData.image;
+    } else if (messageData?.video) {
+      type = 'video';
+      mediaUrl = messageData.video.media_path || messageData.video.url;
+      mediaCaption = messageData.video.caption;
+      content = mediaCaption || '[Video]';
+      metadata.video = messageData.video;
+    } else if (messageData?.audio) {
+      type = 'audio';
+      mediaUrl = messageData.audio.media_path || messageData.audio.url;
+      content = messageData.audio.caption || '[Audio]';
+      metadata.audio = messageData.audio;
+    } else if (messageData?.document) {
+      type = 'document';
+      mediaUrl = messageData.document.media_path || messageData.document.url;
+      mediaCaption = messageData.document.caption;
+      content = mediaCaption || '[Document]';
+      metadata.document = messageData.document;
+    } else if (messageData?.sticker) {
+      type = 'sticker';
+      mediaUrl = messageData.sticker.media_path || messageData.sticker.url;
+      content = '[Sticker]';
+      metadata.sticker = messageData.sticker;
+    } else if (messageData?.location) {
+      type = 'location';
+      const name = messageData.location.name || messageData.location.address;
+      content = name ? `Location: ${name}` : 'Location shared';
+      metadata.location = messageData.location;
+    } else if (messageData?.contact) {
+      type = 'contact';
+      const displayName = messageData.contact.displayName || messageData.contact.name;
+      content = displayName ? `Contact: ${displayName}` : 'Contact shared';
+      metadata.contact = messageData.contact;
+    } else if (messageData?.reaction) {
+      type = 'text';
+      content = `Reaction: ${messageData.reaction.message || ''}`.trim();
+      metadata.reaction = messageData.reaction;
+    } else if (textContent) {
+      type = 'text';
+      content = textContent;
+    } else if (messageData?.action) {
+      type = 'text';
+      content = `[Action] ${messageData.action}`;
+    } else {
+      content = '[Message]';
+    }
+
+    if (!content) {
+      content = '[Message]';
+    }
+
+    return {
+      type,
+      content,
+      mediaUrl,
+      mediaCaption,
+      metadata,
+    };
+  }
+
+  private resolveMessageId(messageData: Record<string, any>): string {
+    return (
+      messageData?.message?.id ||
+      messageData?.id ||
+      messageData?.message_id ||
+      `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    );
+  }
+
+  private resolveMessageTimestamp(
+    messageData: Record<string, any>,
+    fallback: Date
+  ): Date {
+    const candidate =
+      messageData?.timestamp ||
+      messageData?.message?.timestamp;
+
+    if (typeof candidate === 'string' || typeof candidate === 'number') {
+      const parsed = new Date(candidate);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    return fallback;
   }
 
   private async handleDeviceStatusWebhook(payload: WhatsAppWebhookPayload): Promise<void> {
@@ -287,6 +577,23 @@ export class WhatsAppWebhookHandler {
 
     } catch (error) {
       console.error('Error handling device status webhook:', error);
+    }
+  }
+
+  private async handleGroupWebhook(payload: WhatsAppWebhookPayload): Promise<void> {
+    try {
+      await this.emitEvent({
+        type: 'message_received',
+        tenantId: payload.tenantId,
+        deviceId: payload.deviceId,
+        data: {
+          event: 'group',
+          payload: payload.data,
+        },
+        timestamp: payload.timestamp,
+      });
+    } catch (error) {
+      console.error('Error handling group webhook:', error);
     }
   }
 
@@ -381,6 +688,22 @@ export class WhatsAppWebhookHandler {
     } catch (error) {
       console.error('Error verifying webhook signature:', error);
       return false;
+    }
+  }
+
+  private async getConversationById(conversationId: string): Promise<WhatsAppConversation | null> {
+    try {
+      const indexKey = `whatsapp:conversation:index:${conversationId}`;
+      const conversationKey = await kvGet<string>(indexKey);
+      if (!conversationKey) {
+        return null;
+      }
+
+      const conversation = await kvGet<WhatsAppConversation>(conversationKey);
+      return normalizeConversation(conversation);
+    } catch (error) {
+      console.error('Error getting conversation by ID:', error);
+      return null;
     }
   }
 
@@ -507,6 +830,142 @@ export class WhatsAppWebhookHandler {
     } catch (error) {
       console.error('Error updating message status:', error);
     }
+  }
+
+  async getTenantConversations(tenantId: string): Promise<WhatsAppConversation[]> {
+    try {
+      const conversationsKey = `whatsapp:conversations:${tenantId}`;
+      const conversationIds = await kvGetSet(conversationsKey);
+
+      const conversations = await Promise.all(
+        conversationIds.map((id: string) => this.getConversationById(id))
+      );
+
+      return conversations
+        .filter((conv: WhatsAppConversation | null): conv is WhatsAppConversation => conv !== null)
+        .sort(
+          (a: WhatsAppConversation, b: WhatsAppConversation) =>
+            b.lastMessageAt.getTime() - a.lastMessageAt.getTime()
+        );
+    } catch (error) {
+      console.error('Error getting tenant conversations:', error);
+      return [];
+    }
+  }
+
+  async getConversationMessages(
+    tenantId: string,
+    conversationId: string,
+    limit = 100
+  ): Promise<WhatsAppMessage[]> {
+    try {
+      const conversation = await this.getConversationById(conversationId);
+      if (!conversation || conversation.tenantId !== tenantId) {
+        return [];
+      }
+
+      const messagesKey = `whatsapp:messages:${conversationId}`;
+      const messageIds = await kvGetList<string>(messagesKey, 0, limit - 1);
+
+      const messages = await Promise.all(
+        messageIds.map(async (id: string) => {
+          const messageData = await kvGet<WhatsAppMessage>(`whatsapp:message:${id}`);
+          return normalizeMessage(messageData);
+        })
+      );
+
+      return messages
+        .filter((msg): msg is WhatsAppMessage => msg !== null)
+        .sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
+    } catch (error) {
+      console.error('Error getting conversation messages:', error);
+      return [];
+    }
+  }
+
+  async markConversationRead(tenantId: string, conversationId: string): Promise<void> {
+    try {
+      const conversation = await this.getConversationById(conversationId);
+      if (!conversation || conversation.tenantId !== tenantId) {
+        return;
+      }
+
+      await this.updateConversation(conversationId, {
+        unreadCount: 0,
+      });
+    } catch (error) {
+      console.error('Error marking conversation read:', error);
+    }
+  }
+
+  async recordOutgoingMessage(
+    tenantId: string,
+    deviceId: string,
+    customerPhone: string,
+    options: {
+      id: string;
+      content: string;
+      type?: WhatsAppMessage['type'];
+      mediaUrl?: string;
+      mediaCaption?: string;
+      sentAt?: Date;
+      metadata?: Record<string, any>;
+      customerName?: string;
+    }
+  ): Promise<WhatsAppMessage> {
+    const normalizedPhone = this.normalizePhone(customerPhone);
+    const conversation = await this.createOrUpdateConversation(
+      tenantId,
+      normalizedPhone,
+      options.customerName
+    );
+
+    const sentAt = options.sentAt ?? new Date();
+
+    const message: WhatsAppMessage = {
+      id: options.id,
+      tenantId,
+      deviceId,
+      conversationId: conversation.id,
+      type: options.type ?? 'text',
+      content: options.content,
+      mediaUrl: options.mediaUrl,
+      mediaCaption: options.mediaCaption,
+      isFromCustomer: false,
+      customerPhone: normalizedPhone,
+      deliveryStatus: 'sent',
+      metadata: options.metadata ?? {},
+      sentAt,
+    };
+
+    await this.storeMessage(message);
+
+    await this.updateConversation(conversation.id, {
+      customerName: options.customerName || conversation.customerName,
+      lastMessageAt: sentAt,
+      lastMessagePreview: this.getMessagePreview(message),
+      unreadCount: conversation.unreadCount,
+      metadata: {
+        ...(conversation.metadata || {}),
+        chatId: customerPhone,
+      },
+    });
+
+    await this.emitEvent({
+      type: 'message_sent',
+      tenantId,
+      deviceId,
+      data: {
+        messageId: message.id,
+        conversationId: conversation.id,
+        customerPhone: normalizedPhone,
+        content: message.content,
+        type: message.type,
+      },
+      timestamp: sentAt,
+    });
+
+    return message;
   }
 
   private getMessagePreview(message: WhatsAppMessage): string {

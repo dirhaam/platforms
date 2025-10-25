@@ -134,32 +134,36 @@ export class WhatsAppService {
       throw new Error('WhatsApp endpoint not configured or unavailable');
     }
 
-    return await client.sendMessage(deviceId, to, message);
+    const sentMessage = await client.sendMessage(deviceId, to, message);
+
+    const recorded = await this.webhookHandler.recordOutgoingMessage(tenantId, deviceId, to, {
+      id: sentMessage.id,
+      content: sentMessage.content,
+      type: sentMessage.type,
+      mediaUrl: sentMessage.mediaUrl,
+      mediaCaption: sentMessage.mediaCaption,
+      sentAt: sentMessage.sentAt,
+      metadata: sentMessage.metadata,
+    });
+
+    return recorded;
   }
 
   async getConversations(tenantId: string): Promise<WhatsAppConversation[]> {
-    const client = await this.endpointManager.getClient(tenantId);
-    if (!client) {
-      return [];
-    }
-
-    return await client.getConversations(tenantId);
+    return await this.webhookHandler.getTenantConversations(tenantId);
   }
 
   async getMessages(conversationId: string, limit?: number): Promise<WhatsAppMessage[]> {
-    // Extract tenant ID from conversation ID or get it another way
-    // This is a simplified approach - in production you'd want a more robust way
     const conversation = await this.getConversationById(conversationId);
     if (!conversation) {
       return [];
     }
 
-    const client = await this.endpointManager.getClient(conversation.tenantId);
-    if (!client) {
-      return [];
-    }
-
-    return await client.getMessages(conversationId, limit);
+    return await this.webhookHandler.getConversationMessages(
+      conversation.tenantId,
+      conversationId,
+      limit
+    );
   }
 
   async markMessageAsRead(messageId: string, tenantId: string): Promise<void> {
@@ -169,6 +173,10 @@ export class WhatsAppService {
     }
 
     await client.markAsRead(messageId);
+  }
+
+  async markConversationRead(tenantId: string, conversationId: string): Promise<void> {
+    await this.webhookHandler.markConversationRead(tenantId, conversationId);
   }
 
   // Webhook Handling
