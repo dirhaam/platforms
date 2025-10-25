@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { 
   WhatsAppApiClient, 
   WhatsAppMessage, 
@@ -20,28 +21,25 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
   async sendMessage(deviceId: string, to: string, message: WhatsAppMessageData): Promise<WhatsAppMessage> {
     try {
-      const response = await this.makeRequest('/api/send-message', {
+      const response = await this.makeRequest('/send/message', {
         method: 'POST',
         body: JSON.stringify({
-          deviceId,
-          to,
-          type: message.type,
-          content: message.content,
-          mediaUrl: message.mediaUrl,
-          caption: message.caption,
-          filename: message.filename
+          phone: to,
+          message: message.content,
+          is_forwarded: false,
+          reply_message_id: undefined
         })
       });
 
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to send message');
+      if (response.code !== 'SUCCESS') {
+        throw new Error(response.message || 'Failed to send message');
       }
 
       return {
-        id: response.data.messageId,
+        id: response.results?.message_id || randomUUID(),
         tenantId: this.tenantId,
         deviceId,
-        conversationId: response.data.conversationId,
+        conversationId: response.results?.conversation_id || '',
         type: message.type,
         content: message.content,
         mediaUrl: message.mediaUrl,
@@ -59,24 +57,23 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
   async getDeviceStatus(deviceId: string): Promise<WhatsAppDevice> {
     try {
-      const response = await this.makeRequest(`/api/device/${deviceId}/status`);
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to get device status');
-      }
+      const response = await this.makeRequest('/app/devices');
+      const devices = Array.isArray(response?.results) ? response.results : [];
+      const primary = devices.find((entry: any) => typeof entry?.device === 'string') || null;
+      const isConnected = devices.length > 0;
 
       return {
         id: deviceId,
         tenantId: this.tenantId,
         endpointId: this.endpointId,
-        deviceName: response.data.deviceName,
-        phoneNumber: response.data.phoneNumber,
-        status: response.data.status,
-        lastSeen: response.data.lastSeen ? new Date(response.data.lastSeen) : undefined,
-        reconnectAttempts: response.data.reconnectAttempts || 0,
+        deviceName: primary?.name || deviceId,
+        phoneNumber: primary?.device,
+        status: isConnected ? 'connected' : 'disconnected',
+        lastSeen: new Date(),
+        reconnectAttempts: 0,
         maxReconnectAttempts: 5,
-        createdAt: new Date(response.data.createdAt),
-        updatedAt: new Date(response.data.updatedAt)
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
     } catch (error) {
       console.error('Error getting device status:', error);
@@ -86,32 +83,35 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
   async generateQRCode(deviceId: string): Promise<string> {
     try {
-      const response = await this.makeRequest(`/api/device/${deviceId}/qr-code`, {
-        method: 'POST'
-      });
+      const response = await this.makeRequest('/app/login');
 
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to generate QR code');
+      const qrLink = response?.results?.qr_link;
+      if (!qrLink) {
+        throw new Error(response?.message || 'Failed to generate QR code');
       }
 
-      return response.data.qrCode;
+      return qrLink;
     } catch (error) {
       console.error('Error generating QR code:', error);
       throw error;
     }
   }
 
-  async generatePairingCode(deviceId: string): Promise<string> {
+  async generatePairingCode(deviceId: string, phone?: string): Promise<string> {
     try {
-      const response = await this.makeRequest(`/api/device/${deviceId}/pairing-code`, {
-        method: 'POST'
-      });
-
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to generate pairing code');
+      if (!phone) {
+        throw new Error('Phone number required to generate pairing code');
       }
 
-      return response.data.pairingCode;
+      const params = new URLSearchParams({ phone });
+      const response = await this.makeRequest(`/app/login-with-code?${params.toString()}`);
+
+      const pairCode = response?.results?.pair_code;
+      if (!pairCode) {
+        throw new Error(response?.message || 'Failed to generate pairing code');
+      }
+
+      return pairCode;
     } catch (error) {
       console.error('Error generating pairing code:', error);
       throw error;
@@ -120,12 +120,10 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
   async disconnectDevice(deviceId: string): Promise<void> {
     try {
-      const response = await this.makeRequest(`/api/device/${deviceId}/disconnect`, {
-        method: 'POST'
-      });
+      const response = await this.makeRequest('/app/logout');
 
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to disconnect device');
+      if (response?.code !== 'SUCCESS') {
+        throw new Error(response?.message || 'Failed to disconnect device');
       }
     } catch (error) {
       console.error('Error disconnecting device:', error);

@@ -103,7 +103,7 @@ export interface WhatsAppApiClient {
   sendMessage(deviceId: string, to: string, message: WhatsAppMessageData): Promise<WhatsAppMessage>;
   getDeviceStatus(deviceId: string): Promise<WhatsAppDevice>;
   generateQRCode(deviceId: string): Promise<string>;
-  generatePairingCode(deviceId: string): Promise<string>;
+  generatePairingCode(deviceId: string, phone?: string): Promise<string>;
   disconnectDevice(deviceId: string): Promise<void>;
   getConversations(tenantId: string): Promise<WhatsAppConversation[]>;
   getMessages(conversationId: string, limit?: number): Promise<WhatsAppMessage[]>;

@@ -183,7 +183,7 @@ export class WhatsAppDeviceManager implements WhatsAppSessionManager {
       } catch (qrError) {
         // Fallback to pairing code
         try {
-          const pairingCode = await client.generatePairingCode(deviceId);
+          const pairingCode = await client.generatePairingCode(deviceId, device.phoneNumber);
           await this.updateDevice(deviceId, { 
             status: 'pairing', 
             pairingCode,

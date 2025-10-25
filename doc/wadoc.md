@@ -4,7 +4,7 @@ info:
   version: 6.12.0
   description: This API is used for sending whatsapp via API
 servers:
-  - url: http://localhost:3000
+  - url: http://wa.kosan.biz.id/
 tags:
   - name: app
     description: Initial Connection to Whatsapp server
