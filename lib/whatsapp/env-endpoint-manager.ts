@@ -12,12 +12,13 @@
  * 5. Backend fetches credentials from ENV when needed
  */
 
-import { WhatsAppEndpoint } from '@/types/whatsapp';
+import { Buffer } from 'node:buffer';
 
 export interface EnvEndpointConfig {
   name: string;
   apiUrl: string;
   apiKey: string;
+  authType: 'bearer' | 'basic';
 }
 
 export class EnvEndpointManager {
@@ -34,19 +35,22 @@ export class EnvEndpointManager {
 
   /**
    * Load endpoints from WHATSAPP_ENDPOINTS env var
-   * Format: [{"name":"Primary","apiUrl":"...","apiKey":"..."}]
+   * Format: [{"name":"Primary","apiUrl":"...","apiKey":"..."}] or with username/password
    */
   private loadFromEnv(): void {
     try {
       const endpointsJson = process.env.WHATSAPP_ENDPOINTS || '[]';
-      const endpoints: EnvEndpointConfig[] = JSON.parse(endpointsJson);
+      const endpoints = JSON.parse(endpointsJson) as Array<Record<string, any>>;
 
       this.envEndpoints.clear();
-      endpoints.forEach((endpoint) => {
-        this.envEndpoints.set(endpoint.name.toLowerCase(), endpoint);
+      endpoints.forEach((rawEndpoint) => {
+        const normalized = this.normalizeEndpoint(rawEndpoint);
+        if (normalized) {
+          this.envEndpoints.set(normalized.name.toLowerCase(), normalized);
+        }
       });
 
-      console.log(`✓ Loaded ${endpoints.length} WhatsApp endpoints from ENV`);
+      console.log(`✓ Loaded ${this.envEndpoints.size} WhatsApp endpoints from ENV`);
     } catch (error) {
       console.error('Failed to parse WHATSAPP_ENDPOINTS:', error);
       this.envEndpoints.clear();
@@ -97,6 +101,79 @@ export class EnvEndpointManager {
    */
   reload(): void {
     this.loadFromEnv();
+  }
+
+  private normalizeEndpoint(raw: Record<string, any>): EnvEndpointConfig | null {
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+
+    const name = typeof raw.name === 'string' ? raw.name.trim() : '';
+    const apiUrl = typeof raw.apiUrl === 'string' ? raw.apiUrl.trim() : '';
+
+    if (!name || !apiUrl) {
+      console.warn('[WhatsApp Env] Invalid endpoint entry, missing name or apiUrl');
+      return null;
+    }
+
+    const rawApiKey = typeof raw.apiKey === 'string' ? raw.apiKey.trim() : undefined;
+    const username = typeof raw.username === 'string' ? raw.username : undefined;
+    const password = typeof raw.password === 'string' ? raw.password : undefined;
+    const declaredAuthType = typeof raw.authType === 'string' ? raw.authType.toLowerCase() : undefined;
+
+    let authType: 'bearer' | 'basic';
+    if (declaredAuthType === 'basic' || declaredAuthType === 'bearer') {
+      authType = declaredAuthType;
+    } else if (rawApiKey && /^basic\s/i.test(rawApiKey)) {
+      authType = 'basic';
+    } else if (username && password) {
+      authType = 'basic';
+    } else {
+      authType = 'bearer';
+    }
+
+    let apiKey: string | undefined = rawApiKey;
+
+    if (authType === 'basic') {
+      if (apiKey && !/^basic\s/i.test(apiKey)) {
+        console.warn(`[WhatsApp Env] Endpoint "${name}" provided basic authType but apiKey is not a Basic token. Falling back to username/password.`);
+        apiKey = undefined;
+      }
+
+      if (!apiKey) {
+        if (!username || !password) {
+          console.warn(`[WhatsApp Env] Endpoint "${name}" missing username/password for basic authentication`);
+          return null;
+        }
+        const encoded = Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
+        apiKey = `Basic ${encoded}`;
+      }
+    } else {
+      if (!apiKey && username && password) {
+        const encoded = Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
+        apiKey = `Basic ${encoded}`;
+        authType = 'basic';
+      } else if (apiKey) {
+        if (!/^bearer\s/i.test(apiKey) && !/^basic\s/i.test(apiKey)) {
+          apiKey = `Bearer ${apiKey}`;
+        }
+      } else {
+        console.warn(`[WhatsApp Env] Endpoint "${name}" missing apiKey for bearer authentication`);
+        return null;
+      }
+    }
+
+    if (!apiKey) {
+      console.warn(`[WhatsApp Env] Endpoint "${name}" missing credentials`);
+      return null;
+    }
+
+    return {
+      name,
+      apiUrl,
+      apiKey,
+      authType,
+    };
   }
 }
 

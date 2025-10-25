@@ -231,12 +231,7 @@ export class WhatsAppClient implements WhatsAppApiClient {
     try {
       const response = await fetch(`${this.config.apiUrl}${endpoint}`, {
         ...fetchOptions,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': this.config.apiKey ? `Bearer ${this.config.apiKey}` : '',
-          ...this.config.headers,
-          ...fetchOptions.headers
-        },
+        headers: this.buildHeaders(fetchOptions.headers),
         signal: controller.signal
       });
 
@@ -256,5 +251,42 @@ export class WhatsAppClient implements WhatsAppApiClient {
       
       throw error;
     }
+  }
+  private buildHeaders(override?: HeadersInit): Headers {
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+
+    if (this.config.headers) {
+      Object.entries(this.config.headers).forEach(([key, value]) => {
+        headers.set(key, value);
+      });
+    }
+
+    if (override) {
+      new Headers(override).forEach((value, key) => {
+        headers.set(key, value);
+      });
+    }
+
+    if (!headers.has('Authorization')) {
+      const authorization = this.buildAuthorizationHeader();
+      if (authorization) {
+        headers.set('Authorization', authorization);
+      }
+    }
+
+    return headers;
+  }
+
+  private buildAuthorizationHeader(): string | undefined {
+    const apiKey = this.config.apiKey;
+    if (!apiKey) {
+      return undefined;
+    }
+
+    if (/^(basic|bearer)\s/i.test(apiKey)) {
+      return apiKey;
+    }
+
+    return `Bearer ${apiKey}`;
   }
 }
