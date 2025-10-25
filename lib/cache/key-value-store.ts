@@ -42,14 +42,14 @@ export async function kvList(pattern: string): Promise<string[]> {
 
 export async function kvGetSet(key: string): Promise<string[]> {
   const existing = await kvGet<string[]>(key);
-  return Array.isArray(existing) ? existing : [];
+  return Array.isArray(existing) ? [...existing] : [];
 }
 
 export async function kvAddToSet(key: string, value: string): Promise<void> {
   const set = await kvGetSet(key);
   if (!set.includes(value)) {
-    set.push(value);
-    await kvSet(key, set);
+    const next = [...set, value];
+    await kvSet(key, next);
   }
 }
 
@@ -61,8 +61,7 @@ export async function kvRemoveFromSet(key: string, value: string): Promise<void>
 
 export async function kvPushToList<T = JsonValue>(key: string, value: T, maxLength?: number): Promise<void> {
   const existing = await kvGet<T[]>(key);
-  const list = Array.isArray(existing) ? existing : [];
-  list.unshift(value);
+  const list = Array.isArray(existing) ? [value, ...existing] : [value];
   if (typeof maxLength === 'number' && maxLength >= 0) {
     list.splice(maxLength);
   }
