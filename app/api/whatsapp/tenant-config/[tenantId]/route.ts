@@ -269,6 +269,7 @@ async function syncTenantEndpoint(
     existingEndpoint?.webhookUrl ??
     `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/whatsapp/webhook/${tenantId}/${endpointId}`;
 
+  const now = new Date().toISOString();
   const synced = await whatsappEndpointManager.setEndpoint(tenantId, {
     id: endpointId,
     tenantId,
@@ -279,7 +280,7 @@ async function syncTenantEndpoint(
     webhookSecret,
     isActive: true,
     healthStatus: existingEndpoint?.healthStatus ?? 'unknown',
-    lastHealthCheck: existingEndpoint?.lastHealthCheck ?? new Date(),
+    lastHealthCheck: existingEndpoint?.lastHealthCheck ?? new Date(now),
   });
 
   return {

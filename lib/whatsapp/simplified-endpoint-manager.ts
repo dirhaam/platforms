@@ -127,8 +127,19 @@ export class WhatsAppEndpointManager {
   async saveConfiguration(config: WhatsAppConfiguration): Promise<void> {
     try {
       const configKey = `whatsapp:config:${config.tenantId}`;
-      config.updatedAt = new Date();
-      await kvSet(configKey, config);
+      // Ensure all dates are properly serialized for storage
+      const configToStore = {
+        ...config,
+        updatedAt: new Date(),
+        createdAt: config.createdAt instanceof Date ? config.createdAt : new Date(config.createdAt),
+        endpoint: {
+          ...config.endpoint,
+          lastHealthCheck: config.endpoint.lastHealthCheck instanceof Date ? config.endpoint.lastHealthCheck : new Date(config.endpoint.lastHealthCheck),
+          createdAt: config.endpoint.createdAt instanceof Date ? config.endpoint.createdAt : new Date(config.endpoint.createdAt),
+          updatedAt: config.endpoint.updatedAt instanceof Date ? config.endpoint.updatedAt : new Date(config.endpoint.updatedAt),
+        }
+      };
+      await kvSet(configKey, configToStore);
       
       // Invalidate clients if needed
       await this.invalidateClient(config.tenantId);
@@ -151,7 +162,7 @@ export class WhatsAppEndpointManager {
         .eq('tenant_id', tenantId)
         .single();
 
-      const now = new Date();
+      const now = new Date().toISOString();
       const endpointData = {
         id: endpoint.id || existingEndpoint?.id || `ep_${Date.now()}`,
         tenant_id: tenantId,
@@ -162,7 +173,7 @@ export class WhatsAppEndpointManager {
         webhook_secret: endpoint.webhookSecret,
         is_active: endpoint.isActive ?? true,
         health_status: endpoint.healthStatus || 'unknown',
-        last_health_check: endpoint.lastHealthCheck || now,
+        last_health_check: endpoint.lastHealthCheck instanceof Date ? endpoint.lastHealthCheck.toISOString() : endpoint.lastHealthCheck || now,
         updated_at: now,
       };
 
@@ -208,6 +219,7 @@ export class WhatsAppEndpointManager {
       };
 
       // Also update cache
+      const nowDate = new Date();
       const config = await this.getConfiguration(tenantId) || {
         tenantId,
         endpoint: newEndpoint,
@@ -216,12 +228,12 @@ export class WhatsAppEndpointManager {
         healthCheckInterval: 60,
         webhookRetries: 3,
         messageTimeout: 30,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: nowDate,
+        updatedAt: nowDate,
       };
 
       config.endpoint = newEndpoint;
-      config.updatedAt = now;
+      config.updatedAt = nowDate;
 
       const configKey = `whatsapp:config:${tenantId}`;
       await kvSet(configKey, config);
