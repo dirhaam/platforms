@@ -114,10 +114,16 @@ export async function POST(
   context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
+    console.log('[WhatsApp POST] Starting endpoint assignment...');
+    
     const { tenantId } = await context.params;
+    console.log('[WhatsApp POST] tenantId:', tenantId);
+    
     const { endpoint_name } = await request.json();
+    console.log('[WhatsApp POST] endpoint_name:', endpoint_name);
 
     if (!endpoint_name) {
+      console.warn('[WhatsApp POST] Missing endpoint_name');
       return NextResponse.json(
         { error: 'endpoint_name is required' },
         { status: 400 }
@@ -125,33 +131,44 @@ export async function POST(
     }
 
     // Validate endpoint exists in ENV
+    console.log('[WhatsApp POST] Validating endpoint in ENV...');
     if (!envEndpointManager.isValidEndpoint(endpoint_name)) {
+      console.warn('[WhatsApp POST] Endpoint not found in ENV:', endpoint_name);
       return NextResponse.json(
         { error: `Endpoint "${endpoint_name}" not found in configuration` },
         { status: 400 }
       );
     }
+    console.log('[WhatsApp POST] Endpoint validated ✓');
 
     // Resolve tenant ID (handles both UUID and subdomain)
+    console.log('[WhatsApp POST] Resolving tenant ID...');
     const { resolved: resolvedTenantId, error: resolveError } = await resolveTenantId(tenantId);
     if (!resolvedTenantId) {
+      console.warn('[WhatsApp POST] Failed to resolve tenant:', resolveError);
       return NextResponse.json(
         { error: resolveError || 'Tenant not found' },
         { status: 404 }
       );
     }
+    console.log('[WhatsApp POST] Tenant resolved:', resolvedTenantId);
 
+    console.log('[WhatsApp POST] Getting endpoint config...');
     const endpointConfig = envEndpointManager.getEndpointConfig(endpoint_name);
 
     if (!endpointConfig) {
+      console.warn('[WhatsApp POST] Could not get endpoint config');
       return NextResponse.json(
         { error: `Endpoint "${endpoint_name}" not found in configuration` },
         { status: 400 }
       );
     }
+    console.log('[WhatsApp POST] Endpoint config retrieved ✓');
 
     // Ensure endpoint record exists in persistent storage
+    console.log('[WhatsApp POST] Syncing endpoint to database...');
     const syncedEndpoint = await syncTenantEndpoint(resolvedTenantId, endpointConfig);
+    console.log('[WhatsApp POST] Endpoint synced ✓');
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -199,6 +216,9 @@ export async function POST(
       config = data;
     }
 
+    console.log('[WhatsApp POST] Config saved ✓');
+    console.log('[WhatsApp POST] Returning success response...');
+    
     return NextResponse.json(
       {
         config,
@@ -212,9 +232,17 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error updating tenant config:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('[WhatsApp POST] ERROR:', errorMsg);
+    console.error('[WhatsApp POST] Stack:', errorStack);
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? errorMsg : undefined,
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
+      },
       { status: 500 }
     );
   }
