@@ -5,6 +5,7 @@ import {
 } from '@/types/whatsapp';
 import { WhatsAppClient } from './whatsapp-client';
 import { kvGet, kvSet, kvDelete } from '@/lib/cache/key-value-store';
+import { envEndpointManager } from '@/lib/whatsapp/env-endpoint-manager';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -58,7 +59,7 @@ export class WhatsAppEndpointManager {
         return null;
       }
 
-      return {
+      const normalized: WhatsAppConfiguration = {
         ...rawConfig,
         endpoint: {
           ...rawConfig.endpoint,
@@ -69,6 +70,10 @@ export class WhatsAppEndpointManager {
         createdAt: new Date(rawConfig.createdAt),
         updatedAt: new Date(rawConfig.updatedAt),
       };
+
+      this.applyEnvCredentials(normalized.endpoint);
+
+      return normalized;
     } catch (error) {
       console.error('Error getting WhatsApp configuration:', error);
       return null;
@@ -104,6 +109,8 @@ export class WhatsAppEndpointManager {
           createdAt: new Date(dbEndpoint.created_at),
           updatedAt: new Date(dbEndpoint.updated_at),
         };
+
+        this.applyEnvCredentials(endpoint);
 
         // Also update cache for faster subsequent access
         const config = await this.getConfiguration(tenantId);
@@ -178,18 +185,26 @@ export class WhatsAppEndpointManager {
         .eq('tenant_id', tenantId)
         .single();
 
+      const resolvedCredentials = this.resolveEnvCredentials(endpoint.name, endpoint.apiUrl, endpoint.apiKey);
+      const endpointForRuntime: Omit<WhatsAppEndpoint, 'createdAt' | 'updatedAt'> = {
+        ...endpoint,
+        apiUrl: resolvedCredentials.apiUrl,
+        apiKey: resolvedCredentials.apiKey,
+      };
+      const apiKeyToPersist = resolvedCredentials.fromEnv ? '***' : endpointForRuntime.apiKey;
+
       const now = new Date().toISOString();
       const endpointData = {
-        id: endpoint.id || existingEndpoint?.id,
+        id: endpointForRuntime.id || existingEndpoint?.id,
         tenant_id: tenantId,
-        name: endpoint.name,
-        api_url: endpoint.apiUrl,
-        api_key: endpoint.apiKey,
-        webhook_url: endpoint.webhookUrl,
-        webhook_secret: endpoint.webhookSecret,
-        is_active: endpoint.isActive ?? true,
-        health_status: endpoint.healthStatus || 'unknown',
-        last_health_check: endpoint.lastHealthCheck instanceof Date ? endpoint.lastHealthCheck.toISOString() : endpoint.lastHealthCheck || now,
+        name: endpointForRuntime.name,
+        api_url: endpointForRuntime.apiUrl,
+        api_key: apiKeyToPersist,
+        webhook_url: endpointForRuntime.webhookUrl,
+        webhook_secret: endpointForRuntime.webhookSecret,
+        is_active: endpointForRuntime.isActive ?? true,
+        health_status: endpointForRuntime.healthStatus || 'unknown',
+        last_health_check: endpointForRuntime.lastHealthCheck instanceof Date ? endpointForRuntime.lastHealthCheck.toISOString() : endpointForRuntime.lastHealthCheck || now,
         updated_at: now,
       };
 
@@ -228,8 +243,8 @@ export class WhatsAppEndpointManager {
         id: savedEndpoint.id,
         tenantId: savedEndpoint.tenant_id,
         name: savedEndpoint.name,
-        apiUrl: savedEndpoint.api_url,
-        apiKey: savedEndpoint.api_key,
+        apiUrl: endpointForRuntime.apiUrl,
+        apiKey: endpointForRuntime.apiKey,
         webhookUrl: savedEndpoint.webhook_url,
         webhookSecret: savedEndpoint.webhook_secret,
         isActive: savedEndpoint.is_active,
@@ -238,6 +253,8 @@ export class WhatsAppEndpointManager {
         createdAt: new Date(savedEndpoint.created_at),
         updatedAt: new Date(savedEndpoint.updated_at),
       };
+
+      this.applyEnvCredentials(newEndpoint);
 
       // Also update cache
       const nowDate = new Date();
@@ -459,6 +476,39 @@ export class WhatsAppEndpointManager {
       console.error('Error initializing tenant:', error);
       throw error;
     }
+  }
+
+  private applyEnvCredentials(endpoint: { name: string; apiUrl: string; apiKey?: string | null }): void {
+    const { apiUrl, apiKey } = this.resolveEnvCredentials(
+      endpoint.name,
+      endpoint.apiUrl,
+      endpoint.apiKey ?? undefined
+    );
+
+    endpoint.apiUrl = apiUrl;
+    endpoint.apiKey = apiKey;
+  }
+
+  private resolveEnvCredentials(
+    endpointName: string,
+    fallbackUrl?: string,
+    fallbackKey?: string
+  ): { apiUrl: string; apiKey: string; fromEnv: boolean } {
+    const envConfig = envEndpointManager.getEndpointConfig(endpointName);
+
+    if (envConfig) {
+      return {
+        apiUrl: envConfig.apiUrl,
+        apiKey: envConfig.apiKey,
+        fromEnv: true,
+      };
+    }
+
+    return {
+      apiUrl: fallbackUrl ?? '',
+      apiKey: fallbackKey ?? '',
+      fromEnv: false,
+    };
   }
 
   /**
