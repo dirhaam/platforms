@@ -1,8 +1,12 @@
 # Minimal Landing Page Template
 
+⚠️ **UPDATE:** This is an older version documentation. For the **completely redesigned version** with more features, see [`MINIMAL_TEMPLATE_COMPLETE.md`](./MINIMAL_TEMPLATE_COMPLETE.md)
+
 ## Overview
 
 Template Minimal adalah desain landing page yang ultra-clean, minimalist, dan modern dengan fokus pada kesederhanaan dan whitespace. Sempurna untuk bisnis yang ingin tampilan profesional dan elegan.
+
+**Note:** The template has been significantly enhanced with testimonials, FAQ, stats, newsletter, and much more while maintaining the minimalist philosophy.
 
 ## Features
 
