@@ -1,6 +1,6 @@
 // Drizzle schema for Supabase (PostgreSQL)
 import { pgTable, text, integer, real, boolean, timestamp, jsonb, uuid } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, one } from 'drizzle-orm';
 
 // Tenant table
 export const tenants = pgTable('tenants', {
