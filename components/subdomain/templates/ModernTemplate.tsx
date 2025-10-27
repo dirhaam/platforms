@@ -54,7 +54,7 @@ export default function ModernTemplate({
   const primaryColor = tenant.brandColors?.primary || '#0066ff';
   const secondaryColor = tenant.brandColors?.secondary || '#00d4ff';
   
-  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'lowercase' });
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   const todayHours = businessHours?.[currentDay];
   const isOpenToday = todayHours?.isOpen || false;
 
