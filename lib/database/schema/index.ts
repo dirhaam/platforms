@@ -1,6 +1,6 @@
 // Drizzle schema for Supabase (PostgreSQL)
 import { pgTable, text, integer, real, boolean, timestamp, jsonb, uuid } from 'drizzle-orm/pg-core';
-import { relations, one } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
 
 // Tenant table
 export const tenants = pgTable('tenants', {
@@ -440,7 +440,3 @@ export const blockedDates = pgTable('blocked_dates', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
-
-export const blockedDatesRelations = relations(blockedDates, () => ({
-  tenant: one(tenants, { fields: [blockedDates.tenantId], references: [tenants.id] }),
-}));
