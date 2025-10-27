@@ -30,6 +30,7 @@ export function CustomerDetailsDialog({
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [realTenantId, setRealTenantId] = useState<string>('');
   const [stats, setStats] = useState({
     totalSpent: 0,
     averageBookingValue: 0,
@@ -39,13 +40,32 @@ export function CustomerDetailsDialog({
     totalTransactionAmount: 0
   });
 
+  // Resolve real tenant ID from subdomain
+  useEffect(() => {
+    if (open && tenantId && !realTenantId) {
+      resolveTenantId();
+    }
+  }, [open, tenantId]);
+
+  const resolveTenantId = async () => {
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setRealTenantId(data.id);
+      }
+    } catch (error) {
+      console.error('Error resolving tenant ID:', error);
+    }
+  };
+
   // Fetch customer bookings and transactions when dialog opens
   useEffect(() => {
-    if (open && customer.id) {
+    if (open && customer.id && realTenantId) {
       fetchCustomerBookings();
       fetchCustomerTransactions();
     }
-  }, [open, customer.id]);
+  }, [open, customer.id, realTenantId]);
 
   const fetchCustomerBookings = async () => {
     setLoading(true);
@@ -72,7 +92,7 @@ export function CustomerDetailsDialog({
   const fetchCustomerTransactions = async () => {
     setLoadingTransactions(true);
     try {
-      const response = await fetch(`/api/sales/transactions?customerId=${customer.id}&tenantId=${tenantId}`);
+      const response = await fetch(`/api/sales/transactions?customerId=${customer.id}&tenantId=${realTenantId}`);
 
       if (response.ok) {
         const data = await response.json();
