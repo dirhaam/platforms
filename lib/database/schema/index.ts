@@ -311,6 +311,26 @@ export const cache = pgTable('cache', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Sales Transactions table
+export const salesTransactions = pgTable('sales_transactions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
+  bookingId: uuid('booking_id').references(() => bookings.id, { onDelete: 'set null' }),
+  source: text('source').notNull().default('on_the_spot'), // ON_THE_SPOT, FROM_BOOKING
+  serviceName: text('service_name').notNull(),
+  duration: integer('duration').notNull(), // minutes
+  isHomeVisit: boolean('is_home_visit').default(false),
+  homeVisitAddress: text('home_visit_address'),
+  totalAmount: real('total_amount').notNull(),
+  paymentMethod: text('payment_method').notNull().default('cash'), // CASH, CARD, TRANSFER, QRIS
+  status: text('status').notNull().default('pending'), // PENDING, COMPLETED, CANCELLED, REFUNDED
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const tenantRelations = relations(tenants, ({ many, one }) => ({
   services: many(services),
@@ -323,12 +343,14 @@ export const tenantRelations = relations(tenants, ({ many, one }) => ({
   businessHours: one(businessHours),
   invoices: many(invoices),
   serviceAreas: many(serviceAreas),
+  salesTransactions: many(salesTransactions),
 }));
 
 export const serviceRelations = relations(services, ({ one, many }) => ({
   tenant: one(tenants, { fields: [services.tenantId], references: [tenants.id] }),
   bookings: many(bookings),
   invoiceItems: many(invoiceItems),
+  salesTransactions: many(salesTransactions),
 }));
 
 export const customerRelations = relations(customers, ({ one, many }) => ({
@@ -336,6 +358,7 @@ export const customerRelations = relations(customers, ({ one, many }) => ({
   bookings: many(bookings),
   conversations: many(conversations),
   invoices: many(invoices),
+  salesTransactions: many(salesTransactions),
 }));
 
 export const bookingRelations = relations(bookings, ({ one, many }) => ({
@@ -343,6 +366,7 @@ export const bookingRelations = relations(bookings, ({ one, many }) => ({
   customer: one(customers, { fields: [bookings.customerId], references: [customers.id] }),
   service: one(services, { fields: [bookings.serviceId], references: [services.id] }),
   invoices: many(invoices),
+  salesTransactions: many(salesTransactions),
 }));
 
 export const staffRelations = relations(staff, ({ one, many }) => ({
@@ -375,6 +399,13 @@ export const invoiceItemRelations = relations(invoiceItems, ({ one }) => ({
 
 export const serviceAreaRelations = relations(serviceAreas, ({ one }) => ({
   tenant: one(tenants, { fields: [serviceAreas.tenantId], references: [tenants.id] }),
+}));
+
+export const salesTransactionRelations = relations(salesTransactions, ({ one }) => ({
+  tenant: one(tenants, { fields: [salesTransactions.tenantId], references: [tenants.id] }),
+  customer: one(customers, { fields: [salesTransactions.customerId], references: [customers.id] }),
+  service: one(services, { fields: [salesTransactions.serviceId], references: [services.id] }),
+  booking: one(bookings, { fields: [salesTransactions.bookingId], references: [bookings.id] }),
 }));
 
 export const superAdminRelations = relations(superAdmins, () => ({}));

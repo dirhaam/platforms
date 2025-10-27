@@ -15,6 +15,13 @@
       "when": 1760594138059,
       "tag": "0001_open_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761538197832,
+      "tag": "0002_moaning_marrow",
+      "breakpoints": true
     }
   ]
 }
