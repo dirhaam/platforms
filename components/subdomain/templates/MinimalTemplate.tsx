@@ -57,7 +57,7 @@ export default function MinimalTemplate({
   };
 
   // Get today's hours
-  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'lowercase' });
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   const todayHours = businessHours?.[currentDay];
 
   return (
