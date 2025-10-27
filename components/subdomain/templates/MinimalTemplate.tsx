@@ -271,7 +271,7 @@ export default function MinimalTemplate({
                           <h4 className="font-semibold text-gray-900 text-lg group-hover:opacity-75 transition-opacity">
                             {service.name}
                           </h4>
-                          {service.homeVisit && (
+                          {service.homeVisitAvailable && (
                             <Home className="w-4 h-4" style={{ color: primaryColor }} />
                           )}
                         </div>
@@ -477,8 +477,8 @@ export default function MinimalTemplate({
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-opacity-20"
-              style={{ focusRingColor: primaryColor + '30' }}
+              className="flex-1 px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2"
+              style={{ focusRingColor: primaryColor + '30' } as any}
             />
             <Button 
               onClick={() => {
