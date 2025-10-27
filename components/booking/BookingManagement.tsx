@@ -805,37 +805,59 @@ export function BookingManagement({
                             {bookingsForDay.map(booking => (
                               <div
                                 key={booking.id}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200"
+                                className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+                                onClick={() => handleBookingClick(booking)}
                               >
-                                <div>
-                                  <div className="font-medium text-sm">{booking.customer?.name}</div>
-                                  <div className="text-xs text-gray-600 mt-1">
-                                    {booking.service?.name} • {booking.duration} min
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-baseline gap-2 mb-2">
+                                      <div className="font-semibold text-gray-900">{booking.customer?.name}</div>
+                                      <div className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                        {booking.bookingNumber || 'N/A'}
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Service</div>
+                                        <div className="text-gray-900 font-medium">{booking.service?.name}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Duration</div>
+                                        <div className="text-gray-900 font-medium">{booking.duration} min</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Time</div>
+                                        <div className="text-gray-900 font-medium">
+                                          {new Date(booking.scheduledAt).toLocaleTimeString([], { 
+                                            hour: '2-digit', 
+                                            minute: '2-digit' 
+                                          })}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Amount</div>
+                                        <div className="text-gray-900 font-medium">${booking.totalAmount.toFixed(2)}</div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {new Date(booking.scheduledAt).toLocaleTimeString([], { 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    })}
+                                  <div className="flex flex-col items-end gap-2 ml-4">
+                                    <Badge
+                                      className={`
+                                        ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
+                                        ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                        ${booking.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
+                                        ${booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                        ${booking.status === 'no_show' ? 'bg-orange-100 text-orange-800' : ''}
+                                      `}
+                                    >
+                                      {booking.status}
+                                    </Badge>
+                                    {booking.paymentStatus && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {booking.paymentStatus}
+                                      </Badge>
+                                    )}
                                   </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <span className={`
-                                    px-2 py-1 text-xs rounded-full font-medium
-                                    ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
-                                    ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                    ${booking.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
-                                    ${booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                                  `}>
-                                    {booking.status}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleBookingClick(booking)}
-                                  >
-                                    View
-                                  </Button>
                                 </div>
                               </div>
                             ))}
@@ -860,37 +882,63 @@ export function BookingManagement({
                             {bookingsForWeek.map(booking => (
                               <div
                                 key={booking.id}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200"
+                                className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+                                onClick={() => handleBookingClick(booking)}
                               >
-                                <div>
-                                  <div className="font-medium text-sm">{booking.customer?.name}</div>
-                                  <div className="text-xs text-gray-600 mt-1">
-                                    {booking.service?.name} • {booking.duration} min
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-baseline gap-2 mb-2">
+                                      <div className="font-semibold text-gray-900">{booking.customer?.name}</div>
+                                      <div className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                        {booking.bookingNumber || 'N/A'}
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 text-sm">
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Date</div>
+                                        <div className="text-gray-900 font-medium">{new Date(booking.scheduledAt).toLocaleDateString()}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Service</div>
+                                        <div className="text-gray-900 font-medium">{booking.service?.name}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Time</div>
+                                        <div className="text-gray-900 font-medium">
+                                          {new Date(booking.scheduledAt).toLocaleTimeString([], { 
+                                            hour: '2-digit', 
+                                            minute: '2-digit' 
+                                          })}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Duration</div>
+                                        <div className="text-gray-900 font-medium">{booking.duration} min</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-gray-500 text-xs">Amount</div>
+                                        <div className="text-gray-900 font-medium">${booking.totalAmount.toFixed(2)}</div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {new Date(booking.scheduledAt).toLocaleDateString()} {new Date(booking.scheduledAt).toLocaleTimeString([], { 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    })}
+                                  <div className="flex flex-col items-end gap-2 ml-4">
+                                    <Badge
+                                      className={`
+                                        ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
+                                        ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                        ${booking.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
+                                        ${booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                        ${booking.status === 'no_show' ? 'bg-orange-100 text-orange-800' : ''}
+                                      `}
+                                    >
+                                      {booking.status}
+                                    </Badge>
+                                    {booking.paymentStatus && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {booking.paymentStatus}
+                                      </Badge>
+                                    )}
                                   </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <span className={`
-                                    px-2 py-1 text-xs rounded-full font-medium
-                                    ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
-                                    ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                    ${booking.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
-                                    ${booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                                  `}>
-                                    {booking.status}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleBookingClick(booking)}
-                                  >
-                                    View
-                                  </Button>
                                 </div>
                               </div>
                             ))}

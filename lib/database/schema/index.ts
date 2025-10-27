@@ -76,6 +76,7 @@ export const customers = pgTable('customers', {
 // Booking table
 export const bookings = pgTable('bookings', {
   id: uuid('id').defaultRandom().primaryKey(),
+  bookingNumber: text('booking_number').notNull().unique(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
   serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),

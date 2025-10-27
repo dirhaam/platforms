@@ -17,6 +17,7 @@ export enum PaymentStatus {
 // Booking interface
 export interface Booking {
   id: string;
+  bookingNumber: string;
   tenantId: string;
   customerId: string;
   serviceId: string;
