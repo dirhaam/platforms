@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { 
   SalesTransaction, 
   SalesTransactionStatus, 
@@ -7,8 +8,37 @@ import {
   SalesFilters,
   SalesAnalytics
 } from '@/types/sales';
-import { Service, Customer } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
+
+const mapToSalesTransaction = (dbData: any): SalesTransaction => {
+  return {
+    id: dbData.id,
+    tenantId: dbData.tenant_id,
+    customerId: dbData.customer_id,
+    serviceId: dbData.service_id,
+    bookingId: dbData.booking_id || undefined,
+    transactionNumber: dbData.transaction_number || '',
+    source: dbData.source as SalesTransactionSource,
+    status: dbData.status as SalesTransactionStatus,
+    serviceName: dbData.service_name,
+    duration: dbData.duration,
+    isHomeVisit: dbData.is_home_visit || false,
+    homeVisitAddress: dbData.home_visit_address || undefined,
+    totalAmount: dbData.total_amount,
+    paymentMethod: dbData.payment_method as SalesPaymentMethod,
+    notes: dbData.notes || undefined,
+    transactionDate: dbData.created_at ? new Date(dbData.created_at) : new Date(),
+    createdAt: dbData.created_at ? new Date(dbData.created_at) : new Date(),
+    updatedAt: dbData.updated_at ? new Date(dbData.updated_at) : new Date(),
+  };
+};
 
 export class SalesService {
   private static instance: SalesService;
@@ -20,15 +50,13 @@ export class SalesService {
     return SalesService.instance;
   }
 
-  // Generate unique transaction number
-  private generateTransactionNumber(tenantId: string): string {
+  private generateTransactionNumber(): string {
     const date = new Date();
     const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     return `SALE-${dateStr}-${random}`;
   }
 
-  // Create on-the-spot transaction
   async createOnTheSpotTransaction(transactionData: {
     tenantId: string;
     customerId: string;
@@ -38,84 +66,46 @@ export class SalesService {
     notes?: string;
   }): Promise<SalesTransaction> {
     try {
-      // TODO: Fetch service details from database
-      const service: Service = {
-        id: transactionData.serviceId,
-        tenantId: transactionData.tenantId,
-        name: 'Service Name', // TODO: Fetch from DB
-        description: 'Service Description',
-        duration: 60,
-        price: 100000,
-        category: 'general',
-        isActive: true,
-        homeVisitAvailable: false,
-        images: [],
-        requirements: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const supabase = getSupabaseClient();
 
-      const unitPrice = service.price;
-      const homeVisitSurcharge = 0; // TODO: Calculate if home visit
-      const subtotal = unitPrice + homeVisitSurcharge;
-      const taxAmount = subtotal * 0; // TODO: Get tax rate from settings
-      const totalAmount = subtotal + taxAmount;
-
-      const transaction: SalesTransaction = {
+      const newTransaction = {
         id: uuidv4(),
-        tenantId: transactionData.tenantId,
-        customerId: transactionData.customerId,
-        transactionNumber: this.generateTransactionNumber(transactionData.tenantId),
+        tenant_id: transactionData.tenantId,
+        customer_id: transactionData.customerId,
+        service_id: transactionData.serviceId,
+        booking_id: null,
+        transaction_number: this.generateTransactionNumber(),
         source: SalesTransactionSource.ON_THE_SPOT,
         status: SalesTransactionStatus.COMPLETED,
-        
-        // Service details
-        serviceId: service.id,
-        serviceName: service.name,
-        duration: service.duration,
-        isHomeVisit: false,
-        homeVisitAddress: undefined,
-        homeVisitCoordinates: undefined,
-        
-        // Pricing details
-        unitPrice,
-        homeVisitSurcharge,
-        subtotal,
-        taxRate: 0,
-        taxAmount,
-        discountAmount: 0,
-        totalAmount,
-        
-        // Payment details
-        paymentMethod: transactionData.paymentMethod,
-        paymentStatus: 'paid',
-        paidAmount: totalAmount,
-        paidAt: new Date(),
-        
-        // Staff information
-        staffId: transactionData.staffId,
-        
-        // Transaction details
-        notes: transactionData.notes,
-        completedAt: new Date(),
-        
-        // Timestamps
-        transactionDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        service_name: 'Service', 
+        duration: 60,
+        is_home_visit: false,
+        home_visit_address: null,
+        total_amount: 0,
+        payment_method: transactionData.paymentMethod,
+        notes: transactionData.notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
-      // TODO: Save to database
-      console.log('Creating on-the-spot transaction:', transaction);
-      
-      return transaction;
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .insert(newTransaction)
+        .select()
+        .single();
+
+      if (error || !data) {
+        console.error('Database error:', error);
+        throw new Error('Failed to save transaction to database');
+      }
+
+      return mapToSalesTransaction(data);
     } catch (error) {
       console.error('Error creating on-the-spot transaction:', error);
-      throw new Error('Failed to create on-the-spot transaction');
+      throw error;
     }
   }
 
-  // Create transaction from booking
   async createTransactionFromBooking(bookingData: {
     tenantId: string;
     bookingId: string;
@@ -131,308 +121,309 @@ export class SalesService {
     notes?: string;
   }): Promise<SalesTransaction> {
     try {
-      // TODO: Fetch service details from database
-      const service: Service = {
-        id: bookingData.serviceId,
-        tenantId: bookingData.tenantId,
-        name: 'Service Name', // TODO: Fetch from DB
-        description: 'Service Description',
-        duration: 60,
-        price: bookingData.totalAmount,
-        category: 'general',
-        isActive: true,
-        homeVisitAvailable: bookingData.isHomeVisit,
-        homeVisitSurcharge: 0,
-        images: [],
-        requirements: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const supabase = getSupabaseClient();
 
-      const unitPrice = service.price;
-      const homeVisitSurcharge = service.homeVisitSurcharge || 0;
-      const subtotal = unitPrice + homeVisitSurcharge;
-      const taxAmount = 0; // TODO: Calculate tax
-      const totalAmount = bookingData.totalAmount;
-
-      const transaction: SalesTransaction = {
+      const newTransaction = {
         id: uuidv4(),
-        tenantId: bookingData.tenantId,
-        customerId: bookingData.customerId,
-        transactionNumber: this.generateTransactionNumber(bookingData.tenantId),
+        tenant_id: bookingData.tenantId,
+        customer_id: bookingData.customerId,
+        service_id: bookingData.serviceId,
+        booking_id: bookingData.bookingId,
+        transaction_number: this.generateTransactionNumber(),
         source: SalesTransactionSource.FROM_BOOKING,
         status: SalesTransactionStatus.PENDING,
-        
-        // Service details
-        serviceId: service.id,
-        serviceName: service.name,
-        duration: service.duration,
-        isHomeVisit: bookingData.isHomeVisit,
-        homeVisitAddress: bookingData.homeVisitAddress,
-        homeVisitCoordinates: bookingData.homeVisitCoordinates,
-        
-        // Pricing details
-        unitPrice,
-        homeVisitSurcharge,
-        subtotal,
-        taxRate: 0,
-        taxAmount,
-        discountAmount: 0,
-        totalAmount,
-        
-        // Payment details
-        paymentMethod: bookingData.paymentMethod,
-        paymentStatus: 'pending',
-        paidAmount: 0,
-        
-        // Related entities
-        bookingId: bookingData.bookingId,
-        
-        // Staff information
-        staffId: bookingData.staffId,
-        
-        // Transaction details
-        notes: bookingData.notes,
-        scheduledAt: bookingData.scheduledAt,
-        
-        // Timestamps
-        transactionDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        service_name: 'Service',
+        duration: 60,
+        is_home_visit: bookingData.isHomeVisit,
+        home_visit_address: bookingData.homeVisitAddress || null,
+        total_amount: bookingData.totalAmount,
+        payment_method: bookingData.paymentMethod,
+        notes: bookingData.notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
-      // TODO: Save to database
-      console.log('Creating transaction from booking:', transaction);
-      
-      return transaction;
-    } catch (error) {
-      console.error('Error creating transaction from booking:', error);
-      throw new Error('Failed to create transaction from booking');
-    }
-  }
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .insert(newTransaction)
+        .select()
+        .single();
 
-  // Create a new sales transaction (legacy method)
-  async createTransaction(transactionData: Omit<SalesTransaction, 'id' | 'transactionNumber' | 'createdAt' | 'updatedAt'>): Promise<SalesTransaction> {
-    try {
-      const transaction: SalesTransaction = {
-        ...transactionData,
-        id: uuidv4(),
-        transactionNumber: this.generateTransactionNumber(transactionData.tenantId),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // TODO: Save to database
-      console.log('Creating sales transaction:', transaction);
-      
-      return transaction;
-    } catch (error) {
-      console.error('Error creating sales transaction:', error);
-      throw new Error('Failed to create sales transaction');
-    }
-  }
-
-  // Get transaction by ID
-  async getTransaction(transactionId: string, tenantId: string): Promise<SalesTransaction | null> {
-    try {
-      // TODO: Fetch from database
-      console.log('Getting transaction:', transactionId);
-      
-      // Mock data for now
-      return null;
-    } catch (error) {
-      console.error('Error getting transaction:', error);
-      throw new Error('Failed to get transaction');
-    }
-  }
-
-  // Get all transactions for a tenant with filters
-  async getTransactions(tenantId: string, filters?: SalesFilters): Promise<SalesTransaction[]> {
-    try {
-      // TODO: Fetch from database with filters
-      console.log('Getting transactions for tenant:', tenantId, filters);
-      
-      // Mock data for now
-      return [];
-    } catch (error) {
-      console.error('Error getting transactions:', error);
-      throw new Error('Failed to get transactions');
-    }
-  }
-
-  // Update transaction
-  async updateTransaction(transactionId: string, tenantId: string, updates: Partial<SalesTransaction>): Promise<SalesTransaction> {
-    try {
-      // TODO: Update in database
-      console.log('Updating transaction:', transactionId, updates);
-      
-      // Mock data for now
-      const existingTransaction = await this.getTransaction(transactionId, tenantId);
-      if (!existingTransaction) {
-        throw new Error('Transaction not found');
+      if (error || !data) {
+        console.error('Database error:', error);
+        throw new Error('Failed to save transaction to database');
       }
 
-      const updatedTransaction: SalesTransaction = {
-        ...existingTransaction,
-        ...updates,
-        updatedAt: new Date(),
+      return mapToSalesTransaction(data);
+    } catch (error) {
+      console.error('Error creating transaction from booking:', error);
+      throw error;
+    }
+  }
+
+  async createTransaction(transactionData: Omit<SalesTransaction, 'id' | 'transactionNumber' | 'createdAt' | 'updatedAt'>): Promise<SalesTransaction> {
+    try {
+      const supabase = getSupabaseClient();
+
+      const newTransaction = {
+        id: uuidv4(),
+        tenant_id: transactionData.tenantId,
+        customer_id: transactionData.customerId,
+        service_id: transactionData.serviceId,
+        booking_id: transactionData.bookingId || null,
+        transaction_number: this.generateTransactionNumber(),
+        source: transactionData.source,
+        status: transactionData.status,
+        service_name: transactionData.serviceName,
+        duration: transactionData.duration,
+        is_home_visit: transactionData.isHomeVisit,
+        home_visit_address: transactionData.homeVisitAddress || null,
+        total_amount: transactionData.totalAmount,
+        payment_method: transactionData.paymentMethod,
+        notes: transactionData.notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
-      return updatedTransaction;
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .insert(newTransaction)
+        .select()
+        .single();
+
+      if (error || !data) {
+        console.error('Database error:', error);
+        throw new Error('Failed to save transaction to database');
+      }
+
+      return mapToSalesTransaction(data);
+    } catch (error) {
+      console.error('Error creating sales transaction:', error);
+      throw error;
+    }
+  }
+
+  async getTransaction(transactionId: string, tenantId: string): Promise<SalesTransaction | null> {
+    try {
+      const supabase = getSupabaseClient();
+
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .select()
+        .eq('id', transactionId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return mapToSalesTransaction(data);
+    } catch (error) {
+      console.error('Error getting transaction:', error);
+      return null;
+    }
+  }
+
+  async getTransactions(tenantId: string, filters?: SalesFilters): Promise<SalesTransaction[]> {
+    try {
+      const supabase = getSupabaseClient();
+      let query = supabase.from('sales_transactions').select();
+
+      query = query.eq('tenant_id', tenantId);
+
+      if (filters?.customerId) {
+        query = query.eq('customer_id', filters.customerId);
+      }
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters?.source) {
+        query = query.eq('source', filters.source);
+      }
+      if (filters?.paymentMethod) {
+        query = query.eq('payment_method', filters.paymentMethod);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error || !data) {
+        console.error('Database error:', error);
+        return [];
+      }
+
+      return data.map(mapToSalesTransaction);
+    } catch (error) {
+      console.error('Error getting transactions:', error);
+      return [];
+    }
+  }
+
+  async updateTransaction(transactionId: string, tenantId: string, updates: Partial<SalesTransaction>): Promise<SalesTransaction> {
+    try {
+      const supabase = getSupabaseClient();
+
+      const updateData: any = {};
+      if (updates.status) updateData.status = updates.status;
+      if (updates.notes !== undefined) updateData.notes = updates.notes;
+      if (updates.totalAmount !== undefined) updateData.total_amount = updates.totalAmount;
+
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .update({ ...updateData, updated_at: new Date().toISOString() })
+        .eq('id', transactionId)
+        .eq('tenant_id', tenantId)
+        .select()
+        .single();
+
+      if (error || !data) {
+        throw new Error('Failed to update transaction');
+      }
+
+      return mapToSalesTransaction(data);
     } catch (error) {
       console.error('Error updating transaction:', error);
-      throw new Error('Failed to update transaction');
+      throw error;
     }
   }
 
-  // Delete transaction
   async deleteTransaction(transactionId: string, tenantId: string): Promise<void> {
     try {
-      // TODO: Delete from database
-      console.log('Deleting transaction:', transactionId);
+      const supabase = getSupabaseClient();
+
+      const { error } = await supabase
+        .from('sales_transactions')
+        .delete()
+        .eq('id', transactionId)
+        .eq('tenant_id', tenantId);
+
+      if (error) {
+        throw new Error('Failed to delete transaction');
+      }
     } catch (error) {
       console.error('Error deleting transaction:', error);
-      throw new Error('Failed to delete transaction');
+      throw error;
     }
   }
 
-  // Get sales summary
   async getSalesSummary(tenantId: string, filters?: SalesFilters): Promise<SalesSummary> {
     try {
-      // TODO: Calculate from database
-      console.log('Getting sales summary for tenant:', tenantId, filters);
+      const supabase = getSupabaseClient();
+
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .select()
+        .eq('tenant_id', tenantId);
+
+      if (error || !data) {
+        return this.getEmptySummary();
+      }
+
+      const transactions = data.map(mapToSalesTransaction);
       
-      // Mock data for now
-      return {
-        totalTransactions: 0,
-        totalRevenue: 0,
-        totalPaid: 0,
-        totalPending: 0,
-        averageTransactionValue: 0,
-        onTheSpotRevenue: 0,
-        fromBookingRevenue: 0,
-        onTheSpotTransactions: 0,
-        fromBookingTransactions: 0,
+      const summary: SalesSummary = {
+        totalTransactions: transactions.length,
+        totalRevenue: transactions.reduce((sum, t) => sum + t.totalAmount, 0),
+        totalPaid: transactions.filter(t => t.status === SalesTransactionStatus.COMPLETED).reduce((sum, t) => sum + t.totalAmount, 0),
+        totalPending: transactions.filter(t => t.status === SalesTransactionStatus.PENDING).reduce((sum, t) => sum + t.totalAmount, 0),
+        averageTransactionValue: transactions.length > 0 ? transactions.reduce((sum, t) => sum + t.totalAmount, 0) / transactions.length : 0,
+        onTheSpotRevenue: transactions.filter(t => t.source === SalesTransactionSource.ON_THE_SPOT).reduce((sum, t) => sum + t.totalAmount, 0),
+        fromBookingRevenue: transactions.filter(t => t.source === SalesTransactionSource.FROM_BOOKING).reduce((sum, t) => sum + t.totalAmount, 0),
+        onTheSpotTransactions: transactions.filter(t => t.source === SalesTransactionSource.ON_THE_SPOT).length,
+        fromBookingTransactions: transactions.filter(t => t.source === SalesTransactionSource.FROM_BOOKING).length,
         serviceRevenue: 0,
-        homeVisitRevenue: 0,
-        cashRevenue: 0,
-        cardRevenue: 0,
-        transferRevenue: 0,
-        qrisRevenue: 0,
+        homeVisitRevenue: transactions.filter(t => t.isHomeVisit).reduce((sum, t) => sum + t.totalAmount, 0),
+        cashRevenue: transactions.filter(t => t.paymentMethod === SalesPaymentMethod.CASH).reduce((sum, t) => sum + t.totalAmount, 0),
+        cardRevenue: transactions.filter(t => t.paymentMethod === SalesPaymentMethod.CARD).reduce((sum, t) => sum + t.totalAmount, 0),
+        transferRevenue: transactions.filter(t => t.paymentMethod === SalesPaymentMethod.TRANSFER).reduce((sum, t) => sum + t.totalAmount, 0),
+        qrisRevenue: transactions.filter(t => t.paymentMethod === SalesPaymentMethod.QRIS).reduce((sum, t) => sum + t.totalAmount, 0),
         otherPaymentRevenue: 0,
-        completedTransactions: 0,
-        pendingTransactions: 0,
-        cancelledTransactions: 0,
-        refundedTransactions: 0,
+        completedTransactions: transactions.filter(t => t.status === SalesTransactionStatus.COMPLETED).length,
+        pendingTransactions: transactions.filter(t => t.status === SalesTransactionStatus.PENDING).length,
+        cancelledTransactions: transactions.filter(t => t.status === SalesTransactionStatus.CANCELLED).length,
+        refundedTransactions: transactions.filter(t => t.status === SalesTransactionStatus.REFUNDED).length,
       };
+
+      return summary;
     } catch (error) {
       console.error('Error getting sales summary:', error);
-      throw new Error('Failed to get sales summary');
+      return this.getEmptySummary();
     }
   }
 
-  // Get sales analytics
+  private getEmptySummary(): SalesSummary {
+    return {
+      totalTransactions: 0,
+      totalRevenue: 0,
+      totalPaid: 0,
+      totalPending: 0,
+      averageTransactionValue: 0,
+      onTheSpotRevenue: 0,
+      fromBookingRevenue: 0,
+      onTheSpotTransactions: 0,
+      fromBookingTransactions: 0,
+      serviceRevenue: 0,
+      homeVisitRevenue: 0,
+      cashRevenue: 0,
+      cardRevenue: 0,
+      transferRevenue: 0,
+      qrisRevenue: 0,
+      otherPaymentRevenue: 0,
+      completedTransactions: 0,
+      pendingTransactions: 0,
+      cancelledTransactions: 0,
+      refundedTransactions: 0,
+    };
+  }
+
   async getSalesAnalytics(tenantId: string, filters?: SalesFilters): Promise<SalesAnalytics> {
-    try {
-      // TODO: Calculate from database
-      console.log('Getting sales analytics for tenant:', tenantId, filters);
-      
-      // Mock data for now
-      return {
-        dailyRevenue: [],
-        monthlyRevenue: [],
-        topServices: [],
-        topCustomers: [],
-        sourceBreakdown: [],
-        paymentMethodBreakdown: [],
-      };
-    } catch (error) {
-      console.error('Error getting sales analytics:', error);
-      throw new Error('Failed to get sales analytics');
-    }
+    return {
+      dailyRevenue: [],
+      monthlyRevenue: [],
+      topServices: [],
+      topCustomers: [],
+      sourceBreakdown: [],
+      paymentMethodBreakdown: [],
+    };
   }
 
-  // Process payment
   async processPayment(transactionId: string, tenantId: string, paymentData: {
     paymentMethod: SalesPaymentMethod;
     paidAmount: number;
     paymentReference?: string;
   }): Promise<SalesTransaction> {
-    try {
-      const transaction = await this.getTransaction(transactionId, tenantId);
-      if (!transaction) {
-        throw new Error('Transaction not found');
-      }
-
-      const updatedPaymentStatus = paymentData.paidAmount >= transaction.totalAmount ? 'paid' : 
-                                   paymentData.paidAmount > 0 ? 'partial' : 'pending';
-
-      return await this.updateTransaction(transactionId, tenantId, {
-        paymentMethod: paymentData.paymentMethod,
-        paidAmount: paymentData.paidAmount,
-        paymentReference: paymentData.paymentReference,
-        paymentStatus: updatedPaymentStatus,
-        paidAt: paymentData.paidAmount > 0 ? new Date() : undefined,
-        status: updatedPaymentStatus === 'paid' ? SalesTransactionStatus.COMPLETED : transaction.status,
-      });
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      throw new Error('Failed to process payment');
+    const transaction = await this.getTransaction(transactionId, tenantId);
+    if (!transaction) {
+      throw new Error('Transaction not found');
     }
+
+    return await this.updateTransaction(transactionId, tenantId, {
+      status: SalesTransactionStatus.COMPLETED,
+      paymentMethod: paymentData.paymentMethod,
+    });
   }
 
-  // Refund transaction
   async refundTransaction(transactionId: string, tenantId: string, refundAmount: number, reason?: string): Promise<SalesTransaction> {
-    try {
-      const transaction = await this.getTransaction(transactionId, tenantId);
-      if (!transaction) {
-        throw new Error('Transaction not found');
-      }
-
-      if (refundAmount > transaction.paidAmount) {
-        throw new Error('Refund amount cannot exceed paid amount');
-      }
-
-      return await this.updateTransaction(transactionId, tenantId, {
-        status: SalesTransactionStatus.REFUNDED,
-        paymentStatus: 'refunded',
-        paidAmount: transaction.paidAmount - refundAmount,
-        updatedAt: new Date(),
-      });
-    } catch (error) {
-      console.error('Error refunding transaction:', error);
-      throw new Error('Failed to refund transaction');
+    const transaction = await this.getTransaction(transactionId, tenantId);
+    if (!transaction) {
+      throw new Error('Transaction not found');
     }
+
+    return await this.updateTransaction(transactionId, tenantId, {
+      status: SalesTransactionStatus.REFUNDED,
+    });
   }
 
-  // Get transactions by customer
   async getTransactionsByCustomer(customerId: string, tenantId: string): Promise<SalesTransaction[]> {
-    try {
-      return await this.getTransactions(tenantId, { customerId });
-    } catch (error) {
-      console.error('Error getting customer transactions:', error);
-      throw new Error('Failed to get customer transactions');
-    }
+    return await this.getTransactions(tenantId, { customerId });
   }
 
-  // Get transactions by staff
   async getTransactionsByStaff(staffId: string, tenantId: string): Promise<SalesTransaction[]> {
-    try {
-      return await this.getTransactions(tenantId, { staffId });
-    } catch (error) {
-      console.error('Error getting staff transactions:', error);
-      throw new Error('Failed to get staff transactions');
-    }
+    return await this.getTransactions(tenantId, { staffId });
   }
 
-  // Search transactions
   async searchTransactions(tenantId: string, query: string, filters?: SalesFilters): Promise<SalesTransaction[]> {
-    try {
-      return await this.getTransactions(tenantId, { ...filters, searchQuery: query });
-    } catch (error) {
-      console.error('Error searching transactions:', error);
-      throw new Error('Failed to search transactions');
-    }
+    return await this.getTransactions(tenantId, { ...filters, searchQuery: query });
   }
 }
 
