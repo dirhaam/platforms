@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
-import { WhatsAppContent } from './content';
+import { WhatsAppUnifiedContent } from './unified-content';
 
 export default function WhatsAppPage() {
-  return <WhatsAppContent />;
+  return <WhatsAppUnifiedContent />;
 }

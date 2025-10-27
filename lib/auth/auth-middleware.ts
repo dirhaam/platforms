@@ -34,7 +34,7 @@ const PROTECTED_ROUTES: Record<string, RouteProtection> = {
     permissions: ['view_analytics'],
     roles: ['superadmin', 'owner', 'admin'],
   },
-  '/admin/messages': {
+  '/admin/whatsapp': {
     permissions: ['send_messages'],
     roles: ['superadmin', 'owner', 'admin', 'staff'],
   },

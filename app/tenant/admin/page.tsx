@@ -243,9 +243,9 @@ export default async function TenantAdminDashboard({
             <div className="space-y-3">
               <p className="text-sm text-gray-600">Stay connected with your customers</p>
               <Button asChild className="w-full justify-start">
-                <Link href={`/tenant/admin/messages?subdomain=${subdomain}`}>
+                <Link href={`/tenant/admin/whatsapp?subdomain=${subdomain}`}>
                   <MessageSquare className="w-4 h-4 mr-2" />
-                  View Messages
+                  View WhatsApp
                 </Link>
               </Button>
             </div>

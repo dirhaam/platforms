@@ -69,8 +69,8 @@ const navigation: NavigationItem[] = [
     roles: ['owner', 'admin'],
   },
   {
-    name: 'Messages',
-    href: '/admin/messages',
+    name: 'WhatsApp',
+    href: '/admin/whatsapp',
     icon: MessageSquare,
     permission: 'send_messages',
   },
