@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Customer, Booking, BookingStatus } from '@/types/booking';
+import { SalesTransaction } from '@/types/sales';
 
 interface CustomerDetailsDialogProps {
   open: boolean;
@@ -26,19 +27,23 @@ export function CustomerDetailsDialog({
   tenantId
 }: CustomerDetailsDialogProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [stats, setStats] = useState({
     totalSpent: 0,
     averageBookingValue: 0,
     completedBookings: 0,
     cancelledBookings: 0,
-    noShowBookings: 0
+    noShowBookings: 0,
+    totalTransactionAmount: 0
   });
 
-  // Fetch customer bookings when dialog opens
+  // Fetch customer bookings and transactions when dialog opens
   useEffect(() => {
     if (open && customer.id) {
       fetchCustomerBookings();
+      fetchCustomerTransactions();
     }
   }, [open, customer.id]);
 
@@ -61,6 +66,27 @@ export function CustomerDetailsDialog({
       console.error('Error fetching customer bookings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCustomerTransactions = async () => {
+    setLoadingTransactions(true);
+    try {
+      const response = await fetch(`/api/sales/transactions?customerId=${customer.id}&tenantId=${tenantId}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        const customerTransactions = data.transactions || [];
+        setTransactions(customerTransactions);
+        
+        // Calculate total transaction amount
+        const totalTransactionAmount = customerTransactions.reduce((sum: number, t: SalesTransaction) => sum + t.totalAmount, 0);
+        setStats(prev => ({ ...prev, totalTransactionAmount }));
+      }
+    } catch (error) {
+      console.error('Error fetching customer transactions:', error);
+    } finally {
+      setLoadingTransactions(false);
     }
   };
 
@@ -152,9 +178,10 @@ export function CustomerDetailsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="stats">Statistics</TabsTrigger>
           </TabsList>
 
@@ -331,6 +358,83 @@ export function CustomerDetailsDialog({
                               : 'text-red-600'
                           }`}>
                             {booking.paymentStatus}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="transactions" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <DollarSign className="h-5 w-5" />
+                  <span>Sales Transactions</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingTransactions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No transactions found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {transactions.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-medium">{transaction.serviceName}</span>
+                            <Badge className={
+                              transaction.status === 'completed' 
+                                ? 'bg-green-100 text-green-800'
+                                : transaction.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }>
+                              {transaction.status}
+                            </Badge>
+                            {transaction.isHomeVisit && (
+                              <Badge variant="outline" className="text-xs">
+                                Home Visit
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {formatDate(transaction.transactionDate)} at {formatTime(transaction.transactionDate)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Ref: {transaction.transactionNumber}
+                          </div>
+                          {transaction.notes && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              Note: {transaction.notes}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">
+                            {formatCurrency(transaction.totalAmount)}
+                          </div>
+                          <div className={`text-xs ${
+                            transaction.paymentStatus === 'paid' 
+                              ? 'text-green-600' 
+                              : transaction.paymentStatus === 'pending'
+                              ? 'text-yellow-600'
+                              : 'text-red-600'
+                          }`}>
+                            {transaction.paymentMethod}
                           </div>
                         </div>
                       </div>
