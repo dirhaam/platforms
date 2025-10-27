@@ -131,28 +131,27 @@ export class WhatsAppClient implements WhatsAppApiClient {
     }
   }
 
-  async getConversations(tenantId: string): Promise<WhatsAppConversation[]> {
+  async getConversations(limit = 25, offset = 0): Promise<any[]> {
     try {
-      const response = await this.makeRequest(`/api/conversations?tenantId=${tenantId}`);
+      // Call actual WhatsApp API endpoint: GET /chats
+      const response = await this.makeRequest(`/chats?limit=${limit}&offset=${offset}`);
       
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to get conversations');
+      if (response.code !== 'SUCCESS' && !response.data) {
+        throw new Error(response.message || 'Failed to get conversations');
       }
 
-      return response.data.conversations.map((conv: any) => ({
-        id: conv.id,
-        tenantId: conv.tenantId,
-        customerPhone: conv.customerPhone,
-        customerName: conv.customerName,
-        lastMessageAt: new Date(conv.lastMessageAt),
-        lastMessagePreview: conv.lastMessagePreview,
-        unreadCount: conv.unreadCount,
-        assignedTo: conv.assignedTo,
-        status: conv.status,
-        tags: conv.tags || [],
-        metadata: conv.metadata,
-        createdAt: new Date(conv.createdAt),
-        updatedAt: new Date(conv.updatedAt)
+      const chats = Array.isArray(response.data) ? response.data : [];
+      
+      return chats.map((chat: any) => ({
+        id: chat.id || chat.chat_id,
+        chatJid: chat.chat_jid || chat.id,
+        name: chat.name,
+        unreadCount: chat.unread_count || 0,
+        isGroup: chat.is_group || false,
+        isBroadcast: chat.is_broadcast || false,
+        timestamp: chat.timestamp,
+        lastMessage: chat.last_message,
+        isPin: chat.is_pin || false
       }));
     } catch (error) {
       console.error('Error getting conversations:', error);
@@ -160,31 +159,34 @@ export class WhatsAppClient implements WhatsAppApiClient {
     }
   }
 
-  async getMessages(conversationId: string, limit = 50): Promise<WhatsAppMessage[]> {
+  async getMessages(chatJid: string, limit = 50, offset = 0): Promise<WhatsAppMessage[]> {
     try {
-      const response = await this.makeRequest(`/api/conversations/${conversationId}/messages?limit=${limit}`);
+      // Call actual WhatsApp API endpoint: GET /chat/{chat_jid}/messages
+      const response = await this.makeRequest(`/chat/${encodeURIComponent(chatJid)}/messages?limit=${limit}&offset=${offset}`);
       
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to get messages');
+      if (response.code !== 'SUCCESS' && !response.data) {
+        throw new Error(response.message || 'Failed to get messages');
       }
 
-      return response.data.messages.map((msg: any) => ({
-        id: msg.id,
-        tenantId: msg.tenantId,
-        deviceId: msg.deviceId,
-        conversationId: msg.conversationId,
-        type: msg.type,
-        content: msg.content,
-        mediaUrl: msg.mediaUrl,
-        mediaCaption: msg.mediaCaption,
-        isFromCustomer: msg.isFromCustomer,
-        customerPhone: msg.customerPhone,
-        deliveryStatus: msg.deliveryStatus,
-        errorMessage: msg.errorMessage,
-        metadata: msg.metadata,
-        sentAt: new Date(msg.sentAt),
-        deliveredAt: msg.deliveredAt ? new Date(msg.deliveredAt) : undefined,
-        readAt: msg.readAt ? new Date(msg.readAt) : undefined
+      const messages = Array.isArray(response.data) ? response.data : [];
+
+      return messages.map((msg: any) => ({
+        id: msg.id || msg.message_id,
+        tenantId: this.tenantId,
+        deviceId: '',
+        conversationId: chatJid,
+        type: msg.type || 'text',
+        content: msg.content || msg.body,
+        mediaUrl: msg.media_url || msg.mediaUrl,
+        mediaCaption: msg.media_caption || msg.mediaCaption,
+        isFromCustomer: !msg.from_me,
+        customerPhone: msg.from || '',
+        deliveryStatus: msg.delivery_status || 'sent',
+        errorMessage: msg.error_message,
+        metadata: msg.metadata || {},
+        sentAt: msg.timestamp ? new Date(msg.timestamp * 1000) : new Date(),
+        deliveredAt: msg.delivered_at ? new Date(msg.delivered_at * 1000) : undefined,
+        readAt: msg.read_at ? new Date(msg.read_at * 1000) : undefined
       }));
     } catch (error) {
       console.error('Error getting messages:', error);

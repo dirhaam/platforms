@@ -161,10 +161,22 @@ For complete schema documentation, see `docs/PLATFORM_DOCUMENTATION.md`.
 
 ## 📚 Documentation
 
-- **[Platform Documentation](./docs/PLATFORM_DOCUMENTATION.md)** - Complete platform overview
+### Main Documentation
+- **[Platform Documentation](./docs/platform/PLATFORM_DOCUMENTATION.md)** - Complete platform overview
 - **[API Reference](./docs/API_REFERENCE.md)** - Comprehensive API documentation
 - **[Database Schema](./docs/DATABASE_SCHEMA.md)** - Database structure and relationships
 - **[Security Guide](./docs/SECURITY.md)** - Security best practices
+
+### Organized Documentation Index
+For a complete overview of all documentation files, see the [Documentation Index](./DOCUMENTATION_INDEX.md).
+
+#### By Category:
+- **[Platform & Architecture](./docs/platform/)** - Core platform features, architecture, and system documentation
+- **[Setup & Deployment](./docs/setup/)** - Installation, configuration, and deployment guides
+- **[Authentication](./docs/auth/)** - Login, security, RBAC, and access control documentation
+- **[Booking System](./docs/booking/)** - Booking workflows and management
+- **[WhatsApp Integration](./docs/whatsapp/)** - WhatsApp features and integration
+- **[Development](./docs/development/)** - Testing, debugging, and development guides
 
 ## 🔧 Development
 

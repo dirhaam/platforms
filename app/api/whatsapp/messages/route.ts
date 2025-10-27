@@ -32,16 +32,44 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const conversations = await whatsappService.getConversations(tenantId);
+    // First try to get from local database (cached conversations)
+    let conversations = await whatsappService.getConversations(tenantId);
 
-    const response: ConversationResponse[] = conversations.map((conversation) => ({
+    // If no conversations in database, fetch from WhatsApp API
+    if (conversations.length === 0) {
+      try {
+        const client = await whatsappService.getWhatsAppClient(tenantId);
+        if (client) {
+          const chats = await client.getConversations(25, 0);
+          // Convert chats to conversation format and cache them
+          conversations = chats.map((chat: any) => ({
+            id: chat.chatJid || chat.id,
+            customerPhone: chat.chatJid?.replace('@s.whatsapp.net', '') || '',
+            customerName: chat.name || 'Unknown',
+            lastMessagePreview: chat.lastMessage || '',
+            lastMessageAt: chat.timestamp ? new Date(chat.timestamp * 1000) : new Date(),
+            unreadCount: chat.unreadCount || 0,
+            status: 'active',
+            metadata: {
+              chatJid: chat.chatJid,
+              isGroup: chat.isGroup,
+            },
+          }));
+        }
+      } catch (apiError) {
+        console.error('Error fetching from WhatsApp API:', apiError);
+        // Continue with whatever is in database
+      }
+    }
+
+    const response: ConversationResponse[] = conversations.map((conversation: any) => ({
       id: conversation.id,
       customerPhone: conversation.customerPhone,
       customerName: conversation.customerName,
       lastMessagePreview: conversation.lastMessagePreview,
-      lastMessageAt: conversation.lastMessageAt.toISOString(),
-      unreadCount: conversation.unreadCount,
-      status: conversation.status,
+      lastMessageAt: conversation.lastMessageAt?.toISOString?.() || new Date().toISOString(),
+      unreadCount: conversation.unreadCount || 0,
+      status: conversation.status || 'active',
       metadata: conversation.metadata,
     }));
 

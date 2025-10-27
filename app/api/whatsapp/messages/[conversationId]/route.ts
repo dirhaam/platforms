@@ -5,48 +5,66 @@ import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ conversationId: string }> }
+  { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
-    const { conversationId } = await context.params;
-    if (!conversationId) {
-      return NextResponse.json({ error: 'Missing conversationId' }, { status: 400 });
-    }
-
+    const { conversationId } = await params;
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
+    const limit = parseInt(searchParams.get('limit') || '200', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const loadHistory = searchParams.get('loadHistory') === 'true';
+
     if (!tenantId) {
-      return NextResponse.json({ error: 'Missing tenantId parameter' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing tenantId parameter' },
+        { status: 400 }
+      );
     }
 
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
-    const loadHistoryParam = searchParams.get('loadHistory');
-    
-    const limit = limitParam ? Number.parseInt(limitParam, 10) : 100;
-    const offset = offsetParam ? Number.parseInt(offsetParam, 10) : 0;
-    const loadHistory = loadHistoryParam === 'true';
+    if (!conversationId) {
+      return NextResponse.json(
+        { error: 'Conversation ID is required' },
+        { status: 400 }
+      );
+    }
 
-    const messages = await whatsappService.getMessages(conversationId, limit, offset);
+    let messages: any[] = [];
 
-    // If loadHistory is true, also try to load historical messages from webhook data
-    let historicalMessages: any[] = [];
+    // Try to fetch from WhatsApp API if loadHistory is requested
     if (loadHistory) {
       try {
-        historicalMessages = await whatsappService.getHistoricalMessages(tenantId, conversationId, limit, offset);
-      } catch (historyError) {
-        console.warn('Failed to load historical messages:', historyError);
-        // Continue with current messages even if historical loading fails
+        const client = await whatsappService.getWhatsAppClient(tenantId);
+        if (client) {
+          // conversationId should be chatJid (e.g., phone@s.whatsapp.net)
+          const apiMessages = await client.getMessages(conversationId, limit, offset);
+          messages = apiMessages.map((msg: any) => ({
+            id: msg.id,
+            type: msg.type,
+            content: msg.content,
+            mediaUrl: msg.mediaUrl,
+            mediaCaption: msg.mediaCaption,
+            isFromCustomer: msg.isFromCustomer,
+            customerPhone: msg.customerPhone,
+            deliveryStatus: msg.deliveryStatus,
+            sentAt: msg.sentAt,
+            deliveredAt: msg.deliveredAt,
+            readAt: msg.readAt,
+          }));
+        }
+      } catch (apiError) {
+        console.error('Error fetching messages from WhatsApp API:', apiError);
+        // Continue with database fetch
       }
     }
 
-    await whatsappService.markConversationRead(tenantId, conversationId);
+    // If no messages from API, try database
+    if (messages.length === 0) {
+      messages = await whatsappService.getMessages(conversationId, limit, offset);
+    }
 
-    const responseMessages = messages.map((message) => ({
+    const response = messages.map((message) => ({
       id: message.id,
-      conversationId: message.conversationId,
-      tenantId: message.tenantId,
-      deviceId: message.deviceId,
       type: message.type,
       content: message.content,
       mediaUrl: message.mediaUrl,
@@ -54,22 +72,12 @@ export async function GET(
       isFromCustomer: message.isFromCustomer,
       customerPhone: message.customerPhone,
       deliveryStatus: message.deliveryStatus,
-      sentAt: message.sentAt.toISOString(),
-      deliveredAt: message.deliveredAt ? message.deliveredAt.toISOString() : null,
-      readAt: message.readAt ? message.readAt.toISOString() : null,
-      metadata: message.metadata || {},
-      source: 'current'
+      sentAt: message.sentAt?.toISOString?.() || new Date().toISOString(),
+      deliveredAt: message.deliveredAt?.toISOString?.() || null,
+      readAt: message.readAt?.toISOString?.() || null,
     }));
 
-    // Combine current and historical messages
-    const allMessages = [...responseMessages, ...historicalMessages.map(msg => ({ ...msg, source: 'historical' }))]
-      .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
-
-    return NextResponse.json({ 
-      messages: allMessages,
-      hasHistoricalData: historicalMessages.length > 0,
-      totalMessages: allMessages.length
-    });
+    return NextResponse.json({ messages: response });
   } catch (error) {
     console.error('Error fetching WhatsApp messages:', error);
     return NextResponse.json(
