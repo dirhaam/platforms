@@ -44,16 +44,21 @@ export async function GET(request: NextRequest) {
           // Convert chats to conversation format and cache them
           conversations = chats.map((chat: any) => ({
             id: chat.chatJid || chat.id,
+            tenantId,
             customerPhone: chat.chatJid?.replace('@s.whatsapp.net', '') || '',
             customerName: chat.name || 'Unknown',
             lastMessagePreview: chat.lastMessage || '',
             lastMessageAt: chat.timestamp ? new Date(chat.timestamp * 1000) : new Date(),
             unreadCount: chat.unreadCount || 0,
-            status: 'active',
+            assignedTo: undefined,
+            status: 'active' as const,
+            tags: [],
             metadata: {
               chatJid: chat.chatJid,
               isGroup: chat.isGroup,
             },
+            createdAt: new Date(),
+            updatedAt: new Date(),
           }));
         }
       } catch (apiError) {
