@@ -62,19 +62,27 @@ import {
 import {
   SalesTransaction,
   SalesTransactionStatus,
-  SalesTransactionType,
+  SalesTransactionSource,
   SalesPaymentMethod,
   SalesSummary,
+  SalesFilters,
 } from '@/types/sales';
 
-interface NewTransactionData {
+interface NewOnTheSpotTransactionData {
   customerId: string;
-  type: SalesTransactionType;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  taxRate: number;
-  discountAmount: number;
+  serviceId: string;
+  paymentMethod: SalesPaymentMethod;
+  notes?: string;
+}
+
+interface NewTransactionFromBookingData {
+  bookingId: string;
+  customerId: string;
+  serviceId: string;
+  scheduledAt: string;
+  isHomeVisit: boolean;
+  homeVisitAddress?: string;
+  totalAmount: number;
   paymentMethod: SalesPaymentMethod;
   notes?: string;
 }
@@ -97,16 +105,24 @@ export function SalesContent() {
   const [showNewTransactionDialog, setShowNewTransactionDialog] = useState(false);
   const [showTransactionDetailsDialog, setShowTransactionDetailsDialog] = useState(false);
   const [showFiltersDialog, setShowFiltersDialog] = useState(false);
+  const [filters, setFilters] = useState<SalesFilters>({});
+  const [transactionType, setTransactionType] = useState<'on_the_spot' | 'from_booking'>('on_the_spot');
 
   // Form states
-  const [newTransaction, setNewTransaction] = useState<NewTransactionData>({
+  const [newOnTheSpotTransaction, setNewOnTheSpotTransaction] = useState<NewOnTheSpotTransactionData>({
     customerId: '',
-    type: SalesTransactionType.SERVICE,
-    description: '',
-    quantity: 1,
-    unitPrice: 0,
-    taxRate: 0,
-    discountAmount: 0,
+    serviceId: '',
+    paymentMethod: SalesPaymentMethod.CASH,
+    notes: '',
+  });
+
+  const [newTransactionFromBooking, setNewTransactionFromBooking] = useState<NewTransactionFromBookingData>({
+    bookingId: '',
+    customerId: '',
+    serviceId: '',
+    scheduledAt: '',
+    isHomeVisit: false,
+    totalAmount: 0,
     paymentMethod: SalesPaymentMethod.CASH,
     notes: '',
   });
@@ -188,16 +204,29 @@ export function SalesContent() {
 
     try {
       setError(null);
+      
+      let requestBody;
+      
+      if (transactionType === 'on_the_spot') {
+        requestBody = {
+          type: 'on_the_spot',
+          ...newOnTheSpotTransaction,
+          tenantId,
+        };
+      } else {
+        requestBody = {
+          type: 'from_booking',
+          ...newTransactionFromBooking,
+          tenantId,
+        };
+      }
+
       const response = await fetch('/api/sales/transactions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...newTransaction,
-          tenantId,
-          transactionDate: new Date().toISOString(),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -208,17 +237,28 @@ export function SalesContent() {
       const data = await response.json();
       setTransactions([data.transaction, ...transactions]);
       setShowNewTransactionDialog(false);
-      setNewTransaction({
-        customerId: '',
-        type: SalesTransactionType.SERVICE,
-        description: '',
-        quantity: 1,
-        unitPrice: 0,
-        taxRate: 0,
-        discountAmount: 0,
-        paymentMethod: SalesPaymentMethod.CASH,
-        notes: '',
-      });
+      
+      // Reset form based on type
+      if (transactionType === 'on_the_spot') {
+        setNewOnTheSpotTransaction({
+          customerId: '',
+          serviceId: '',
+          paymentMethod: SalesPaymentMethod.CASH,
+          notes: '',
+        });
+      } else {
+        setNewTransactionFromBooking({
+          bookingId: '',
+          customerId: '',
+          serviceId: '',
+          scheduledAt: '',
+          isHomeVisit: false,
+          totalAmount: 0,
+          paymentMethod: SalesPaymentMethod.CASH,
+          notes: '',
+        });
+      }
+      
       await fetchSummary();
     } catch (error) {
       console.error('Error creating transaction:', error);
@@ -266,27 +306,44 @@ export function SalesContent() {
     );
   };
 
+  // Get source badge
+  const getSourceBadge = (source: SalesTransactionSource) => {
+    const variants = {
+      [SalesTransactionSource.ON_THE_SPOT]: 'bg-blue-100 text-blue-800',
+      [SalesTransactionSource.FROM_BOOKING]: 'bg-purple-100 text-purple-800',
+    };
+
+    const labels = {
+      [SalesTransactionSource.ON_THE_SPOT]: 'On-the-Spot',
+      [SalesTransactionSource.FROM_BOOKING]: 'From Booking',
+    };
+
+    return (
+      <Badge className={variants[source]}>
+        {labels[source]}
+      </Badge>
+    );
+  };
+
   // Get payment method badge
   const getPaymentMethodBadge = (method: SalesPaymentMethod) => {
     const variants = {
       [SalesPaymentMethod.CASH]: 'bg-green-100 text-green-800',
-      [SalesPaymentMethod.BANK_TRANSFER]: 'bg-blue-100 text-blue-800',
-      [SalesPaymentMethod.CREDIT_CARD]: 'bg-purple-100 text-purple-800',
-      [SalesPaymentMethod.DIGITAL_WALLET]: 'bg-orange-100 text-orange-800',
+      [SalesPaymentMethod.CARD]: 'bg-purple-100 text-purple-800',
+      [SalesPaymentMethod.TRANSFER]: 'bg-blue-100 text-blue-800',
       [SalesPaymentMethod.QRIS]: 'bg-indigo-100 text-indigo-800',
-      [SalesPaymentMethod.OTHER]: 'bg-gray-100 text-gray-800',
     };
 
     return (
       <Badge className={variants[method]}>
-        {method.replace('_', ' ').toUpperCase()}
+        {method.toUpperCase()}
       </Badge>
     );
   };
 
   // Filter transactions
   const filteredTransactions = transactions.filter(transaction =>
-    transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    transaction.serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     transaction.transactionNumber.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -413,6 +470,134 @@ export function SalesContent() {
               Filters
             </Button>
 
+            {/* Filters Dialog */}
+            <Dialog open={showFiltersDialog} onOpenChange={setShowFiltersDialog}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Filter Transactions</DialogTitle>
+                  <DialogDescription>
+                    Filter transactions by various criteria.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label>Transaction Source</Label>
+                    <Select
+                      value={filters.source || ''}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, source: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All sources" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Sources</SelectItem>
+                        <SelectItem value={SalesTransactionSource.ON_THE_SPOT}>On-the-Spot</SelectItem>
+                        <SelectItem value={SalesTransactionSource.FROM_BOOKING}>From Booking</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Payment Method</Label>
+                    <Select
+                      value={filters.paymentMethod || ''}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, paymentMethod: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All methods" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Methods</SelectItem>
+                        <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
+                        <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
+                        <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
+                        <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={filters.status || ''}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, status: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Statuses</SelectItem>
+                        <SelectItem value={SalesTransactionStatus.PENDING}>Pending</SelectItem>
+                        <SelectItem value={SalesTransactionStatus.COMPLETED}>Completed</SelectItem>
+                        <SelectItem value={SalesTransactionStatus.CANCELLED}>Cancelled</SelectItem>
+                        <SelectItem value={SalesTransactionStatus.REFUNDED}>Refunded</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Home Visit Only</Label>
+                    <Select
+                      value={filters.isHomeVisit?.toString() || ''}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, isHomeVisit: value === 'true' ? true : value === 'false' ? false : undefined }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All transactions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Transactions</SelectItem>
+                        <SelectItem value="true">Home Visit Only</SelectItem>
+                        <SelectItem value="false">In-Store Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Min Amount</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={filters.minAmount || ''}
+                        onChange={(e) => setFilters(prev => ({ ...prev, minAmount: parseFloat(e.target.value) || undefined }))}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Max Amount</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="999999"
+                        value={filters.maxAmount || ''}
+                        onChange={(e) => setFilters(prev => ({ ...prev, maxAmount: parseFloat(e.target.value) || undefined }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFilters({});
+                      setShowFiltersDialog(false);
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      // Apply filters and refresh data
+                      setShowFiltersDialog(false);
+                      // TODO: Apply filters to fetchTransactions
+                    }}
+                  >
+                    Apply Filters
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={showNewTransactionDialog} onOpenChange={setShowNewTransactionDialog}>
               <DialogTrigger asChild>
                 <Button>
@@ -424,116 +609,163 @@ export function SalesContent() {
                 <DialogHeader>
                   <DialogTitle>Create New Transaction</DialogTitle>
                   <DialogDescription>
-                    Enter the transaction details below.
+                    Choose transaction type and enter details below.
                   </DialogDescription>
                 </DialogHeader>
+                
+                {/* Transaction Type Selection */}
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="type">Transaction Type</Label>
+                    <Label>Transaction Type</Label>
                     <Select
-                      value={newTransaction.type}
-                      onValueChange={(value) => setNewTransaction(prev => ({ ...prev, type: value as SalesTransactionType }))}
+                      value={transactionType}
+                      onValueChange={(value) => setTransactionType(value as 'on_the_spot' | 'from_booking')}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder="Select transaction type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={SalesTransactionType.SERVICE}>Service</SelectItem>
-                        <SelectItem value={SalesTransactionType.PRODUCT}>Product</SelectItem>
-                        <SelectItem value={SalesTransactionType.PACKAGE}>Package</SelectItem>
-                        <SelectItem value={SalesTransactionType.CONSULTATION}>Consultation</SelectItem>
-                        <SelectItem value={SalesTransactionType.OTHER}>Other</SelectItem>
+                        <SelectItem value="on_the_spot">On-the-Spot Transaction</SelectItem>
+                        <SelectItem value="from_booking">From Booking</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Input
-                      id="description"
-                      value={newTransaction.description}
-                      onChange={(e) => setNewTransaction(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Enter description"
-                    />
-                  </div>
+                  {transactionType === 'on_the_spot' ? (
+                    // On-the-spot transaction form
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="customerId">Customer</Label>
+                        <Select
+                          value={newOnTheSpotTransaction.customerId}
+                          onValueChange={(value) => setNewOnTheSpotTransaction(prev => ({ ...prev, customerId: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* TODO: Fetch customers from API */}
+                            <SelectItem value="customer1">Customer 1</SelectItem>
+                            <SelectItem value="customer2">Customer 2</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="quantity">Quantity</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        min="1"
-                        value={newTransaction.quantity}
-                        onChange={(e) => setNewTransaction(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="unitPrice">Unit Price</Label>
-                      <Input
-                        id="unitPrice"
-                        type="number"
-                        min="0"
-                        value={newTransaction.unitPrice}
-                        onChange={(e) => setNewTransaction(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                      />
-                    </div>
-                  </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="serviceId">Service</Label>
+                        <Select
+                          value={newOnTheSpotTransaction.serviceId}
+                          onValueChange={(value) => setNewOnTheSpotTransaction(prev => ({ ...prev, serviceId: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select service" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* TODO: Fetch services from API */}
+                            <SelectItem value="service1">Service 1</SelectItem>
+                            <SelectItem value="service2">Service 2</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                      <Input
-                        id="taxRate"
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={newTransaction.taxRate}
-                        onChange={(e) => setNewTransaction(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="discountAmount">Discount</Label>
-                      <Input
-                        id="discountAmount"
-                        type="number"
-                        min="0"
-                        value={newTransaction.discountAmount}
-                        onChange={(e) => setNewTransaction(prev => ({ ...prev, discountAmount: parseFloat(e.target.value) || 0 }))}
-                      />
-                    </div>
-                  </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="paymentMethod">Payment Method</Label>
+                        <Select
+                          value={newOnTheSpotTransaction.paymentMethod}
+                          onValueChange={(value) => setNewOnTheSpotTransaction(prev => ({ ...prev, paymentMethod: value as SalesPaymentMethod }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="paymentMethod">Payment Method</Label>
-                    <Select
-                      value={newTransaction.paymentMethod}
-                      onValueChange={(value) => setNewTransaction(prev => ({ ...prev, paymentMethod: value as SalesPaymentMethod }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.BANK_TRANSFER}>Bank Transfer</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.CREDIT_CARD}>Credit Card</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.DIGITAL_WALLET}>Digital Wallet</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.OTHER}>Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="notes">Notes (Optional)</Label>
+                        <Textarea
+                          id="notes"
+                          value={newOnTheSpotTransaction.notes}
+                          onChange={(e) => setNewOnTheSpotTransaction(prev => ({ ...prev, notes: e.target.value }))}
+                          placeholder="Add any notes..."
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    // From booking transaction form
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="bookingId">Booking</Label>
+                        <Select
+                          value={newTransactionFromBooking.bookingId}
+                          onValueChange={(value) => setNewTransactionFromBooking(prev => ({ ...prev, bookingId: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select booking" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* TODO: Fetch bookings from API */}
+                            <SelectItem value="booking1">Booking 1</SelectItem>
+                            <SelectItem value="booking2">Booking 2</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes (Optional)</Label>
-                    <Textarea
-                      id="notes"
-                      value={newTransaction.notes}
-                      onChange={(e) => setNewTransaction(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Add any notes..."
-                    />
-                  </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="scheduledAt">Scheduled Date</Label>
+                        <Input
+                          id="scheduledAt"
+                          type="datetime-local"
+                          value={newTransactionFromBooking.scheduledAt}
+                          onChange={(e) => setNewTransactionFromBooking(prev => ({ ...prev, scheduledAt: e.target.value }))}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="totalAmount">Total Amount</Label>
+                        <Input
+                          id="totalAmount"
+                          type="number"
+                          min="0"
+                          value={newTransactionFromBooking.totalAmount}
+                          onChange={(e) => setNewTransactionFromBooking(prev => ({ ...prev, totalAmount: parseFloat(e.target.value) || 0 }))}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="paymentMethod">Payment Method</Label>
+                        <Select
+                          value={newTransactionFromBooking.paymentMethod}
+                          onValueChange={(value) => setNewTransactionFromBooking(prev => ({ ...prev, paymentMethod: value as SalesPaymentMethod }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="notes">Notes (Optional)</Label>
+                        <Textarea
+                          id="notes"
+                          value={newTransactionFromBooking.notes}
+                          onChange={(e) => setNewTransactionFromBooking(prev => ({ ...prev, notes: e.target.value }))}
+                          placeholder="Add any notes..."
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button
@@ -546,7 +778,11 @@ export function SalesContent() {
                   <Button
                     type="button"
                     onClick={handleCreateTransaction}
-                    disabled={!newTransaction.description || !newTransaction.customerId}
+                    disabled={
+                      transactionType === 'on_the_spot' 
+                        ? (!newOnTheSpotTransaction.customerId || !newOnTheSpotTransaction.serviceId)
+                        : (!newTransactionFromBooking.bookingId || !newTransactionFromBooking.totalAmount)
+                    }
                   >
                     Create Transaction
                   </Button>
@@ -568,8 +804,8 @@ export function SalesContent() {
                   <TableRow>
                     <TableHead>Transaction #</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead>Status</TableHead>
@@ -592,11 +828,9 @@ export function SalesContent() {
                         <TableCell>
                           {new Date(transaction.transactionDate).toLocaleDateString()}
                         </TableCell>
-                        <TableCell>{transaction.description}</TableCell>
+                        <TableCell>{transaction.serviceName}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {transaction.type}
-                          </Badge>
+                          {getSourceBadge(transaction.source)}
                         </TableCell>
                         <TableCell className="font-medium">
                           IDR {transaction.totalAmount.toLocaleString()}
@@ -687,26 +921,44 @@ export function SalesContent() {
                 </div>
               </div>
 
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Description</Label>
-                <p className="mt-1">{selectedTransaction.description}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Service</Label>
+                  <p className="mt-1">{selectedTransaction.serviceName}</p>
+                  <p className="text-xs text-gray-500">Duration: {selectedTransaction.duration} minutes</p>
+                  {selectedTransaction.isHomeVisit && (
+                    <p className="text-xs text-blue-600">Home Visit</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Source</Label>
+                  <p className="mt-1">{getSourceBadge(selectedTransaction.source)}</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-600">Type</Label>
-                  <p className="mt-1">
-                    <Badge variant="outline">{selectedTransaction.type}</Badge>
-                  </p>
-                </div>
-                <div>
                   <Label className="text-sm font-medium text-gray-600">Status</Label>
                   <p className="mt-1">{getStatusBadge(selectedTransaction.status)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Payment Method</Label>
+                  <p className="mt-1">{getPaymentMethodBadge(selectedTransaction.paymentMethod)}</p>
                 </div>
               </div>
 
               <div className="border-t pt-4">
                 <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Unit Price:</span>
+                    <span>IDR {selectedTransaction.unitPrice.toLocaleString()}</span>
+                  </div>
+                  {selectedTransaction.homeVisitSurcharge && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Home Visit Surcharge:</span>
+                      <span>IDR {selectedTransaction.homeVisitSurcharge.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal:</span>
                     <span>IDR {selectedTransaction.subtotal.toLocaleString()}</span>
@@ -736,6 +988,28 @@ export function SalesContent() {
                   <p className="mt-1">IDR {selectedTransaction.paidAmount.toLocaleString()}</p>
                 </div>
               </div>
+
+              {selectedTransaction.scheduledAt && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Scheduled At</Label>
+                    <p className="mt-1">
+                      {new Date(selectedTransaction.scheduledAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {selectedTransaction.completedAt && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Completed At</Label>
+                    <p className="mt-1">
+                      {new Date(selectedTransaction.completedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {selectedTransaction.notes && (
                 <div>

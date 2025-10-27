@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tenantId, ...transactionData } = body;
+    const { tenantId, type, ...transactionData } = body;
     
     if (!tenantId) {
       return NextResponse.json(
@@ -84,32 +84,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate required fields
-    const requiredFields = ['customerId', 'type', 'description', 'quantity', 'unitPrice', 'paymentMethod'];
-    for (const field of requiredFields) {
-      if (!transactionData[field]) {
-        return NextResponse.json(
-          { error: `${field} is required` },
-          { status: 400 }
-        );
+    let transaction;
+
+    if (type === 'on_the_spot') {
+      // Create on-the-spot transaction
+      const requiredFields = ['customerId', 'serviceId', 'paymentMethod'];
+      for (const field of requiredFields) {
+        if (!transactionData[field]) {
+          return NextResponse.json(
+            { error: `${field} is required for on-the-spot transaction` },
+            { status: 400 }
+          );
+        }
       }
+
+      transaction = await salesService.createOnTheSpotTransaction({
+        tenantId,
+        customerId: transactionData.customerId,
+        serviceId: transactionData.serviceId,
+        staffId: transactionData.staffId,
+        paymentMethod: transactionData.paymentMethod,
+        notes: transactionData.notes,
+      });
+    } else if (type === 'from_booking') {
+      // Create transaction from booking
+      const requiredFields = ['bookingId', 'customerId', 'serviceId', 'scheduledAt', 'totalAmount', 'paymentMethod'];
+      for (const field of requiredFields) {
+        if (!transactionData[field]) {
+          return NextResponse.json(
+            { error: `${field} is required for booking transaction` },
+            { status: 400 }
+          );
+        }
+      }
+
+      transaction = await salesService.createTransactionFromBooking({
+        tenantId,
+        bookingId: transactionData.bookingId,
+        customerId: transactionData.customerId,
+        serviceId: transactionData.serviceId,
+        scheduledAt: new Date(transactionData.scheduledAt),
+        isHomeVisit: transactionData.isHomeVisit || false,
+        homeVisitAddress: transactionData.homeVisitAddress,
+        homeVisitCoordinates: transactionData.homeVisitCoordinates,
+        totalAmount: transactionData.totalAmount,
+        paymentMethod: transactionData.paymentMethod,
+        staffId: transactionData.staffId,
+        notes: transactionData.notes,
+      });
+    } else {
+      // Legacy transaction creation
+      const requiredFields = ['customerId', 'serviceId', 'serviceName', 'unitPrice', 'paymentMethod'];
+      for (const field of requiredFields) {
+        if (!transactionData[field]) {
+          return NextResponse.json(
+            { error: `${field} is required` },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Calculate financial fields
+      const subtotal = transactionData.unitPrice;
+      const taxAmount = subtotal * (transactionData.taxRate || 0);
+      const totalAmount = subtotal + taxAmount - (transactionData.discountAmount || 0);
+
+      transaction = await salesService.createTransaction({
+        ...transactionData,
+        tenantId,
+        subtotal,
+        taxAmount,
+        totalAmount,
+        paidAmount: 0,
+        paymentStatus: 'pending',
+        transactionDate: new Date(transactionData.transactionDate || Date.now()),
+      });
     }
-
-    // Calculate financial fields
-    const subtotal = transactionData.quantity * transactionData.unitPrice;
-    const taxAmount = subtotal * (transactionData.taxRate || 0);
-    const totalAmount = subtotal + taxAmount - (transactionData.discountAmount || 0);
-
-    const transaction = await salesService.createTransaction({
-      ...transactionData,
-      tenantId,
-      subtotal,
-      taxAmount,
-      totalAmount,
-      paidAmount: 0,
-      paymentStatus: 'pending',
-      transactionDate: new Date(transactionData.transactionDate || Date.now()),
-    });
 
     return NextResponse.json({
       success: true,

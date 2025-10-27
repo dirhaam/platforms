@@ -6,23 +6,18 @@ export enum SalesTransactionStatus {
   REFUNDED = 'refunded'
 }
 
-// Sales transaction type enum
-export enum SalesTransactionType {
-  SERVICE = 'service',
-  PRODUCT = 'product',
-  PACKAGE = 'package',
-  CONSULTATION = 'consultation',
-  OTHER = 'other'
+// Sales transaction source enum
+export enum SalesTransactionSource {
+  ON_THE_SPOT = 'on_the_spot',
+  FROM_BOOKING = 'from_booking'
 }
 
-// Payment method enum (reusing from invoice but extending for sales)
+// Payment method enum (aligned with booking)
 export enum SalesPaymentMethod {
   CASH = 'cash',
-  BANK_TRANSFER = 'bank_transfer',
-  CREDIT_CARD = 'credit_card',
-  DIGITAL_WALLET = 'digital_wallet',
-  QRIS = 'qris',
-  OTHER = 'other'
+  CARD = 'card',
+  TRANSFER = 'transfer',
+  QRIS = 'qris'
 }
 
 // Sales transaction interface
@@ -31,19 +26,28 @@ export interface SalesTransaction {
   tenantId: string;
   customerId: string;
   transactionNumber: string;
-  type: SalesTransactionType;
+  source: SalesTransactionSource;
   status: SalesTransactionStatus;
   
-  // Transaction details
-  description: string;
-  quantity: number;
+  // Service details (aligned with booking)
+  serviceId: string;
+  serviceName: string;
+  duration: number; // minutes
+  isHomeVisit: boolean;
+  homeVisitAddress?: string;
+  homeVisitCoordinates?: {
+    lat: number;
+    lng: number;
+  };
+  
+  // Pricing details
   unitPrice: number;
+  homeVisitSurcharge?: number;
   subtotal: number;
   taxRate: number;
   taxAmount: number;
   discountAmount: number;
   totalAmount: number;
-  notes?: string;
   
   // Payment details
   paymentMethod: SalesPaymentMethod;
@@ -55,12 +59,15 @@ export interface SalesTransaction {
   // Related entities
   bookingId?: string;
   invoiceId?: string;
-  serviceId?: string;
-  productId?: string;
   
   // Staff information
   staffId?: string;
   staffName?: string;
+  
+  // Transaction details
+  notes?: string;
+  scheduledAt?: Date; // For transactions from booking
+  completedAt?: Date; // For on-the-spot transactions
   
   // Timestamps
   transactionDate: Date;
@@ -82,18 +89,20 @@ export interface SalesSummary {
   totalPending: number;
   averageTransactionValue: number;
   
-  // Breakdown by type
+  // Breakdown by source
+  onTheSpotRevenue: number;
+  fromBookingRevenue: number;
+  onTheSpotTransactions: number;
+  fromBookingTransactions: number;
+  
+  // Breakdown by service type
   serviceRevenue: number;
-  productRevenue: number;
-  packageRevenue: number;
-  consultationRevenue: number;
-  otherRevenue: number;
+  homeVisitRevenue: number;
   
   // Breakdown by payment method
   cashRevenue: number;
-  transferRevenue: number;
   cardRevenue: number;
-  digitalWalletRevenue: number;
+  transferRevenue: number;
   qrisRevenue: number;
   otherPaymentRevenue: number;
   
@@ -110,9 +119,11 @@ export interface SalesFilters {
   dateTo?: Date;
   customerId?: string;
   staffId?: string;
-  transactionType?: SalesTransactionType;
+  source?: SalesTransactionSource;
+  serviceId?: string;
   paymentMethod?: SalesPaymentMethod;
   status?: SalesTransactionStatus;
+  isHomeVisit?: boolean;
   minAmount?: number;
   maxAmount?: number;
   searchQuery?: string;
@@ -124,22 +135,35 @@ export interface SalesAnalytics {
     date: string;
     revenue: number;
     transactionCount: number;
+    onTheSpotCount: number;
+    fromBookingCount: number;
   }>;
   monthlyRevenue: Array<{
     month: string;
     revenue: number;
     transactionCount: number;
+    onTheSpotCount: number;
+    fromBookingCount: number;
   }>;
   topServices: Array<{
     serviceId: string;
     serviceName: string;
     revenue: number;
     transactionCount: number;
+    homeVisitCount: number;
   }>;
   topCustomers: Array<{
     customerId: string;
     customerName: string;
     revenue: number;
+    transactionCount: number;
+    onTheSpotCount: number;
+    fromBookingCount: number;
+  }>;
+  sourceBreakdown: Array<{
+    source: SalesTransactionSource;
+    revenue: number;
+    percentage: number;
     transactionCount: number;
   }>;
   paymentMethodBreakdown: Array<{
