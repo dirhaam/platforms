@@ -82,6 +82,24 @@ export class SalesService {
     try {
       const supabase = getSupabaseClient();
 
+      // Fetch service details
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('id, name, price, duration, home_visit_surcharge')
+        .eq('id', transactionData.serviceId)
+        .eq('tenant_id', transactionData.tenantId)
+        .single();
+
+      if (serviceError || !serviceData) {
+        throw new Error(`Service not found: ${transactionData.serviceId}`);
+      }
+
+      const unitPrice = serviceData.price || 0;
+      const homeVisitSurcharge = 0;
+      const subtotal = unitPrice + homeVisitSurcharge;
+      const taxAmount = 0;
+      const totalAmount = subtotal + taxAmount;
+
       const newTransaction = {
         id: uuidv4(),
         tenant_id: transactionData.tenantId,
@@ -91,21 +109,21 @@ export class SalesService {
         transaction_number: this.generateTransactionNumber(),
         source: SalesTransactionSource.ON_THE_SPOT,
         status: SalesTransactionStatus.COMPLETED,
-        service_name: 'Service', 
-        duration: 60,
+        service_name: serviceData.name,
+        duration: serviceData.duration || 60,
         is_home_visit: false,
         home_visit_address: null,
         home_visit_coordinates: null,
-        unit_price: 0,
-        home_visit_surcharge: 0,
-        subtotal: 0,
+        unit_price: unitPrice,
+        home_visit_surcharge: homeVisitSurcharge,
+        subtotal,
         tax_rate: 0,
-        tax_amount: 0,
+        tax_amount: taxAmount,
         discount_amount: 0,
-        total_amount: 0,
+        total_amount: totalAmount,
         payment_method: transactionData.paymentMethod,
         payment_status: 'paid',
-        paid_amount: 0,
+        paid_amount: totalAmount,
         payment_reference: null,
         paid_at: new Date().toISOString(),
         staff_id: transactionData.staffId || null,
@@ -151,6 +169,23 @@ export class SalesService {
     try {
       const supabase = getSupabaseClient();
 
+      // Fetch service details
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('id, name, price, duration, home_visit_surcharge')
+        .eq('id', bookingData.serviceId)
+        .eq('tenant_id', bookingData.tenantId)
+        .single();
+
+      if (serviceError || !serviceData) {
+        throw new Error(`Service not found: ${bookingData.serviceId}`);
+      }
+
+      const unitPrice = serviceData.price || 0;
+      const homeVisitSurcharge = bookingData.isHomeVisit ? (serviceData.home_visit_surcharge || 0) : 0;
+      const subtotal = unitPrice + homeVisitSurcharge;
+      const taxAmount = 0;
+
       const newTransaction = {
         id: uuidv4(),
         tenant_id: bookingData.tenantId,
@@ -160,16 +195,16 @@ export class SalesService {
         transaction_number: this.generateTransactionNumber(),
         source: SalesTransactionSource.FROM_BOOKING,
         status: SalesTransactionStatus.PENDING,
-        service_name: 'Service',
-        duration: 60,
+        service_name: serviceData.name,
+        duration: serviceData.duration || 60,
         is_home_visit: bookingData.isHomeVisit,
         home_visit_address: bookingData.homeVisitAddress || null,
         home_visit_coordinates: bookingData.homeVisitCoordinates || null,
-        unit_price: 0,
-        home_visit_surcharge: 0,
-        subtotal: 0,
+        unit_price: unitPrice,
+        home_visit_surcharge: homeVisitSurcharge,
+        subtotal,
         tax_rate: 0,
-        tax_amount: 0,
+        tax_amount: taxAmount,
         discount_amount: 0,
         total_amount: bookingData.totalAmount,
         payment_method: bookingData.paymentMethod,
