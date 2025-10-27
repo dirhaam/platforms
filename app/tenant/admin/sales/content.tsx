@@ -108,6 +108,11 @@ export function SalesContent() {
   const [filters, setFilters] = useState<SalesFilters>({});
   const [transactionType, setTransactionType] = useState<'on_the_spot' | 'from_booking'>('on_the_spot');
 
+  // Data states
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+
   // Form states
   const [newOnTheSpotTransaction, setNewOnTheSpotTransaction] = useState<NewOnTheSpotTransactionData>({
     customerId: '',
@@ -190,13 +195,67 @@ export function SalesContent() {
     }
   }, [tenantId]);
 
+  // Fetch customers
+  const fetchCustomers = useCallback(async () => {
+    if (!tenantId) return;
+
+    try {
+      const response = await fetch(`/api/customers?tenantId=${tenantId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch customers');
+      }
+
+      const data = await response.json();
+      setCustomers(data.customers || []);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  }, [tenantId]);
+
+  // Fetch services
+  const fetchServices = useCallback(async () => {
+    if (!tenantId) return;
+
+    try {
+      const response = await fetch(`/api/services?tenantId=${tenantId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch services');
+      }
+
+      const data = await response.json();
+      setServices(data.services || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  }, [tenantId]);
+
+  // Fetch bookings
+  const fetchBookings = useCallback(async () => {
+    if (!tenantId) return;
+
+    try {
+      const response = await fetch(`/api/bookings?tenantId=${tenantId}&status=completed`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+      }
+
+      const data = await response.json();
+      setBookings(data.bookings || []);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  }, [tenantId]);
+
   // Initial data fetch
   useEffect(() => {
     if (tenantId) {
       fetchTransactions();
       fetchSummary();
+      fetchCustomers();
+      fetchServices();
+      fetchBookings();
     }
-  }, [tenantId, fetchTransactions, fetchSummary]);
+  }, [tenantId, fetchTransactions, fetchSummary, fetchCustomers, fetchServices, fetchBookings]);
 
   // Create new transaction
   const handleCreateTransaction = async () => {
@@ -644,9 +703,11 @@ export function SalesContent() {
                             <SelectValue placeholder="Select customer" />
                           </SelectTrigger>
                           <SelectContent>
-                            {/* TODO: Fetch customers from API */}
-                            <SelectItem value="customer1">Customer 1</SelectItem>
-                            <SelectItem value="customer2">Customer 2</SelectItem>
+                            {customers.map(customer => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                {customer.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -661,9 +722,11 @@ export function SalesContent() {
                             <SelectValue placeholder="Select service" />
                           </SelectTrigger>
                           <SelectContent>
-                            {/* TODO: Fetch services from API */}
-                            <SelectItem value="service1">Service 1</SelectItem>
-                            <SelectItem value="service2">Service 2</SelectItem>
+                            {services.map(service => (
+                              <SelectItem key={service.id} value={service.id}>
+                                {service.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -709,9 +772,11 @@ export function SalesContent() {
                             <SelectValue placeholder="Select booking" />
                           </SelectTrigger>
                           <SelectContent>
-                            {/* TODO: Fetch bookings from API */}
-                            <SelectItem value="booking1">Booking 1</SelectItem>
-                            <SelectItem value="booking2">Booking 2</SelectItem>
+                            {bookings.map(booking => (
+                              <SelectItem key={booking.id} value={booking.id}>
+                                {booking.customer?.name || 'Unknown'} - {booking.service?.name || 'Unknown Service'}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
