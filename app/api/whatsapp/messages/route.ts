@@ -45,7 +45,9 @@ export async function GET(request: NextRequest) {
         const client = await whatsappService.getWhatsAppClient(tenantId);
         
         if (!client) {
-          console.warn(`[WhatsApp] No WhatsApp client available for tenant ${tenantId}. Check if endpoint is configured.`);
+          console.warn(`[WhatsApp] No WhatsApp client available for tenant ${tenantId}.`);
+          console.warn(`[WhatsApp] Setup required: Configure WHATSAPP_ENDPOINTS env variable with your WhatsApp API server.`);
+          console.warn(`[WhatsApp] Example: WHATSAPP_ENDPOINTS=[{"name":"primary","apiUrl":"http://wa.example.com","username":"admin","password":"pass"}]`);
         } else {
           console.log(`[WhatsApp] Client found, calling getConversations...`);
           conversations = await client.getConversations(tenantId);
