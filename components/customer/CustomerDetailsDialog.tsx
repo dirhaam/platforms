@@ -108,7 +108,8 @@ export function CustomerDetailsDialog({
       averageBookingValue,
       completedBookings: completedBookings.length,
       cancelledBookings: cancelledBookings.length,
-      noShowBookings: noShowBookings.length
+      noShowBookings: noShowBookings.length,
+      totalTransactionAmount: 0
     });
   };
 
