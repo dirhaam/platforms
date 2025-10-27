@@ -31,6 +31,10 @@ export class WhatsAppService {
     return WhatsAppService.instance;
   }
 
+  async getWhatsAppClient(tenantId: string) {
+    return await this.endpointManager.getClient(tenantId);
+  }
+
   // Configuration Management
   async getTenantConfiguration(tenantId: string): Promise<WhatsAppConfiguration | null> {
     return await this.endpointManager.getConfiguration(tenantId);

@@ -205,6 +205,8 @@ export class RBAC {
       'manage_staff': 'Add, edit, and manage staff members and their roles',
       'view_analytics': 'View business analytics and performance metrics',
       'send_messages': 'Send messages to customers via WhatsApp or other channels',
+      'view_sales': 'View sales transactions and revenue reports',
+      'manage_sales': 'Create, edit, and manage sales transactions',
       'manage_settings': 'Modify business settings and configuration',
       'export_data': 'Export business data and generate reports',
       '*': 'All permissions (wildcard access)',

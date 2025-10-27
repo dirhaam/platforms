@@ -252,6 +252,28 @@ export default async function TenantAdminDashboard({
           </CardContent>
         </Card>
 
+        {/* Sales */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-purple-600" />
+              Sales
+            </CardTitle>
+            <CardDescription>Track revenue and manage transactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">Monitor your business performance</p>
+              <Button asChild className="w-full justify-start">
+                <Link href={`/tenant/admin/sales?subdomain=${subdomain}`}>
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  View Sales
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Staff */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>

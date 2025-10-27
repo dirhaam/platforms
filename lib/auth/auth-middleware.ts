@@ -38,6 +38,10 @@ const PROTECTED_ROUTES: Record<string, RouteProtection> = {
     permissions: ['send_messages'],
     roles: ['superadmin', 'owner', 'admin', 'staff'],
   },
+  '/admin/sales': {
+    permissions: ['view_sales', 'manage_sales'],
+    roles: ['superadmin', 'owner', 'admin', 'staff'],
+  },
   '/admin/settings': {
     permissions: ['manage_settings'],
     roles: ['superadmin', 'owner', 'admin'],

@@ -51,6 +51,7 @@ export function WhatsAppContent() {
   const [newDeviceName, setNewDeviceName] = useState('');
   const [connectionResult, setConnectionResult] = useState<{ qrCode?: string; pairingCode?: string } | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<WhatsAppDevice | null>(null);
+  const [qrCodeError, setQrCodeError] = useState(false);
 
   useEffect(() => {
     if (!subdomain) return;
@@ -143,6 +144,7 @@ export function WhatsAppContent() {
 
   const handleConnectDevice = async (deviceId: string) => {
     setError(null);
+    setQrCodeError(false); // Reset QR code error state
     try {
       const response = await fetch(`/api/whatsapp/devices/${deviceId}?action=connect`, {
         method: 'POST',
@@ -450,11 +452,58 @@ export function WhatsAppContent() {
               {connectionResult.qrCode && (
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-2">Scan with WhatsApp on your phone:</p>
-                  <img
-                    src={connectionResult.qrCode}
-                    alt="QR Code"
-                    className="w-64 h-64"
-                  />
+                  {qrCodeError ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        <p className="text-sm">QR code failed to load. Try opening in a new tab:</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(connectionResult.qrCode, '_blank')}
+                        className="gap-2"
+                      >
+                        <Smartphone className="w-4 h-4" />
+                        Open QR Code in New Tab
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img
+                        src={`/api/whatsapp/qr/${selectedDevice.id}`}
+                        alt="QR Code"
+                        className="w-64 h-64 border rounded-lg"
+                        onError={(e) => {
+                          console.error('QR code failed to load via proxy');
+                          // Try to get more error information
+                          fetch(`/api/whatsapp/qr/${selectedDevice.id}`)
+                            .then(res => res.json())
+                            .then(errorData => {
+                              console.error('QR code error details:', errorData);
+                            })
+                            .catch(() => {
+                              console.error('Could not fetch error details');
+                            });
+                          setQrCodeError(true);
+                        }}
+                        onLoad={() => {
+                          setQrCodeError(false);
+                        }}
+                      />
+                      <div className="absolute top-2 right-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(connectionResult.qrCode, '_blank')}
+                          className="gap-1 bg-white/90 backdrop-blur"
+                        >
+                          <Smartphone className="w-3 h-3" />
+                          Open
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {connectionResult.pairingCode && (

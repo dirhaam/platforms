@@ -12,6 +12,7 @@ import {
   MessageSquare,
   LogOut,
   Home,
+  TrendingUp,
 } from 'lucide-react';
 
 function TenantAdminLayoutContent({
@@ -43,6 +44,11 @@ function TenantAdminLayoutContent({
       href: `/tenant/admin/services?subdomain=${subdomain}`,
       label: 'Services',
       icon: BarChart3,
+    },
+    {
+      href: `/tenant/admin/sales?subdomain=${subdomain}`,
+      label: 'Sales',
+      icon: TrendingUp,
     },
     {
       href: `/tenant/admin/whatsapp?subdomain=${subdomain}`,

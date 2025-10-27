@@ -24,6 +24,8 @@ export type Permission =
   | 'manage_staff'
   | 'view_analytics'
   | 'send_messages'
+  | 'view_sales'
+  | 'manage_sales'
   | 'manage_settings'
   | 'export_data'
   | '*';
