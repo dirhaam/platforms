@@ -14,7 +14,7 @@ POST /api/whatsapp/tenant-config/{tenantId} returns 500 Internal Server Error
 \d tenant_whatsapp_config;
 
 -- If not found, run migration:
--- Copy contents of: fix-whatsapp-endpoints-types.sql
+-- Copy contents of: sql/whatsapp/fix-whatsapp-endpoints-types.sql
 -- Paste & execute
 ```
 
@@ -98,7 +98,7 @@ relation "whatsapp_endpoints" does not exist
 ```
 **Fix**:
 ```sql
--- Run: fix-whatsapp-endpoints-types.sql
+-- Run: sql/whatsapp/fix-whatsapp-endpoints-types.sql
 ```
 
 #### Issue 2: Missing ENV Variable
@@ -171,7 +171,7 @@ Cannot read property 'set' of undefined
 
 ```
 [ ] 1. Database tables exist
-      → Run: fix-whatsapp-endpoints-types.sql
+      → Run: sql/whatsapp/fix-whatsapp-endpoints-types.sql
       → Verify with: \d whatsapp_endpoints;
 
 [ ] 2. ENV variables set

@@ -1,6 +1,9 @@
 import { ReminderTemplate, getTemplateById, processTemplate, getAllActiveTemplates } from '@/lib/templates/reminder-templates';
 import { Booking, Service, Customer } from '@/types/booking';
 
+// Re-export ReminderTemplate for use in other components
+export type { ReminderTemplate };
+
 export interface ReminderSchedule {
   id: string;
   bookingId: string;
@@ -346,7 +349,7 @@ export class ReminderService {
     templateId: string,
     booking: Booking,
     customer?: Customer,
-    service?: Customer
+    service?: Service
   ): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
       const template = getTemplateById(templateId);

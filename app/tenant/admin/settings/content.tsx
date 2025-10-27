@@ -9,7 +9,7 @@ import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettin
 export default function SettingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
 
   useEffect(() => {
     if (!subdomain) {

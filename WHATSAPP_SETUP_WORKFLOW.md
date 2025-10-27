@@ -573,7 +573,7 @@ Sebelum workflow berjalan, pastikan:
 
 - [ ] Database tables created:
   ```sql
-  -- Run: fix-whatsapp-endpoints-types.sql
+  -- Run: sql/whatsapp/fix-whatsapp-endpoints-types.sql
   CREATE TABLE whatsapp_endpoints (...)
   CREATE TABLE tenant_whatsapp_config (...)
   ```
@@ -615,7 +615,7 @@ Sebelum workflow berjalan, pastikan:
 
 ### Problem: "Foreign key constraint error"
 **Cause**: Column type mismatch (TEXT vs UUID)
-**Solution**: Run `fix-whatsapp-endpoints-types.sql`
+**Solution**: Run `sql/whatsapp/fix-whatsapp-endpoints-types.sql`
 
 ### Problem: "WhatsApp endpoint not configured" (Tenant view)
 **Cause**: `is_configured = FALSE` di database

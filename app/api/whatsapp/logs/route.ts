@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
+import { WhatsAppEventType } from '@/types/whatsapp';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,12 +21,31 @@ export async function GET(request: NextRequest) {
     // Format events as log entries
     let logs = events.map(event => {
       const timestamp = event.timestamp.toISOString();
-      const level = event.type === 'error' ? 'ERROR' : 
-                   event.type === 'warning' ? 'WARN' : 
-                   event.type === 'info' ? 'INFO' : 'DEBUG';
       
-      const description = event.description;
-      const metadata = event.metadata || {};
+      // Map WhatsApp event types to log levels
+      const getLogLevel = (eventType: WhatsAppEventType): string => {
+        switch (eventType) {
+          case 'device_disconnected':
+          case 'endpoint_health_changed':
+            return 'WARN';
+          case 'device_connected':
+          case 'message_received':
+          case 'message_sent':
+          case 'message_delivered':
+          case 'message_read':
+          case 'qr_code_generated':
+          case 'pairing_code_generated':
+            return 'INFO';
+          default:
+            return 'DEBUG';
+        }
+      };
+      
+      const level = getLogLevel(event.type);
+      
+      // Extract description and metadata from event data
+      const description = event.data.description || JSON.stringify(event.data);
+      const metadata = event.data.metadata || event.data || {};
       
       // Categorize logs based on content
       let category = 'general';

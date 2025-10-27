@@ -60,7 +60,7 @@
   - Subdomain-based requests
 
 ### 6. Database Tables Schema
-- ✅ **File**: `fix-whatsapp-endpoints-types.sql`
+- ✅ **File**: `sql/whatsapp/fix-whatsapp-endpoints-types.sql`
 - ✅ **Tables**:
   - `whatsapp_endpoints` - Store endpoint credentials
   - `tenant_whatsapp_config` - Track assignments
@@ -82,7 +82,7 @@
 **Status**: ⏳ **MANUAL STEP REQUIRED**
 - [ ] Run SQL script in Supabase console:
   ```bash
-  # File: fix-whatsapp-endpoints-types.sql
+  # File: sql/whatsapp/fix-whatsapp-endpoints-types.sql
   ```
 - **What it does**:
   - Creates `whatsapp_endpoints` table
@@ -92,7 +92,7 @@
 
 **How to run**:
 1. Go to Supabase Dashboard → SQL Editor
-2. Copy contents of `fix-whatsapp-endpoints-types.sql`
+2. Copy contents of `sql/whatsapp/fix-whatsapp-endpoints-types.sql`
 3. Paste and execute
 4. Verify: `\d whatsapp_endpoints` and `\d tenant_whatsapp_config`
 
@@ -178,7 +178,7 @@ Before everything works:
 SETUP STEPS:
 
 1. DATABASE
-   [ ] Run: fix-whatsapp-endpoints-types.sql
+   [ ] Run: sql/whatsapp/fix-whatsapp-endpoints-types.sql
    [ ] Verify tables exist: \d whatsapp_endpoints
    [ ] Verify FK constraints work
 
@@ -220,7 +220,7 @@ SETUP STEPS:
 - ✅ `app/tenant/admin/whatsapp/content.tsx` - Tenant UI
 
 ### Database
-- ⏳ `fix-whatsapp-endpoints-types.sql` - Migration (needs to run)
+- ⏳ `sql/whatsapp/fix-whatsapp-endpoints-types.sql` - Migration (needs to run)
 
 ### Documentation
 - ✅ `WORKFLOW_WHATSAPP_SETUP.md` - Complete workflow guide
@@ -235,7 +235,7 @@ SETUP STEPS:
 ### Step 1: Run Database Migration (5 mins)
 ```bash
 # In Supabase SQL Editor:
-# 1. Copy contents of: fix-whatsapp-endpoints-types.sql
+# 1. Copy contents of: sql/whatsapp/fix-whatsapp-endpoints-types.sql
 # 2. Execute in SQL Editor
 # 3. Verify: SELECT * FROM whatsapp_endpoints;
 ```

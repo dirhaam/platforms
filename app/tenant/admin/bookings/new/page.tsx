@@ -43,7 +43,7 @@ interface NewCustomer {
 export default function BookingNewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
   
   const [booking, setBooking] = useState<NewBooking>({
     customerId: '',

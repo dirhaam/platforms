@@ -21,7 +21,7 @@ SELECT EXISTS (
 **If returns FALSE** (tables don't exist):
 ```sql
 -- Run this migration:
--- Copy contents of: fix-whatsapp-endpoints-types.sql
+-- Copy contents of: sql/whatsapp/fix-whatsapp-endpoints-types.sql
 -- Paste & execute in SQL Editor
 ```
 
@@ -144,7 +144,7 @@ vercel logs --follow
 **Fix**:
 ```bash
 # In Supabase SQL Editor:
-1. Copy: fix-whatsapp-endpoints-types.sql
+1. Copy: sql/whatsapp/fix-whatsapp-endpoints-types.sql
 2. Paste & Execute
 3. Run: \d whatsapp_endpoints;
 4. Should show table structure

@@ -7,7 +7,7 @@ import { TenantAnalyticsDashboard } from '@/components/analytics/TenantAnalytics
 export default function AnalyticsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
 
   useEffect(() => {
     if (!subdomain) {

@@ -8,7 +8,7 @@ import { InvoiceManagement } from '@/components/invoice/InvoiceManagement';
 export default function FinancePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
 
   useEffect(() => {
     if (!subdomain) {

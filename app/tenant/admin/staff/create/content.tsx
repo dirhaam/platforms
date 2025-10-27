@@ -27,7 +27,7 @@ interface StaffFormData {
 export function StaffCreateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
   
   const [formData, setFormData] = useState<StaffFormData>({
     name: '',

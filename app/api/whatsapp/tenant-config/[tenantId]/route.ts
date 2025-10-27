@@ -59,7 +59,7 @@ function mapSupabaseError(error: PostgrestError | null, action: string): WhatsAp
   ) {
     return new WhatsAppConfigError(
       'WHATSAPP_TABLES_MISSING',
-      'Required WhatsApp tables are missing. Run fix-whatsapp-endpoints-types.sql on Supabase.'
+      'Required WhatsApp tables are missing. Run sql/whatsapp/fix-whatsapp-endpoints-types.sql on Supabase.'
     );
   }
 
@@ -85,7 +85,7 @@ function mapSupabaseError(error: PostgrestError | null, action: string): WhatsAp
  * - whatsapp_endpoints (UUID tenant_id, api_url, api_key, webhook_url, webhook_secret)
  * - tenant_whatsapp_config (UUID tenant_id, endpoint_name, is_configured, health_status)
  * 
- * Run: fix-whatsapp-endpoints-types.sql to create/fix these tables with proper UUID types
+ * Run: sql/whatsapp/fix-whatsapp-endpoints-types.sql to create/fix these tables with proper UUID types
  */
 
 /**

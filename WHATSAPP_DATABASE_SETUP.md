@@ -22,7 +22,7 @@ This occurs because:
 Execute the SQL script to recreate the tables with proper UUID types:
 
 ```sql
--- From: fix-whatsapp-endpoints-types.sql
+-- From: sql/whatsapp/fix-whatsapp-endpoints-types.sql
 ```
 
 This will:

@@ -356,7 +356,7 @@ Before workflow works:
 
 - [ ] **Database**: Tables created with UUID types
   ```sql
-  -- Run: fix-whatsapp-endpoints-types.sql
+  -- Run: sql/whatsapp/fix-whatsapp-endpoints-types.sql
   ```
 
 - [ ] **Environment**: WHATSAPP_ENDPOINTS set
@@ -386,7 +386,7 @@ Before workflow works:
 |-------|-------|-----|
 | "Endpoint not found" | endpoint_name not in ENV | Add to WHATSAPP_ENDPOINTS |
 | POST 500 error | Date serialization | Already fixed in code |
-| Foreign key error | Column type mismatch | Run fix-whatsapp-endpoints-types.sql |
+| Foreign key error | Column type mismatch | Run sql/whatsapp/fix-whatsapp-endpoints-types.sql |
 | "Not configured" | is_configured = false | Check tenant_whatsapp_config table |
 | Subdomain doesn't resolve | Query failed | Check tenants table subdomain column |
 
@@ -401,7 +401,7 @@ Before workflow works:
 | `app/api/whatsapp/tenant-config/[tenantId]/route.ts` | API handler (GET/POST/DELETE) |
 | `lib/whatsapp/env-endpoint-manager.ts` | Read endpoints from ENV |
 | `lib/whatsapp/simplified-endpoint-manager.ts` | Manage DB + cache |
-| `fix-whatsapp-endpoints-types.sql` | Database migration |
+| `sql/whatsapp/fix-whatsapp-endpoints-types.sql` | Database migration |
 
 ---
 

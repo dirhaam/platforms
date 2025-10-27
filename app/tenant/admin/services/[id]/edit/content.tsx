@@ -19,7 +19,7 @@ interface ServiceEditContentProps {
 export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

@@ -20,7 +20,7 @@ interface NewCustomer {
 export default function CustomerNewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
   const [customer, setCustomer] = useState<NewCustomer>({
     name: '',
     email: '',

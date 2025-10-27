@@ -10,7 +10,7 @@ import { Users, Plus, Edit2, Trash2 } from 'lucide-react';
 export default function StaffPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
   const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -36,7 +36,7 @@ const DEFAULT_SERVICE: NewService = {
 export function ServiceCreateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const subdomain = searchParams.get('subdomain');
+  const subdomain = searchParams?.get('subdomain');
   const [service, setService] = useState<NewService>(DEFAULT_SERVICE);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
