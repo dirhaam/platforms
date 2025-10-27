@@ -40,26 +40,7 @@ export async function GET(request: NextRequest) {
       try {
         const client = await whatsappService.getWhatsAppClient(tenantId);
         if (client) {
-          const chats = await client.getConversations(25, 0);
-          // Convert chats to conversation format and cache them
-          conversations = chats.map((chat: any) => ({
-            id: chat.chatJid || chat.id,
-            tenantId,
-            customerPhone: chat.chatJid?.replace('@s.whatsapp.net', '') || '',
-            customerName: chat.name || 'Unknown',
-            lastMessagePreview: chat.lastMessage || '',
-            lastMessageAt: chat.timestamp ? new Date(chat.timestamp * 1000) : new Date(),
-            unreadCount: chat.unreadCount || 0,
-            assignedTo: undefined,
-            status: 'active' as const,
-            tags: [],
-            metadata: {
-              chatJid: chat.chatJid,
-              isGroup: chat.isGroup,
-            },
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }));
+          conversations = await client.getConversations(tenantId);
         }
       } catch (apiError) {
         console.error('Error fetching from WhatsApp API:', apiError);

@@ -37,7 +37,7 @@ export async function GET(
         const client = await whatsappService.getWhatsAppClient(tenantId);
         if (client) {
           // conversationId should be chatJid (e.g., phone@s.whatsapp.net)
-          const apiMessages = await client.getMessages(conversationId, limit, offset);
+          const apiMessages = await client.getMessages(conversationId, limit);
           messages = apiMessages.map((msg: any) => ({
             id: msg.id,
             type: msg.type,

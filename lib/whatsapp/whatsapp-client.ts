@@ -131,10 +131,10 @@ export class WhatsAppClient implements WhatsAppApiClient {
     }
   }
 
-  async getConversations(limit = 25, offset = 0): Promise<any[]> {
+  async getConversations(tenantId: string): Promise<WhatsAppConversation[]> {
     try {
       // Call actual WhatsApp API endpoint: GET /chats
-      const response = await this.makeRequest(`/chats?limit=${limit}&offset=${offset}`);
+      const response = await this.makeRequest(`/chats?limit=25&offset=0`);
       
       if (response.code !== 'SUCCESS' && !response.data) {
         throw new Error(response.message || 'Failed to get conversations');
@@ -143,15 +143,22 @@ export class WhatsAppClient implements WhatsAppApiClient {
       const chats = Array.isArray(response.data) ? response.data : [];
       
       return chats.map((chat: any) => ({
-        id: chat.id || chat.chat_id,
-        chatJid: chat.chat_jid || chat.id,
-        name: chat.name,
+        id: chat.chat_jid || chat.id,
+        tenantId,
+        customerPhone: chat.chat_jid?.replace('@s.whatsapp.net', '') || '',
+        customerName: chat.name || 'Unknown',
+        lastMessageAt: chat.timestamp ? new Date(chat.timestamp * 1000) : new Date(),
+        lastMessagePreview: chat.last_message || '',
         unreadCount: chat.unread_count || 0,
-        isGroup: chat.is_group || false,
-        isBroadcast: chat.is_broadcast || false,
-        timestamp: chat.timestamp,
-        lastMessage: chat.last_message,
-        isPin: chat.is_pin || false
+        status: 'active' as const,
+        tags: [],
+        metadata: {
+          chatJid: chat.chat_jid,
+          isGroup: chat.is_group,
+          isBroadcast: chat.is_broadcast,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
       }));
     } catch (error) {
       console.error('Error getting conversations:', error);
@@ -159,10 +166,10 @@ export class WhatsAppClient implements WhatsAppApiClient {
     }
   }
 
-  async getMessages(chatJid: string, limit = 50, offset = 0): Promise<WhatsAppMessage[]> {
+  async getMessages(conversationId: string, limit = 50): Promise<WhatsAppMessage[]> {
     try {
       // Call actual WhatsApp API endpoint: GET /chat/{chat_jid}/messages
-      const response = await this.makeRequest(`/chat/${encodeURIComponent(chatJid)}/messages?limit=${limit}&offset=${offset}`);
+      const response = await this.makeRequest(`/chat/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=0`);
       
       if (response.code !== 'SUCCESS' && !response.data) {
         throw new Error(response.message || 'Failed to get messages');
@@ -174,14 +181,14 @@ export class WhatsAppClient implements WhatsAppApiClient {
         id: msg.id || msg.message_id,
         tenantId: this.tenantId,
         deviceId: '',
-        conversationId: chatJid,
-        type: msg.type || 'text',
+        conversationId,
+        type: (msg.type || 'text') as WhatsAppMessage['type'],
         content: msg.content || msg.body,
         mediaUrl: msg.media_url || msg.mediaUrl,
         mediaCaption: msg.media_caption || msg.mediaCaption,
         isFromCustomer: !msg.from_me,
         customerPhone: msg.from || '',
-        deliveryStatus: msg.delivery_status || 'sent',
+        deliveryStatus: (msg.delivery_status || 'sent') as WhatsAppMessage['deliveryStatus'],
         errorMessage: msg.error_message,
         metadata: msg.metadata || {},
         sentAt: msg.timestamp ? new Date(msg.timestamp * 1000) : new Date(),
