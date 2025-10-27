@@ -32,18 +32,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(`[WhatsApp] Fetching conversations for tenant: ${tenantId}`);
+
     // First try to get from local database (cached conversations)
     let conversations = await whatsappService.getConversations(tenantId);
+    console.log(`[WhatsApp] Found ${conversations.length} cached conversations in database`);
 
     // If no conversations in database, fetch from WhatsApp API
     if (conversations.length === 0) {
       try {
+        console.log(`[WhatsApp] No cached conversations, fetching from WhatsApp API...`);
         const client = await whatsappService.getWhatsAppClient(tenantId);
-        if (client) {
+        
+        if (!client) {
+          console.warn(`[WhatsApp] No WhatsApp client available for tenant ${tenantId}. Check if endpoint is configured.`);
+        } else {
+          console.log(`[WhatsApp] Client found, calling getConversations...`);
           conversations = await client.getConversations(tenantId);
+          console.log(`[WhatsApp] Fetched ${conversations.length} conversations from WhatsApp API`);
         }
       } catch (apiError) {
-        console.error('Error fetching from WhatsApp API:', apiError);
+        console.error('[WhatsApp] Error fetching from WhatsApp API:', apiError);
         // Continue with whatever is in database
       }
     }
@@ -59,11 +68,12 @@ export async function GET(request: NextRequest) {
       metadata: conversation.metadata,
     }));
 
+    console.log(`[WhatsApp] Returning ${response.length} conversations to client`);
     return NextResponse.json({ conversations: response });
   } catch (error) {
-    console.error('Error fetching WhatsApp conversations:', error);
+    console.error('[WhatsApp] Error fetching WhatsApp conversations:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch conversations' },
+      { error: 'Failed to fetch conversations', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
