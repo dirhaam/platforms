@@ -19,11 +19,11 @@ interface Template {
 const TEMPLATES: Template[] = [
   {
     id: 'modern',
-    name: 'Modern',
-    description: 'Contemporary design with vibrant colors and smooth animations',
-    bestFor: 'Startups, tech companies, modern services',
+    name: 'Modern V2 (Premium)',
+    description: 'Premium dark theme with glassmorphism, animated gradients, and smooth transitions',
+    bestFor: 'Luxury brands, tech companies, premium services',
     icon: '✨',
-    colors: ['#3b82f6', '#8b5cf6', '#ec4899']
+    colors: ['#0066ff', '#00d4ff', '#ff0080']
   },
   {
     id: 'classic',
@@ -35,11 +35,11 @@ const TEMPLATES: Template[] = [
   },
   {
     id: 'minimal',
-    name: 'Minimal',
-    description: 'Clean and simple with focus on whitespace and typography',
-    bestFor: 'Tech startups, design agencies, luxury brands',
+    name: 'Minimal (Redesigned)',
+    description: 'Ultra-clean design with focus on whitespace, sticky navigation, and elegant typography',
+    bestFor: 'Tech startups, design agencies, luxury brands, professional services',
     icon: '✏️',
-    colors: ['#000000', '#666666', '#cccccc']
+    colors: ['#000000', '#4b5563', '#d1d5db']
   },
   {
     id: 'beauty',
