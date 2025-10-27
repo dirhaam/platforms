@@ -245,7 +245,7 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
           </div>
 
           {/* Selected Template Preview Info */}
-          {selectedTemplateData && selectedTemplate !== currentTemplate && (
+          {selectedTemplateData && selectedTemplate !== fetchedCurrentTemplate && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-900">
                 <strong>Preview:</strong> {selectedTemplateData.name}
@@ -274,7 +274,7 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
             </Button>
             <Button
               onClick={handleSaveTemplate}
-              disabled={saving || selectedTemplate === currentTemplate}
+              disabled={saving || selectedTemplate === fetchedCurrentTemplate}
               className="flex-1"
             >
               {saving ? (
@@ -285,7 +285,7 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
               ) : (
                 <>
                   Save Style
-                  {selectedTemplate !== currentTemplate && ' (Changes pending)'}
+                  {selectedTemplate !== fetchedCurrentTemplate && ' (Changes pending)'}
                 </>
               )}
             </Button>
