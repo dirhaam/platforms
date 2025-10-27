@@ -67,6 +67,7 @@ import {
   SalesSummary,
   SalesFilters,
 } from '@/types/sales';
+import { NewCustomerForm } from '@/components/forms/NewCustomerForm';
 
 interface NewOnTheSpotTransactionData {
   customerId: string;
@@ -130,14 +131,6 @@ export function SalesContent() {
     isHomeVisit: false,
     totalAmount: 0,
     paymentMethod: SalesPaymentMethod.CASH,
-    notes: '',
-  });
-
-  const [newCustomer, setNewCustomer] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
     notes: '',
   });
 
@@ -355,47 +348,6 @@ export function SalesContent() {
     } catch (error) {
       console.error('Error deleting transaction:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete transaction');
-    }
-  };
-
-  // Create new customer
-  const handleCreateCustomer = async () => {
-    if (!tenantId || !newCustomer.name || !newCustomer.phone) {
-      setError('Please fill in name and phone number');
-      return;
-    }
-
-    try {
-      setError(null);
-      const response = await fetch('/api/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...newCustomer,
-          tenantId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to create customer');
-      }
-
-      const data = await response.json();
-      setCustomers([data.customer, ...customers]);
-      setShowNewCustomerDialog(false);
-      setNewCustomer({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        notes: '',
-      });
-    } catch (error) {
-      console.error('Error creating customer:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create customer');
     }
   };
 
@@ -926,75 +878,16 @@ export function SalesContent() {
                   </DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="customerName">Name*</Label>
-                    <Input
-                      id="customerName"
-                      placeholder="Customer name"
-                      value={newCustomer.name}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="customerPhone">Phone*</Label>
-                    <Input
-                      id="customerPhone"
-                      placeholder="Phone number"
-                      value={newCustomer.phone}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="customerEmail">Email</Label>
-                    <Input
-                      id="customerEmail"
-                      type="email"
-                      placeholder="Email address"
-                      value={newCustomer.email}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="customerAddress">Address</Label>
-                    <Input
-                      id="customerAddress"
-                      placeholder="Address"
-                      value={newCustomer.address}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, address: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="customerNotes">Notes</Label>
-                    <Textarea
-                      id="customerNotes"
-                      placeholder="Additional notes"
-                      value={newCustomer.notes}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, notes: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowNewCustomerDialog(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleCreateCustomer}
-                    disabled={!newCustomer.name || !newCustomer.phone}
-                  >
-                    Add Customer
-                  </Button>
-                </DialogFooter>
+                <NewCustomerForm
+                  subdomain={searchParams?.get('subdomain') || ''}
+                  tenantId={tenantId}
+                  compact={true}
+                  onSuccess={(customer) => {
+                    setCustomers([customer, ...customers]);
+                    setShowNewCustomerDialog(false);
+                  }}
+                  onCancel={() => setShowNewCustomerDialog(false)}
+                />
               </DialogContent>
             </Dialog>
           </div>
