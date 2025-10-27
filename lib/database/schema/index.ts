@@ -427,3 +427,20 @@ export const salesTransactionRelations = relations(salesTransactions, ({ one }) 
 export const superAdminRelations = relations(superAdmins, () => ({}));
 
 export const securityAuditLogRelations = relations(securityAuditLogs, () => ({}));
+
+// Blocked Dates table
+export const blockedDates = pgTable('blocked_dates', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  date: timestamp('date', { withTimezone: true }).notNull(),
+  reason: text('reason'),
+  isRecurring: boolean('is_recurring').default(false),
+  recurringPattern: text('recurring_pattern'), // 'daily', 'weekly', 'monthly', 'yearly'
+  recurringEndDate: timestamp('recurring_end_date', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const blockedDatesRelations = relations(blockedDates, () => ({
+  tenant: one(tenants, { fields: [blockedDates.tenantId], references: [tenants.id] }),
+}));

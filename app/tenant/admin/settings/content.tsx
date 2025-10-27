@@ -5,19 +5,45 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Loader } from 'lucide-react';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
+import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
+
+interface TenantData {
+  id: string;
+  subdomain: string;
+}
 
 export default function SettingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain');
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!subdomain) {
       router.push('/tenant/login');
+      return;
     }
+
+    // Fetch tenant ID from subdomain
+    const fetchTenantId = async () => {
+      try {
+        const response = await fetch(`/api/tenants/${subdomain}`);
+        if (response.ok) {
+          const data: TenantData = await response.json();
+          setTenantId(data.id);
+        }
+      } catch (error) {
+        console.error('Error fetching tenant:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTenantId();
   }, [subdomain, router]);
 
-  if (!subdomain) {
+  if (!subdomain || loading) {
     return null;
   }
 
@@ -27,6 +53,9 @@ export default function SettingsPageContent() {
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600 mt-2">Manage business configuration and preferences</p>
       </div>
+
+      {/* Blocked Dates Section */}
+      {tenantId && <BlockedDatesManager tenantId={tenantId} />}
 
       {/* Landing Page Style Section */}
       <LandingPageStyleSettings subdomain={subdomain} currentTemplate="modern" />

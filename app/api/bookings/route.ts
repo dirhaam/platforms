@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BookingService } from '@/lib/booking/booking-service';
 import { createBookingSchema } from '@/lib/validation/booking-validation';
 import { BookingStatus } from '@/types/booking';
+import { BlockedDatesService } from '@/lib/bookings/blocked-dates-service';
 import { createClient } from '@supabase/supabase-js';
 
 // GET /api/bookings - Get bookings for a tenant
@@ -129,6 +130,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: 'Home visit address is required for home visit bookings' 
       }, { status: 400 });
+    }
+
+    // Check if booking date is blocked
+    if (validation.data.scheduledAt) {
+      const isBlocked = await BlockedDatesService.isDateBlocked(
+        resolvedTenantId,
+        new Date(validation.data.scheduledAt)
+      );
+      
+      if (isBlocked) {
+        return NextResponse.json({ 
+          error: 'This date is blocked and cannot be booked' 
+        }, { status: 400 });
+      }
     }
     
     const result = await BookingService.createBooking(resolvedTenantId, validation.data);
