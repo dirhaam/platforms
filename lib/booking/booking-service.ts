@@ -31,6 +31,7 @@ const randomUUID = () => {
 const mapToBooking = (dbData: any): Booking => {
   return {
     id: dbData.id,
+    bookingNumber: dbData.booking_number || `BK-${Date.now()}`,
     tenantId: dbData.tenant_id,
     customerId: dbData.customer_id,
     serviceId: dbData.service_id,
