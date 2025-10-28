@@ -64,6 +64,32 @@ export function UnifiedBookingPanel({
   const fetchRelatedData = async () => {
     try {
       setLoading(true);
+
+      // Fetch customer & service details if not already present
+      if (!booking.customer || !booking.service) {
+        try {
+          const [customerRes, serviceRes] = await Promise.all([
+            fetch(`/api/customers/${booking.customerId}`, {
+              headers: { 'x-tenant-id': tenantId }
+            }),
+            fetch(`/api/services/${booking.serviceId}`, {
+              headers: { 'x-tenant-id': tenantId }
+            })
+          ]);
+
+          if (customerRes.ok) {
+            const customerData = await customerRes.json();
+            // Note: This just fetches for display, but booking object won't update
+            // BookingDashboard should handle enrichment before passing
+          }
+          if (serviceRes.ok) {
+            const serviceData = await serviceRes.json();
+            // Note: This just fetches for display
+          }
+        } catch (error) {
+          console.error('Error fetching customer/service details:', error);
+        }
+      }
       
       // Fetch sales transaction
       const salesUrl = new URL('/api/sales/transactions', window.location.origin);

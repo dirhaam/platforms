@@ -65,13 +65,40 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/bookings?tenantId=${encodeURIComponent(tenantId)}`, {
-        headers: { 'x-tenant-id': tenantId }
-      });
+      // Fetch all needed data in parallel
+      const [bookingsRes, customersRes, servicesRes] = await Promise.all([
+        fetch(`/api/bookings?tenantId=${encodeURIComponent(tenantId)}`, {
+          headers: { 'x-tenant-id': tenantId }
+        }),
+        fetch(`/api/customers?tenantId=${encodeURIComponent(tenantId)}`, {
+          headers: { 'x-tenant-id': tenantId }
+        }),
+        fetch(`/api/services?tenantId=${encodeURIComponent(tenantId)}`, {
+          headers: { 'x-tenant-id': tenantId }
+        })
+      ]);
 
-      if (response.ok) {
-        const data = await response.json();
-        setBookings(data.bookings || []);
+      if (bookingsRes.ok && customersRes.ok && servicesRes.ok) {
+        const bookingsData = await bookingsRes.json();
+        const customersData = await customersRes.json();
+        const servicesData = await servicesRes.json();
+
+        // Create lookup maps for fast access
+        const customerMap = new Map(
+          (customersData.customers || []).map((c: any) => [c.id, c])
+        );
+        const serviceMap = new Map(
+          (servicesData.services || []).map((s: any) => [s.id, s])
+        );
+
+        // Enrich bookings with customer and service data
+        const enrichedBookings = (bookingsData.bookings || []).map((booking: any) => ({
+          ...booking,
+          customer: customerMap.get(booking.customerId),
+          service: serviceMap.get(booking.serviceId)
+        }));
+
+        setBookings(enrichedBookings);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
