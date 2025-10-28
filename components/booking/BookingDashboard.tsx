@@ -213,6 +213,15 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       toast.error('Selected service not found. Please refresh the page and try again.');
       return;
     }
+    
+    // Log detailed service info
+    console.log('Selected service details:', {
+      serviceId: selectedService.id,
+      name: selectedService.name,
+      price: selectedService.price,
+      tenantId,
+      allServiceIds: services.map(s => s.id)
+    });
 
     // Validate that selected customer exists
     const selectedCustomer = customers.find(c => c.id === quickSaleForm.customerId);

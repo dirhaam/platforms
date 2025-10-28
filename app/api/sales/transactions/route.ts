@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { salesService } from '@/lib/sales/sales-service';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,6 +85,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve tenant subdomain to UUID if needed
+    let resolvedTenantId = tenantId;
+    const isUUID = tenantId.length === 36 && tenantId.includes('-');
+    
+    if (!isUUID) {
+      // It's a subdomain, lookup the UUID
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
+      const { data: tenant, error: tenantErr } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('subdomain', tenantId)
+        .single();
+      
+      if (!tenant || tenantErr) {
+        return NextResponse.json(
+          { error: `Tenant not found: ${tenantId}` },
+          { status: 404 }
+        );
+      }
+      resolvedTenantId = tenant.id;
+    }
+
     let transaction;
 
     if (type === 'on_the_spot') {
@@ -99,7 +126,7 @@ export async function POST(request: NextRequest) {
       }
 
       transaction = await salesService.createOnTheSpotTransaction({
-        tenantId,
+        tenantId: resolvedTenantId,
         customerId: transactionData.customerId,
         serviceId: transactionData.serviceId,
         staffId: transactionData.staffId,
@@ -119,7 +146,7 @@ export async function POST(request: NextRequest) {
       }
 
       transaction = await salesService.createTransactionFromBooking({
-        tenantId,
+        tenantId: resolvedTenantId,
         bookingId: transactionData.bookingId,
         customerId: transactionData.customerId,
         serviceId: transactionData.serviceId,
@@ -151,7 +178,7 @@ export async function POST(request: NextRequest) {
 
       transaction = await salesService.createTransaction({
         ...transactionData,
-        tenantId,
+        tenantId: resolvedTenantId,
         subtotal,
         taxAmount,
         totalAmount,
