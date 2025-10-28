@@ -11,8 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Invoice, InvoiceStatus, InvoiceFilters } from '@/types/invoice';
-import { Booking, BookingStatus } from '@/types/booking';
-import { SalesTransaction, SalesTransactionStatus } from '@/types/sales';
+import { BookingStatus } from '@/types/booking';
+import { SalesTransactionStatus } from '@/types/sales';
 import { InvoiceDialog } from '@/components/invoice/InvoiceDialog';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { Plus, Search, Filter, Download, Eye, Edit, Trash2, Send, CalendarClock } from 'lucide-react';
@@ -21,6 +21,25 @@ import { toast } from 'sonner';
 interface InvoiceManagementProps {
   tenantId: string;
 }
+
+type BookingListItem = {
+  id: string;
+  bookingNumber: string;
+  status: BookingStatus;
+  scheduledAt: Date | null;
+  totalAmount: number;
+  customer?: { name?: string | null } | null;
+};
+
+type SalesListItem = {
+  id: string;
+  transactionNumber: string;
+  status: SalesTransactionStatus;
+  serviceName: string;
+  totalAmount: number;
+  transactionDate: Date | null;
+  customer?: { name?: string | null } | null;
+};
 
 export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -39,12 +58,12 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [bookingDialogTab, setBookingDialogTab] = useState<'bookings' | 'sales'>('bookings');
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
   const [bookingSearch, setBookingSearch] = useState('');
   const [creatingFromBookingId, setCreatingFromBookingId] = useState<string | null>(null);
-  const [salesTransactions, setSalesTransactions] = useState<SalesTransaction[]>([]);
+  const [salesTransactions, setSalesTransactions] = useState<SalesListItem[]>([]);
   const [salesLoading, setSalesLoading] = useState(false);
   const [salesError, setSalesError] = useState<string | null>(null);
   const [salesSearch, setSalesSearch] = useState('');
@@ -122,18 +141,27 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       url.searchParams.set('status', BookingStatus.COMPLETED);
       url.searchParams.set('limit', '50');
 
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), {
+        headers: tenantId ? { 'x-tenant-id': tenantId } : undefined,
+        credentials: 'include',
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Gagal mengambil data booking');
       }
 
       const data = await response.json();
-      const normalized: Booking[] = (data.bookings || []).map((booking: any) => ({
-        ...booking,
-        scheduledAt: booking.scheduledAt ? new Date(booking.scheduledAt) : (booking.scheduled_at ? new Date(booking.scheduled_at) : undefined),
-        totalAmount: Number(booking.totalAmount ?? booking.total_amount ?? 0),
-      }));
+      const normalized = (data.bookings || []).map((booking: any) => {
+        const scheduledAtRaw = booking.scheduledAt ?? booking.scheduled_at ?? null;
+        return {
+          id: booking.id,
+          bookingNumber: booking.bookingNumber ?? booking.booking_number ?? '',
+          status: booking.status as BookingStatus,
+          scheduledAt: scheduledAtRaw ? new Date(scheduledAtRaw) : null,
+          totalAmount: Number(booking.totalAmount ?? booking.total_amount ?? 0),
+          customer: booking.customer ?? null,
+        } satisfies BookingListItem;
+      });
 
       setBookings(normalized);
     } catch (error) {
@@ -156,29 +184,29 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       url.searchParams.set('status', SalesTransactionStatus.COMPLETED);
       url.searchParams.set('limit', '50');
 
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), {
+        headers: tenantId ? { 'x-tenant-id': tenantId } : undefined,
+        credentials: 'include',
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Gagal mengambil data penjualan');
       }
 
       const data = await response.json();
-      const normalized: SalesTransaction[] = (data.transactions || []).map((transaction: any) => ({
-        ...transaction,
-        transactionDate: transaction.transactionDate
-          ? new Date(transaction.transactionDate)
-          : transaction.createdAt
-            ? new Date(transaction.createdAt)
-            : transaction.created_at
-              ? new Date(transaction.created_at)
-              : new Date(),
-        totalAmount: Number(transaction.totalAmount ?? transaction.total_amount ?? 0),
-        unitPrice: Number(transaction.unitPrice ?? transaction.unit_price ?? 0),
-        homeVisitSurcharge: Number(transaction.homeVisitSurcharge ?? transaction.home_visit_surcharge ?? 0),
-        subtotal: Number(transaction.subtotal ?? transaction.sub_total ?? transaction.totalAmount ?? 0),
-        taxRate: Number(transaction.taxRate ?? transaction.tax_rate ?? 0),
-        discountAmount: Number(transaction.discountAmount ?? transaction.discount_amount ?? 0),
-      }));
+      const normalized = (data.transactions || []).map((transaction: any) => {
+        const transactionDateRaw =
+          transaction.transactionDate ?? transaction.transaction_date ?? transaction.createdAt ?? transaction.created_at ?? null;
+        return {
+          id: transaction.id,
+          transactionNumber: transaction.transactionNumber ?? transaction.transaction_number ?? '',
+          status: transaction.status as SalesTransactionStatus,
+          serviceName: transaction.serviceName ?? transaction.service_name ?? '',
+          totalAmount: Number(transaction.totalAmount ?? transaction.total_amount ?? 0),
+          transactionDate: transactionDateRaw ? new Date(transactionDateRaw) : null,
+          customer: transaction.customer ?? null,
+        } satisfies SalesListItem;
+      });
 
       setSalesTransactions(normalized);
     } catch (error) {
@@ -347,7 +375,7 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
 
     const term = bookingSearch.trim().toLowerCase();
     const bookingNumber = booking.bookingNumber?.toLowerCase() || '';
-    const customerName = (booking as any).customer?.name?.toLowerCase?.() || '';
+    const customerName = (booking.customer?.name ?? '').toLowerCase();
     return (
       bookingNumber.includes(term) ||
       booking.id.toLowerCase().includes(term) ||
@@ -355,7 +383,7 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     );
   });
 
-  const handleCreateInvoiceFromBooking = async (booking: Booking) => {
+  const handleCreateInvoiceFromBooking = async (booking: BookingListItem) => {
     try {
       setCreatingFromBookingId(booking.id);
       const url = new URL(`/api/invoices/from-booking/${booking.id}`, window.location.origin);
@@ -389,9 +417,9 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     }
 
     const term = salesSearch.trim().toLowerCase();
-    const transactionNumber = transaction.transactionNumber?.toLowerCase?.() || '';
+    const transactionNumber = (transaction.transactionNumber ?? '').toLowerCase();
     const customerName = (transaction.customer?.name ?? '').toLowerCase();
-    const serviceName = transaction.serviceName?.toLowerCase?.() || '';
+    const serviceName = (transaction.serviceName ?? '').toLowerCase();
 
     return (
       transactionNumber.includes(term) ||
@@ -401,7 +429,7 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     );
   });
 
-  const handleCreateInvoiceFromSales = async (transaction: SalesTransaction) => {
+  const handleCreateInvoiceFromSales = async (transaction: SalesListItem) => {
     try {
       setCreatingFromSalesId(transaction.id);
       const url = new URL(`/api/invoices/from-sales/${transaction.id}`, window.location.origin);
