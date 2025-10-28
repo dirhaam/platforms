@@ -359,6 +359,12 @@ export function UnifiedBookingPanel({
                       </Badge>
                     </div>
                   </div>
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm text-green-700 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Sales transaction linked from booking
+                    </p>
+                  </div>
                   <Button variant="outline" size="sm">
                     View Details
                   </Button>
@@ -366,7 +372,13 @@ export function UnifiedBookingPanel({
               ) : (
                 <div className="py-6 text-center">
                   <p className="text-sm text-gray-600 mb-4">No sales transaction yet</p>
-                  <Button>Create Sales Transaction</Button>
+                  {booking.paymentStatus === PaymentStatus.PAID ? (
+                    <Button onClick={() => toast.info('Sales transaction creation coming soon')}>
+                      Create Sales Transaction
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-gray-500">Record payment first to create sales transaction</p>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -381,35 +393,53 @@ export function UnifiedBookingPanel({
                         <div>
                           <p className="font-medium">{invoice.invoiceNumber}</p>
                           <p className="text-sm text-gray-600">Rp {invoice.totalAmount.toLocaleString('id-ID')}</p>
+                          {invoice.dueDate && (
+                            <p className="text-xs text-gray-500">
+                              Due: {new Date(invoice.dueDate).toLocaleDateString('id-ID')}
+                            </p>
+                          )}
                         </div>
                         <Badge className={
                           invoice.status === InvoiceStatus.PAID 
                             ? 'bg-green-100 text-green-800'
                             : invoice.status === InvoiceStatus.SENT
                             ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
+                            : invoice.status === InvoiceStatus.DRAFT
+                            ? 'bg-gray-100 text-gray-800'
+                            : 'bg-red-100 text-red-800'
                         }>
                           {invoice.status.toUpperCase()}
                         </Badge>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         {invoice.status === InvoiceStatus.DRAFT && (
                           <Button size="sm" variant="outline">Send</Button>
+                        )}
+                        {invoice.status !== InvoiceStatus.PAID && (
+                          <Button size="sm" variant="outline">Mark Paid</Button>
                         )}
                         <Button size="sm" variant="outline">
                           <Download className="h-3 w-3 mr-1" />
                           PDF
+                        </Button>
+                        <Button size="sm" variant="ghost">
+                          <Send className="h-3 w-3 mr-1" />
+                          WhatsApp
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="py-6 text-center">
-                  <p className="text-sm text-gray-600 mb-4">No invoices yet</p>
-                  {booking.paymentStatus === PaymentStatus.PAID && (
-                    <Button>Generate Invoice</Button>
-                  )}
+                <div className="py-6 text-center space-y-3">
+                  <p className="text-sm text-gray-600">No invoices yet</p>
+                  {booking.paymentStatus === PaymentStatus.PENDING ? (
+                    <p className="text-xs text-gray-500">Record payment first to generate invoice</p>
+                  ) : booking.paymentStatus === PaymentStatus.PAID ? (
+                    <Button onClick={() => toast.info('Invoice generation coming soon')}>
+                      Generate Invoice
+                    </Button>
+                  ) : null}
                 </div>
               )}
             </TabsContent>
