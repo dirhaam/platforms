@@ -397,6 +397,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                     bookings={filteredBookings}
                     selectedDate={selectedDate}
                     onDateSelect={setSelectedDate}
+                    onBookingClick={handleBookingClick}
                   />
                 </CardContent>
               </Card>

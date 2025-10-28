@@ -382,10 +382,19 @@ export function UnifiedBookingPanel({
                 >
                   {booking.status === BookingStatus.PENDING ? 'Confirm' : 'Complete'}
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toast.info('Reschedule feature coming soon')}
+                  disabled={booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED}
+                >
                   Reschedule
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => toast.info('More options coming soon')}
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </div>
