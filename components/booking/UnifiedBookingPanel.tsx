@@ -138,8 +138,98 @@ export function UnifiedBookingPanel({
       });
       toast.success('Payment recorded');
       setShowPaymentDialog(false);
+      await fetchRelatedData();
     } catch (error) {
       toast.error('Failed to record payment');
+    }
+  };
+
+  const handleGenerateInvoice = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/from-booking/${booking.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        }
+      });
+
+      if (response.ok) {
+        toast.success('Invoice generated successfully');
+        await fetchRelatedData();
+      } else {
+        throw new Error('Failed to generate invoice');
+      }
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      toast.error('Failed to generate invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSalesTransaction = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/sales/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          tenantId,
+          type: 'from_booking',
+          bookingId: booking.id,
+          customerId: booking.customerId,
+          serviceId: booking.serviceId,
+          scheduledAt: booking.scheduledAt,
+          totalAmount: booking.totalAmount,
+          paymentMethod: booking.paymentMethod || 'cash'
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Sales transaction created successfully');
+        await fetchRelatedData();
+      } else {
+        throw new Error('Failed to create sales transaction');
+      }
+    } catch (error) {
+      console.error('Error creating sales transaction:', error);
+      toast.error('Failed to create sales transaction');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendInvoiceWhatsApp = async (invoiceId: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/${invoiceId}/whatsapp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          customerId: booking.customerId,
+          invoiceId
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Invoice sent via WhatsApp');
+        await fetchRelatedData();
+      } else {
+        throw new Error('Failed to send invoice');
+      }
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      toast.error('Failed to send invoice');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -373,8 +463,11 @@ export function UnifiedBookingPanel({
                 <div className="py-6 text-center">
                   <p className="text-sm text-gray-600 mb-4">No sales transaction yet</p>
                   {booking.paymentStatus === PaymentStatus.PAID ? (
-                    <Button onClick={() => toast.info('Sales transaction creation coming soon')}>
-                      Create Sales Transaction
+                    <Button 
+                      onClick={handleCreateSalesTransaction}
+                      disabled={loading}
+                    >
+                      {loading ? 'Creating...' : 'Create Sales Transaction'}
                     </Button>
                   ) : (
                     <p className="text-xs text-gray-500">Record payment first to create sales transaction</p>
@@ -413,7 +506,14 @@ export function UnifiedBookingPanel({
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         {invoice.status === InvoiceStatus.DRAFT && (
-                          <Button size="sm" variant="outline">Send</Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleSendInvoiceWhatsApp(invoice.id)}
+                            disabled={loading}
+                          >
+                            Send
+                          </Button>
                         )}
                         {invoice.status !== InvoiceStatus.PAID && (
                           <Button size="sm" variant="outline">Mark Paid</Button>
@@ -422,7 +522,12 @@ export function UnifiedBookingPanel({
                           <Download className="h-3 w-3 mr-1" />
                           PDF
                         </Button>
-                        <Button size="sm" variant="ghost">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleSendInvoiceWhatsApp(invoice.id)}
+                          disabled={loading}
+                        >
                           <Send className="h-3 w-3 mr-1" />
                           WhatsApp
                         </Button>
@@ -436,8 +541,11 @@ export function UnifiedBookingPanel({
                   {booking.paymentStatus === PaymentStatus.PENDING ? (
                     <p className="text-xs text-gray-500">Record payment first to generate invoice</p>
                   ) : booking.paymentStatus === PaymentStatus.PAID ? (
-                    <Button onClick={() => toast.info('Invoice generation coming soon')}>
-                      Generate Invoice
+                    <Button 
+                      onClick={handleGenerateInvoice}
+                      disabled={loading}
+                    >
+                      {loading ? 'Generating...' : 'Generate Invoice'}
                     </Button>
                   ) : null}
                 </div>
