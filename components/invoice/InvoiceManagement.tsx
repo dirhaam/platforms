@@ -138,7 +138,7 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       if (tenantId) {
         url.searchParams.set('tenantId', tenantId);
       }
-      url.searchParams.set('status', BookingStatus.COMPLETED);
+      url.searchParams.set('status', BookingStatus.CONFIRMED);
       url.searchParams.set('limit', '50');
 
       const response = await fetch(url.toString(), {
@@ -181,7 +181,6 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       if (tenantId) {
         url.searchParams.set('tenantId', tenantId);
       }
-      url.searchParams.set('status', SalesTransactionStatus.COMPLETED);
       url.searchParams.set('limit', '50');
 
       const response = await fetch(url.toString(), {
