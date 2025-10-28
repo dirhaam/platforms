@@ -131,13 +131,22 @@ export function UnifiedBookingPanel({
   };
 
   const handleUpdateStatus = async (status: BookingStatus) => {
-    if (!onBookingUpdate) return;
+    if (!onBookingUpdate) {
+      toast.error('Unable to update booking');
+      return;
+    }
     try {
+      setLoading(true);
       await onBookingUpdate(booking.id, { status });
-      toast.success(`Booking status updated to ${status}`);
+      toast.success(`Booking ${status.toLowerCase()}`);
       setShowStatusDialog(false);
+      await fetchRelatedData();
     } catch (error) {
-      toast.error('Failed to update booking status');
+      console.error('Error updating booking status:', error);
+      const msg = error instanceof Error ? error.message : 'Failed to update booking status';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -159,26 +168,40 @@ export function UnifiedBookingPanel({
   const handleGenerateInvoice = async () => {
     try {
       setLoading(true);
+      
       const response = await fetch(`/api/invoices/from-booking/${booking.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-tenant-id': tenantId
-        }
+        },
+        body: JSON.stringify({
+          tenantId,
+          bookingId: booking.id,
+          customerId: booking.customerId,
+          totalAmount: booking.totalAmount
+        })
       });
 
       if (response.ok) {
         toast.success('Invoice generated successfully');
         await fetchRelatedData();
       } else {
-        const errorData = await response.json();
-        const errorMsg = errorData.error || `Failed to generate invoice (${response.status})`;
+        let errorMsg = `Failed to generate invoice (${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorMsg = response.statusText || errorMsg;
+        }
         console.error('API Error:', errorMsg);
         toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error generating invoice:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate invoice');
+      const msg = error instanceof Error ? error.message : 'Failed to generate invoice';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
