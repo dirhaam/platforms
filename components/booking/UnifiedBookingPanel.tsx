@@ -185,11 +185,14 @@ export function UnifiedBookingPanel({
         toast.success('Invoice generated successfully');
         await fetchRelatedData();
       } else {
-        throw new Error('Failed to generate invoice');
+        const errorData = await response.json();
+        const errorMsg = errorData.error || `Failed to generate invoice (${response.status})`;
+        console.error('API Error:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error generating invoice:', error);
-      toast.error('Failed to generate invoice');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate invoice');
     } finally {
       setLoading(false);
     }
@@ -212,7 +215,10 @@ export function UnifiedBookingPanel({
           serviceId: booking.serviceId,
           scheduledAt: booking.scheduledAt,
           totalAmount: booking.totalAmount,
-          paymentMethod: booking.paymentMethod || 'cash'
+          paymentMethod: booking.paymentMethod || 'cash',
+          isHomeVisit: booking.isHomeVisit || false,
+          homeVisitAddress: booking.homeVisitAddress,
+          homeVisitCoordinates: booking.homeVisitCoordinates
         })
       });
 
@@ -220,11 +226,14 @@ export function UnifiedBookingPanel({
         toast.success('Sales transaction created successfully');
         await fetchRelatedData();
       } else {
-        throw new Error('Failed to create sales transaction');
+        const errorData = await response.json();
+        const errorMsg = errorData.error || `Failed to create sales transaction (${response.status})`;
+        console.error('API Error:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error creating sales transaction:', error);
-      toast.error('Failed to create sales transaction');
+      toast.error(error instanceof Error ? error.message : 'Failed to create sales transaction');
     } finally {
       setLoading(false);
     }
@@ -249,11 +258,14 @@ export function UnifiedBookingPanel({
         toast.success('Invoice sent via WhatsApp');
         await fetchRelatedData();
       } else {
-        throw new Error('Failed to send invoice');
+        const errorData = await response.json();
+        const errorMsg = errorData.error || `Failed to send invoice (${response.status})`;
+        console.error('API Error:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error sending invoice:', error);
-      toast.error('Failed to send invoice');
+      toast.error(error instanceof Error ? error.message : 'Failed to send invoice');
     } finally {
       setLoading(false);
     }
