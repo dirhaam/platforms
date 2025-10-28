@@ -38,7 +38,12 @@ export class WhatsAppClient implements WhatsAppApiClient {
           ? message.fileData
           : new Uint8Array(message.fileData);
 
-        const blob = new Blob([uint8], {
+        const arrayBuffer = uint8.buffer.slice(
+          uint8.byteOffset,
+          uint8.byteOffset + uint8.byteLength
+        );
+
+        const blob = new Blob([arrayBuffer], {
           type: message.mimeType || 'application/pdf',
         });
 
