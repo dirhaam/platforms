@@ -16,6 +16,8 @@ import {
   TrendingUp,
   Menu,
   X,
+  FileText,
+  Wallet,
 } from 'lucide-react';
 
 function TenantAdminLayoutContent({
@@ -53,6 +55,16 @@ function TenantAdminLayoutContent({
       href: `/tenant/admin/sales?subdomain=${subdomain}`,
       label: 'Sales',
       icon: TrendingUp,
+    },
+    {
+      href: `/tenant/admin/finance?subdomain=${subdomain}`,
+      label: 'Finance',
+      icon: Wallet,
+    },
+    {
+      href: `/tenant/admin/invoices?subdomain=${subdomain}`,
+      label: 'Invoices',
+      icon: FileText,
     },
     {
       href: `/tenant/admin/whatsapp?subdomain=${subdomain}`,

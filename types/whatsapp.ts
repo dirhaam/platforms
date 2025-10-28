@@ -117,6 +117,8 @@ export interface WhatsAppMessageData {
   mediaUrl?: string;
   caption?: string;
   filename?: string;
+  fileData?: Uint8Array | ArrayBuffer;
+  mimeType?: string;
 }
 
 export interface WhatsAppEndpointConfig {

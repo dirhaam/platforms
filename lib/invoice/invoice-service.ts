@@ -8,10 +8,10 @@ import {
   InvoiceSummary,
   InvoiceFilters,
   QRCodePaymentData,
-  type Service,
   type Customer,
   type Booking,
   type Tenant,
+  type InvoiceItem,
 } from '@/types/invoice';
 import Decimal from 'decimal.js';
 
@@ -61,6 +61,8 @@ export class InvoiceService {
       const discountAmount = new Decimal(data.discountAmount || 0);
       const totalAmount = subtotal.add(taxAmount).sub(discountAmount);
 
+      const nowIso = new Date().toISOString();
+
       const { error } = await supabase
         .from('invoices')
         .insert({
@@ -70,7 +72,7 @@ export class InvoiceService {
           bookingId: data.bookingId,
           invoiceNumber,
           status: 'draft',
-          issueDate: new Date().toISOString(),
+          issueDate: nowIso,
           dueDate: data.dueDate,
           subtotal: subtotal.toNumber(),
           taxRate: taxRate.toNumber(),
@@ -79,13 +81,36 @@ export class InvoiceService {
           totalAmount: totalAmount.toNumber(),
           notes: data.notes,
           terms: data.terms,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: nowIso,
+          updatedAt: nowIso,
         });
 
       if (error) {
         console.error('Error creating invoice:', error);
         throw error;
+      }
+
+      const items = (data.items || []).map(item => ({
+        id: randomUUID(),
+        invoiceId,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.unitPrice) * item.quantity,
+        serviceId: item.serviceId ?? null,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      }));
+
+      if (items.length) {
+        const { error: itemsError } = await supabase
+          .from('invoice_items')
+          .insert(items);
+
+        if (itemsError) {
+          console.error('Error creating invoice items:', itemsError);
+          throw itemsError;
+        }
       }
 
       return this.getInvoiceById(tenantId, invoiceId) as Promise<Invoice>;
@@ -110,7 +135,7 @@ export class InvoiceService {
         return null;
       }
 
-      return {
+      const baseInvoice: Invoice = {
         id: data.id,
         tenantId: data.tenantId,
         customerId: data.customerId,
@@ -135,6 +160,41 @@ export class InvoiceService {
         createdAt: new Date(data.createdAt),
         updatedAt: new Date(data.updatedAt),
       } as Invoice;
+
+      const [itemsResult, customerResult, tenantResult] = await Promise.all([
+        supabase
+          .from('invoice_items')
+          .select('*')
+          .or(`invoiceId.eq.${invoiceId},invoice_id.eq.${invoiceId}`),
+        data.customerId
+          ? supabase
+              .from('customers')
+              .select('*')
+              .eq('id', data.customerId)
+              .limit(1)
+              .single()
+          : Promise.resolve({ data: null, error: null } as { data: any; error: any }),
+        supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', tenantId)
+          .limit(1)
+          .single(),
+      ]);
+
+      if (!itemsResult.error && Array.isArray(itemsResult.data)) {
+        baseInvoice.items = itemsResult.data.map(this.mapInvoiceItem);
+      }
+
+      if (!customerResult.error && customerResult.data) {
+        baseInvoice.customer = this.mapCustomer(customerResult.data);
+      }
+
+      if (!tenantResult.error && tenantResult.data) {
+        baseInvoice.tenant = this.mapTenant(tenantResult.data);
+      }
+
+      return baseInvoice;
     } catch (error) {
       console.error('Error fetching invoice:', error);
       return null;
@@ -166,17 +226,50 @@ export class InvoiceService {
         .order('createdAt', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 
-      const invoices = (data || []).map(inv => ({
-        id: inv.id,
-        tenantId: inv.tenantId,
-        customerId: inv.customerId,
-        invoiceNumber: inv.invoiceNumber,
-        status: inv.status as InvoiceStatus,
-        issueDate: new Date(inv.issueDate),
-        dueDate: new Date(inv.dueDate),
-        totalAmount: parseDecimal(inv.totalAmount),
-        items: [],
-      })) as any;
+      const rows = data || [];
+
+      const customerIds = Array.from(
+        new Set(
+          rows
+            .map(inv => inv.customerId ?? inv.customer_id)
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      const customersMap = new Map<string, Customer>();
+
+      if (customerIds.length) {
+        const { data: customersData, error: customersError } = await supabase
+          .from('customers')
+          .select('*')
+          .in('id', customerIds);
+
+        if (customersError) {
+          console.error('Error fetching invoice customers:', customersError);
+        } else if (Array.isArray(customersData)) {
+          customersData.forEach(customer => {
+            const mapped = this.mapCustomer(customer);
+            customersMap.set(mapped.id, mapped);
+          });
+        }
+      }
+
+      const invoices = rows.map(inv => {
+        const mappedCustomer = customersMap.get(inv.customerId ?? inv.customer_id);
+
+        return {
+          id: inv.id,
+          tenantId: inv.tenantId,
+          customerId: inv.customerId,
+          invoiceNumber: inv.invoiceNumber,
+          status: inv.status as InvoiceStatus,
+          issueDate: new Date(inv.issueDate),
+          dueDate: new Date(inv.dueDate),
+          totalAmount: parseDecimal(inv.totalAmount),
+          items: [],
+          customer: mappedCustomer,
+        };
+      });
 
       return {
         invoices,
@@ -302,6 +395,84 @@ export class InvoiceService {
         overdueCount: 0,
       };
     }
+  }
+
+  private static mapInvoiceItem(item: any): InvoiceItem {
+    const quantity = Number(item.quantity ?? item.qty ?? 0);
+    const unitPrice = parseDecimal(item.unitPrice ?? item.unit_price);
+    const totalPrice = parseDecimal(
+      item.totalPrice ?? item.total_price ?? quantity * unitPrice
+    );
+
+    return {
+      id: item.id,
+      invoiceId: item.invoiceId ?? item.invoice_id,
+      description: item.description ?? '',
+      quantity,
+      unitPrice,
+      totalPrice,
+      serviceId: item.serviceId ?? item.service_id ?? undefined,
+    } as InvoiceItem;
+  }
+
+  private static mapCustomer(customer: any): Customer {
+    return {
+      id: customer.id,
+      tenantId: customer.tenantId ?? customer.tenant_id,
+      name: customer.name,
+      email: customer.email ?? undefined,
+      phone: customer.phone ?? '',
+      address: customer.address ?? undefined,
+      notes: customer.notes ?? undefined,
+      totalBookings: Number(customer.totalBookings ?? customer.total_bookings ?? 0),
+      lastBookingAt: this.parseDate(customer.lastBookingAt ?? customer.last_booking_at) ?? undefined,
+      whatsappNumber: customer.whatsappNumber ?? customer.whatsapp_number ?? undefined,
+      createdAt: this.parseDate(customer.createdAt ?? customer.created_at) ?? new Date(),
+      updatedAt: this.parseDate(customer.updatedAt ?? customer.updated_at) ?? new Date(),
+      bookings: customer.bookings,
+    } as Customer;
+  }
+
+  private static mapTenant(tenant: any): Tenant {
+    return {
+      id: tenant.id,
+      subdomain: tenant.subdomain,
+      emoji: tenant.emoji ?? '🏢',
+      businessName: tenant.businessName ?? tenant.business_name ?? '',
+      businessCategory: tenant.businessCategory ?? tenant.business_category ?? '',
+      ownerName: tenant.ownerName ?? tenant.owner_name ?? '',
+      email: tenant.email ?? '',
+      phone: tenant.phone ?? '',
+      address: tenant.address ?? undefined,
+      businessDescription: tenant.businessDescription ?? tenant.business_description ?? undefined,
+      logo: tenant.logo ?? undefined,
+      brandColors: tenant.brandColors ?? tenant.brand_colors ?? null,
+      whatsappEnabled: Boolean(tenant.whatsappEnabled ?? tenant.whatsapp_enabled ?? false),
+      homeVisitEnabled: Boolean(tenant.homeVisitEnabled ?? tenant.home_visit_enabled ?? false),
+      analyticsEnabled: Boolean(tenant.analyticsEnabled ?? tenant.analytics_enabled ?? false),
+      customTemplatesEnabled: Boolean(tenant.customTemplatesEnabled ?? tenant.custom_templates_enabled ?? false),
+      multiStaffEnabled: Boolean(tenant.multiStaffEnabled ?? tenant.multi_staff_enabled ?? false),
+      subscriptionPlan: tenant.subscriptionPlan ?? tenant.subscription_plan ?? 'basic',
+      subscriptionStatus: tenant.subscriptionStatus ?? tenant.subscription_status ?? 'active',
+      subscriptionExpiresAt: this.parseDate(tenant.subscriptionExpiresAt ?? tenant.subscription_expires_at),
+      passwordHash: tenant.passwordHash ?? tenant.password_hash ?? null,
+      lastLoginAt: this.parseDate(tenant.lastLoginAt ?? tenant.last_login_at),
+      loginAttempts: Number(tenant.loginAttempts ?? tenant.login_attempts ?? 0),
+      lockedUntil: this.parseDate(tenant.lockedUntil ?? tenant.locked_until),
+      passwordResetToken: tenant.passwordResetToken ?? tenant.password_reset_token ?? null,
+      passwordResetExpires: this.parseDate(tenant.passwordResetExpires ?? tenant.password_reset_expires),
+      createdAt: this.parseDate(tenant.createdAt ?? tenant.created_at) ?? new Date(),
+      updatedAt: this.parseDate(tenant.updatedAt ?? tenant.updated_at) ?? new Date(),
+    } as Tenant;
+  }
+
+  private static parseDate(value: any): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
   static async createInvoiceFromBooking(tenantId: string, bookingId: string): Promise<Invoice> {

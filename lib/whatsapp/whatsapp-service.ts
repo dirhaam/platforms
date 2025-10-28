@@ -138,7 +138,8 @@ export class WhatsAppService {
       throw new Error('WhatsApp endpoint not configured or unavailable');
     }
 
-    const sentMessage = await client.sendMessage(deviceId, to, message);
+    const recipient = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+    const sentMessage = await client.sendMessage(deviceId, recipient, message);
 
     const recorded = await this.webhookHandler.recordOutgoingMessage(tenantId, deviceId, to, {
       id: sentMessage.id,

@@ -21,6 +21,55 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
   async sendMessage(deviceId: string, to: string, message: WhatsAppMessageData): Promise<WhatsAppMessage> {
     try {
+      if (message.type === 'document') {
+        if (!message.fileData) {
+          throw new Error('Document message requires file data');
+        }
+
+        const formData = new FormData();
+        formData.append('phone', to);
+
+        const caption = message.caption ?? message.content;
+        if (caption) {
+          formData.append('caption', caption);
+        }
+
+        const uint8 = message.fileData instanceof Uint8Array
+          ? message.fileData
+          : new Uint8Array(message.fileData);
+
+        const blob = new Blob([uint8], {
+          type: message.mimeType || 'application/pdf',
+        });
+
+        formData.append('file', blob, message.filename || 'document.pdf');
+
+        const response = await this.makeRequest('/send/file', {
+          method: 'POST',
+          body: formData,
+          isFormData: true,
+        });
+
+        if (response.code !== 'SUCCESS') {
+          throw new Error(response.message || 'Failed to send document');
+        }
+
+        return {
+          id: response.results?.message_id || randomUUID(),
+          tenantId: this.tenantId,
+          deviceId,
+          conversationId: response.results?.conversation_id || '',
+          type: message.type,
+          content: message.content,
+          mediaUrl: response.results?.media_url || message.mediaUrl,
+          mediaCaption: caption,
+          isFromCustomer: false,
+          customerPhone: to,
+          deliveryStatus: 'sent',
+          sentAt: new Date(),
+        };
+      }
+
       const response = await this.makeRequest('/send/message', {
         method: 'POST',
         body: JSON.stringify({
@@ -229,16 +278,18 @@ export class WhatsAppClient implements WhatsAppApiClient {
     }
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit & { timeout?: number } = {}): Promise<any> {
-    const { timeout = this.config.timeout, ...fetchOptions } = options;
+  private async makeRequest(endpoint: string, options: RequestInit & { timeout?: number; isFormData?: boolean } = {}): Promise<any> {
+    const { timeout = this.config.timeout, isFormData = false, ...fetchOptions } = options;
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
+      const { headers: overrideHeaders, ...restFetchOptions } = fetchOptions;
+
       const response = await fetch(`${this.config.apiUrl}${endpoint}`, {
-        ...fetchOptions,
-        headers: this.buildHeaders(fetchOptions.headers),
+        ...restFetchOptions,
+        headers: this.buildHeaders(overrideHeaders, isFormData),
         signal: controller.signal
       });
 
@@ -274,8 +325,12 @@ export class WhatsAppClient implements WhatsAppApiClient {
       throw error;
     }
   }
-  private buildHeaders(override?: HeadersInit): Headers {
-    const headers = new Headers({ 'Content-Type': 'application/json' });
+  private buildHeaders(override?: HeadersInit, isFormData = false): Headers {
+    const headers = new Headers();
+
+    if (!isFormData) {
+      headers.set('Content-Type', 'application/json');
+    }
 
     if (this.config.headers) {
       Object.entries(this.config.headers).forEach(([key, value]) => {

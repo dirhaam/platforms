@@ -8,10 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Invoice, InvoiceStatus, InvoiceFilters } from '@/types/invoice';
 import { InvoiceDialog } from '@/components/invoice/InvoiceDialog';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
-import { Plus, Search, Filter, Download, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, Download, Eye, Edit, Trash2, Send } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface InvoiceManagementProps {
   tenantId: string;
@@ -27,6 +30,11 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
@@ -121,6 +129,78 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       }
     } catch (error) {
       console.error('Error deleting invoice:', error);
+    }
+  };
+
+  const resetSendDialogState = () => {
+    setInvoiceToSend(null);
+    setWhatsappPhone('');
+    setWhatsappMessage('');
+    setSendingWhatsApp(false);
+  };
+
+  const handleSendDialogOpenChange = (open: boolean) => {
+    setShowSendDialog(open);
+    if (!open) {
+      resetSendDialogState();
+    }
+  };
+
+  const handleOpenSendDialog = (invoice: Invoice) => {
+    const customerName = invoice.customer?.name || '';
+    const dueDate = invoice.dueDate ? invoice.dueDate.toLocaleDateString() : '';
+    const totalAmount = invoice.totalAmount.toLocaleString('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+    });
+
+    setInvoiceToSend(invoice);
+    setWhatsappPhone(invoice.customer?.whatsappNumber || invoice.customer?.phone || '');
+    setWhatsappMessage(
+      [`Halo ${customerName}`.trim(),
+      `Berikut kami kirimkan invoice ${invoice.invoiceNumber} dengan total ${totalAmount}.`,
+      dueDate ? `Jatuh tempo pada ${dueDate}.` : '',
+      'Terima kasih.'
+      ].filter(Boolean).join(' ')
+    );
+    setShowSendDialog(true);
+  };
+
+  const handleSendInvoiceWhatsApp = async () => {
+    if (!invoiceToSend) {
+      return;
+    }
+
+    if (!whatsappPhone.trim()) {
+      toast.error('Nomor WhatsApp wajib diisi');
+      return;
+    }
+
+    setSendingWhatsApp(true);
+
+    try {
+      const response = await fetch(`/api/invoices/${invoiceToSend.id}/whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: whatsappPhone.trim(),
+          message: whatsappMessage.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal mengirim invoice via WhatsApp');
+      }
+
+      toast.success('Invoice berhasil dikirim via WhatsApp');
+      setShowSendDialog(false);
+      resetSendDialogState();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal mengirim invoice via WhatsApp';
+      toast.error(message);
+    } finally {
+      setSendingWhatsApp(false);
     }
   };
 
@@ -266,6 +346,13 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => handleOpenSendDialog(invoice)}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDownloadPDF(invoice)}
                     >
                       <Download className="h-4 w-4" />
@@ -325,6 +412,47 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
           setShowCreateDialog(false);
         }}
       />
+
+      {/* Send via WhatsApp Dialog */}
+      <Dialog open={showSendDialog} onOpenChange={handleSendDialogOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kirim Invoice via WhatsApp</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="whatsappPhone">Nomor WhatsApp</Label>
+              <Input
+                id="whatsappPhone"
+                placeholder="Misal: 6281234567890"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappMessage">Pesan</Label>
+              <Textarea
+                id="whatsappMessage"
+                rows={4}
+                value={whatsappMessage}
+                onChange={(e) => setWhatsappMessage(e.target.value)}
+                placeholder="Pesan yang akan dikirim bersama invoice"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => handleSendDialogOpenChange(false)} disabled={sendingWhatsApp}>
+                Batal
+              </Button>
+              <Button onClick={handleSendInvoiceWhatsApp} disabled={sendingWhatsApp}>
+                {sendingWhatsApp ? 'Mengirim...' : 'Kirim WhatsApp'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Preview Dialog */}
       {selectedInvoice && (
