@@ -94,6 +94,10 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         // Enrich bookings with customer and service data
         const enrichedBookings = (bookingsData.bookings || []).map((booking: any) => ({
           ...booking,
+          // Convert string dates to Date objects
+          scheduledAt: new Date(booking.scheduledAt),
+          createdAt: new Date(booking.createdAt),
+          updatedAt: new Date(booking.updatedAt),
           customer: customerMap.get(booking.customerId),
           service: serviceMap.get(booking.serviceId)
         }));
@@ -271,7 +275,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                           </Badge>
                         </div>
                         <p className="text-xs text-gray-500">
-                          {booking.scheduledAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(booking.scheduledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </CardContent>
@@ -307,7 +311,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                         <td className="py-3 px-4">{booking.customer?.name}</td>
                         <td className="py-3 px-4">{booking.service?.name}</td>
                         <td className="py-3 px-4">
-                          {booking.scheduledAt.toLocaleString('id-ID')}
+                          {new Date(booking.scheduledAt).toLocaleString('id-ID')}
                         </td>
                         <td className="py-3 px-4">
                           <Badge className={

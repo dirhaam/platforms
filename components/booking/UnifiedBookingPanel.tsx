@@ -300,11 +300,11 @@ export function UnifiedBookingPanel({
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                {booking.scheduledAt.toLocaleDateString()}
+                {new Date(booking.scheduledAt).toLocaleDateString()}
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                {booking.scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
@@ -592,7 +592,7 @@ export function UnifiedBookingPanel({
                     <div className="flex-1 pt-1">
                       <p className="font-medium text-sm">{item.action}</p>
                       <p className="text-xs text-gray-500">
-                        {item.timestamp.toLocaleString('id-ID')} by {item.actor}
+                        {new Date(item.timestamp).toLocaleString('id-ID')} by {item.actor}
                       </p>
                       {item.details && (
                         <p className="text-xs text-gray-600 mt-1">{item.details}</p>
