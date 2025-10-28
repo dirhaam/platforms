@@ -52,7 +52,7 @@ export function UnifiedBookingPanel({
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<BookingStatus>(booking.status);
-  const [paymentMethod, setPaymentMethod] = useState(booking.paymentMethod || 'cash');
+  const [paymentMethod, setPaymentMethod] = useState<string>(booking.paymentMethod || 'cash');
   const [refundAmount, setRefundAmount] = useState(booking.totalAmount);
   const [refundNotes, setRefundNotes] = useState('');
 
