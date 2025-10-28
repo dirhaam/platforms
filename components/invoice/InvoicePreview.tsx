@@ -15,7 +15,12 @@ interface InvoicePreviewProps {
 export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewProps) {
   const handleDownloadPDF = async () => {
     try {
-      const response = await fetch(`/api/invoices/${invoice.id}/pdf`);
+      const pdfUrl = new URL(`/api/invoices/${invoice.id}/pdf`, window.location.origin);
+      if (invoice.tenantId) {
+        pdfUrl.searchParams.set('tenantId', invoice.tenantId);
+      }
+
+      const response = await fetch(pdfUrl.toString());
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);

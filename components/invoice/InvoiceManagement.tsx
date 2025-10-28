@@ -6,14 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Invoice, InvoiceStatus, InvoiceFilters } from '@/types/invoice';
+import { Booking, BookingStatus } from '@/types/booking';
+import { SalesTransaction, SalesTransactionStatus } from '@/types/sales';
 import { InvoiceDialog } from '@/components/invoice/InvoiceDialog';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
-import { Plus, Search, Filter, Download, Eye, Edit, Trash2, Send } from 'lucide-react';
+import { Plus, Search, Filter, Download, Eye, Edit, Trash2, Send, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface InvoiceManagementProps {
@@ -35,15 +37,43 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [whatsappMessage, setWhatsappMessage] = useState('');
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [bookingDialogTab, setBookingDialogTab] = useState<'bookings' | 'sales'>('bookings');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [creatingFromBookingId, setCreatingFromBookingId] = useState<string | null>(null);
+  const [salesTransactions, setSalesTransactions] = useState<SalesTransaction[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [salesError, setSalesError] = useState<string | null>(null);
+  const [salesSearch, setSalesSearch] = useState('');
+  const [creatingFromSalesId, setCreatingFromSalesId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInvoices();
   }, [filters, currentPage]);
 
+  useEffect(() => {
+    if (!showBookingDialog) {
+      return;
+    }
+
+    if (bookingDialogTab === 'bookings') {
+      fetchLatestBookings();
+    } else if (bookingDialogTab === 'sales') {
+      fetchSalesTransactions();
+    }
+  }, [showBookingDialog, bookingDialogTab]);
+
   const fetchInvoices = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      
+      if (tenantId) {
+        params.append('tenantId', tenantId);
+      }
       
       if (filters.status?.length) {
         params.append('status', filters.status.join(','));
@@ -67,7 +97,7 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       params.append('page', currentPage.toString());
       params.append('limit', '20');
 
-      const response = await fetch(`/api/invoices?${params}`);
+      const response = await fetch(`/api/invoices?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setInvoices(data.invoices);
@@ -77,6 +107,85 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       console.error('Error fetching invoices:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLatestBookings = async () => {
+    try {
+      setBookingsLoading(true);
+      setBookingsError(null);
+
+      const url = new URL('/api/bookings', window.location.origin);
+      if (tenantId) {
+        url.searchParams.set('tenantId', tenantId);
+      }
+      url.searchParams.set('status', BookingStatus.COMPLETED);
+      url.searchParams.set('limit', '50');
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal mengambil data booking');
+      }
+
+      const data = await response.json();
+      const normalized: Booking[] = (data.bookings || []).map((booking: any) => ({
+        ...booking,
+        scheduledAt: booking.scheduledAt ? new Date(booking.scheduledAt) : (booking.scheduled_at ? new Date(booking.scheduled_at) : undefined),
+        totalAmount: Number(booking.totalAmount ?? booking.total_amount ?? 0),
+      }));
+
+      setBookings(normalized);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal mengambil data booking';
+      setBookingsError(message);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const fetchSalesTransactions = async () => {
+    try {
+      setSalesLoading(true);
+      setSalesError(null);
+
+      const url = new URL('/api/sales/transactions', window.location.origin);
+      if (tenantId) {
+        url.searchParams.set('tenantId', tenantId);
+      }
+      url.searchParams.set('status', SalesTransactionStatus.COMPLETED);
+      url.searchParams.set('limit', '50');
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal mengambil data penjualan');
+      }
+
+      const data = await response.json();
+      const normalized: SalesTransaction[] = (data.transactions || []).map((transaction: any) => ({
+        ...transaction,
+        transactionDate: transaction.transactionDate
+          ? new Date(transaction.transactionDate)
+          : transaction.createdAt
+            ? new Date(transaction.createdAt)
+            : transaction.created_at
+              ? new Date(transaction.created_at)
+              : new Date(),
+        totalAmount: Number(transaction.totalAmount ?? transaction.total_amount ?? 0),
+        unitPrice: Number(transaction.unitPrice ?? transaction.unit_price ?? 0),
+        homeVisitSurcharge: Number(transaction.homeVisitSurcharge ?? transaction.home_visit_surcharge ?? 0),
+        subtotal: Number(transaction.subtotal ?? transaction.sub_total ?? transaction.totalAmount ?? 0),
+        taxRate: Number(transaction.taxRate ?? transaction.tax_rate ?? 0),
+        discountAmount: Number(transaction.discountAmount ?? transaction.discount_amount ?? 0),
+      }));
+
+      setSalesTransactions(normalized);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal mengambil data penjualan';
+      setSalesError(message);
+    } finally {
+      setSalesLoading(false);
     }
   };
 
@@ -97,7 +206,13 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
 
   const handleDownloadPDF = async (invoice: Invoice) => {
     try {
-      const response = await fetch(`/api/invoices/${invoice.id}/pdf`);
+      const pdfUrl = new URL(`/api/invoices/${invoice.id}/pdf`, window.location.origin);
+      const tenantIdentifier = invoice.tenantId || tenantId;
+      if (tenantIdentifier) {
+        pdfUrl.searchParams.set('tenantId', tenantIdentifier);
+      }
+
+      const response = await fetch(pdfUrl.toString());
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -120,7 +235,12 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     }
 
     try {
-      const response = await fetch(`/api/invoices/${invoice.id}`, {
+      const deleteUrl = new URL(`/api/invoices/${invoice.id}`, window.location.origin);
+      if (tenantId) {
+        deleteUrl.searchParams.set('tenantId', tenantId);
+      }
+
+      const response = await fetch(deleteUrl.toString(), {
         method: 'DELETE'
       });
       
@@ -143,6 +263,17 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     setShowSendDialog(open);
     if (!open) {
       resetSendDialogState();
+    }
+  };
+
+  const handleBookingDialogOpenChange = (open: boolean) => {
+    setShowBookingDialog(open);
+    if (!open) {
+      setBookingSearch('');
+      setBookingsError(null);
+      setSalesSearch('');
+      setSalesError(null);
+      setBookingDialogTab('bookings');
     }
   };
 
@@ -179,7 +310,12 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     setSendingWhatsApp(true);
 
     try {
-      const response = await fetch(`/api/invoices/${invoiceToSend.id}/whatsapp`, {
+      const sendUrl = new URL(`/api/invoices/${invoiceToSend.id}/whatsapp`, window.location.origin);
+      if (tenantId) {
+        sendUrl.searchParams.set('tenantId', tenantId);
+      }
+
+      const response = await fetch(sendUrl.toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -201,6 +337,95 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
       toast.error(message);
     } finally {
       setSendingWhatsApp(false);
+    }
+  };
+
+  const filteredBookings = bookings.filter((booking) => {
+    if (!bookingSearch.trim()) {
+      return true;
+    }
+
+    const term = bookingSearch.trim().toLowerCase();
+    const bookingNumber = booking.bookingNumber?.toLowerCase() || '';
+    const customerName = (booking as any).customer?.name?.toLowerCase?.() || '';
+    return (
+      bookingNumber.includes(term) ||
+      booking.id.toLowerCase().includes(term) ||
+      customerName.includes(term)
+    );
+  });
+
+  const handleCreateInvoiceFromBooking = async (booking: Booking) => {
+    try {
+      setCreatingFromBookingId(booking.id);
+      const url = new URL(`/api/invoices/from-booking/${booking.id}`, window.location.origin);
+      if (tenantId) {
+        url.searchParams.set('tenantId', tenantId);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal membuat invoice dari booking');
+      }
+
+      toast.success('Invoice berhasil dibuat dari booking');
+      setShowBookingDialog(false);
+      fetchInvoices();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal membuat invoice dari booking';
+      toast.error(message);
+    } finally {
+      setCreatingFromBookingId(null);
+    }
+  };
+
+  const filteredSalesTransactions = salesTransactions.filter((transaction) => {
+    if (!salesSearch.trim()) {
+      return true;
+    }
+
+    const term = salesSearch.trim().toLowerCase();
+    const transactionNumber = transaction.transactionNumber?.toLowerCase?.() || '';
+    const customerName = (transaction.customer?.name ?? '').toLowerCase();
+    const serviceName = transaction.serviceName?.toLowerCase?.() || '';
+
+    return (
+      transactionNumber.includes(term) ||
+      transaction.id.toLowerCase().includes(term) ||
+      customerName.includes(term) ||
+      serviceName.includes(term)
+    );
+  });
+
+  const handleCreateInvoiceFromSales = async (transaction: SalesTransaction) => {
+    try {
+      setCreatingFromSalesId(transaction.id);
+      const url = new URL(`/api/invoices/from-sales/${transaction.id}`, window.location.origin);
+      if (tenantId) {
+        url.searchParams.set('tenantId', tenantId);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal membuat invoice dari penjualan');
+      }
+
+      toast.success('Invoice berhasil dibuat dari transaksi penjualan');
+      setShowBookingDialog(false);
+      fetchInvoices();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal membuat invoice dari penjualan';
+      toast.error(message);
+    } finally {
+      setCreatingFromSalesId(null);
     }
   };
 
@@ -228,12 +453,18 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <h2 className="text-2xl font-bold">Invoice Management</h2>
-        <Button onClick={handleCreateInvoice}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Invoice
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setShowBookingDialog(true)}>
+            <CalendarClock className="h-4 w-4 mr-2" />
+            Create from Booking
+          </Button>
+          <Button onClick={handleCreateInvoice}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Invoice
+          </Button>
+        </div>
       </div>
 
       {/* Filters and Search */}
@@ -411,13 +642,171 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
           fetchInvoices();
           setShowCreateDialog(false);
         }}
+        tenantId={tenantId}
       />
+
+      {/* Create Invoice from Booking Dialog */}
+      <Dialog open={showBookingDialog} onOpenChange={handleBookingDialogOpenChange}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Generate Invoice from Booking</DialogTitle>
+            <DialogDescription>
+              Gunakan data Booking atau Sales yang sudah tercatat untuk membuat invoice secara otomatis.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs
+            value={bookingDialogTab}
+            onValueChange={(value) => setBookingDialogTab(value as 'bookings' | 'sales')}
+            className="space-y-4"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="bookings">Booking</TabsTrigger>
+              <TabsTrigger value="sales">Sales</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="bookings" className="space-y-4">
+              <Input
+                placeholder="Cari nomor booking atau nama pelanggan..."
+                value={bookingSearch}
+                onChange={(e) => setBookingSearch(e.target.value)}
+              />
+
+              {bookingsLoading ? (
+                <div className="py-10 text-center text-muted-foreground">Memuat daftar booking...</div>
+              ) : bookingsError ? (
+                <div className="py-10 text-center text-red-500 text-sm">{bookingsError}</div>
+              ) : filteredBookings.length === 0 ? (
+                <div className="py-10 text-center text-muted-foreground text-sm">
+                  Tidak ada booking yang dapat digunakan.
+                </div>
+              ) : (
+                <div className="max-h-80 overflow-y-auto space-y-3">
+                  {filteredBookings.map((booking) => {
+                    const scheduledAt = booking.scheduledAt
+                      ? (booking.scheduledAt instanceof Date
+                          ? booking.scheduledAt
+                          : new Date(booking.scheduledAt))
+                      : null;
+
+                    const formattedScheduledAt = scheduledAt
+                      ? scheduledAt.toLocaleString('id-ID', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })
+                      : '-';
+
+                    const totalAmountLabel = Number(booking.totalAmount || 0).toLocaleString('id-ID', {
+                      style: 'currency',
+                      currency: 'IDR'
+                    });
+
+                    return (
+                      <div
+                        key={booking.id}
+                        className="flex items-center justify-between rounded-lg border p-4 shadow-sm"
+                      >
+                        <div className="space-y-1">
+                          <p className="font-medium">
+                            Booking #{booking.bookingNumber || booking.id.slice(0, 8)}
+                          </p>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>Tanggal: {formattedScheduledAt}</p>
+                            <p>Total: {totalAmountLabel}</p>
+                            <p>Status: {booking.status}</p>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() => handleCreateInvoiceFromBooking(booking)}
+                          disabled={creatingFromBookingId === booking.id}
+                        >
+                          {creatingFromBookingId === booking.id ? 'Memproses...' : 'Gunakan Booking'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="sales" className="space-y-4">
+              <Input
+                placeholder="Cari nomor transaksi atau nama pelanggan..."
+                value={salesSearch}
+                onChange={(e) => setSalesSearch(e.target.value)}
+              />
+
+              {salesLoading ? (
+                <div className="py-10 text-center text-muted-foreground">Memuat transaksi penjualan...</div>
+              ) : salesError ? (
+                <div className="py-10 text-center text-red-500 text-sm">{salesError}</div>
+              ) : filteredSalesTransactions.length === 0 ? (
+                <div className="py-10 text-center text-muted-foreground text-sm">
+                  Tidak ada transaksi penjualan yang dapat digunakan.
+                </div>
+              ) : (
+                <div className="max-h-80 overflow-y-auto space-y-3">
+                  {filteredSalesTransactions.map((transaction) => {
+                    const transactionDate = transaction.transactionDate
+                      ? (transaction.transactionDate instanceof Date
+                          ? transaction.transactionDate
+                          : new Date(transaction.transactionDate))
+                      : null;
+
+                    const formattedTransactionDate = transactionDate
+                      ? transactionDate.toLocaleString('id-ID', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })
+                      : '-';
+
+                    const totalAmountLabel = Number(transaction.totalAmount || 0).toLocaleString('id-ID', {
+                      style: 'currency',
+                      currency: 'IDR'
+                    });
+
+                    return (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between rounded-lg border p-4 shadow-sm"
+                      >
+                        <div className="space-y-1">
+                          <p className="font-medium">
+                            Transaksi #{transaction.transactionNumber || transaction.id.slice(0, 8)}
+                          </p>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>Tanggal: {formattedTransactionDate}</p>
+                            <p>Service: {transaction.serviceName || '-'}</p>
+                            <p>Total: {totalAmountLabel}</p>
+                            <p>Status: {transaction.status}</p>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() => handleCreateInvoiceFromSales(transaction)}
+                          disabled={creatingFromSalesId === transaction.id}
+                        >
+                          {creatingFromSalesId === transaction.id ? 'Memproses...' : 'Gunakan Transaksi'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
 
       {/* Send via WhatsApp Dialog */}
       <Dialog open={showSendDialog} onOpenChange={handleSendDialogOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Kirim Invoice via WhatsApp</DialogTitle>
+            <DialogDescription>
+              Masukkan nomor WhatsApp tujuan dan pesan yang akan dikirim bersama file invoice.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">

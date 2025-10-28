@@ -67,22 +67,22 @@ export class InvoiceService {
         .from('invoices')
         .insert({
           id: invoiceId,
-          tenantId,
-          customerId: data.customerId,
-          bookingId: data.bookingId,
-          invoiceNumber,
+          tenant_id: tenantId,
+          customer_id: data.customerId,
+          booking_id: data.bookingId,
+          invoice_number: invoiceNumber,
           status: 'draft',
-          issueDate: nowIso,
-          dueDate: data.dueDate,
+          issue_date: nowIso,
+          due_date: data.dueDate,
           subtotal: subtotal.toNumber(),
-          taxRate: taxRate.toNumber(),
-          taxAmount: taxAmount.toNumber(),
-          discountAmount: discountAmount.toNumber(),
-          totalAmount: totalAmount.toNumber(),
+          tax_rate: taxRate.toNumber(),
+          tax_amount: taxAmount.toNumber(),
+          discount_amount: discountAmount.toNumber(),
+          total_amount: totalAmount.toNumber(),
           notes: data.notes,
           terms: data.terms,
-          createdAt: nowIso,
-          updatedAt: nowIso,
+          created_at: nowIso,
+          updated_at: nowIso,
         });
 
       if (error) {
@@ -92,14 +92,14 @@ export class InvoiceService {
 
       const items = (data.items || []).map(item => ({
         id: randomUUID(),
-        invoiceId,
+        invoice_id: invoiceId,
         description: item.description,
         quantity: item.quantity,
-        unitPrice: Number(item.unitPrice),
-        totalPrice: Number(item.unitPrice) * item.quantity,
-        serviceId: item.serviceId ?? null,
-        createdAt: nowIso,
-        updatedAt: nowIso,
+        unit_price: Number(item.unitPrice),
+        total_price: Number(item.unitPrice) * item.quantity,
+        service_id: item.serviceId ?? null,
+        created_at: nowIso,
+        updated_at: nowIso,
       }));
 
       if (items.length) {
@@ -126,7 +126,7 @@ export class InvoiceService {
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .eq('id', invoiceId)
         .limit(1)
         .single();
@@ -137,28 +137,28 @@ export class InvoiceService {
 
       const baseInvoice: Invoice = {
         id: data.id,
-        tenantId: data.tenantId,
-        customerId: data.customerId,
-        bookingId: data.bookingId,
-        invoiceNumber: data.invoiceNumber,
-        status: data.status as InvoiceStatus,
-        issueDate: new Date(data.issueDate),
-        dueDate: new Date(data.dueDate),
-        paidDate: data.paidDate ? new Date(data.paidDate) : undefined,
+        tenantId: data.tenantId ?? data.tenant_id,
+        customerId: data.customerId ?? data.customer_id,
+        bookingId: data.bookingId ?? data.booking_id,
+        invoiceNumber: data.invoiceNumber ?? data.invoice_number,
+        status: (data.status as InvoiceStatus) ?? InvoiceStatus.DRAFT,
+        issueDate: new Date(data.issueDate ?? data.issue_date),
+        dueDate: new Date(data.dueDate ?? data.due_date),
+        paidDate: data.paidDate ? new Date(data.paidDate) : data.paid_date ? new Date(data.paid_date) : undefined,
         subtotal: parseDecimal(data.subtotal),
-        taxRate: parseDecimal(data.taxRate),
-        taxAmount: parseDecimal(data.taxAmount),
-        discountAmount: parseDecimal(data.discountAmount),
-        totalAmount: parseDecimal(data.totalAmount),
-        paymentMethod: data.paymentMethod,
-        paymentReference: data.paymentReference,
+        taxRate: parseDecimal(data.taxRate ?? data.tax_rate),
+        taxAmount: parseDecimal(data.taxAmount ?? data.tax_amount),
+        discountAmount: parseDecimal(data.discountAmount ?? data.discount_amount),
+        totalAmount: parseDecimal(data.totalAmount ?? data.total_amount),
+        paymentMethod: data.paymentMethod ?? data.payment_method,
+        paymentReference: data.paymentReference ?? data.payment_reference,
         items: [],
         notes: data.notes,
         terms: data.terms,
-        qrCodeData: data.qrCodeData,
-        qrCodeUrl: data.qrCodeUrl,
-        createdAt: new Date(data.createdAt),
-        updatedAt: new Date(data.updatedAt),
+        qrCodeData: data.qrCodeData ?? data.qr_code_data,
+        qrCodeUrl: data.qrCodeUrl ?? data.qr_code_url,
+        createdAt: new Date(data.createdAt ?? data.created_at),
+        updatedAt: new Date(data.updatedAt ?? data.updated_at),
       } as Invoice;
 
       const [itemsResult, customerResult, tenantResult] = await Promise.all([
@@ -207,19 +207,25 @@ export class InvoiceService {
       let query = supabase
         .from('invoices')
         .select('*', { count: 'exact' })
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
 
       if (filters?.status?.length) {
         query = query.in('status', filters.status);
       }
       if (filters?.customerId) {
-        query = query.eq('customerId', filters.customerId);
+        query = query.eq('customer_id', filters.customerId);
       }
       if (filters?.dateFrom) {
-        query = query.gte('issueDate', filters.dateFrom);
+        query = query.gte('issue_date', filters.dateFrom);
       }
       if (filters?.dateTo) {
-        query = query.lte('issueDate', filters.dateTo);
+        query = query.lte('issue_date', filters.dateTo);
+      }
+      if (filters?.amountMin !== undefined) {
+        query = query.gte('total_amount', filters.amountMin);
+      }
+      if (filters?.amountMax !== undefined) {
+        query = query.lte('total_amount', filters.amountMax);
       }
 
       const { data, count, error } = await query
@@ -255,17 +261,19 @@ export class InvoiceService {
       }
 
       const invoices = rows.map(inv => {
-        const mappedCustomer = customersMap.get(inv.customerId ?? inv.customer_id);
+        const tenantIdentifier = inv.tenantId ?? inv.tenant_id;
+        const customerIdentifier = inv.customerId ?? inv.customer_id;
+        const mappedCustomer = customersMap.get(customerIdentifier);
 
         return {
           id: inv.id,
-          tenantId: inv.tenantId,
-          customerId: inv.customerId,
-          invoiceNumber: inv.invoiceNumber,
-          status: inv.status as InvoiceStatus,
-          issueDate: new Date(inv.issueDate),
-          dueDate: new Date(inv.dueDate),
-          totalAmount: parseDecimal(inv.totalAmount),
+          tenantId: tenantIdentifier,
+          customerId: customerIdentifier,
+          invoiceNumber: inv.invoiceNumber ?? inv.invoice_number,
+          status: (inv.status as InvoiceStatus) ?? InvoiceStatus.DRAFT,
+          issueDate: new Date(inv.issueDate ?? inv.issue_date),
+          dueDate: new Date(inv.dueDate ?? inv.due_date),
+          totalAmount: parseDecimal(inv.totalAmount ?? inv.total_amount),
           items: [],
           customer: mappedCustomer,
         };
@@ -323,7 +331,7 @@ export class InvoiceService {
         .from('invoices')
         .update(updateData)
         .eq('id', invoiceId)
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
 
       if (error) {
         console.error('Error updating invoice:', error);
@@ -344,7 +352,7 @@ export class InvoiceService {
         .from('invoices')
         .delete()
         .eq('id', invoiceId)
-        .eq('tenantId', tenantId);
+        .eq('tenant_id', tenantId);
 
       return !error;
     } catch (error) {
@@ -358,15 +366,15 @@ export class InvoiceService {
       const supabase = getSupabaseClient();
       const { data: invoices } = await supabase
         .from('invoices')
-        .select('status, totalAmount')
-        .eq('tenantId', tenantId);
+        .select('status, total_amount')
+        .eq('tenant_id', tenantId);
 
       let totalAmount = 0;
       let paidAmount = 0;
       let overdueCount = 0;
 
       (invoices || []).forEach((inv: any) => {
-        const amount = parseDecimal(inv.totalAmount);
+        const amount = parseDecimal(inv.total_amount ?? inv.totalAmount);
         totalAmount += amount;
         if (inv.status === 'paid') {
           paidAmount += amount;
@@ -482,7 +490,7 @@ export class InvoiceService {
         .from('bookings')
         .select('*')
         .eq('id', bookingId)
-        .eq('tenantId', tenantId)
+        .eq('tenant_id', tenantId)
         .limit(1)
         .single();
 
@@ -490,25 +498,117 @@ export class InvoiceService {
         throw new Error('Booking not found');
       }
 
+      const customerId = booking.customer_id;
+      const serviceId = booking.service_id;
+      const totalAmount = parseDecimal(booking.total_amount);
+
+      let serviceName = 'Service';
+      if (serviceId) {
+        const { data: service } = await supabase
+          .from('services')
+          .select('name')
+          .eq('id', serviceId)
+          .single();
+        if (service?.name) {
+          serviceName = service.name;
+        }
+      }
+
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 7);
 
       const invoiceData: CreateInvoiceRequest = {
-        customerId: booking.customerId,
+        customerId,
         bookingId: booking.id,
         dueDate: dueDate.toISOString(),
         items: [{
-          description: 'Service',
+          description: serviceName,
           quantity: 1,
-          unitPrice: parseDecimal(booking.totalAmount),
-          serviceId: booking.serviceId,
+          unitPrice: totalAmount,
+          serviceId,
         }],
-        notes: `Invoice for booking on ${new Date(booking.scheduledAt).toLocaleDateString()}`,
+        notes: booking.scheduled_at
+          ? `Invoice for booking on ${new Date(booking.scheduled_at).toLocaleDateString()}`
+          : undefined,
       };
 
       return this.createInvoice(tenantId, invoiceData);
     } catch (error) {
       console.error('Error creating invoice from booking:', error);
+      throw error;
+    }
+  }
+
+  static async createInvoiceFromSalesTransaction(tenantId: string, transactionId: string): Promise<Invoice> {
+    try {
+      const supabase = getSupabaseClient();
+      const { data: transaction } = await supabase
+        .from('sales_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .eq('tenant_id', tenantId)
+        .limit(1)
+        .single();
+
+      if (!transaction) {
+        throw new Error('Sales transaction not found');
+      }
+
+      if (transaction.invoice_id) {
+        const existingInvoice = await this.getInvoiceById(tenantId, transaction.invoice_id);
+        if (existingInvoice) {
+          return existingInvoice;
+        }
+      }
+
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 7);
+
+      const baseItemPrice = parseDecimal(
+        transaction.unit_price ?? transaction.subtotal ?? transaction.total_amount ?? 0
+      );
+
+      const items: CreateInvoiceRequest['items'] = [
+        {
+          description: transaction.service_name ?? 'Service',
+          quantity: 1,
+          unitPrice: baseItemPrice,
+          serviceId: transaction.service_id ?? undefined,
+        },
+      ];
+
+      const homeVisitSurcharge = parseDecimal(transaction.home_visit_surcharge ?? 0);
+      if (homeVisitSurcharge > 0) {
+        items.push({
+          description: 'Home Visit Surcharge',
+          quantity: 1,
+          unitPrice: homeVisitSurcharge,
+        });
+      }
+
+      const invoiceData: CreateInvoiceRequest = {
+        customerId: transaction.customer_id,
+        bookingId: transaction.booking_id ?? undefined,
+        dueDate: dueDate.toISOString(),
+        items,
+        taxRate: parseDecimal(transaction.tax_rate ?? 0),
+        discountAmount: parseDecimal(transaction.discount_amount ?? 0),
+        notes: transaction.transaction_number
+          ? `Invoice generated from sales transaction ${transaction.transaction_number}`
+          : undefined,
+      };
+
+      const invoice = await this.createInvoice(tenantId, invoiceData);
+
+      await supabase
+        .from('sales_transactions')
+        .update({ invoice_id: invoice.id, updated_at: new Date().toISOString() })
+        .eq('id', transactionId)
+        .eq('tenant_id', tenantId);
+
+      return invoice;
+    } catch (error) {
+      console.error('Error creating invoice from sales transaction:', error);
       throw error;
     }
   }
@@ -520,9 +620,9 @@ export class InvoiceService {
 
       await supabase
         .from('invoices')
-        .update({ status: 'overdue', updatedAt: now })
+        .update({ status: 'overdue', updated_at: now })
         .eq('status', 'sent')
-        .lt('dueDate', now);
+        .lt('due_date', now);
     } catch (error) {
       console.error('Error marking overdue invoices:', error);
     }

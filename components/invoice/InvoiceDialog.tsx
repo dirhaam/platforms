@@ -17,9 +17,10 @@ interface InvoiceDialogProps {
   onOpenChange: (open: boolean) => void;
   invoice?: Invoice | null;
   onSuccess: () => void;
+  tenantId: string;
 }
 
-export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: InvoiceDialogProps) {
+export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId }: InvoiceDialogProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -88,7 +89,10 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/customers');
+      const customersUrl = new URL('/api/customers', window.location.origin);
+      customersUrl.searchParams.set('tenantId', tenantId);
+
+      const response = await fetch(customersUrl.toString());
       if (response.ok) {
         const data = await response.json();
         setCustomers(data.customers || []);
@@ -124,7 +128,10 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
           updateData.paidDate = formData.paidDate;
         }
 
-        const response = await fetch(`/api/invoices/${invoice.id}`, {
+        const updateUrl = new URL(`/api/invoices/${invoice.id}`, window.location.origin);
+        updateUrl.searchParams.set('tenantId', tenantId);
+
+        const response = await fetch(updateUrl.toString(), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData)
@@ -146,7 +153,10 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
           paymentReference: formData.paymentReference
         };
 
-        const response = await fetch('/api/invoices', {
+        const createUrl = new URL('/api/invoices', window.location.origin);
+        createUrl.searchParams.set('tenantId', tenantId);
+
+        const response = await fetch(createUrl.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(createData)

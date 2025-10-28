@@ -747,27 +747,76 @@ export const PERMISSIONS = {
 // Helper functions for API routes
 export async function getTenantFromRequest(request: NextRequest): Promise<{ id: string; name: string } | null> {
   try {
+    const url = new URL(request.url);
     const session = await TenantAuth.getSessionFromRequest(request);
-    if (!session) {
-      return null;
+
+    if (session) {
+      if (session.isSuperAdmin) {
+        const pathParts = url.pathname.split('/');
+        const tenantIdIndex = pathParts.findIndex(part => part === 'tenant') + 1;
+        if (tenantIdIndex > 0 && pathParts[tenantIdIndex]) {
+          return { id: pathParts[tenantIdIndex], name: 'Platform Admin Access' };
+        }
+      }
+
+      return { id: session.tenantId, name: session.name };
     }
 
-    // For superadmin, we might need to get tenant from URL params or headers
-    if (session.isSuperAdmin) {
-      // Extract tenant ID from URL or headers if needed
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
-      const tenantIdIndex = pathParts.findIndex(part => part === 'tenant') + 1;
-      if (tenantIdIndex > 0 && pathParts[tenantIdIndex]) {
-        return { id: pathParts[tenantIdIndex], name: 'Platform Admin Access' };
+    const headerTenant = request.headers.get('x-tenant-id') ?? request.headers.get('x-tenant-subdomain');
+    const queryTenant = url.searchParams.get('tenantId') ?? url.searchParams.get('subdomain');
+    const identifier = (headerTenant ?? queryTenant)?.trim();
+
+    if (identifier) {
+      const resolvedTenant = await resolveTenantByIdentifier(identifier);
+      if (resolvedTenant) {
+        return resolvedTenant;
       }
     }
 
-    return { id: session.tenantId, name: session.name };
+    return null;
   } catch (error) {
     console.error('Error getting tenant from request:', error);
     return null;
   }
+}
+
+async function resolveTenantByIdentifier(identifier: string): Promise<{ id: string; name: string } | null> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const isUuid = identifier.length === 36 && identifier.includes('-');
+
+    if (isUuid) {
+      const { data } = await supabase
+        .from('tenants')
+        .select('id, business_name')
+        .eq('id', identifier)
+        .single();
+
+      if (data) {
+        const businessName = (data as any).business_name ?? (data as any).businessName ?? 'Tenant';
+        return { id: data.id, name: businessName };
+      }
+    } else {
+      const { data } = await supabase
+        .from('tenants')
+        .select('id, business_name')
+        .eq('subdomain', identifier)
+        .single();
+
+      if (data) {
+        const businessName = (data as any).business_name ?? (data as any).businessName ?? 'Tenant';
+        return { id: data.id, name: businessName };
+      }
+    }
+  } catch (error) {
+    console.error('Failed to resolve tenant identifier:', error);
+  }
+
+  return null;
 }
 
 export async function getTenantSession(request?: NextRequest): Promise<TenantSession | null> {
