@@ -29,6 +29,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   
   // Quick Sale states
   const [showQuickSaleDialog, setShowQuickSaleDialog] = useState(false);
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quickSaleForm, setQuickSaleForm] = useState({
@@ -37,7 +38,13 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     paymentMethod: 'cash',
     notes: ''
   });
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    name: '',
+    phone: '',
+    email: ''
+  });
   const [creatingQuickSale, setCreatingQuickSale] = useState(false);
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,7 +144,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const handleBookingUpdate = async (bookingId: string, updates: Partial<Booking>) => {
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'x-tenant-id': tenantId
@@ -237,6 +244,49 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     }
   };
 
+  const handleCreateCustomer = async () => {
+    if (!newCustomerForm.name || !newCustomerForm.phone) {
+      toast.error('Name and phone are required');
+      return;
+    }
+
+    try {
+      setCreatingCustomer(true);
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          name: newCustomerForm.name,
+          phone: newCustomerForm.phone,
+          email: newCustomerForm.email || undefined
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success('Customer created successfully!');
+        setNewCustomerForm({ name: '', phone: '', email: '' });
+        setShowAddCustomerDialog(false);
+        
+        // Add new customer to list and auto-select it
+        const newCustomer = data.customer || data;
+        setCustomers([...customers, newCustomer]);
+        setQuickSaleForm({ ...quickSaleForm, customerId: newCustomer.id });
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to create customer');
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      toast.error('Failed to create customer');
+    } finally {
+      setCreatingCustomer(false);
+    }
+  };
+
   // Get bookings for selected date
   const bookingsForDate = filteredBookings.filter(b => {
     const bookingDate = new Date(b.scheduledAt).toDateString();
@@ -253,7 +303,12 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <p className="text-gray-600">Manage your bookings with unified panel</p>
         </div>
         <div className="flex gap-2">
-          <Button>
+          <Button
+            onClick={() => {
+              const searchParams = new URLSearchParams({ subdomain: tenantId });
+              window.location.href = `/tenant/admin/bookings/new?${searchParams.toString()}`;
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Booking
           </Button>
@@ -469,7 +524,19 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <div className="space-y-4">
             {/* Customer Selection */}
             <div>
-              <Label htmlFor="customer">Customer *</Label>
+              <div className="flex justify-between items-center mb-2">
+                <Label htmlFor="customer">Customer *</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowAddCustomerDialog(true)}
+                  className="h-6 px-2 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add New
+                </Button>
+              </div>
               <Select
                 value={quickSaleForm.customerId}
                 onValueChange={(value) =>
@@ -560,6 +627,73 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                 disabled={creatingQuickSale}
               >
                 {creatingQuickSale ? 'Creating...' : 'Create Sale'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Customer Dialog */}
+      <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="newCustomerName">Full Name *</Label>
+              <Input
+                id="newCustomerName"
+                placeholder="Customer name"
+                value={newCustomerForm.name}
+                onChange={(e) =>
+                  setNewCustomerForm({ ...newCustomerForm, name: e.target.value })
+                }
+                disabled={creatingCustomer}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="newCustomerPhone">Phone Number *</Label>
+              <Input
+                id="newCustomerPhone"
+                placeholder="0812xxxxxxx"
+                value={newCustomerForm.phone}
+                onChange={(e) =>
+                  setNewCustomerForm({ ...newCustomerForm, phone: e.target.value })
+                }
+                disabled={creatingCustomer}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="newCustomerEmail">Email (Optional)</Label>
+              <Input
+                id="newCustomerEmail"
+                placeholder="customer@email.com"
+                type="email"
+                value={newCustomerForm.email}
+                onChange={(e) =>
+                  setNewCustomerForm({ ...newCustomerForm, email: e.target.value })
+                }
+                disabled={creatingCustomer}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddCustomerDialog(false)}
+                disabled={creatingCustomer}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateCustomer}
+                disabled={creatingCustomer}
+              >
+                {creatingCustomer ? 'Creating...' : 'Add Customer'}
               </Button>
             </div>
           </div>
