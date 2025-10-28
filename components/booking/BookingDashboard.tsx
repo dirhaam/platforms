@@ -192,7 +192,19 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       });
       if (response.ok) {
         const data = await response.json();
-        setCustomers(data.customers || []);
+        const customerList = data.customers || [];
+        console.log('[fetchCustomers] Loaded customers:', {
+          total: customerList.length,
+          customers: customerList.map((c: any) => ({ 
+            id: c.id, 
+            name: c.name, 
+            phone: c.phone,
+            totalBookings: c.totalBookings 
+          }))
+        });
+        setCustomers(customerList);
+      } else {
+        console.error('[fetchCustomers] Failed:', response.status);
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -319,7 +331,20 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         
         // Add new customer to list and auto-select it
         const newCustomer = data.customer || data;
-        setCustomers([...customers, newCustomer]);
+        console.log('[handleCreateCustomer] Customer created:', {
+          id: newCustomer.id,
+          name: newCustomer.name,
+          phone: newCustomer.phone,
+          totalBookings: newCustomer.totalBookings
+        });
+        
+        const updatedCustomersList = [...customers, newCustomer];
+        console.log('[handleCreateCustomer] Updated customers list:', {
+          total: updatedCustomersList.length,
+          newCustomersList: updatedCustomersList.map((c: any) => ({ id: c.id, name: c.name }))
+        });
+        
+        setCustomers(updatedCustomersList);
         setQuickSaleForm({ ...quickSaleForm, customerId: newCustomer.id });
       } else {
         const errorData = await response.json();
