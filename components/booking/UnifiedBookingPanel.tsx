@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Booking, BookingStatus, PaymentStatus, Customer, Service } from '@/types/booking';
 import { Invoice, InvoiceStatus, PaymentMethod } from '@/types/invoice';
-import { SalesTransaction, SalesTransactionStatus } from '@/types/sales';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,7 +42,6 @@ export function UnifiedBookingPanel({
   const [loading, setLoading] = useState(false);
   
   // Related data
-  const [sales, setSales] = useState<SalesTransaction | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [history, setHistory] = useState<BookingHistory[]>([]);
   
@@ -91,18 +89,6 @@ export function UnifiedBookingPanel({
         }
       }
       
-      // Fetch sales transaction
-      const salesUrl = new URL('/api/sales/transactions', window.location.origin);
-      salesUrl.searchParams.set('tenantId', tenantId);
-      const salesRes = await fetch(salesUrl.toString());
-      if (salesRes.ok) {
-        const salesData = await salesRes.json();
-        const relatedSales = salesData.transactions?.find(
-          (t: SalesTransaction) => t.source === 'from_booking' && t.id === booking.id
-        );
-        setSales(relatedSales || null);
-      }
-
       // Fetch invoices
       const invoicesUrl = new URL('/api/invoices', window.location.origin);
       invoicesUrl.searchParams.set('tenantId', tenantId);
@@ -193,47 +179,6 @@ export function UnifiedBookingPanel({
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate invoice');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateSalesTransaction = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/sales/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          tenantId,
-          type: 'from_booking',
-          bookingId: booking.id,
-          customerId: booking.customerId,
-          serviceId: booking.serviceId,
-          scheduledAt: booking.scheduledAt,
-          totalAmount: booking.totalAmount,
-          paymentMethod: booking.paymentMethod || 'cash',
-          isHomeVisit: booking.isHomeVisit || false,
-          homeVisitAddress: booking.homeVisitAddress,
-          homeVisitCoordinates: booking.homeVisitCoordinates
-        })
-      });
-
-      if (response.ok) {
-        toast.success('Sales transaction created successfully');
-        await fetchRelatedData();
-      } else {
-        const errorData = await response.json();
-        const errorMsg = errorData.error || `Failed to create sales transaction (${response.status})`;
-        console.error('API Error:', errorMsg);
-        toast.error(errorMsg);
-      }
-    } catch (error) {
-      console.error('Error creating sales transaction:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create sales transaction');
     } finally {
       setLoading(false);
     }
@@ -343,10 +288,9 @@ export function UnifiedBookingPanel({
       <Card>
         <CardContent className="pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="payment">Payment</TabsTrigger>
-              <TabsTrigger value="sales">Sales</TabsTrigger>
               <TabsTrigger value="invoice">Invoice</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
@@ -461,57 +405,6 @@ export function UnifiedBookingPanel({
                   </p>
                 )}
               </div>
-            </TabsContent>
-
-            {/* Sales Tab */}
-            <TabsContent value="sales" className="space-y-4 mt-4">
-              {sales ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-gray-600">Transaction</Label>
-                      <p className="font-medium">{sales.transactionNumber}</p>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Source</Label>
-                      <Badge>From Booking</Badge>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Amount</Label>
-                      <p className="font-medium">Rp {sales.totalAmount.toLocaleString('id-ID')}</p>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Status</Label>
-                      <Badge className="bg-green-100 text-green-800">
-                        {sales.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <p className="text-sm text-green-700 flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4" />
-                      Sales transaction linked from booking
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
-                </div>
-              ) : (
-                <div className="py-6 text-center">
-                  <p className="text-sm text-gray-600 mb-4">No sales transaction yet</p>
-                  {booking.paymentStatus === PaymentStatus.PAID ? (
-                    <Button 
-                      onClick={handleCreateSalesTransaction}
-                      disabled={loading}
-                    >
-                      {loading ? 'Creating...' : 'Create Sales Transaction'}
-                    </Button>
-                  ) : (
-                    <p className="text-xs text-gray-500">Record payment first to create sales transaction</p>
-                  )}
-                </div>
-              )}
             </TabsContent>
 
             {/* Invoice Tab */}
