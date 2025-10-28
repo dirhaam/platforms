@@ -253,11 +253,11 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
             </div>
             
             <Select
-              value={filters.status?.[0] || ''}
-              onValueChange={(value) => 
-                setFilters(prev => ({ 
-                  ...prev, 
-                  status: value ? [value as InvoiceStatus] : undefined 
+              value={filters.status?.[0] ?? 'all'}
+              onValueChange={(value) =>
+                setFilters(prev => ({
+                  ...prev,
+                  status: value === 'all' ? undefined : [value as InvoiceStatus]
                 }))
               }
             >
@@ -265,7 +265,7 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value={InvoiceStatus.DRAFT}>Draft</SelectItem>
                 <SelectItem value={InvoiceStatus.SENT}>Sent</SelectItem>
                 <SelectItem value={InvoiceStatus.PAID}>Paid</SelectItem>
