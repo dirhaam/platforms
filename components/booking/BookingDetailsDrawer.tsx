@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Booking } from '@/types/booking';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnifiedBookingPanel } from './UnifiedBookingPanel';
@@ -29,7 +29,12 @@ export function BookingDetailsDrawer({
       <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-0 sm:rounded-lg">
         <DialogHeader className="sticky top-0 bg-white z-10 border-b px-6 py-4">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl">Booking Details</DialogTitle>
+            <div>
+              <DialogTitle className="text-2xl">Booking Details</DialogTitle>
+              <DialogDescription>
+                View and manage booking information with unified panel
+              </DialogDescription>
+            </div>
             <Button
               variant="ghost"
               size="sm"

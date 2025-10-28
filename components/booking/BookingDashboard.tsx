@@ -205,6 +205,20 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       return;
     }
 
+    // Validate that selected service exists
+    const selectedService = services.find(s => s.id === quickSaleForm.serviceId);
+    if (!selectedService) {
+      toast.error('Selected service not found. Please refresh and try again.');
+      return;
+    }
+
+    // Validate that selected customer exists
+    const selectedCustomer = customers.find(c => c.id === quickSaleForm.customerId);
+    if (!selectedCustomer) {
+      toast.error('Selected customer not found. Please refresh and try again.');
+      return;
+    }
+
     try {
       setCreatingQuickSale(true);
       const response = await fetch('/api/sales/transactions', {
