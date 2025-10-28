@@ -548,6 +548,9 @@ export function UnifiedBookingPanel({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Mark this booking payment as received
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -585,6 +588,9 @@ export function UnifiedBookingPanel({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Process Refund</DialogTitle>
+            <DialogDescription>
+              Process a refund for this booking
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
