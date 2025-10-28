@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
-import { Calendar, List, Search, Plus, Filter, X } from 'lucide-react';
+import { Calendar, List, Search, Plus, Filter, X, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
@@ -208,19 +208,29 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     // Validate that selected service exists
     const selectedService = services.find(s => s.id === quickSaleForm.serviceId);
     if (!selectedService) {
-      toast.error('Selected service not found. Please refresh and try again.');
+      console.warn('Service not found in local cache:', quickSaleForm.serviceId);
+      console.warn('Available services:', services.map(s => ({ id: s.id, name: s.name })));
+      toast.error('Selected service not found. Please refresh the page and try again.');
       return;
     }
 
     // Validate that selected customer exists
     const selectedCustomer = customers.find(c => c.id === quickSaleForm.customerId);
     if (!selectedCustomer) {
-      toast.error('Selected customer not found. Please refresh and try again.');
+      console.warn('Customer not found in local cache:', quickSaleForm.customerId);
+      console.warn('Available customers:', customers.map(c => ({ id: c.id, name: c.name })));
+      toast.error('Selected customer not found. Please refresh the page and try again.');
       return;
     }
 
     try {
       setCreatingQuickSale(true);
+      console.log('Creating quick sale with:', {
+        tenantId,
+        customerId: quickSaleForm.customerId,
+        serviceId: quickSaleForm.serviceId,
+        paymentMethod: quickSaleForm.paymentMethod
+      });
       const response = await fetch('/api/sales/transactions', {
         method: 'POST',
         headers: {
@@ -249,9 +259,17 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         // Refresh bookings/sales data
         await Promise.all([fetchBookings(), fetchCustomers()]);
       } else {
-        const errorData = await response.json();
-        const errorMsg = errorData.error || `Failed to create quick sale (${response.status})`;
-        console.error('API Error:', errorMsg);
+        let errorMsg = `Failed to create quick sale (${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+          console.error('API Error:', errorMsg);
+          console.error('Full error response:', errorData);
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+          errorMsg = `Server error (${response.status}): ${response.statusText}`;
+        }
+        console.warn('Service validation might have missed something. Services:', services);
         toast.error(errorMsg);
       }
     } catch (error) {
@@ -578,7 +596,20 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
             {/* Service Selection */}
             <div>
-              <Label htmlFor="service">Service *</Label>
+              <div className="flex justify-between items-center mb-2">
+                <Label htmlFor="service">Service *</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => fetchServices()}
+                  className="h-6 px-2 text-xs"
+                  disabled={loading}
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Refresh
+                </Button>
+              </div>
               <Select
                 value={quickSaleForm.serviceId}
                 onValueChange={(value) =>
@@ -589,11 +620,17 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name} - Rp {service.price.toLocaleString('id-ID')}
-                    </SelectItem>
-                  ))}
+                  {services.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">
+                      No services available. Click Refresh to reload.
+                    </div>
+                  ) : (
+                    services.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name} - Rp {service.price.toLocaleString('id-ID')}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

@@ -91,7 +91,13 @@ export class SalesService {
         .single();
 
       if (serviceError || !serviceData) {
-        throw new Error(`Service not found: ${transactionData.serviceId}`);
+        console.error('Service query error:', {
+          serviceId: transactionData.serviceId,
+          tenantId: transactionData.tenantId,
+          error: serviceError?.message,
+          message: serviceError?.message
+        });
+        throw new Error(`Service not found: ${transactionData.serviceId} for tenant ${transactionData.tenantId}`);
       }
 
       const unitPrice = serviceData.price || 0;
