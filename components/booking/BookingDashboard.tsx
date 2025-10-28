@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Booking, BookingStatus, PaymentStatus } from '@/types/booking';
+import { Booking, BookingStatus, PaymentStatus, Service, Customer } from '@/types/booking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
-import { Calendar, List, Search, Plus, Filter } from 'lucide-react';
+import { Calendar, List, Search, Plus, Filter, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
@@ -24,6 +27,18 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // Quick Sale states
+  const [showQuickSaleDialog, setShowQuickSaleDialog] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [quickSaleForm, setQuickSaleForm] = useState({
+    customerId: '',
+    serviceId: '',
+    paymentMethod: 'cash',
+    notes: ''
+  });
+  const [creatingQuickSale, setCreatingQuickSale] = useState(false);
+  
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -31,9 +46,11 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Fetch bookings
+  // Fetch bookings, services, and customers
   useEffect(() => {
     fetchBookings();
+    fetchServices();
+    fetchCustomers();
   }, [tenantId]);
 
   // Apply filters
@@ -147,6 +164,79 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     }
   };
 
+  const fetchServices = async () => {
+    try {
+      const response = await fetch(`/api/services?tenantId=${encodeURIComponent(tenantId)}`, {
+        headers: { 'x-tenant-id': tenantId }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setServices(data.services || []);
+      }
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const response = await fetch(`/api/customers?tenantId=${encodeURIComponent(tenantId)}`, {
+        headers: { 'x-tenant-id': tenantId }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCustomers(data.customers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  };
+
+  const handleCreateQuickSale = async () => {
+    if (!quickSaleForm.customerId || !quickSaleForm.serviceId) {
+      toast.error('Please select customer and service');
+      return;
+    }
+
+    try {
+      setCreatingQuickSale(true);
+      const response = await fetch('/api/sales/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          tenantId,
+          type: 'on_the_spot',
+          customerId: quickSaleForm.customerId,
+          serviceId: quickSaleForm.serviceId,
+          paymentMethod: quickSaleForm.paymentMethod,
+          notes: quickSaleForm.notes
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Quick sale created successfully!');
+        setShowQuickSaleDialog(false);
+        setQuickSaleForm({
+          customerId: '',
+          serviceId: '',
+          paymentMethod: 'cash',
+          notes: ''
+        });
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to create quick sale');
+      }
+    } catch (error) {
+      console.error('Error creating quick sale:', error);
+      toast.error('Failed to create quick sale');
+    } finally {
+      setCreatingQuickSale(false);
+    }
+  };
+
   // Get bookings for selected date
   const bookingsForDate = filteredBookings.filter(b => {
     const bookingDate = new Date(b.scheduledAt).toDateString();
@@ -162,10 +252,19 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <h2 className="text-3xl font-bold">Bookings</h2>
           <p className="text-gray-600">Manage your bookings with unified panel</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          New Booking
-        </Button>
+        <div className="flex gap-2">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            New Booking
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowQuickSaleDialog(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Quick Sale
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -356,6 +455,116 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Quick Sale Dialog */}
+      <Dialog open={showQuickSaleDialog} onOpenChange={setShowQuickSaleDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Quick Sale</DialogTitle>
+            <DialogDescription>
+              Create an on-the-spot sale for a walk-in customer
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Customer Selection */}
+            <div>
+              <Label htmlFor="customer">Customer *</Label>
+              <Select
+                value={quickSaleForm.customerId}
+                onValueChange={(value) =>
+                  setQuickSaleForm({ ...quickSaleForm, customerId: value })
+                }
+              >
+                <SelectTrigger id="customer">
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name} ({customer.phone})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Service Selection */}
+            <div>
+              <Label htmlFor="service">Service *</Label>
+              <Select
+                value={quickSaleForm.serviceId}
+                onValueChange={(value) =>
+                  setQuickSaleForm({ ...quickSaleForm, serviceId: value })
+                }
+              >
+                <SelectTrigger id="service">
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} - Rp {service.price.toLocaleString('id-ID')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Payment Method */}
+            <div>
+              <Label htmlFor="payment">Payment Method</Label>
+              <Select
+                value={quickSaleForm.paymentMethod}
+                onValueChange={(value) =>
+                  setQuickSaleForm({ ...quickSaleForm, paymentMethod: value })
+                }
+              >
+                <SelectTrigger id="payment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="qris">QRIS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Add any notes..."
+                value={quickSaleForm.notes}
+                onChange={(e) =>
+                  setQuickSaleForm({ ...quickSaleForm, notes: e.target.value })
+                }
+                className="h-20"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowQuickSaleDialog(false)}
+                disabled={creatingQuickSale}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateQuickSale}
+                disabled={creatingQuickSale}
+              >
+                {creatingQuickSale ? 'Creating...' : 'Create Sale'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Booking Details Drawer */}
       <BookingDetailsDrawer
