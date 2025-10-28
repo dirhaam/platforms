@@ -232,13 +232,18 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           paymentMethod: 'cash',
           notes: ''
         });
+        // Refresh bookings/sales data
+        await Promise.all([fetchBookings(), fetchCustomers()]);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to create quick sale');
+        const errorMsg = errorData.error || `Failed to create quick sale (${response.status})`;
+        console.error('API Error:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error creating quick sale:', error);
-      toast.error('Failed to create quick sale');
+      const msg = error instanceof Error ? error.message : 'Failed to create quick sale';
+      toast.error(msg);
     } finally {
       setCreatingQuickSale(false);
     }
@@ -638,6 +643,9 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Add New Customer</DialogTitle>
+            <DialogDescription>
+              Create a new customer to use for this quick sale
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
