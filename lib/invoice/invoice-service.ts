@@ -183,12 +183,14 @@ export class InvoiceService {
           .limit(1)
           .single(),
         // Query payments from sales_transaction_payments (if this invoice is from a sales transaction)
-        supabase
-          .from('sales_transactions')
-          .select('id')
-          .eq('invoice_id', invoiceId)
-          .limit(1)
-          .single()
+        Promise.resolve(
+          supabase
+            .from('sales_transactions')
+            .select('id')
+            .eq('invoice_id', invoiceId)
+            .limit(1)
+            .single()
+        )
           .then(async (transResult) => {
             if (transResult.data?.id) {
               return supabase
