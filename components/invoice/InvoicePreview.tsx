@@ -64,7 +64,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="invoice-dialog max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex justify-between items-center">
             <DialogTitle>Invoice Preview</DialogTitle>
@@ -81,8 +81,11 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
           </div>
         </DialogHeader>
 
-        <div className="flex justify-center">
-          <div className="invoice-preview w-[320px] bg-white border rounded-lg px-4 py-6 text-sm space-y-4">
+        <div className="invoice-print-wrapper flex justify-center">
+          <div
+            className="invoice-preview invoice-print-area bg-white border rounded-lg px-4 py-6 text-sm space-y-4"
+            style={{ width: '80mm' }}
+          >
             <div className="flex flex-col items-center text-center gap-2">
               {branding?.logoUrl ? (
                 <img
@@ -226,6 +229,41 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
           </div>
         </div>
       </DialogContent>
+      <style jsx global>{`
+        @media print {
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .invoice-dialog > * {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          .invoice-dialog .invoice-print-wrapper,
+          .invoice-dialog .invoice-print-wrapper * {
+            display: block !important;
+            visibility: visible !important;
+          }
+          .invoice-print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            margin: 0;
+            box-shadow: none !important;
+          }
+          .invoice-dialog {
+            box-shadow: none !important;
+            padding: 0;
+          }
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+        }
+      `}</style>
     </Dialog>
   );
 }
