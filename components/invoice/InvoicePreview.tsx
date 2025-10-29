@@ -26,14 +26,15 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
       const applyComputedStyles = (original: Element, clone: Element) => {
         const computed = window.getComputedStyle(original);
-        (clone as HTMLElement).style.color = computed.color;
-        (clone as HTMLElement).style.backgroundColor = computed.backgroundColor;
-        (clone as HTMLElement).style.borderColor = computed.borderColor;
-        (clone as HTMLElement).style.borderTopColor = computed.borderTopColor;
-        (clone as HTMLElement).style.borderRightColor = computed.borderRightColor;
-        (clone as HTMLElement).style.borderBottomColor = computed.borderBottomColor;
-        (clone as HTMLElement).style.borderLeftColor = computed.borderLeftColor;
-        (clone as HTMLElement).style.outlineColor = computed.outlineColor;
+        const safeColor = (value: string) => (value.startsWith('oklch') ? '#000000' : value);
+        (clone as HTMLElement).style.color = safeColor(computed.color);
+        (clone as HTMLElement).style.backgroundColor = safeColor(computed.backgroundColor);
+        (clone as HTMLElement).style.borderColor = safeColor(computed.borderColor);
+        (clone as HTMLElement).style.borderTopColor = safeColor(computed.borderTopColor);
+        (clone as HTMLElement).style.borderRightColor = safeColor(computed.borderRightColor);
+        (clone as HTMLElement).style.borderBottomColor = safeColor(computed.borderBottomColor);
+        (clone as HTMLElement).style.borderLeftColor = safeColor(computed.borderLeftColor);
+        (clone as HTMLElement).style.outlineColor = safeColor(computed.outlineColor);
         (clone as HTMLElement).style.boxShadow = computed.boxShadow;
         (clone as HTMLElement).style.font = computed.font;
         (clone as HTMLElement).style.textTransform = computed.textTransform;
@@ -51,6 +52,8 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
       clonedNode.style.left = '-10000px';
       clonedNode.style.top = '0';
       clonedNode.style.background = '#ffffff';
+      clonedNode.style.color = '#000000';
+      clonedNode.style.borderColor = '#000000';
 
       document.body.appendChild(clonedNode);
 
