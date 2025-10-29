@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import { Buffer } from 'buffer';
 import { Invoice } from '@/types/invoice';
 
 export class InvoicePDFGenerator {
@@ -52,38 +53,59 @@ export class InvoicePDFGenerator {
    */
   private async addHeader(invoice: Invoice, yPosition: number): Promise<number> {
     const tenant = invoice.tenant;
-    
-    // Business name
+    const branding = invoice.branding;
+
+    let currentY = yPosition;
+
+    if (branding?.logoUrl) {
+      const logo = await this.loadImageData(branding.logoUrl);
+      if (logo) {
+        const logoHeight = 24;
+        const logoWidth = 24;
+        this.pdf.addImage(logo.dataUrl, logo.format, this.margin, currentY, logoWidth, logoHeight);
+        currentY += logoHeight + 5;
+      }
+    }
+
+    if (branding?.headerText) {
+      this.pdf.setFontSize(12);
+      this.pdf.setFont('helvetica', 'bold');
+      const headerLines = this.pdf.splitTextToSize(
+        branding.headerText,
+        this.pageWidth - 2 * this.margin
+      );
+      this.pdf.text(headerLines, this.pageWidth / 2, currentY, { align: 'center' });
+      currentY += headerLines.length * 5 + 5;
+    }
+
     this.pdf.setFontSize(24);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text(tenant?.businessName || 'Business Name', this.margin, yPosition);
-    yPosition += 10;
+    this.pdf.text(tenant?.businessName || 'Business Name', this.margin, currentY);
+    currentY += 10;
 
-    // Business details
     this.pdf.setFontSize(10);
     this.pdf.setFont('helvetica', 'normal');
     
     if (tenant?.address) {
-      this.pdf.text(tenant.address, this.margin, yPosition);
-      yPosition += 5;
+      this.pdf.text(tenant.address, this.margin, currentY);
+      currentY += 5;
     }
     
     if (tenant?.phone) {
-      this.pdf.text(`Phone: ${tenant.phone}`, this.margin, yPosition);
-      yPosition += 5;
+      this.pdf.text(`Phone: ${tenant.phone}`, this.margin, currentY);
+      currentY += 5;
     }
     
     if (tenant?.email) {
-      this.pdf.text(`Email: ${tenant.email}`, this.margin, yPosition);
-      yPosition += 5;
+      this.pdf.text(`Email: ${tenant.email}`, this.margin, currentY);
+      currentY += 5;
     }
 
-    // Invoice title
     this.pdf.setFontSize(20);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('INVOICE', this.pageWidth - this.margin - 30, this.margin + 10);
+    this.pdf.text('INVOICE', this.pageWidth - this.margin - 30, yPosition + 15);
 
-    return yPosition + 15;
+    return currentY + 15;
   }
 
   /**
@@ -298,7 +320,53 @@ export class InvoicePDFGenerator {
     const footerY = this.pageHeight - this.margin;
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'italic');
-    this.pdf.text('Thank you for your business!', this.pageWidth / 2, footerY, { align: 'center' });
+    const footerText = invoice.branding?.footerText?.trim() || 'Thank you for your business!';
+    const footerLines = this.pdf.splitTextToSize(
+      footerText,
+      this.pageWidth - 2 * this.margin
+    );
+    this.pdf.text(footerLines, this.pageWidth / 2, footerY, { align: 'center' });
+  }
+
+  private async loadImageData(
+    url: string
+  ): Promise<{ dataUrl: string; format: 'PNG' | 'JPEG' } | null> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return null;
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/png';
+      const format: 'PNG' | 'JPEG' = contentType.includes('jpeg') || contentType.includes('jpg')
+        ? 'JPEG'
+        : 'PNG';
+
+      if (typeof window === 'undefined') {
+        const arrayBuffer = await response.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        return {
+          dataUrl: `data:${contentType};base64,${base64}`,
+          format,
+        };
+      }
+
+      const blob = await response.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Failed to read logo blob'));
+        reader.onload = () => {
+          resolve({
+            dataUrl: reader.result as string,
+            format,
+          });
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('[InvoiceBranding] Failed to load logo image:', error);
+      return null;
+    }
   }
 
   /**

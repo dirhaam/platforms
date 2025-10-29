@@ -57,6 +57,8 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     );
   };
 
+  const branding = invoice.branding;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -78,26 +80,44 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
         <div className="invoice-preview bg-white p-8 border rounded-lg">
           {/* Header */}
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {invoice.tenant?.businessName || 'Business Name'}
-              </h1>
-              <div className="mt-2 text-sm text-gray-600">
-                {invoice.tenant?.address && (
-                  <p>{invoice.tenant.address}</p>
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between mb-8">
+            <div className="flex items-start gap-4">
+              {branding?.logoUrl ? (
+                <img
+                  src={branding.logoUrl}
+                  alt="Invoice logo"
+                  className="h-16 w-16 rounded border bg-white object-contain"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded border bg-gray-50 flex items-center justify-center text-gray-400 text-xs">
+                  Logo
+                </div>
+              )}
+              <div>
+                {branding?.headerText && (
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    {branding.headerText}
+                  </p>
                 )}
-                {invoice.tenant?.phone && (
-                  <p>Phone: {invoice.tenant.phone}</p>
-                )}
-                {invoice.tenant?.email && (
-                  <p>Email: {invoice.tenant.email}</p>
-                )}
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {invoice.tenant?.businessName || 'Business Name'}
+                </h1>
+                <div className="mt-2 text-sm text-gray-600 space-y-1">
+                  {invoice.tenant?.address && (
+                    <p>{invoice.tenant.address}</p>
+                  )}
+                  {invoice.tenant?.phone && (
+                    <p>Phone: {invoice.tenant.phone}</p>
+                  )}
+                  {invoice.tenant?.email && (
+                    <p>Email: {invoice.tenant.email}</p>
+                  )}
+                </div>
               </div>
             </div>
             <div className="text-right">
               <h2 className="text-xl font-bold text-gray-900">INVOICE</h2>
-              <div className="mt-2 text-sm">
+              <div className="mt-2 text-sm space-y-1">
                 <p><strong>Invoice #:</strong> {invoice.invoiceNumber}</p>
                 <p><strong>Issue Date:</strong> {invoice.issueDate.toLocaleDateString()}</p>
                 <p><strong>Due Date:</strong> {invoice.dueDate.toLocaleDateString()}</p>
@@ -227,7 +247,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
           {/* Footer */}
           <div className="text-center text-sm text-gray-500 border-t pt-4">
-            <p>Thank you for your business!</p>
+            <p>{branding?.footerText || 'Thank you for your business!'}</p>
           </div>
         </div>
       </DialogContent>

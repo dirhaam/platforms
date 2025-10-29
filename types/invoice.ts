@@ -17,6 +17,12 @@ export enum PaymentMethod {
 }
 
 // Invoice interface
+export interface InvoiceBranding {
+  logoUrl?: string;
+  headerText?: string;
+  footerText?: string;
+}
+
 export interface Invoice {
   id: string;
   tenantId: string;
@@ -55,6 +61,7 @@ export interface Invoice {
   customer?: Customer;
   booking?: Booking;
   tenant?: Tenant;
+  branding?: InvoiceBranding;
 }
 
 // Invoice item interface

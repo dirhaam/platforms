@@ -14,6 +14,7 @@ import {
   type InvoiceItem,
 } from '@/types/invoice';
 import Decimal from 'decimal.js';
+import { InvoiceBrandingService } from './invoice-branding-service';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -193,6 +194,8 @@ export class InvoiceService {
       if (!tenantResult.error && tenantResult.data) {
         baseInvoice.tenant = this.mapTenant(tenantResult.data);
       }
+
+      baseInvoice.branding = await InvoiceBrandingService.getSettings(tenantId);
 
       return baseInvoice;
     } catch (error) {
