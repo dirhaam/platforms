@@ -49,6 +49,7 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Printer,
 } from 'lucide-react';
 import {
   SalesTransaction,
@@ -79,6 +80,7 @@ export function SalesContent() {
   const [invoicePreview, setInvoicePreview] = useState<Invoice | null>(null);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [invoiceGenerating, setInvoiceGenerating] = useState(false);
+  const [showInvoicePrompt, setShowInvoicePrompt] = useState(false);
 
   // UI states
   const [activeTab, setActiveTab] = useState('transactions');
@@ -175,7 +177,8 @@ export function SalesContent() {
         const invoiceData = await response.json();
         const invoice = normalizeInvoiceResponse(invoiceData);
         setInvoicePreview(invoice);
-        setShowInvoicePreview(true);
+        setShowInvoicePreview(false);
+        setShowInvoicePrompt(true);
         toast.success('Invoice siap dicetak');
       } catch (error) {
         console.error('Error creating invoice from transaction:', error);
@@ -580,6 +583,13 @@ export function SalesContent() {
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => createInvoiceAndPreview(transaction)}
+                        disabled={invoiceGenerating}
+                      >
+                        <Printer className="w-4 h-4 mr-2" />
+                        Generate Invoice
+                      </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
@@ -748,12 +758,44 @@ export function SalesContent() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Invoice berhasil dibuat</DialogTitle>
+            <DialogDescription>
+              Cetak atau unduh invoice sekarang untuk pelanggan Anda.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowInvoicePrompt(false);
+                setInvoicePreview(null);
+              }}
+            >
+              Nanti saja
+            </Button>
+            <Button
+              onClick={() => {
+                setShowInvoicePrompt(false);
+                setShowInvoicePreview(true);
+              }}
+              disabled={!invoicePreview}
+            >
+              Cetak Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {invoicePreview && (
         <InvoicePreview
           open={showInvoicePreview}
           onOpenChange={(open) => {
             setShowInvoicePreview(open);
             if (!open) {
+              setShowInvoicePrompt(false);
               setInvoicePreview(null);
             }
           }}

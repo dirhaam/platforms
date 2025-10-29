@@ -18,6 +18,14 @@ import { SalesTransaction, SalesSummary } from '@/types/sales';
 import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -40,6 +48,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [invoicePreview, setInvoicePreview] = useState<Invoice | null>(null);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [invoiceGenerating, setInvoiceGenerating] = useState(false);
+  const [showInvoicePrompt, setShowInvoicePrompt] = useState(false);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -232,7 +241,8 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         const invoiceData = await response.json();
         const invoice = normalizeInvoiceResponse(invoiceData);
         setInvoicePreview(invoice);
-        setShowInvoicePreview(true);
+        setShowInvoicePreview(false);
+        setShowInvoicePrompt(true);
         toast.success('Invoice siap dicetak');
       } catch (error) {
         console.error('Error creating invoice from sales transaction:', error);
@@ -611,12 +621,44 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         onBookingUpdate={handleBookingUpdate}
       />
 
+      <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Invoice berhasil dibuat</DialogTitle>
+            <DialogDescription>
+              Cetak atau unduh invoice sekarang untuk pelanggan Anda.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowInvoicePrompt(false);
+                setInvoicePreview(null);
+              }}
+            >
+              Nanti saja
+            </Button>
+            <Button
+              onClick={() => {
+                setShowInvoicePrompt(false);
+                setShowInvoicePreview(true);
+              }}
+              disabled={!invoicePreview}
+            >
+              Cetak Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {invoicePreview && (
         <InvoicePreview
           open={showInvoicePreview}
           onOpenChange={(open) => {
             setShowInvoicePreview(open);
             if (!open) {
+              setShowInvoicePrompt(false);
               setInvoicePreview(null);
             }
           }}

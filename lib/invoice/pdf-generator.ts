@@ -3,25 +3,73 @@ import QRCode from 'qrcode';
 import { Buffer } from 'buffer';
 import { Invoice } from '@/types/invoice';
 
+const RECEIPT_WIDTH_MM = 80;
+const RECEIPT_HEIGHT_MM = 200;
+
 export class InvoicePDFGenerator {
   private pdf: jsPDF;
-  private pageWidth: number;
-  private pageHeight: number;
-  private margin: number = 20;
+  private pageWidth: number = RECEIPT_WIDTH_MM;
+  private pageHeight: number = RECEIPT_HEIGHT_MM;
+  private margin: number = 5;
 
   constructor() {
-    this.pdf = new jsPDF();
+    this.pdf = this.createDocument();
+    this.refreshPageSize();
+  }
+
+  private createDocument() {
+    return new jsPDF({
+      unit: 'mm',
+      orientation: 'portrait',
+      format: [RECEIPT_WIDTH_MM, RECEIPT_HEIGHT_MM],
+    });
+  }
+
+  private refreshPageSize(): void {
     this.pageWidth = this.pdf.internal.pageSize.getWidth();
     this.pageHeight = this.pdf.internal.pageSize.getHeight();
+  }
+
+  private ensureSpace(currentY: number, neededHeight: number): number {
+    if (currentY + neededHeight <= this.pageHeight - this.margin) {
+      return currentY;
+    }
+
+    this.pdf.addPage([RECEIPT_WIDTH_MM, RECEIPT_HEIGHT_MM], 'portrait');
+    this.refreshPageSize();
+    return this.margin;
+  }
+
+  private drawDivider(y: number): void {
+    this.pdf.setDrawColor(200, 200, 200);
+    this.pdf.line(this.margin, y, this.pageWidth - this.margin, y);
+    this.pdf.setDrawColor(0, 0, 0);
+  }
+
+  private formatCurrency(value: number): string {
+    return `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
+  }
+
+  private formatDate(date: Date | undefined): string {
+    if (!date) return '-';
+    return date.toLocaleDateString('id-ID');
+  }
+
+  private drawKeyValue(label: string, value: string, y: number): number {
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.text(label, this.margin, y);
+    this.pdf.text(value, this.pageWidth - this.margin, y, { align: 'right' });
+    return y + 4;
   }
 
   /**
    * Generate PDF for invoice
    */
   async generateInvoicePDF(invoice: Invoice): Promise<ArrayBuffer> {
-    // Reset PDF
-    this.pdf = new jsPDF();
-    
+    this.pdf = this.createDocument();
+    this.pageWidth = this.pdf.internal.pageSize.getWidth();
+    this.pageHeight = this.pdf.internal.pageSize.getHeight();
+
     let yPosition = this.margin;
 
     // Add header with business branding
@@ -55,206 +103,181 @@ export class InvoicePDFGenerator {
     const tenant = invoice.tenant;
     const branding = invoice.branding;
 
-    let currentY = yPosition;
+    let currentY = this.ensureSpace(yPosition, 25);
 
     if (branding?.logoUrl) {
       const logo = await this.loadImageData(branding.logoUrl);
       if (logo) {
-        const logoHeight = 24;
-        const logoWidth = 24;
-        this.pdf.addImage(logo.dataUrl, logo.format, this.margin, currentY, logoWidth, logoHeight);
-        currentY += logoHeight + 5;
+        const logoWidth = 20;
+        const logoHeight = 20;
+        const x = (this.pageWidth - logoWidth) / 2;
+        this.pdf.addImage(logo.dataUrl, logo.format, x, currentY, logoWidth, logoHeight);
+        currentY += logoHeight + 3;
       }
     }
 
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.setFontSize(12);
+
     if (branding?.headerText) {
-      this.pdf.setFontSize(12);
-      this.pdf.setFont('helvetica', 'bold');
-      const headerLines = this.pdf.splitTextToSize(
-        branding.headerText,
-        this.pageWidth - 2 * this.margin
-      );
+      const headerLines = this.pdf.splitTextToSize(branding.headerText, this.pageWidth - 2 * this.margin);
       this.pdf.text(headerLines, this.pageWidth / 2, currentY, { align: 'center' });
-      currentY += headerLines.length * 5 + 5;
+      currentY += headerLines.length * 4 + 2;
     }
 
-    this.pdf.setFontSize(24);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text(tenant?.businessName || 'Business Name', this.margin, currentY);
-    currentY += 10;
+    this.pdf.setFontSize(14);
+    this.pdf.text(tenant?.businessName || 'Business Name', this.pageWidth / 2, currentY, { align: 'center' });
+    currentY += 6;
 
-    this.pdf.setFontSize(10);
     this.pdf.setFont('helvetica', 'normal');
-    
-    if (tenant?.address) {
-      this.pdf.text(tenant.address, this.margin, currentY);
-      currentY += 5;
-    }
-    
-    if (tenant?.phone) {
-      this.pdf.text(`Phone: ${tenant.phone}`, this.margin, currentY);
-      currentY += 5;
-    }
-    
-    if (tenant?.email) {
-      this.pdf.text(`Email: ${tenant.email}`, this.margin, currentY);
-      currentY += 5;
+    this.pdf.setFontSize(9);
+
+    const infoParts: string[] = [];
+    if (tenant?.address) infoParts.push(tenant.address);
+    if (tenant?.phone) infoParts.push(`Tel: ${tenant.phone}`);
+    if (tenant?.email) infoParts.push(`Email: ${tenant.email}`);
+
+    if (infoParts.length) {
+      const lines = this.pdf.splitTextToSize(infoParts.join(' • '), this.pageWidth - 2 * this.margin);
+      this.pdf.text(lines, this.pageWidth / 2, currentY, { align: 'center' });
+      currentY += lines.length * 4;
     }
 
-    this.pdf.setFontSize(20);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('INVOICE', this.pageWidth - this.margin - 30, yPosition + 15);
+    this.pdf.setFontSize(10);
+    this.pdf.text('INVOICE', this.pageWidth / 2, currentY + 4, { align: 'center' });
+    currentY += 8;
 
-    return currentY + 15;
+    this.drawDivider(currentY);
+    return currentY + 3;
   }
 
   /**
    * Add invoice details
    */
   private addInvoiceDetails(invoice: Invoice, yPosition: number): number {
+    let currentY = this.ensureSpace(yPosition, 20);
+    this.pdf.setFont('helvetica', 'bold');
     this.pdf.setFontSize(10);
+    this.pdf.text('Detail Invoice', this.pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+
     this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(9);
+    currentY = this.drawKeyValue('Invoice', invoice.invoiceNumber, currentY);
+    currentY = this.drawKeyValue('Tanggal', this.formatDate(invoice.issueDate), currentY);
+    currentY = this.drawKeyValue('Jatuh Tempo', this.formatDate(invoice.dueDate), currentY);
+    currentY = this.drawKeyValue('Status', invoice.status.toUpperCase(), currentY);
 
-    // Invoice details on the right
-    const rightX = this.pageWidth - this.margin - 60;
-    
-    this.pdf.text(`Invoice #: ${invoice.invoiceNumber}`, rightX, yPosition);
-    yPosition += 5;
-    
-    this.pdf.text(`Issue Date: ${invoice.issueDate.toLocaleDateString()}`, rightX, yPosition);
-    yPosition += 5;
-    
-    this.pdf.text(`Due Date: ${invoice.dueDate.toLocaleDateString()}`, rightX, yPosition);
-    yPosition += 5;
-    
-    this.pdf.text(`Status: ${invoice.status.toUpperCase()}`, rightX, yPosition);
-
-    return yPosition + 10;
+    currentY += 2;
+    this.drawDivider(currentY);
+    return currentY + 3;
   }
 
   /**
    * Add customer details
    */
   private addCustomerDetails(invoice: Invoice, yPosition: number): number {
-    this.pdf.setFontSize(12);
+    let currentY = this.ensureSpace(yPosition, 15);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('Bill To:', this.margin, yPosition);
-    yPosition += 8;
-
     this.pdf.setFontSize(10);
+    this.pdf.text('Pelanggan', this.pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+
     this.pdf.setFont('helvetica', 'normal');
-    
+    this.pdf.setFontSize(9);
+
     if (invoice.customer) {
-      this.pdf.text(invoice.customer.name, this.margin, yPosition);
-      yPosition += 5;
-      
-      if (invoice.customer.email) {
-        this.pdf.text(invoice.customer.email, this.margin, yPosition);
-        yPosition += 5;
-      }
-      
-      this.pdf.text(invoice.customer.phone, this.margin, yPosition);
-      yPosition += 5;
-      
+      const lines: string[] = [invoice.customer.name];
+      if (invoice.customer.phone) lines.push(invoice.customer.phone);
+      if (invoice.customer.email) lines.push(invoice.customer.email);
       if (invoice.customer.address) {
-        this.pdf.text(invoice.customer.address, this.margin, yPosition);
-        yPosition += 5;
+        const addressLines = this.pdf.splitTextToSize(
+          invoice.customer.address,
+          this.pageWidth - 2 * this.margin
+        );
+        lines.push(...addressLines);
       }
+
+      lines.forEach((line) => {
+        currentY = this.ensureSpace(currentY, 4);
+        this.pdf.text(line, this.margin, currentY);
+        currentY += 4;
+      });
     }
 
-    return yPosition + 10;
+    currentY += 1;
+    this.drawDivider(currentY);
+    return currentY + 3;
   }
 
   /**
    * Add items table
    */
   private addItemsTable(invoice: Invoice, yPosition: number): number {
-    const tableStartY = yPosition;
-    const rowHeight = 8;
-    const colWidths = [80, 20, 30, 30]; // Description, Qty, Unit Price, Total
-    const colX = [this.margin, this.margin + 80, this.margin + 100, this.margin + 130];
-
-    // Table header
-    this.pdf.setFontSize(10);
+    let currentY = this.ensureSpace(yPosition, 10);
     this.pdf.setFont('helvetica', 'bold');
-    
-    // Header background
-    this.pdf.setFillColor(240, 240, 240);
-    this.pdf.rect(this.margin, yPosition, this.pageWidth - 2 * this.margin, rowHeight, 'F');
-    
-    // Header text
-    this.pdf.text('Description', colX[0] + 2, yPosition + 5);
-    this.pdf.text('Qty', colX[1] + 2, yPosition + 5);
-    this.pdf.text('Unit Price', colX[2] + 2, yPosition + 5);
-    this.pdf.text('Total', colX[3] + 2, yPosition + 5);
-    
-    yPosition += rowHeight;
+    this.pdf.setFontSize(10);
+    this.pdf.text('Rincian Layanan', this.pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
 
-    // Table rows
     this.pdf.setFont('helvetica', 'normal');
-    
+    this.pdf.setFontSize(9);
+
     invoice.items.forEach((item, index) => {
-      // Alternate row background
-      if (index % 2 === 1) {
-        this.pdf.setFillColor(250, 250, 250);
-        this.pdf.rect(this.margin, yPosition, this.pageWidth - 2 * this.margin, rowHeight, 'F');
+      currentY = this.ensureSpace(currentY, 10);
+      const descLines = this.pdf.splitTextToSize(item.description, this.pageWidth - 2 * this.margin);
+      this.pdf.text(descLines, this.margin, currentY);
+      currentY += descLines.length * 4;
+
+      const detailLine = `${item.quantity} x ${this.formatCurrency(item.unitPrice)} = ${this.formatCurrency(item.totalPrice)}`;
+      this.pdf.text(detailLine, this.margin, currentY);
+      currentY += 5;
+
+      if (index !== invoice.items.length - 1) {
+        this.drawDivider(currentY - 2);
       }
-      
-      this.pdf.text(item.description, colX[0] + 2, yPosition + 5);
-      this.pdf.text(item.quantity.toString(), colX[1] + 2, yPosition + 5);
-      this.pdf.text(`Rp ${item.unitPrice.toFixed(2)}`, colX[2] + 2, yPosition + 5);
-      this.pdf.text(`Rp ${item.totalPrice.toFixed(2)}`, colX[3] + 2, yPosition + 5);
-      
-      yPosition += rowHeight;
     });
 
-    // Table border
-    this.pdf.setDrawColor(200, 200, 200);
-    this.pdf.rect(this.margin, tableStartY, this.pageWidth - 2 * this.margin, yPosition - tableStartY);
-    
-    // Column separators
-    colX.slice(1).forEach(x => {
-      this.pdf.line(x, tableStartY, x, yPosition);
-    });
-
-    return yPosition + 10;
+    currentY += 2;
+    this.drawDivider(currentY);
+    return currentY + 3;
   }
 
   /**
    * Add totals section
    */
   private addTotals(invoice: Invoice, yPosition: number): number {
-    const rightX = this.pageWidth - this.margin - 60;
-    
-    this.pdf.setFontSize(10);
+    let currentY = this.ensureSpace(yPosition, 20);
     this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(9);
 
-    // Subtotal
-    this.pdf.text('Subtotal:', rightX, yPosition);
-    this.pdf.text(`Rp ${invoice.subtotal.toFixed(2)}`, rightX + 30, yPosition);
-    yPosition += 6;
+    currentY = this.drawKeyValue('Subtotal', this.formatCurrency(invoice.subtotal), currentY);
 
-    // Tax
     if (invoice.taxAmount > 0) {
-      this.pdf.text(`Tax (${(invoice.taxRate * 100).toFixed(1)}%):`, rightX, yPosition);
-      this.pdf.text(`Rp ${invoice.taxAmount.toFixed(2)}`, rightX + 30, yPosition);
-      yPosition += 6;
+      currentY = this.drawKeyValue(
+        `Pajak ${(invoice.taxRate * 100).toFixed(1)}%`,
+        this.formatCurrency(invoice.taxAmount),
+        currentY,
+      );
     }
 
-    // Discount
     if (invoice.discountAmount > 0) {
-      this.pdf.text('Discount:', rightX, yPosition);
-      this.pdf.text(`-Rp ${invoice.discountAmount.toFixed(2)}`, rightX + 30, yPosition);
-      yPosition += 6;
+      currentY = this.drawKeyValue('Diskon', `- ${this.formatCurrency(invoice.discountAmount)}`, currentY);
     }
 
-    // Total
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.setFontSize(12);
-    this.pdf.text('Total:', rightX, yPosition);
-    this.pdf.text(`Rp ${invoice.totalAmount.toFixed(2)}`, rightX + 30, yPosition);
+    this.pdf.setFontSize(10);
+    currentY = this.drawKeyValue('TOTAL', this.formatCurrency(invoice.totalAmount), currentY);
 
-    return yPosition + 15;
+    if (invoice.paymentMethod) {
+      this.pdf.setFont('helvetica', 'normal');
+      currentY = this.drawKeyValue('Metode Bayar', invoice.paymentMethod.toUpperCase(), currentY);
+    }
+
+    currentY += 2;
+    this.drawDivider(currentY);
+    return currentY + 3;
   }
 
   /**
@@ -266,21 +289,25 @@ export class InvoicePDFGenerator {
     }
 
     try {
-      // Generate QR code as data URL
+      let currentY = this.ensureSpace(yPosition, 40);
+
       const qrCodeDataURL = await QRCode.toDataURL(invoice.qrCodeData, {
-        width: 100,
+        width: 256,
         margin: 1
       });
 
-      // Add QR code to PDF
-      this.pdf.addImage(qrCodeDataURL, 'PNG', this.margin, yPosition, 30, 30);
-      
-      // Add QR code label
-      this.pdf.setFontSize(10);
-      this.pdf.setFont('helvetica', 'normal');
-      this.pdf.text('Scan to Pay', this.margin, yPosition + 35);
+      const size = 30;
+      const x = (this.pageWidth - size) / 2;
+      this.pdf.addImage(qrCodeDataURL, 'PNG', x, currentY, size, size);
+      currentY += size + 4;
 
-      return yPosition + 45;
+      this.pdf.setFontSize(9);
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.text('Scan untuk membayar', this.pageWidth / 2, currentY, { align: 'center' });
+
+      currentY += 3;
+      this.drawDivider(currentY);
+      return currentY + 3;
     } catch (error) {
       console.error('Error generating QR code:', error);
       return yPosition;
@@ -291,40 +318,36 @@ export class InvoicePDFGenerator {
    * Add footer with terms and notes
    */
   private addFooter(invoice: Invoice, yPosition: number): void {
-    // Notes
+    let currentY = this.ensureSpace(yPosition, 10);
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(8);
+
     if (invoice.notes) {
-      this.pdf.setFontSize(10);
       this.pdf.setFont('helvetica', 'bold');
-      this.pdf.text('Notes:', this.margin, yPosition);
-      yPosition += 6;
-      
+      this.pdf.text('Catatan', this.margin, currentY);
+      currentY += 4;
+
       this.pdf.setFont('helvetica', 'normal');
       const noteLines = this.pdf.splitTextToSize(invoice.notes, this.pageWidth - 2 * this.margin);
-      this.pdf.text(noteLines, this.margin, yPosition);
-      yPosition += noteLines.length * 5 + 10;
+      this.pdf.text(noteLines, this.margin, currentY);
+      currentY += noteLines.length * 4 + 2;
     }
 
-    // Terms
     if (invoice.terms) {
-      this.pdf.setFontSize(10);
       this.pdf.setFont('helvetica', 'bold');
-      this.pdf.text('Terms & Conditions:', this.margin, yPosition);
-      yPosition += 6;
-      
+      this.pdf.text('Ketentuan', this.margin, currentY);
+      currentY += 4;
+
       this.pdf.setFont('helvetica', 'normal');
       const termLines = this.pdf.splitTextToSize(invoice.terms, this.pageWidth - 2 * this.margin);
-      this.pdf.text(termLines, this.margin, yPosition);
+      this.pdf.text(termLines, this.margin, currentY);
+      currentY += termLines.length * 4 + 2;
     }
 
-    // Footer
-    const footerY = this.pageHeight - this.margin;
-    this.pdf.setFontSize(8);
+    const footerText = invoice.branding?.footerText?.trim() || 'Terima kasih atas kunjungan Anda!';
+    const footerLines = this.pdf.splitTextToSize(footerText, this.pageWidth - 2 * this.margin);
+    const footerY = Math.max(currentY, this.pageHeight - this.margin - footerLines.length * 4);
     this.pdf.setFont('helvetica', 'italic');
-    const footerText = invoice.branding?.footerText?.trim() || 'Thank you for your business!';
-    const footerLines = this.pdf.splitTextToSize(
-      footerText,
-      this.pageWidth - 2 * this.margin
-    );
     this.pdf.text(footerLines, this.pageWidth / 2, footerY, { align: 'center' });
   }
 
