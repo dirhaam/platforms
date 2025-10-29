@@ -133,7 +133,9 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
     setLoadingSales(true);
     try {
-      const response = await fetch(`/api/sales/transactions?tenantId=${encodeURIComponent(tenantId)}`);
+      const response = await fetch(`/api/sales/transactions?tenantId=${encodeURIComponent(tenantId)}`, {
+        headers: { 'x-tenant-id': tenantId }
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch sales transactions');
@@ -163,7 +165,9 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     if (!tenantId) return;
 
     try {
-      const response = await fetch(`/api/sales/summary?tenantId=${encodeURIComponent(tenantId)}`);
+      const response = await fetch(`/api/sales/summary?tenantId=${encodeURIComponent(tenantId)}`, {
+        headers: { 'x-tenant-id': tenantId }
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch sales summary');
