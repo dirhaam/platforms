@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Invoice, InvoiceStatus } from '@/types/invoice';
 import jsPDF from 'jspdf';
-import { Download, Printer } from 'lucide-react';
+import { Download, ImageDown, Printer } from 'lucide-react';
 
 interface InvoicePreviewProps {
   open: boolean;
@@ -17,7 +17,7 @@ interface InvoicePreviewProps {
 export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleDownloadPDF = async () => {
+  const captureReceiptCanvas = async () => {
     try {
       if (!printAreaRef.current) return;
       const html2canvas = (await import('html2canvas')).default;
@@ -65,6 +65,17 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
       document.body.removeChild(clonedNode);
 
+      return canvas;
+    } catch (error) {
+      console.error('Error capturing receipt canvas:', error);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    const canvas = await captureReceiptCanvas();
+    if (!canvas) return;
+
+    try {
       const imgData = canvas.toDataURL('image/png');
       const pdfWidth = 80; // mm
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
@@ -74,6 +85,21 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
       pdf.save(`invoice-${invoice.invoiceNumber}.pdf`);
     } catch (error) {
       console.error('Error downloading PDF:', error);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    const canvas = await captureReceiptCanvas();
+    if (!canvas) return;
+
+    try {
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = imgData;
+      link.download = `invoice-${invoice.invoiceNumber}.png`;
+      link.click();
+    } catch (error) {
+      console.error('Error downloading image:', error);
     }
   };
 
@@ -119,6 +145,10 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
               <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDownloadImage}>
+                <ImageDown className="h-4 w-4 mr-2" />
+                Download PNG
               </Button>
             </div>
           </div>
