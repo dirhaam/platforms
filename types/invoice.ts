@@ -7,6 +7,14 @@ export enum InvoiceStatus {
   CANCELLED = 'cancelled'
 }
 
+// Payment status enum
+export enum PaymentStatus {
+  UNPAID = 'unpaid',
+  PARTIAL_PAID = 'partial_paid',
+  PAID = 'paid',
+  OVERDUE = 'overdue'
+}
+
 // Payment method enum
 export enum PaymentMethod {
   CASH = 'cash',
@@ -40,6 +48,7 @@ export interface Invoice {
   taxAmount: number;
   discountAmount: number;
   totalAmount: number;
+  paidAmount?: number;
   
   // Payment details
   paymentMethod?: PaymentMethod;
@@ -62,6 +71,25 @@ export interface Invoice {
   booking?: Booking;
   tenant?: Tenant;
   branding?: InvoiceBranding;
+}
+
+// Helper function to calculate payment status
+export function getPaymentStatus(invoice: Invoice): PaymentStatus {
+  const now = new Date();
+  const isOverdue = now > invoice.dueDate;
+  
+  const paidAmount = invoice.paidAmount || 0;
+  const remainingAmount = invoice.totalAmount - paidAmount;
+  
+  if (paidAmount >= invoice.totalAmount) {
+    return PaymentStatus.PAID;
+  }
+  
+  if (paidAmount > 0 && remainingAmount > 0) {
+    return isOverdue ? PaymentStatus.OVERDUE : PaymentStatus.PARTIAL_PAID;
+  }
+  
+  return isOverdue ? PaymentStatus.OVERDUE : PaymentStatus.UNPAID;
 }
 
 // Invoice item interface

@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Invoice, InvoiceStatus } from '@/types/invoice';
+import { Invoice, InvoiceStatus, PaymentStatus, getPaymentStatus } from '@/types/invoice';
 import jsPDF from 'jspdf';
 import { Download, ImageDown, Printer } from 'lucide-react';
 
@@ -104,9 +104,10 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
       document.head.appendChild(styleOverride);
 
       const canvas = await html2canvas(printAreaRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         backgroundColor: '#ffffff',
+        logging: false,
       });
 
       document.head.removeChild(styleOverride);
@@ -138,7 +139,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     if (!canvas) return;
 
     try {
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 0.85);
       const pdfWidth = 80; // mm
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
@@ -155,7 +156,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     if (!canvas) return;
 
     try {
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 0.85);
       const link = document.createElement('a');
       link.href = imgData;
       link.download = `invoice-${invoice.invoiceNumber}.png`;
@@ -169,20 +170,53 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     window.print();
   };
 
-  const getStatusBadge = (status: InvoiceStatus) => {
+  const getPaymentStatusBadge = (invoice: Invoice) => {
+    const paymentStatus = getPaymentStatus(invoice);
     const variants = {
-      [InvoiceStatus.DRAFT]: 'secondary',
-      [InvoiceStatus.SENT]: 'default',
-      [InvoiceStatus.PAID]: 'success',
-      [InvoiceStatus.OVERDUE]: 'destructive',
-      [InvoiceStatus.CANCELLED]: 'outline'
+      [PaymentStatus.UNPAID]: 'destructive',
+      [PaymentStatus.PARTIAL_PAID]: 'secondary',
+      [PaymentStatus.PAID]: 'success',
+      [PaymentStatus.OVERDUE]: 'destructive'
     } as const;
 
+    const labels = {
+      [PaymentStatus.UNPAID]: 'UNPAID',
+      [PaymentStatus.PARTIAL_PAID]: 'PARTIAL PAID',
+      [PaymentStatus.PAID]: 'PAID',
+      [PaymentStatus.OVERDUE]: 'OVERDUE'
+    };
+
     return (
-      <Badge variant={variants[status]}>
-        {status.replace('_', ' ').toUpperCase()}
+      <Badge variant={variants[paymentStatus]}>
+        {labels[paymentStatus]}
       </Badge>
     );
+  };
+
+  const getPaymentHistoryNotes = (invoice: Invoice): string => {
+    const paidAmount = invoice.paidAmount || 0;
+    const remainingAmount = invoice.totalAmount - paidAmount;
+    const paymentStatus = getPaymentStatus(invoice);
+
+    if (paymentStatus === PaymentStatus.PAID) {
+      return `Payment Complete: Rp ${invoice.totalAmount.toLocaleString('id-ID')}${
+        invoice.paidDate ? ` | Paid on ${invoice.paidDate.toLocaleDateString('id-ID')}` : ''
+      }`;
+    }
+
+    if (paymentStatus === PaymentStatus.PARTIAL_PAID) {
+      return `Partial Payment: Rp ${paidAmount.toLocaleString('id-ID')} | Remaining: Rp ${remainingAmount.toLocaleString('id-ID')}`;
+    }
+
+    if (paymentStatus === PaymentStatus.OVERDUE && paidAmount > 0) {
+      return `Overdue: Rp ${remainingAmount.toLocaleString('id-ID')} remaining | Payment Received: Rp ${paidAmount.toLocaleString('id-ID')}`;
+    }
+
+    if (paymentStatus === PaymentStatus.OVERDUE) {
+      return `Overdue: Rp ${invoice.totalAmount.toLocaleString('id-ID')} | Due: ${invoice.dueDate.toLocaleDateString('id-ID')}`;
+    }
+
+    return `Unpaid: Rp ${invoice.totalAmount.toLocaleString('id-ID')} | Due: ${invoice.dueDate.toLocaleDateString('id-ID')}`;
   };
 
   const branding = invoice.branding;
@@ -261,8 +295,8 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 <span>{formatDate(invoice.dueDate)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span>Status</span>
-                <span>{getStatusBadge(invoice.status)}</span>
+                <span>Payment Status</span>
+                <span>{getPaymentStatusBadge(invoice)}</span>
               </div>
             </div>
 
@@ -345,9 +379,14 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
               </div>
             )}
 
+            <div className="border-t border-dashed border-gray-300 pt-3 text-xs text-gray-600">
+              <p className="font-semibold mb-1">Riwayat Pembayaran</p>
+              <p>{getPaymentHistoryNotes(invoice)}</p>
+            </div>
+
             {invoice.notes && (
               <div className="border-t border-dashed border-gray-300 pt-3 text-xs text-gray-600">
-                <p className="font-semibold mb-1">Catatan</p>
+                <p className="font-semibold mb-1">Catatan Tambahan</p>
                 <p>{invoice.notes}</p>
               </div>
             )}

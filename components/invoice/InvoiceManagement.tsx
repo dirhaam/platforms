@@ -226,9 +226,23 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     setShowCreateDialog(true);
   };
 
-  const handlePreviewInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setShowPreviewDialog(true);
+  const handlePreviewInvoice = async (invoice: Invoice) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/${invoice.id}`);
+      if (response.ok) {
+        const fullInvoice = await response.json();
+        setSelectedInvoice(fullInvoice);
+        setShowPreviewDialog(true);
+      } else {
+        toast.error('Gagal memuat detail invoice');
+      }
+    } catch (error) {
+      console.error('Error fetching invoice details:', error);
+      toast.error('Gagal memuat detail invoice');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDownloadPDF = async (invoice: Invoice) => {

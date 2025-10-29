@@ -151,6 +151,7 @@ export class InvoiceService {
         taxAmount: parseDecimal(data.taxAmount ?? data.tax_amount),
         discountAmount: parseDecimal(data.discountAmount ?? data.discount_amount),
         totalAmount: parseDecimal(data.totalAmount ?? data.total_amount),
+        paidAmount: parseDecimal(data.paidAmount ?? data.paid_amount),
         paymentMethod: data.paymentMethod ?? data.payment_method,
         paymentReference: data.paymentReference ?? data.payment_reference,
         items: [],
@@ -166,12 +167,12 @@ export class InvoiceService {
         supabase
           .from('invoice_items')
           .select('*')
-          .or(`invoiceId.eq.${invoiceId},invoice_id.eq.${invoiceId}`),
-        data.customerId
+          .eq('invoice_id', invoiceId),
+        data.customerId || data.customer_id
           ? supabase
               .from('customers')
               .select('*')
-              .eq('id', data.customerId)
+              .eq('id', data.customerId ?? data.customer_id)
               .limit(1)
               .single()
           : Promise.resolve({ data: null, error: null } as { data: any; error: any }),
@@ -185,14 +186,20 @@ export class InvoiceService {
 
       if (!itemsResult.error && Array.isArray(itemsResult.data)) {
         baseInvoice.items = itemsResult.data.map(this.mapInvoiceItem);
+      } else if (itemsResult.error) {
+        console.error('Error fetching invoice items:', itemsResult.error);
       }
 
       if (!customerResult.error && customerResult.data) {
         baseInvoice.customer = this.mapCustomer(customerResult.data);
+      } else if (customerResult.error) {
+        console.error('Error fetching customer:', customerResult.error);
       }
 
       if (!tenantResult.error && tenantResult.data) {
         baseInvoice.tenant = this.mapTenant(tenantResult.data);
+      } else if (tenantResult.error) {
+        console.error('Error fetching tenant:', tenantResult.error);
       }
 
       baseInvoice.branding = await InvoiceBrandingService.getSettings(tenantId);
@@ -277,6 +284,7 @@ export class InvoiceService {
           issueDate: new Date(inv.issueDate ?? inv.issue_date),
           dueDate: new Date(inv.dueDate ?? inv.due_date),
           totalAmount: parseDecimal(inv.totalAmount ?? inv.total_amount),
+          paidAmount: parseDecimal(inv.paidAmount ?? inv.paid_amount),
           items: [],
           customer: mappedCustomer,
         };
