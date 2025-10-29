@@ -522,6 +522,212 @@ export class SalesService {
   async searchTransactions(tenantId: string, query: string, filters?: SalesFilters): Promise<SalesTransaction[]> {
     return await this.getTransactions(tenantId, { ...filters, searchQuery: query });
   }
+
+  // NEW: Create transaction with multiple items and split payment support
+  async createTransactionWithItems(transactionData: {
+    tenantId: string;
+    customerId: string;
+    items: Array<{ serviceId: string; quantity: number; unitPrice: number }>;
+    totalAmount: number;
+    paymentAmount: number; // Amount paid now (can be partial)
+    paymentMethod: SalesPaymentMethod;
+    paymentReference?: string;
+    taxRate?: number;
+    discountAmount?: number;
+    notes?: string;
+    bookingId?: string;
+  }): Promise<SalesTransaction> {
+    try {
+      const supabase = getSupabaseClient();
+
+      // Calculate totals
+      const subtotal = transactionData.items.reduce(
+        (sum, item) => sum + item.quantity * item.unitPrice,
+        0
+      );
+      const taxRate = transactionData.taxRate || 0;
+      const taxAmount = subtotal * taxRate;
+      const discountAmount = transactionData.discountAmount || 0;
+      const totalAmount = subtotal + taxAmount - discountAmount;
+
+      // Determine payment status
+      let paymentStatus: 'paid' | 'partial' | 'pending' = 'pending';
+      if (transactionData.paymentAmount >= totalAmount) {
+        paymentStatus = 'paid';
+      } else if (transactionData.paymentAmount > 0) {
+        paymentStatus = 'partial';
+      }
+
+      // Create transaction
+      const transactionId = uuidv4();
+      const newTransaction = {
+        id: transactionId,
+        tenant_id: transactionData.tenantId,
+        customer_id: transactionData.customerId,
+        booking_id: transactionData.bookingId || null,
+        transaction_number: this.generateTransactionNumber(),
+        source: SalesTransactionSource.ON_THE_SPOT,
+        status: SalesTransactionStatus.COMPLETED,
+        service_id: null,
+        service_name: null,
+        duration: null,
+        is_home_visit: false,
+        home_visit_address: null,
+        unit_price: null,
+        home_visit_surcharge: 0,
+        subtotal,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        discount_amount: discountAmount,
+        total_amount: totalAmount,
+        payment_method: transactionData.paymentMethod,
+        payment_status: paymentStatus,
+        paid_amount: transactionData.paymentAmount,
+        payment_amount: transactionData.paymentAmount, // NEW: track initial payment
+        payment_reference: transactionData.paymentReference || null,
+        paid_at: transactionData.paymentAmount > 0 ? new Date().toISOString() : null,
+        staff_id: null,
+        scheduled_at: null,
+        completed_at: new Date().toISOString(),
+        notes: transactionData.notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: savedTransaction, error: transactionError } = await supabase
+        .from('sales_transactions')
+        .insert(newTransaction)
+        .select()
+        .single();
+
+      if (transactionError || !savedTransaction) {
+        throw new Error('Failed to create transaction');
+      }
+
+      // Insert items
+      const items = transactionData.items.map(item => ({
+        id: uuidv4(),
+        sales_transaction_id: transactionId,
+        service_id: item.serviceId,
+        service_name: item.serviceId, // Will be replaced with actual service name
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.quantity * item.unitPrice,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sales_transaction_items')
+        .insert(items);
+
+      if (itemsError) {
+        throw new Error('Failed to create transaction items');
+      }
+
+      // Record initial payment if any
+      if (transactionData.paymentAmount > 0) {
+        const { error: paymentError } = await supabase
+          .from('sales_transaction_payments')
+          .insert({
+            id: uuidv4(),
+            sales_transaction_id: transactionId,
+            payment_amount: transactionData.paymentAmount,
+            payment_method: transactionData.paymentMethod,
+            payment_reference: transactionData.paymentReference || null,
+            paid_at: new Date().toISOString(),
+            notes: 'Initial payment',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (paymentError) {
+          throw new Error('Failed to record payment');
+        }
+      }
+
+      return mapToSalesTransaction(savedTransaction);
+    } catch (error) {
+      console.error('Error creating transaction with items:', error);
+      throw error;
+    }
+  }
+
+  // NEW: Record additional payment for split payment transactions
+  async recordPayment(transactionId: string, tenantId: string, paymentData: {
+    paymentAmount: number;
+    paymentMethod: SalesPaymentMethod;
+    paymentReference?: string;
+    notes?: string;
+  }): Promise<SalesTransaction> {
+    try {
+      const supabase = getSupabaseClient();
+
+      // Get current transaction
+      const { data: transaction, error: fetchError } = await supabase
+        .from('sales_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (fetchError || !transaction) {
+        throw new Error('Transaction not found');
+      }
+
+      // Record payment
+      const { error: paymentError } = await supabase
+        .from('sales_transaction_payments')
+        .insert({
+          id: uuidv4(),
+          sales_transaction_id: transactionId,
+          payment_amount: paymentData.paymentAmount,
+          payment_method: paymentData.paymentMethod,
+          payment_reference: paymentData.paymentReference || null,
+          paid_at: new Date().toISOString(),
+          notes: paymentData.notes || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (paymentError) {
+        throw new Error('Failed to record payment');
+      }
+
+      // Calculate new totals
+      const newPaidAmount = transaction.paid_amount + paymentData.paymentAmount;
+      const totalAmount = transaction.total_amount;
+
+      // Determine new payment status
+      let newPaymentStatus: 'paid' | 'partial' | 'pending' = 'pending';
+      if (newPaidAmount >= totalAmount) {
+        newPaymentStatus = 'paid';
+      } else if (newPaidAmount > 0) {
+        newPaymentStatus = 'partial';
+      }
+
+      // Update transaction
+      const { data: updatedTransaction, error: updateError } = await supabase
+        .from('sales_transactions')
+        .update({
+          paid_amount: newPaidAmount,
+          payment_status: newPaymentStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', transactionId)
+        .select()
+        .single();
+
+      if (updateError || !updatedTransaction) {
+        throw new Error('Failed to update transaction');
+      }
+
+      return mapToSalesTransaction(updatedTransaction);
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      throw error;
+    }
+  }
 }
 
 export const salesService = SalesService.getInstance();

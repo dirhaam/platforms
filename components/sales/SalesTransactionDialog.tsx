@@ -356,7 +356,7 @@ export function SalesTransactionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Transaction</DialogTitle>
           <DialogDescription>
@@ -364,7 +364,7 @@ export function SalesTransactionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
           {transactionTypeOptions && (
             <div className="grid gap-2">
               <Label>Transaction Type</Label>
@@ -394,7 +394,7 @@ export function SalesTransactionDialog({
           )}
 
           {transactionType === "on_the_spot" && (
-            <>
+            <div className="space-y-4">
               <div className="grid gap-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="customerId">Customer *</Label>
@@ -618,11 +618,12 @@ export function SalesTransactionDialog({
                   rows={3}
                 />
               </div>
-            </>
+            </div>
           )}
 
           {transactionType === "from_booking" && (
-            <>
+            <div className="space-y-4">
+              <>
               <div className="grid gap-2">
                 <Label htmlFor="bookingId">Booking</Label>
                 <Select
@@ -773,7 +774,8 @@ export function SalesTransactionDialog({
                   placeholder="Add any notes..."
                 />
               </div>
-            </>
+              </>
+            </div>
           )}
         </div>
 

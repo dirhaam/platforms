@@ -29,6 +29,11 @@ const randomUUID = () => {
 
 // Map database snake_case fields to camelCase Booking interface
 const mapToBooking = (dbData: any): Booking => {
+  const dpAmount = dbData.dp_amount || 0;
+  const paidAmount = dbData.paid_amount || 0;
+  const totalAmount = dbData.total_amount || 0;
+  const remainingBalance = totalAmount - paidAmount;
+  
   return {
     id: dbData.id,
     bookingNumber: dbData.booking_number || `BK-${Date.now()}`,
@@ -42,11 +47,16 @@ const mapToBooking = (dbData: any): Booking => {
     homeVisitAddress: dbData.home_visit_address,
     homeVisitCoordinates: dbData.home_visit_coordinates,
     notes: dbData.notes,
-    totalAmount: dbData.total_amount,
+    totalAmount,
     paymentStatus: dbData.payment_status,
     remindersSent: dbData.reminders_sent,
     createdAt: new Date(dbData.created_at),
-    updatedAt: new Date(dbData.updated_at)
+    updatedAt: new Date(dbData.updated_at),
+    dpAmount,
+    paidAmount,
+    paymentReference: dbData.payment_reference,
+    paymentMethod: dbData.payment_method,
+    remainingBalance
   };
 };
 
@@ -120,11 +130,16 @@ export class BookingService {
         }
       }
       
+      // Prepare DP payment data
+      const dpAmount = data.dpAmount || 0;
+      const paidAmount = dpAmount > 0 ? dpAmount : 0;
+
       // Create the booking
+      const bookingId = randomUUID();
       const { data: newBooking, error: insertError } = await supabase
         .from('bookings')
         .insert({
-          id: randomUUID(),
+          id: bookingId,
           tenant_id: tenantId,
           customer_id: data.customerId,
           service_id: data.serviceId,
@@ -137,11 +152,38 @@ export class BookingService {
           total_amount: totalAmount,
           status: BookingStatus.PENDING,
           reminders_sent: [],
+          dp_amount: dpAmount,
+          paid_amount: paidAmount,
+          payment_method: data.paymentMethod || null,
+          payment_reference: data.paymentReference || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .select()
         .single();
+      
+      // Record initial DP payment if provided
+      if (dpAmount > 0 && data.paymentMethod) {
+        const { error: paymentError } = await supabase
+          .from('booking_payments')
+          .insert({
+            id: randomUUID(),
+            booking_id: bookingId,
+            tenant_id: tenantId,
+            payment_amount: dpAmount,
+            payment_method: data.paymentMethod,
+            payment_reference: data.paymentReference || null,
+            notes: 'Down Payment (DP)',
+            paid_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        
+        if (paymentError) {
+          console.error('Failed to record DP payment:', paymentError);
+          // Don't fail the booking creation, just log the error
+        }
+      }
       
       if (insertError || !newBooking) {
         return { error: 'Failed to create booking' };
@@ -503,6 +545,84 @@ export class BookingService {
     } catch (error) {
       console.error('Error in getService:', error);
       return null;
+    }
+  }
+
+  // Record additional payment for DP/partial payment
+  static async recordPayment(
+    tenantId: string,
+    bookingId: string,
+    paymentAmount: number,
+    paymentMethod: 'cash' | 'card' | 'transfer' | 'qris',
+    paymentReference?: string,
+    notes?: string
+  ): Promise<{ booking?: Booking; error?: string }> {
+    try {
+      const supabase = getSupabaseClient();
+
+      // Get current booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (bookingError || !booking) {
+        return { error: 'Booking not found' };
+      }
+
+      // Record payment
+      const { error: paymentError } = await supabase
+        .from('booking_payments')
+        .insert({
+          id: randomUUID(),
+          booking_id: bookingId,
+          tenant_id: tenantId,
+          payment_amount: paymentAmount,
+          payment_method: paymentMethod,
+          payment_reference: paymentReference || null,
+          notes: notes || 'Additional payment',
+          paid_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (paymentError) {
+        console.error('Failed to record payment:', paymentError);
+        return { error: 'Failed to record payment' };
+      }
+
+      // Calculate new paid amount
+      const currentPaidAmount = booking.paid_amount || 0;
+      const newPaidAmount = currentPaidAmount + paymentAmount;
+      const totalAmount = booking.total_amount;
+
+      // Determine new payment status
+      const paymentStatus = newPaidAmount >= totalAmount ? 'paid' : 'pending';
+
+      // Update booking with new paid amount and status
+      const { data: updatedBooking, error: updateError } = await supabase
+        .from('bookings')
+        .update({
+          paid_amount: newPaidAmount,
+          payment_status: paymentStatus,
+          payment_method: paymentMethod,
+          payment_reference: paymentReference || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', bookingId)
+        .select()
+        .single();
+
+      if (updateError || !updatedBooking) {
+        return { error: 'Failed to update booking' };
+      }
+
+      return { booking: mapToBooking(updatedBooking) };
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      return { error: 'Failed to record payment' };
     }
   }
 }

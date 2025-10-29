@@ -14,6 +14,20 @@ export enum PaymentStatus {
   REFUNDED = 'refunded'
 }
 
+// Booking payment record
+export interface BookingPayment {
+  id: string;
+  bookingId: string;
+  tenantId: string;
+  paymentAmount: number;
+  paymentMethod: 'cash' | 'card' | 'transfer' | 'qris';
+  paymentReference?: string;
+  notes?: string;
+  paidAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Booking interface
 export interface Booking {
   id: string;
@@ -37,6 +51,13 @@ export interface Booking {
   remindersSent: Date[];
   createdAt: Date;
   updatedAt: Date;
+  
+  // Down Payment (DP) support
+  dpAmount?: number; // Down payment amount
+  paidAmount?: number; // Total paid so far
+  paymentReference?: string; // Reference/receipt for initial payment
+  paymentHistory?: BookingPayment[]; // List of all payments
+  remainingBalance?: number; // totalAmount - paidAmount
   
   // Relations
   customer?: Customer;
@@ -95,6 +116,9 @@ export interface CreateBookingRequest {
     lng: number;
   };
   notes?: string;
+  dpAmount?: number; // Down payment amount
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
+  paymentReference?: string;
 }
 
 // Update booking request
@@ -114,6 +138,8 @@ export interface UpdateBookingRequest {
   notes?: string;
   paymentStatus?: PaymentStatus;
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
+  dpAmount?: number; // Down payment amount
+  paymentReference?: string;
 }
 
 // Create service request
