@@ -88,6 +88,8 @@ export function SalesTransactionDialog({
     isHomeVisit: false,
     totalAmount: 0,
     paymentMethod: SalesPaymentMethod.CASH,
+    paymentAmount: 0,
+    paymentReference: "",
     notes: "",
   });
 
