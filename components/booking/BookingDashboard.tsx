@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Booking, BookingStatus, PaymentStatus } from '@/types/booking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,9 @@ import { toast } from 'sonner';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
 import { SalesTransaction, SalesSummary } from '@/types/sales';
+import { Invoice } from '@/types/invoice';
+import { InvoicePreview } from '@/components/invoice/InvoicePreview';
+import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -34,6 +37,9 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [salesTransactions, setSalesTransactions] = useState<SalesTransaction[]>([]);
   const [loadingSales, setLoadingSales] = useState(false);
   const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
+  const [invoicePreview, setInvoicePreview] = useState<Invoice | null>(null);
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [invoiceGenerating, setInvoiceGenerating] = useState(false);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -202,6 +208,44 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     }
   };
 
+  const createInvoiceAndPreview = useCallback(
+    async (transaction: SalesTransaction) => {
+      if (!resolvedTenantId || !transaction?.id) return;
+
+      try {
+        setInvoiceGenerating(true);
+        const response = await fetch(
+          `/api/invoices/from-sales/${transaction.id}?tenantId=${encodeURIComponent(resolvedTenantId)}`,
+          {
+            method: 'POST',
+            headers: {
+              'x-tenant-id': resolvedTenantId,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to create invoice');
+        }
+
+        const invoiceData = await response.json();
+        const invoice = normalizeInvoiceResponse(invoiceData);
+        setInvoicePreview(invoice);
+        setShowInvoicePreview(true);
+        toast.success('Invoice siap dicetak');
+      } catch (error) {
+        console.error('Error creating invoice from sales transaction:', error);
+        toast.error(
+          error instanceof Error ? error.message : 'Gagal membuat invoice dari transaksi'
+        );
+      } finally {
+        setInvoiceGenerating(false);
+      }
+    },
+    [resolvedTenantId]
+  );
+
   const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking);
     setShowDetailsDrawer(true);
@@ -265,7 +309,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <Button 
             variant="outline"
             onClick={() => setShowQuickSaleDialog(true)}
-            disabled={!resolvedTenantId}
+            disabled={!resolvedTenantId || invoiceGenerating}
           >
             <Plus className="h-4 w-4 mr-2" />
             Quick Sale
@@ -551,9 +595,10 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         subdomain={tenantSubdomain}
         allowedTypes={["on_the_spot"]}
         defaultType="on_the_spot"
-        onCreated={async (_transaction) => {
+        onCreated={async (transaction) => {
           toast.success('Quick sale created successfully!');
-          await Promise.all([fetchBookings(), fetchSalesTransactions(), fetchSalesSummary()]);
+          void Promise.all([fetchBookings(), fetchSalesTransactions(), fetchSalesSummary()]);
+          await createInvoiceAndPreview(transaction);
         }}
       />
 
@@ -565,6 +610,19 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         onOpenChange={setShowDetailsDrawer}
         onBookingUpdate={handleBookingUpdate}
       />
+
+      {invoicePreview && (
+        <InvoicePreview
+          open={showInvoicePreview}
+          onOpenChange={(open) => {
+            setShowInvoicePreview(open);
+            if (!open) {
+              setInvoicePreview(null);
+            }
+          }}
+          invoice={invoicePreview}
+        />
+      )}
     </div>
   );
 }

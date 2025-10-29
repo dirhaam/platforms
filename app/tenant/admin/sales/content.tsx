@@ -60,6 +60,10 @@ import {
 } from '@/types/sales';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
+import { Invoice } from '@/types/invoice';
+import { InvoicePreview } from '@/components/invoice/InvoicePreview';
+import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
+import { toast } from 'sonner';
 
 export function SalesContent() {
   const searchParams = useSearchParams();
@@ -72,6 +76,9 @@ export function SalesContent() {
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
   const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<SalesTransaction | null>(null);
+  const [invoicePreview, setInvoicePreview] = useState<Invoice | null>(null);
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [invoiceGenerating, setInvoiceGenerating] = useState(false);
 
   // UI states
   const [activeTab, setActiveTab] = useState('transactions');
@@ -143,6 +150,53 @@ export function SalesContent() {
       console.error('Error fetching summary:', error);
     }
   }, [tenantId]);
+
+  const createInvoiceAndPreview = useCallback(
+    async (transaction: SalesTransaction) => {
+      if (!tenantId || !transaction?.id) return;
+
+      try {
+        setInvoiceGenerating(true);
+        const response = await fetch(
+          `/api/invoices/from-sales/${transaction.id}?tenantId=${tenantId}`,
+          {
+            method: 'POST',
+            headers: {
+              'x-tenant-id': tenantId,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to create invoice');
+        }
+
+        const invoiceData = await response.json();
+        const invoice = normalizeInvoiceResponse(invoiceData);
+        setInvoicePreview(invoice);
+        setShowInvoicePreview(true);
+        toast.success('Invoice siap dicetak');
+      } catch (error) {
+        console.error('Error creating invoice from transaction:', error);
+        toast.error(
+          error instanceof Error ? error.message : 'Gagal membuat invoice dari transaksi'
+        );
+      } finally {
+        setInvoiceGenerating(false);
+      }
+    },
+    [tenantId]
+  );
+
+  const handleTransactionCreated = useCallback(
+    async (transaction: SalesTransaction) => {
+      setTransactions((prev) => [transaction, ...prev]);
+      void fetchSummary();
+      await createInvoiceAndPreview(transaction);
+    },
+    [fetchSummary, createInvoiceAndPreview]
+  );
 
   // Initial data fetch
   useEffect(() => {
@@ -483,7 +537,7 @@ export function SalesContent() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Button onClick={() => setShowNewTransactionDialog(true)}>
+            <Button onClick={() => setShowNewTransactionDialog(true)} disabled={invoiceGenerating}>
               <Plus className="w-4 h-4 mr-2" />
               New Transaction
             </Button>
@@ -493,10 +547,7 @@ export function SalesContent() {
               onOpenChange={setShowNewTransactionDialog}
               tenantId={tenantId}
               subdomain={subdomain || ''}
-              onCreated={async (transaction) => {
-                setTransactions((prev) => [transaction, ...prev]);
-                await fetchSummary();
-              }}
+              onCreated={handleTransactionCreated}
               onError={(message) => setError(message)}
             />
           </div>
@@ -696,6 +747,19 @@ export function SalesContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {invoicePreview && (
+        <InvoicePreview
+          open={showInvoicePreview}
+          onOpenChange={(open) => {
+            setShowInvoicePreview(open);
+            if (!open) {
+              setInvoicePreview(null);
+            }
+          }}
+          invoice={invoicePreview}
+        />
+      )}
     </div>
   );
 }
