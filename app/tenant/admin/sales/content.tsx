@@ -682,10 +682,12 @@ export function SalesContent() {
 
               <div className="border-t pt-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Unit Price:</span>
-                    <span>IDR {selectedTransaction.unitPrice.toLocaleString()}</span>
-                  </div>
+                  {selectedTransaction.unitPrice && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Unit Price:</span>
+                      <span>IDR {selectedTransaction.unitPrice.toLocaleString()}</span>
+                    </div>
+                  )}
                   {selectedTransaction.homeVisitSurcharge && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Home Visit Surcharge:</span>
