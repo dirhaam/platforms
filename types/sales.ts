@@ -20,6 +20,32 @@ export enum SalesPaymentMethod {
   QRIS = 'qris'
 }
 
+// Sales transaction item interface (for multiple services)
+export interface SalesTransactionItem {
+  id: string;
+  salesTransactionId: string;
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Sales transaction payment interface (for split/partial payments)
+export interface SalesTransactionPayment {
+  id: string;
+  salesTransactionId: string;
+  paymentAmount: number;
+  paymentMethod: SalesPaymentMethod;
+  paymentReference?: string;
+  paidAt: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Sales transaction interface
 export interface SalesTransaction {
   id: string;
@@ -29,10 +55,10 @@ export interface SalesTransaction {
   source: SalesTransactionSource;
   status: SalesTransactionStatus;
   
-  // Service details (aligned with booking)
-  serviceId: string;
-  serviceName: string;
-  duration: number; // minutes
+  // Service details (for backward compatibility with old schema)
+  serviceId?: string;
+  serviceName?: string;
+  duration?: number; // minutes
   isHomeVisit: boolean;
   homeVisitAddress?: string;
   homeVisitCoordinates?: {
@@ -41,7 +67,7 @@ export interface SalesTransaction {
   };
   
   // Pricing details
-  unitPrice: number;
+  unitPrice?: number;
   homeVisitSurcharge?: number;
   subtotal: number;
   taxRate: number;
@@ -53,6 +79,7 @@ export interface SalesTransaction {
   paymentMethod: SalesPaymentMethod;
   paymentStatus: 'pending' | 'paid' | 'partial' | 'refunded';
   paidAmount: number;
+  paymentAmount?: number; // Initial payment amount (can be less than total for split payment)
   paymentReference?: string;
   paidAt?: Date;
   
@@ -79,6 +106,8 @@ export interface SalesTransaction {
   booking?: any; // Booking type
   service?: any; // Service type
   staff?: any; // Staff type
+  items?: SalesTransactionItem[]; // Multiple services (new)
+  payments?: SalesTransactionPayment[]; // Payment history (new)
 }
 
 // Sales summary interface
