@@ -24,33 +24,41 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
       const sourceNode = printAreaRef.current;
       const clonedNode = sourceNode.cloneNode(true) as HTMLElement;
 
+      const sanitizeColorFunctions = (value: string) =>
+        value ? value.replace(/oklch\([^)]*\)/g, '#000000') : value;
+
       const applyComputedStyles = (original: Element, clone: Element) => {
         const computed = window.getComputedStyle(original);
-        const safeColor = (value: string) => (value.startsWith('oklch') ? '#000000' : value);
-        (clone as HTMLElement).style.color = safeColor(computed.color);
-        (clone as HTMLElement).style.backgroundColor = safeColor(computed.backgroundColor);
-        (clone as HTMLElement).style.borderColor = safeColor(computed.borderColor);
-        (clone as HTMLElement).style.borderTopColor = safeColor(computed.borderTopColor);
-        (clone as HTMLElement).style.borderRightColor = safeColor(computed.borderRightColor);
-        (clone as HTMLElement).style.borderBottomColor = safeColor(computed.borderBottomColor);
-        (clone as HTMLElement).style.borderLeftColor = safeColor(computed.borderLeftColor);
-        (clone as HTMLElement).style.outlineColor = safeColor(computed.outlineColor);
-        (clone as HTMLElement).style.boxShadow = computed.boxShadow;
+        const safeValue = (value: string) => sanitizeColorFunctions(value || '');
+        (clone as HTMLElement).style.color = safeValue(computed.color);
+        (clone as HTMLElement).style.backgroundColor = safeValue(computed.backgroundColor);
+        (clone as HTMLElement).style.borderColor = safeValue(computed.borderColor);
+        (clone as HTMLElement).style.borderTopColor = safeValue(computed.borderTopColor);
+        (clone as HTMLElement).style.borderRightColor = safeValue(computed.borderRightColor);
+        (clone as HTMLElement).style.borderBottomColor = safeValue(computed.borderBottomColor);
+        (clone as HTMLElement).style.borderLeftColor = safeValue(computed.borderLeftColor);
+        (clone as HTMLElement).style.outlineColor = safeValue(computed.outlineColor);
+        (clone as HTMLElement).style.boxShadow = safeValue(computed.boxShadow);
+        (clone as HTMLElement).style.backgroundImage = safeValue(computed.backgroundImage);
+        (clone as HTMLElement).style.textShadow = safeValue(computed.textShadow);
         (clone as HTMLElement).style.font = computed.font;
         (clone as HTMLElement).style.textTransform = computed.textTransform;
         (clone as HTMLElement).style.letterSpacing = computed.letterSpacing;
 
         Array.from(original.children).forEach((child, index) => {
-          applyComputedStyles(child, clone.children[index]);
+          const cloneChild = clone.children[index];
+          if (cloneChild) {
+            applyComputedStyles(child, cloneChild);
+          }
         });
       };
 
       applyComputedStyles(sourceNode, clonedNode);
 
       clonedNode.style.width = '80mm';
-      clonedNode.style.position = 'absolute';
-      clonedNode.style.left = '-10000px';
-      clonedNode.style.top = '0';
+      clonedNode.style.position = 'fixed';
+      clonedNode.style.inset = '0';
+      clonedNode.style.zIndex = '-1';
       clonedNode.style.background = '#ffffff';
       clonedNode.style.color = '#000000';
       clonedNode.style.borderColor = '#000000';

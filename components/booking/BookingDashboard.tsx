@@ -663,7 +663,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       />
 
       <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>Invoice berhasil dibuat</DialogTitle>
             <DialogDescription>

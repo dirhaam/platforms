@@ -759,7 +759,7 @@ export function SalesContent() {
       </Dialog>
 
       <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>Invoice berhasil dibuat</DialogTitle>
             <DialogDescription>
