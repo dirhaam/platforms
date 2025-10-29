@@ -22,33 +22,58 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
     try {
       const html2canvas = (await import('html2canvas')).default;
+      const container = printAreaRef.current;
+      const elements = Array.from(container.querySelectorAll<HTMLElement>('*'));
+      elements.unshift(container);
+
+      const originalInlineStyles = new Map<HTMLElement, Partial<CSSStyleDeclaration>>();
+
+      const sanitizeColor = (value: string, fallback: string) =>
+        value && value.startsWith('oklch') ? fallback : value;
+
+      elements.forEach(element => {
+        originalInlineStyles.set(element, {
+          color: element.style.color,
+          backgroundColor: element.style.backgroundColor,
+          borderColor: element.style.borderColor,
+          borderTopColor: element.style.borderTopColor,
+          borderRightColor: element.style.borderRightColor,
+          borderBottomColor: element.style.borderBottomColor,
+          borderLeftColor: element.style.borderLeftColor,
+          boxShadow: element.style.boxShadow,
+          textShadow: element.style.textShadow,
+        });
+
+        const computed = window.getComputedStyle(element);
+        element.style.color = sanitizeColor(computed.color, '#111827') || '#111827';
+        element.style.backgroundColor = sanitizeColor(computed.backgroundColor, '#ffffff') || '#ffffff';
+        element.style.borderColor = sanitizeColor(computed.borderColor, '#d1d5db') || '#d1d5db';
+        element.style.borderTopColor = sanitizeColor(computed.borderTopColor, '#d1d5db') || '#d1d5db';
+        element.style.borderRightColor = sanitizeColor(computed.borderRightColor, '#d1d5db') || '#d1d5db';
+        element.style.borderBottomColor = sanitizeColor(computed.borderBottomColor, '#d1d5db') || '#d1d5db';
+        element.style.borderLeftColor = sanitizeColor(computed.borderLeftColor, '#d1d5db') || '#d1d5db';
+        element.style.boxShadow = 'none';
+        element.style.textShadow = 'none';
+      });
+
       const canvas = await html2canvas(printAreaRef.current, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
-        onclone: (doc) => {
-          const target = doc.querySelector('.invoice-print-area');
-          if (target instanceof HTMLElement) {
-            target.classList.add('invoice-print-area-clone');
-            target.style.width = '80mm';
-            target.style.background = '#ffffff';
-            target.style.color = '#111827';
-          }
+      });
 
-          const style = doc.createElement('style');
-          style.textContent = `
-            .invoice-print-area-clone,
-            .invoice-print-area-clone * {
-              color: #111827 !important;
-              background: transparent !important;
-              box-shadow: none !important;
-              border-color: #d1d5db !important;
-              text-shadow: none !important;
-              outline: none !important;
-            }
-          `;
-          doc.head.appendChild(style);
-        }
+      elements.forEach(element => {
+        const original = originalInlineStyles.get(element);
+        if (!original) return;
+        element.style.color = original.color ?? '';
+        element.style.backgroundColor = original.backgroundColor ?? '';
+        element.style.borderColor = original.borderColor ?? '';
+        element.style.borderTopColor = original.borderTopColor ?? '';
+        element.style.borderRightColor = original.borderRightColor ?? '';
+        element.style.borderBottomColor = original.borderBottomColor ?? '';
+        element.style.borderLeftColor = original.borderLeftColor ?? '';
+        element.style.boxShadow = original.boxShadow ?? '';
+        element.style.textShadow = original.textShadow ?? '';
       });
 
       return canvas;
