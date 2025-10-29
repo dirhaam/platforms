@@ -93,7 +93,7 @@ export async function GET(
     }
 
     // Get booking with payment history
-    const booking = await BookingService.getBookingById(tenantId, bookingId);
+    const booking = await BookingService.getBooking(tenantId, bookingId);
 
     if (!booking) {
       return NextResponse.json(
