@@ -1,20 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Booking, BookingStatus, PaymentStatus, Service, Customer } from '@/types/booking';
+import { Booking, BookingStatus, PaymentStatus } from '@/types/booking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
-import { Calendar, List, Search, Plus, Filter, X, RefreshCw } from 'lucide-react';
+import { Calendar, List, Search, Plus, Filter, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -29,22 +27,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   
   // Quick Sale states
   const [showQuickSaleDialog, setShowQuickSaleDialog] = useState(false);
-  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [quickSaleForm, setQuickSaleForm] = useState({
-    customerId: '',
-    serviceId: '',
-    paymentMethod: 'cash',
-    notes: ''
-  });
-  const [newCustomerForm, setNewCustomerForm] = useState({
-    name: '',
-    phone: '',
-    email: ''
-  });
-  const [creatingQuickSale, setCreatingQuickSale] = useState(false);
-  const [creatingCustomer, setCreatingCustomer] = useState(false);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,11 +35,9 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Fetch bookings, services, and customers
+  // Fetch bookings with related metadata
   useEffect(() => {
     fetchBookings();
-    fetchServices();
-    fetchCustomers();
   }, [tenantId]);
 
   // Apply filters
@@ -168,193 +148,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       console.error('Error updating booking:', error);
       toast.error('Failed to update booking');
       throw error;
-    }
-  };
-
-  const fetchServices = async () => {
-    try {
-      const response = await fetch(`/api/services?tenantId=${encodeURIComponent(tenantId)}`, {
-        headers: { 'x-tenant-id': tenantId }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setServices(data.services || []);
-      }
-    } catch (error) {
-      console.error('Error fetching services:', error);
-    }
-  };
-
-  const fetchCustomers = async () => {
-    try {
-      const response = await fetch(`/api/customers?tenantId=${encodeURIComponent(tenantId)}`, {
-        headers: { 'x-tenant-id': tenantId }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const customerList = data.customers || [];
-        console.log('[fetchCustomers] Loaded customers:', {
-          total: customerList.length,
-          customers: customerList.map((c: any) => ({ 
-            id: c.id, 
-            name: c.name, 
-            phone: c.phone,
-            totalBookings: c.totalBookings 
-          }))
-        });
-        setCustomers(customerList);
-      } else {
-        console.error('[fetchCustomers] Failed:', response.status);
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-    }
-  };
-
-  const handleCreateQuickSale = async () => {
-    if (!quickSaleForm.customerId || !quickSaleForm.serviceId) {
-      toast.error('Please select customer and service');
-      return;
-    }
-
-    // Validate that selected service exists
-    const selectedService = services.find(s => s.id === quickSaleForm.serviceId);
-    if (!selectedService) {
-      console.warn('Service not found in local cache:', quickSaleForm.serviceId);
-      console.warn('Available services:', services.map(s => ({ id: s.id, name: s.name })));
-      toast.error('Selected service not found. Please refresh the page and try again.');
-      return;
-    }
-    
-    // Log detailed service info
-    console.log('Selected service details:', {
-      serviceId: selectedService.id,
-      name: selectedService.name,
-      price: selectedService.price,
-      tenantId,
-      allServiceIds: services.map(s => s.id)
-    });
-
-    // Validate that selected customer exists
-    const selectedCustomer = customers.find(c => c.id === quickSaleForm.customerId);
-    if (!selectedCustomer) {
-      console.warn('Customer not found in local cache:', quickSaleForm.customerId);
-      console.warn('Available customers:', customers.map(c => ({ id: c.id, name: c.name })));
-      toast.error('Selected customer not found. Please refresh the page and try again.');
-      return;
-    }
-
-    try {
-      setCreatingQuickSale(true);
-      console.log('Creating quick sale with:', {
-        tenantId,
-        customerId: quickSaleForm.customerId,
-        serviceId: quickSaleForm.serviceId,
-        paymentMethod: quickSaleForm.paymentMethod
-      });
-      const response = await fetch('/api/sales/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          tenantId,
-          type: 'on_the_spot',
-          customerId: quickSaleForm.customerId,
-          serviceId: quickSaleForm.serviceId,
-          paymentMethod: quickSaleForm.paymentMethod,
-          notes: quickSaleForm.notes
-        })
-      });
-
-      if (response.ok) {
-        toast.success('Quick sale created successfully!');
-        setShowQuickSaleDialog(false);
-        setQuickSaleForm({
-          customerId: '',
-          serviceId: '',
-          paymentMethod: 'cash',
-          notes: ''
-        });
-        // Refresh bookings/sales data
-        await Promise.all([fetchBookings(), fetchCustomers()]);
-      } else {
-        let errorMsg = `Failed to create quick sale (${response.status})`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.error || errorMsg;
-          console.error('API Error:', errorMsg);
-          console.error('Full error response:', errorData);
-        } catch (parseError) {
-          console.error('Could not parse error response:', parseError);
-          errorMsg = `Server error (${response.status}): ${response.statusText}`;
-        }
-        console.warn('Service validation might have missed something. Services:', services);
-        toast.error(errorMsg);
-      }
-    } catch (error) {
-      console.error('Error creating quick sale:', error);
-      const msg = error instanceof Error ? error.message : 'Failed to create quick sale';
-      toast.error(msg);
-    } finally {
-      setCreatingQuickSale(false);
-    }
-  };
-
-  const handleCreateCustomer = async () => {
-    if (!newCustomerForm.name || !newCustomerForm.phone) {
-      toast.error('Name and phone are required');
-      return;
-    }
-
-    try {
-      setCreatingCustomer(true);
-      const response = await fetch('/api/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          name: newCustomerForm.name,
-          phone: newCustomerForm.phone,
-          email: newCustomerForm.email || undefined
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success('Customer created successfully!');
-        setNewCustomerForm({ name: '', phone: '', email: '' });
-        setShowAddCustomerDialog(false);
-        
-        // Add new customer to list and auto-select it
-        const newCustomer = data.customer || data;
-        console.log('[handleCreateCustomer] Customer created:', {
-          id: newCustomer.id,
-          name: newCustomer.name,
-          phone: newCustomer.phone,
-          totalBookings: newCustomer.totalBookings
-        });
-        
-        const updatedCustomersList = [...customers, newCustomer];
-        console.log('[handleCreateCustomer] Updated customers list:', {
-          total: updatedCustomersList.length,
-          newCustomersList: updatedCustomersList.map((c: any) => ({ id: c.id, name: c.name }))
-        });
-        
-        setCustomers(updatedCustomersList);
-        setQuickSaleForm({ ...quickSaleForm, customerId: newCustomer.id });
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to create customer');
-      }
-    } catch (error) {
-      console.error('Error creating customer:', error);
-      toast.error('Failed to create customer');
-    } finally {
-      setCreatingCustomer(false);
     }
   };
 
@@ -583,216 +376,18 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Quick Sale Dialog */}
-      <Dialog open={showQuickSaleDialog} onOpenChange={setShowQuickSaleDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Quick Sale</DialogTitle>
-            <DialogDescription>
-              Create an on-the-spot sale for a walk-in customer
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Customer Selection */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <Label htmlFor="customer">Customer *</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowAddCustomerDialog(true)}
-                  className="h-6 px-2 text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add New
-                </Button>
-              </div>
-              <Select
-                value={quickSaleForm.customerId}
-                onValueChange={(value) =>
-                  setQuickSaleForm({ ...quickSaleForm, customerId: value })
-                }
-              >
-                <SelectTrigger id="customer">
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name} ({customer.phone})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Service Selection */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <Label htmlFor="service">Service *</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => fetchServices()}
-                  className="h-6 px-2 text-xs"
-                  disabled={loading}
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Refresh
-                </Button>
-              </div>
-              <Select
-                value={quickSaleForm.serviceId}
-                onValueChange={(value) =>
-                  setQuickSaleForm({ ...quickSaleForm, serviceId: value })
-                }
-              >
-                <SelectTrigger id="service">
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.length === 0 ? (
-                    <div className="p-2 text-sm text-gray-500">
-                      No services available. Click Refresh to reload.
-                    </div>
-                  ) : (
-                    services.map((service) => (
-                      <SelectItem key={service.id} value={service.id}>
-                        {service.name} - Rp {service.price.toLocaleString('id-ID')}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Payment Method */}
-            <div>
-              <Label htmlFor="payment">Payment Method</Label>
-              <Select
-                value={quickSaleForm.paymentMethod}
-                onValueChange={(value) =>
-                  setQuickSaleForm({ ...quickSaleForm, paymentMethod: value })
-                }
-              >
-                <SelectTrigger id="payment">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="qris">QRIS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                placeholder="Add any notes..."
-                value={quickSaleForm.notes}
-                onChange={(e) =>
-                  setQuickSaleForm({ ...quickSaleForm, notes: e.target.value })
-                }
-                className="h-20"
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowQuickSaleDialog(false)}
-                disabled={creatingQuickSale}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateQuickSale}
-                disabled={creatingQuickSale}
-              >
-                {creatingQuickSale ? 'Creating...' : 'Create Sale'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add New Customer Dialog */}
-      <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
-            <DialogDescription>
-              Create a new customer to use for this quick sale
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="newCustomerName">Full Name *</Label>
-              <Input
-                id="newCustomerName"
-                placeholder="Customer name"
-                value={newCustomerForm.name}
-                onChange={(e) =>
-                  setNewCustomerForm({ ...newCustomerForm, name: e.target.value })
-                }
-                disabled={creatingCustomer}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="newCustomerPhone">Phone Number *</Label>
-              <Input
-                id="newCustomerPhone"
-                placeholder="0812xxxxxxx"
-                value={newCustomerForm.phone}
-                onChange={(e) =>
-                  setNewCustomerForm({ ...newCustomerForm, phone: e.target.value })
-                }
-                disabled={creatingCustomer}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="newCustomerEmail">Email (Optional)</Label>
-              <Input
-                id="newCustomerEmail"
-                placeholder="customer@email.com"
-                type="email"
-                value={newCustomerForm.email}
-                onChange={(e) =>
-                  setNewCustomerForm({ ...newCustomerForm, email: e.target.value })
-                }
-                disabled={creatingCustomer}
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowAddCustomerDialog(false)}
-                disabled={creatingCustomer}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateCustomer}
-                disabled={creatingCustomer}
-              >
-                {creatingCustomer ? 'Creating...' : 'Add Customer'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SalesTransactionDialog
+        open={showQuickSaleDialog}
+        onOpenChange={setShowQuickSaleDialog}
+        tenantId={tenantId}
+        subdomain=""
+        allowedTypes={["on_the_spot"]}
+        defaultType="on_the_spot"
+        onCreated={async (_transaction) => {
+          toast.success('Quick sale created successfully!');
+          await fetchBookings();
+        }}
+      />
 
       {/* Booking Details Drawer */}
       <BookingDetailsDrawer

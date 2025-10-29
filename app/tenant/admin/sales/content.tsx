@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -67,26 +66,7 @@ import {
   SalesSummary,
   SalesFilters,
 } from '@/types/sales';
-import { NewCustomerForm } from '@/components/forms/NewCustomerForm';
-
-interface NewOnTheSpotTransactionData {
-  customerId: string;
-  serviceId: string;
-  paymentMethod: SalesPaymentMethod;
-  notes?: string;
-}
-
-interface NewTransactionFromBookingData {
-  bookingId: string;
-  customerId: string;
-  serviceId: string;
-  scheduledAt: string;
-  isHomeVisit: boolean;
-  homeVisitAddress?: string;
-  totalAmount: number;
-  paymentMethod: SalesPaymentMethod;
-  notes?: string;
-}
+import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 
 export function SalesContent() {
   const searchParams = useSearchParams();
@@ -106,33 +86,7 @@ export function SalesContent() {
   const [showNewTransactionDialog, setShowNewTransactionDialog] = useState(false);
   const [showTransactionDetailsDialog, setShowTransactionDetailsDialog] = useState(false);
   const [showFiltersDialog, setShowFiltersDialog] = useState(false);
-  const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [filters, setFilters] = useState<SalesFilters>({});
-  const [transactionType, setTransactionType] = useState<'on_the_spot' | 'from_booking'>('on_the_spot');
-
-  // Data states
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-
-  // Form states
-  const [newOnTheSpotTransaction, setNewOnTheSpotTransaction] = useState<NewOnTheSpotTransactionData>({
-    customerId: '',
-    serviceId: '',
-    paymentMethod: SalesPaymentMethod.CASH,
-    notes: '',
-  });
-
-  const [newTransactionFromBooking, setNewTransactionFromBooking] = useState<NewTransactionFromBookingData>({
-    bookingId: '',
-    customerId: '',
-    serviceId: '',
-    scheduledAt: '',
-    isHomeVisit: false,
-    totalAmount: 0,
-    paymentMethod: SalesPaymentMethod.CASH,
-    notes: '',
-  });
 
   // Fetch tenant information
   useEffect(() => {
@@ -197,135 +151,13 @@ export function SalesContent() {
     }
   }, [tenantId]);
 
-  // Fetch customers
-  const fetchCustomers = useCallback(async () => {
-    if (!tenantId) return;
-
-    try {
-      const response = await fetch(`/api/customers?tenantId=${tenantId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch customers');
-      }
-
-      const data = await response.json();
-      setCustomers(data.customers || []);
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-    }
-  }, [tenantId]);
-
-  // Fetch services
-  const fetchServices = useCallback(async () => {
-    if (!tenantId) return;
-
-    try {
-      const response = await fetch(`/api/services?tenantId=${tenantId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch services');
-      }
-
-      const data = await response.json();
-      setServices(data.services || []);
-    } catch (error) {
-      console.error('Error fetching services:', error);
-    }
-  }, [tenantId]);
-
-  // Fetch bookings
-  const fetchBookings = useCallback(async () => {
-    if (!tenantId) return;
-
-    try {
-      const response = await fetch(`/api/bookings?tenantId=${tenantId}&status=completed`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
-      }
-
-      const data = await response.json();
-      setBookings(data.bookings || []);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    }
-  }, [tenantId]);
-
   // Initial data fetch
   useEffect(() => {
     if (tenantId) {
       fetchTransactions();
       fetchSummary();
-      fetchCustomers();
-      fetchServices();
-      fetchBookings();
     }
-  }, [tenantId, fetchTransactions, fetchSummary, fetchCustomers, fetchServices, fetchBookings]);
-
-  // Create new transaction
-  const handleCreateTransaction = async () => {
-    if (!tenantId) return;
-
-    try {
-      setError(null);
-      
-      let requestBody;
-      
-      if (transactionType === 'on_the_spot') {
-        requestBody = {
-          type: 'on_the_spot',
-          ...newOnTheSpotTransaction,
-          tenantId,
-        };
-      } else {
-        requestBody = {
-          type: 'from_booking',
-          ...newTransactionFromBooking,
-          tenantId,
-        };
-      }
-
-      const response = await fetch('/api/sales/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to create transaction');
-      }
-
-      const data = await response.json();
-      setTransactions([data.transaction, ...transactions]);
-      setShowNewTransactionDialog(false);
-      
-      // Reset form based on type
-      if (transactionType === 'on_the_spot') {
-        setNewOnTheSpotTransaction({
-          customerId: '',
-          serviceId: '',
-          paymentMethod: SalesPaymentMethod.CASH,
-          notes: '',
-        });
-      } else {
-        setNewTransactionFromBooking({
-          bookingId: '',
-          customerId: '',
-          serviceId: '',
-          scheduledAt: '',
-          isHomeVisit: false,
-          totalAmount: 0,
-          paymentMethod: SalesPaymentMethod.CASH,
-          notes: '',
-        });
-      }
-      
-      await fetchSummary();
-    } catch (error) {
-      console.error('Error creating transaction:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create transaction');
-    }
-  };
+  }, [tenantId, fetchTransactions, fetchSummary]);
 
   // Delete transaction
   const handleDeleteTransaction = async (transactionId: string) => {
@@ -658,238 +490,22 @@ export function SalesContent() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <Button onClick={() => setShowNewTransactionDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Transaction
+            </Button>
 
-            <Dialog open={showNewTransactionDialog} onOpenChange={setShowNewTransactionDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Transaction
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Create New Transaction</DialogTitle>
-                  <DialogDescription>
-                    Choose transaction type and enter details below.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                {/* Transaction Type Selection */}
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label>Transaction Type</Label>
-                    <Select
-                      value={transactionType}
-                      onValueChange={(value) => setTransactionType(value as 'on_the_spot' | 'from_booking')}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select transaction type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="on_the_spot">On-the-Spot Transaction</SelectItem>
-                        <SelectItem value="from_booking">From Booking</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {transactionType === 'on_the_spot' ? (
-                    // On-the-spot transaction form
-                    <>
-                      <div className="grid gap-2">
-                        <div className="flex justify-between items-center">
-                          <Label htmlFor="customerId">Customer</Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowNewCustomerDialog(true)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <Select
-                          value={newOnTheSpotTransaction.customerId}
-                          onValueChange={(value) => setNewOnTheSpotTransaction(prev => ({ ...prev, customerId: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select customer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers.map(customer => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                {customer.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="serviceId">Service</Label>
-                        <Select
-                          value={newOnTheSpotTransaction.serviceId}
-                          onValueChange={(value) => setNewOnTheSpotTransaction(prev => ({ ...prev, serviceId: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select service" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {services.map(service => (
-                              <SelectItem key={service.id} value={service.id}>
-                                {service.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="paymentMethod">Payment Method</Label>
-                        <Select
-                          value={newOnTheSpotTransaction.paymentMethod}
-                          onValueChange={(value) => setNewOnTheSpotTransaction(prev => ({ ...prev, paymentMethod: value as SalesPaymentMethod }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
-                            <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
-                            <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
-                            <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="notes">Notes (Optional)</Label>
-                        <Textarea
-                          id="notes"
-                          value={newOnTheSpotTransaction.notes}
-                          onChange={(e) => setNewOnTheSpotTransaction(prev => ({ ...prev, notes: e.target.value }))}
-                          placeholder="Add any notes..."
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    // From booking transaction form
-                    <>
-                      <div className="grid gap-2">
-                        <Label htmlFor="bookingId">Booking</Label>
-                        <Select
-                          value={newTransactionFromBooking.bookingId}
-                          onValueChange={(value) => setNewTransactionFromBooking(prev => ({ ...prev, bookingId: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select booking" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bookings.map(booking => (
-                              <SelectItem key={booking.id} value={booking.id}>
-                                {booking.customer?.name || 'Unknown'} - {booking.service?.name || 'Unknown Service'}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="scheduledAt">Scheduled Date</Label>
-                        <Input
-                          id="scheduledAt"
-                          type="datetime-local"
-                          value={newTransactionFromBooking.scheduledAt}
-                          onChange={(e) => setNewTransactionFromBooking(prev => ({ ...prev, scheduledAt: e.target.value }))}
-                        />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="totalAmount">Total Amount</Label>
-                        <Input
-                          id="totalAmount"
-                          type="number"
-                          min="0"
-                          value={newTransactionFromBooking.totalAmount}
-                          onChange={(e) => setNewTransactionFromBooking(prev => ({ ...prev, totalAmount: parseFloat(e.target.value) || 0 }))}
-                        />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="paymentMethod">Payment Method</Label>
-                        <Select
-                          value={newTransactionFromBooking.paymentMethod}
-                          onValueChange={(value) => setNewTransactionFromBooking(prev => ({ ...prev, paymentMethod: value as SalesPaymentMethod }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
-                            <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
-                            <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
-                            <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="notes">Notes (Optional)</Label>
-                        <Textarea
-                          id="notes"
-                          value={newTransactionFromBooking.notes}
-                          onChange={(e) => setNewTransactionFromBooking(prev => ({ ...prev, notes: e.target.value }))}
-                          placeholder="Add any notes..."
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowNewTransactionDialog(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleCreateTransaction}
-                    disabled={
-                      transactionType === 'on_the_spot' 
-                        ? (!newOnTheSpotTransaction.customerId || !newOnTheSpotTransaction.serviceId)
-                        : (!newTransactionFromBooking.bookingId || !newTransactionFromBooking.totalAmount)
-                    }
-                  >
-                    Create Transaction
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* New Customer Dialog */}
-            <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add New Customer</DialogTitle>
-                  <DialogDescription>
-                    Create a new customer and add them to the system.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <NewCustomerForm
-                  subdomain={searchParams?.get('subdomain') || ''}
-                  tenantId={tenantId}
-                  compact={true}
-                  onSuccess={(customer) => {
-                    setCustomers([customer, ...customers]);
-                    setShowNewCustomerDialog(false);
-                  }}
-                  onCancel={() => setShowNewCustomerDialog(false)}
-                />
-              </DialogContent>
-            </Dialog>
+            <SalesTransactionDialog
+              open={showNewTransactionDialog}
+              onOpenChange={setShowNewTransactionDialog}
+              tenantId={tenantId}
+              subdomain={subdomain || ''}
+              onCreated={async (transaction) => {
+                setTransactions((prev) => [transaction, ...prev]);
+                await fetchSummary();
+              }}
+              onError={(message) => setError(message)}
+            />
           </div>
         </div>
 
