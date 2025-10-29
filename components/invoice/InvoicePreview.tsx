@@ -28,8 +28,16 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
       const originalInlineStyles = new Map<HTMLElement, Partial<CSSStyleDeclaration>>();
 
-      const sanitizeColor = (value: string, fallback: string) =>
-        value && value.startsWith('oklch') ? fallback : value;
+      const sanitizeColor = (value: string, fallback: string): string => {
+        if (!value) return fallback;
+        if (value.startsWith('oklch')) {
+          return fallback;
+        }
+        if (value.includes('oklch')) {
+          return value.replace(/oklch\([^)]+\)/g, fallback);
+        }
+        return value;
+      };
 
       elements.forEach(element => {
         originalInlineStyles.set(element, {
@@ -42,25 +50,66 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
           borderLeftColor: element.style.borderLeftColor,
           boxShadow: element.style.boxShadow,
           textShadow: element.style.textShadow,
+          outline: element.style.outline,
         });
 
         const computed = window.getComputedStyle(element);
-        element.style.color = sanitizeColor(computed.color, '#111827') || '#111827';
-        element.style.backgroundColor = sanitizeColor(computed.backgroundColor, '#ffffff') || '#ffffff';
-        element.style.borderColor = sanitizeColor(computed.borderColor, '#d1d5db') || '#d1d5db';
-        element.style.borderTopColor = sanitizeColor(computed.borderTopColor, '#d1d5db') || '#d1d5db';
-        element.style.borderRightColor = sanitizeColor(computed.borderRightColor, '#d1d5db') || '#d1d5db';
-        element.style.borderBottomColor = sanitizeColor(computed.borderBottomColor, '#d1d5db') || '#d1d5db';
-        element.style.borderLeftColor = sanitizeColor(computed.borderLeftColor, '#d1d5db') || '#d1d5db';
+        const colorFallback = '#111827';
+        const bgFallback = '#ffffff';
+        const borderFallback = '#d1d5db';
+
+        element.style.color = sanitizeColor(computed.color, colorFallback) || colorFallback;
+        element.style.backgroundColor = sanitizeColor(computed.backgroundColor, bgFallback) || bgFallback;
+        element.style.borderColor = sanitizeColor(computed.borderColor, borderFallback) || borderFallback;
+        element.style.borderTopColor = sanitizeColor(computed.borderTopColor, borderFallback) || borderFallback;
+        element.style.borderRightColor = sanitizeColor(computed.borderRightColor, borderFallback) || borderFallback;
+        element.style.borderBottomColor = sanitizeColor(computed.borderBottomColor, borderFallback) || borderFallback;
+        element.style.borderLeftColor = sanitizeColor(computed.borderLeftColor, borderFallback) || borderFallback;
+        element.style.outline = sanitizeColor(computed.outline, 'none') || 'none';
         element.style.boxShadow = 'none';
         element.style.textShadow = 'none';
       });
+
+      elements.forEach(element => {
+        const styleAttr = element.getAttribute('style');
+        if (styleAttr && styleAttr.includes('oklch')) {
+          const sanitized = styleAttr.replace(/oklch\([^)]*\)/g, '#ffffff');
+          element.setAttribute('style', sanitized);
+        }
+      });
+
+      const styleOverride = document.createElement('style');
+      styleOverride.textContent = `
+        :root, .dark {
+          --background: #ffffff !important;
+          --foreground: #111827 !important;
+          --card: #ffffff !important;
+          --card-foreground: #111827 !important;
+          --popover: #ffffff !important;
+          --popover-foreground: #111827 !important;
+          --primary: #353538 !important;
+          --primary-foreground: #fafbfc !important;
+          --secondary: #f6f6f7 !important;
+          --secondary-foreground: #353538 !important;
+          --muted: #f6f6f7 !important;
+          --muted-foreground: #8d8d91 !important;
+          --accent: #f6f6f7 !important;
+          --accent-foreground: #353538 !important;
+          --destructive: #f44336 !important;
+          --border: #d1d5db !important;
+          --input: #d1d5db !important;
+          --ring: #b4b8b8 !important;
+        }
+      `;
+      document.head.appendChild(styleOverride);
 
       const canvas = await html2canvas(printAreaRef.current, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
       });
+
+      document.head.removeChild(styleOverride);
 
       elements.forEach(element => {
         const original = originalInlineStyles.get(element);
@@ -72,6 +121,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
         element.style.borderRightColor = original.borderRightColor ?? '';
         element.style.borderBottomColor = original.borderBottomColor ?? '';
         element.style.borderLeftColor = original.borderLeftColor ?? '';
+        element.style.outline = original.outline ?? '';
         element.style.boxShadow = original.boxShadow ?? '';
         element.style.textShadow = original.textShadow ?? '';
       });
