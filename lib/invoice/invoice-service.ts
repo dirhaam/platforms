@@ -163,7 +163,7 @@ export class InvoiceService {
         updatedAt: new Date(data.updatedAt ?? data.updated_at),
       } as Invoice;
 
-      const [itemsResult, customerResult, tenantResult] = await Promise.all([
+      const [itemsResult, customerResult, tenantResult, paymentsResult] = await Promise.all([
         supabase
           .from('invoice_items')
           .select('*')
@@ -182,6 +182,24 @@ export class InvoiceService {
           .eq('id', tenantId)
           .limit(1)
           .single(),
+        // Query payments from sales_transaction_payments (if this invoice is from a sales transaction)
+        supabase
+          .from('sales_transactions')
+          .select('id')
+          .eq('invoice_id', invoiceId)
+          .limit(1)
+          .single()
+          .then(async (transResult) => {
+            if (transResult.data?.id) {
+              return supabase
+                .from('sales_transaction_payments')
+                .select('*')
+                .eq('sales_transaction_id', transResult.data.id)
+                .order('paid_at', { ascending: true });
+            }
+            return { data: null, error: null };
+          })
+          .catch(() => ({ data: null, error: null })),
       ]);
 
       if (!itemsResult.error && Array.isArray(itemsResult.data)) {
@@ -200,6 +218,31 @@ export class InvoiceService {
         baseInvoice.tenant = this.mapTenant(tenantResult.data);
       } else if (tenantResult.error) {
         console.error('Error fetching tenant:', tenantResult.error);
+      }
+
+      // Process payment history
+      if (paymentsResult && Array.isArray(paymentsResult.data)) {
+        baseInvoice.paymentHistory = paymentsResult.data.map((payment: any) => ({
+          id: payment.id,
+          invoiceId,
+          paymentAmount: parseDecimal(payment.payment_amount),
+          paymentMethod: payment.payment_method,
+          paymentReference: payment.payment_reference,
+          notes: payment.notes,
+          paidAt: new Date(payment.paid_at),
+          createdAt: new Date(payment.created_at),
+          updatedAt: new Date(payment.updated_at),
+        }));
+
+        // Calculate total paid amount from payment history
+        const totalPaid = baseInvoice.paymentHistory.reduce(
+          (sum, payment) => sum + payment.paymentAmount,
+          0
+        );
+        baseInvoice.paidAmount = totalPaid;
+        baseInvoice.remainingBalance = baseInvoice.totalAmount - totalPaid;
+      } else {
+        baseInvoice.remainingBalance = baseInvoice.totalAmount - (baseInvoice.paidAmount || 0);
       }
 
       baseInvoice.branding = await InvoiceBrandingService.getSettings(tenantId);

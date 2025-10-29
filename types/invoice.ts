@@ -31,6 +31,19 @@ export interface InvoiceBranding {
   footerText?: string;
 }
 
+// Payment record for invoice
+export interface InvoicePayment {
+  id: string;
+  invoiceId: string;
+  paymentAmount: number;
+  paymentMethod: PaymentMethod;
+  paymentReference?: string;
+  notes?: string;
+  paidAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Invoice {
   id: string;
   tenantId: string;
@@ -49,10 +62,12 @@ export interface Invoice {
   discountAmount: number;
   totalAmount: number;
   paidAmount?: number;
+  remainingBalance?: number; // totalAmount - paidAmount
   
   // Payment details
   paymentMethod?: PaymentMethod;
   paymentReference?: string;
+  paymentHistory?: InvoicePayment[]; // List of all payments
   
   // Invoice content
   items: InvoiceItem[];
@@ -73,22 +88,29 @@ export interface Invoice {
   branding?: InvoiceBranding;
 }
 
-// Helper function to calculate payment status based on payment records
+// Helper function to calculate payment status based on actual payment records
 export function getPaymentStatus(invoice: Invoice): PaymentStatus {
-  // Check if payment has been recorded (via reference or paid date)
-  const hasPaymentRecord = invoice.paymentReference || invoice.paidDate;
+  const totalAmount = invoice.totalAmount || 0;
+  const paidAmount = invoice.paidAmount || 0;
   
-  // If payment record exists (reference or paid date) → PAID
-  if (hasPaymentRecord) {
+  // If fully paid
+  if (paidAmount >= totalAmount && paidAmount > 0) {
     return PaymentStatus.PAID;
   }
   
-  // Check if overdue (no payment record + past due date)
-  const now = new Date();
-  const isOverdue = now > invoice.dueDate;
+  // If partial payment
+  if (paidAmount > 0 && paidAmount < totalAmount) {
+    return PaymentStatus.PARTIAL_PAID;
+  }
   
-  if (isOverdue) {
-    return PaymentStatus.OVERDUE;
+  // If no payment recorded, check if overdue
+  if (paidAmount === 0) {
+    const now = new Date();
+    const dueDate = new Date(invoice.dueDate);
+    if (now > dueDate) {
+      return PaymentStatus.OVERDUE;
+    }
+    return PaymentStatus.UNPAID;
   }
   
   // Default: unpaid
