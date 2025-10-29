@@ -1,9 +1,11 @@
 'use client';
 
+import { useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Invoice, InvoiceStatus } from '@/types/invoice';
+import jsPDF from 'jspdf';
 import { Download, Printer } from 'lucide-react';
 
 interface InvoicePreviewProps {
@@ -13,25 +15,25 @@ interface InvoicePreviewProps {
 }
 
 export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewProps) {
+  const printAreaRef = useRef<HTMLDivElement>(null);
+
   const handleDownloadPDF = async () => {
     try {
-      const pdfUrl = new URL(`/api/invoices/${invoice.id}/pdf`, window.location.origin);
-      if (invoice.tenantId) {
-        pdfUrl.searchParams.set('tenantId', invoice.tenantId);
-      }
+      if (!printAreaRef.current) return;
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(printAreaRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
 
-      const response = await fetch(pdfUrl.toString());
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `invoice-${invoice.invoiceNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
+      const imgData = canvas.toDataURL('image/png');
+      const pdfWidth = 80; // mm
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      const pdf = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' });
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`invoice-${invoice.invoiceNumber}.pdf`);
     } catch (error) {
       console.error('Error downloading PDF:', error);
     }
@@ -85,6 +87,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
           <div
             className="invoice-preview invoice-print-area bg-white border rounded-lg px-4 py-6 text-sm space-y-4"
             style={{ width: '80mm' }}
+            ref={printAreaRef}
           >
             <div className="flex flex-col items-center text-center gap-2">
               {branding?.logoUrl ? (
