@@ -30,11 +30,11 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
       const sanitizeColor = (value: string, fallback: string): string => {
         if (!value) return fallback;
-        if (value.startsWith('oklch')) {
+        if (value.startsWith('oklch') || value.startsWith('oklab') || value.startsWith('lch') || value.startsWith('lab')) {
           return fallback;
         }
-        if (value.includes('oklch')) {
-          return value.replace(/oklch\([^)]+\)/g, fallback);
+        if (value.includes('oklch') || value.includes('oklab') || value.includes('lch(') || value.includes('lab(')) {
+          return value.replace(/oklch\([^)]+\)/g, fallback).replace(/oklab\([^)]+\)/g, fallback).replace(/lch\([^)]+\)/g, fallback).replace(/lab\([^)]+\)/g, fallback);
         }
         return value;
       };
@@ -72,8 +72,11 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
       elements.forEach(element => {
         const styleAttr = element.getAttribute('style');
-        if (styleAttr && styleAttr.includes('oklch')) {
-          const sanitized = styleAttr.replace(/oklch\([^)]*\)/g, '#ffffff');
+        if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab') || styleAttr.includes('lch(') || styleAttr.includes('lab('))) {
+          let sanitized = styleAttr.replace(/oklch\([^)]*\)/g, '#ffffff');
+          sanitized = sanitized.replace(/oklab\([^)]*\)/g, '#ffffff');
+          sanitized = sanitized.replace(/lch\([^)]*\)/g, '#ffffff');
+          sanitized = sanitized.replace(/lab\([^)]*\)/g, '#ffffff');
           element.setAttribute('style', sanitized);
         }
       });
@@ -199,13 +202,18 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     const paymentStatus = getPaymentStatus(invoice);
 
     if (paymentStatus === PaymentStatus.PAID) {
-      return `Payment Complete: Rp ${invoice.totalAmount.toLocaleString('id-ID')}${
-        invoice.paidDate ? ` | Paid on ${invoice.paidDate.toLocaleDateString('id-ID')}` : ''
-      }`;
+      let note = `Payment Complete: Rp ${invoice.totalAmount.toLocaleString('id-ID')}`;
+      if (invoice.paidDate) note += ` | Paid on ${invoice.paidDate.toLocaleDateString('id-ID')}`;
+      if (invoice.paymentMethod) note += ` | Via ${invoice.paymentMethod.replace('_', ' ').toUpperCase()}`;
+      if (invoice.paymentReference) note += ` | Ref: ${invoice.paymentReference}`;
+      return note;
     }
 
     if (paymentStatus === PaymentStatus.PARTIAL_PAID) {
-      return `Partial Payment: Rp ${paidAmount.toLocaleString('id-ID')} | Remaining: Rp ${remainingAmount.toLocaleString('id-ID')}`;
+      let note = `Partial Payment: Rp ${paidAmount.toLocaleString('id-ID')} | Remaining: Rp ${remainingAmount.toLocaleString('id-ID')}`;
+      if (invoice.paymentMethod) note += ` | Via ${invoice.paymentMethod.replace('_', ' ').toUpperCase()}`;
+      if (invoice.paymentReference) note += ` | Ref: ${invoice.paymentReference}`;
+      return note;
     }
 
     if (paymentStatus === PaymentStatus.OVERDUE && paidAmount > 0) {
@@ -383,13 +391,6 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
               <p className="font-semibold mb-1">Riwayat Pembayaran</p>
               <p>{getPaymentHistoryNotes(invoice)}</p>
             </div>
-
-            {invoice.notes && (
-              <div className="border-t border-dashed border-gray-300 pt-3 text-xs text-gray-600">
-                <p className="font-semibold mb-1">Catatan Tambahan</p>
-                <p>{invoice.notes}</p>
-              </div>
-            )}
 
             {invoice.terms && (
               <div className="border-t border-dashed border-gray-300 pt-3 text-xs text-gray-600">
