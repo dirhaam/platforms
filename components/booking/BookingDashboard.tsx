@@ -9,10 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
-import { Calendar, List, Search, Plus, Filter, X } from 'lucide-react';
+import { Calendar, List, Search, Plus, Filter, X, DollarSign, TrendingUp, CreditCard, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
+import {
+  SalesTransaction,
+  SalesTransactionStatus,
+  SalesTransactionSource,
+  SalesPaymentMethod,
+  SalesSummary,
+} from '@/types/sales';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -27,17 +34,22 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   
   // Quick Sale states
   const [showQuickSaleDialog, setShowQuickSaleDialog] = useState(false);
+  const [salesTransactions, setSalesTransactions] = useState<SalesTransaction[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+  const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'sales'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Fetch bookings with related metadata
   useEffect(() => {
     fetchBookings();
+    fetchSalesTransactions();
+    fetchSalesSummary();
   }, [tenantId]);
 
   // Apply filters
@@ -116,6 +128,54 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     }
   };
 
+  const fetchSalesTransactions = async () => {
+    if (!tenantId) return;
+
+    setLoadingSales(true);
+    try {
+      const response = await fetch(`/api/sales/transactions?tenantId=${encodeURIComponent(tenantId)}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sales transactions');
+      }
+
+      const data = await response.json();
+      const transactions: SalesTransaction[] = (data.transactions || []).map((transaction: any) => ({
+        ...transaction,
+        transactionDate: transaction.transactionDate ? new Date(transaction.transactionDate) : new Date(),
+        createdAt: transaction.createdAt ? new Date(transaction.createdAt) : new Date(),
+        updatedAt: transaction.updatedAt ? new Date(transaction.updatedAt) : new Date(),
+        paidAt: transaction.paidAt ? new Date(transaction.paidAt) : undefined,
+        scheduledAt: transaction.scheduledAt ? new Date(transaction.scheduledAt) : undefined,
+        completedAt: transaction.completedAt ? new Date(transaction.completedAt) : undefined,
+      }));
+
+      setSalesTransactions(transactions);
+    } catch (error) {
+      console.error('Error fetching sales transactions:', error);
+      toast.error('Failed to fetch sales data');
+    } finally {
+      setLoadingSales(false);
+    }
+  };
+
+  const fetchSalesSummary = async () => {
+    if (!tenantId) return;
+
+    try {
+      const response = await fetch(`/api/sales/summary?tenantId=${encodeURIComponent(tenantId)}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sales summary');
+      }
+
+      const data = await response.json();
+      setSalesSummary(data.summary || null);
+    } catch (error) {
+      console.error('Error fetching sales summary:', error);
+    }
+  };
+
   const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking);
     setShowDetailsDrawer(true);
@@ -151,6 +211,61 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     }
   };
 
+  const getSalesStatusBadge = (status: SalesTransactionStatus) => {
+    const variants: Record<SalesTransactionStatus, string> = {
+      [SalesTransactionStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
+      [SalesTransactionStatus.COMPLETED]: 'bg-green-100 text-green-800',
+      [SalesTransactionStatus.CANCELLED]: 'bg-red-100 text-red-800',
+      [SalesTransactionStatus.REFUNDED]: 'bg-gray-100 text-gray-800',
+    };
+
+    return (
+      <Badge className={variants[status]}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  const getSalesSourceBadge = (source: SalesTransactionSource) => {
+    const variants: Record<SalesTransactionSource, string> = {
+      [SalesTransactionSource.ON_THE_SPOT]: 'bg-blue-100 text-blue-800',
+      [SalesTransactionSource.FROM_BOOKING]: 'bg-purple-100 text-purple-800',
+    };
+
+    const labels: Record<SalesTransactionSource, string> = {
+      [SalesTransactionSource.ON_THE_SPOT]: 'On-the-Spot',
+      [SalesTransactionSource.FROM_BOOKING]: 'From Booking',
+    };
+
+    return (
+      <Badge className={variants[source]}>
+        {labels[source]}
+      </Badge>
+    );
+  };
+
+  const getSalesPaymentBadge = (method: SalesPaymentMethod) => {
+    const variants: Record<SalesPaymentMethod, string> = {
+      [SalesPaymentMethod.CASH]: 'bg-green-100 text-green-800',
+      [SalesPaymentMethod.CARD]: 'bg-purple-100 text-purple-800',
+      [SalesPaymentMethod.TRANSFER]: 'bg-blue-100 text-blue-800',
+      [SalesPaymentMethod.QRIS]: 'bg-indigo-100 text-indigo-800',
+    };
+
+    return (
+      <Badge className={variants[method]}>
+        {method.toUpperCase()}
+      </Badge>
+    );
+  };
+
+  const getSalesCustomerName = (transaction: SalesTransaction) => {
+    const name = (transaction as any).customerName;
+    if (name && typeof name === 'string') return name;
+    if (transaction.customer?.name) return transaction.customer.name;
+    return 'Unknown';
+  };
+
   // Get bookings for selected date
   const bookingsForDate = filteredBookings.filter(b => {
     const bookingDate = new Date(b.scheduledAt).toDateString();
@@ -164,7 +279,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold">Bookings</h2>
-          <p className="text-gray-600">Manage your bookings with unified panel</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -185,6 +299,64 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           </Button>
         </div>
       </div>
+
+      {salesSummary && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    IDR {salesSummary.totalRevenue.toLocaleString('id-ID')}
+                  </p>
+                </div>
+                <DollarSign className="w-8 h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Transactions</p>
+                  <p className="text-2xl font-bold text-gray-900">{salesSummary.totalTransactions}</p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Paid Amount</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    IDR {salesSummary.totalPaid.toLocaleString('id-ID')}
+                  </p>
+                </div>
+                <CreditCard className="w-8 h-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pending Amount</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    IDR {salesSummary.totalPending.toLocaleString('id-ID')}
+                  </p>
+                </div>
+                <Users className="w-8 h-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
@@ -234,7 +406,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       </Card>
 
       {/* View Toggle */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list')}>
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list' | 'sales')}>
         <TabsList>
           <TabsTrigger value="calendar">
             <Calendar className="h-4 w-4 mr-2" />
@@ -243,6 +415,10 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <TabsTrigger value="list">
             <List className="h-4 w-4 mr-2" />
             List
+          </TabsTrigger>
+          <TabsTrigger value="sales">
+            <DollarSign className="h-4 w-4 mr-2" />
+            Sales
           </TabsTrigger>
         </TabsList>
 
@@ -374,6 +550,65 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Sales View */}
+        <TabsContent value="sales" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingSales ? (
+                <p className="text-sm text-gray-600">Loading sales data...</p>
+              ) : salesTransactions.length === 0 ? (
+                <p className="text-sm text-gray-600">No sales transactions found.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-4 font-medium">Transaction #</th>
+                        <th className="text-left py-2 px-4 font-medium">Date</th>
+                        <th className="text-left py-2 px-4 font-medium">Customer</th>
+                        <th className="text-left py-2 px-4 font-medium">Service</th>
+                        <th className="text-left py-2 px-4 font-medium">Source</th>
+                        <th className="text-left py-2 px-4 font-medium">Amount</th>
+                        <th className="text-left py-2 px-4 font-medium">Payment</th>
+                        <th className="text-left py-2 px-4 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {salesTransactions.map((transaction) => (
+                        <tr key={transaction.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{transaction.transactionNumber}</td>
+                          <td className="py-3 px-4">
+                            {transaction.transactionDate
+                              ? new Date(transaction.transactionDate).toLocaleString('id-ID')
+                              : '-'}
+                          </td>
+                          <td className="py-3 px-4">
+                            {getSalesCustomerName(transaction)}
+                          </td>
+                          <td className="py-3 px-4">{transaction.serviceName}</td>
+                          <td className="py-3 px-4">{getSalesSourceBadge(transaction.source)}</td>
+                          <td className="py-3 px-4 font-medium">
+                            Rp {transaction.totalAmount.toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-3 px-4">
+                            {getSalesPaymentBadge(transaction.paymentMethod)}
+                          </td>
+                          <td className="py-3 px-4">
+                            {getSalesStatusBadge(transaction.status)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <SalesTransactionDialog
@@ -385,7 +620,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         defaultType="on_the_spot"
         onCreated={async (_transaction) => {
           toast.success('Quick sale created successfully!');
-          await fetchBookings();
+          await Promise.all([fetchBookings(), fetchSalesTransactions(), fetchSalesSummary()]);
         }}
       />
 
