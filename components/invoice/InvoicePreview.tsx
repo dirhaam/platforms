@@ -197,8 +197,6 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
   };
 
   const getPaymentHistoryNotes = (invoice: Invoice): string => {
-    const paidAmount = invoice.paidAmount || 0;
-    const remainingAmount = invoice.totalAmount - paidAmount;
     const paymentStatus = getPaymentStatus(invoice);
 
     if (paymentStatus === PaymentStatus.PAID) {
@@ -207,17 +205,6 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
       if (invoice.paymentMethod) note += ` | Via ${invoice.paymentMethod.replace('_', ' ').toUpperCase()}`;
       if (invoice.paymentReference) note += ` | Ref: ${invoice.paymentReference}`;
       return note;
-    }
-
-    if (paymentStatus === PaymentStatus.PARTIAL_PAID) {
-      let note = `Partial Payment: Rp ${paidAmount.toLocaleString('id-ID')} | Remaining: Rp ${remainingAmount.toLocaleString('id-ID')}`;
-      if (invoice.paymentMethod) note += ` | Via ${invoice.paymentMethod.replace('_', ' ').toUpperCase()}`;
-      if (invoice.paymentReference) note += ` | Ref: ${invoice.paymentReference}`;
-      return note;
-    }
-
-    if (paymentStatus === PaymentStatus.OVERDUE && paidAmount > 0) {
-      return `Overdue: Rp ${remainingAmount.toLocaleString('id-ID')} remaining | Payment Received: Rp ${paidAmount.toLocaleString('id-ID')}`;
     }
 
     if (paymentStatus === PaymentStatus.OVERDUE) {

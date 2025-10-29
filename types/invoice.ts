@@ -73,34 +73,21 @@ export interface Invoice {
   branding?: InvoiceBranding;
 }
 
-// Helper function to calculate payment status based on actual payment records
+// Helper function to calculate payment status based on payment records
 export function getPaymentStatus(invoice: Invoice): PaymentStatus {
-  const paidAmount = invoice.paidAmount || 0;
-  const totalAmount = invoice.totalAmount;
-  
   // Check if payment has been recorded (via reference or paid date)
   const hasPaymentRecord = invoice.paymentReference || invoice.paidDate;
   
-  // If payment is complete
-  if (paidAmount >= totalAmount) {
+  // If payment record exists (reference or paid date) → PAID
+  if (hasPaymentRecord) {
     return PaymentStatus.PAID;
   }
   
-  // If payment has been recorded but is partial
-  if (hasPaymentRecord && paidAmount > 0 && paidAmount < totalAmount) {
-    return PaymentStatus.PARTIAL_PAID;
-  }
-  
-  // If payment was recorded as full amount
-  if (hasPaymentRecord && paidAmount >= totalAmount) {
-    return PaymentStatus.PAID;
-  }
-  
-  // Check if overdue
+  // Check if overdue (no payment record + past due date)
   const now = new Date();
   const isOverdue = now > invoice.dueDate;
   
-  if (isOverdue && !hasPaymentRecord) {
+  if (isOverdue) {
     return PaymentStatus.OVERDUE;
   }
   
