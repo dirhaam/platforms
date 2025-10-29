@@ -78,7 +78,7 @@ export function SalesTransactionsTable({
                   ? new Date(transaction.transactionDate).toLocaleDateString()
                   : '-'}
               </TableCell>
-              <TableCell>{transaction.serviceName}</TableCell>
+              <TableCell>{transaction.serviceName || 'Multiple Services'}</TableCell>
               <TableCell>
                 <Badge className={SOURCE_VARIANTS[transaction.source].className}>
                   {SOURCE_VARIANTS[transaction.source].label}

@@ -285,10 +285,13 @@ export function SalesContent() {
   };
 
   // Filter transactions
-  const filteredTransactions = transactions.filter(transaction =>
-    transaction.serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    transaction.transactionNumber.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTransactions = transactions.filter(transaction => {
+    const serviceName = transaction.serviceName || 'Multiple Services';
+    return (
+      serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.transactionNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   if (loading) {
     return (
@@ -652,8 +655,10 @@ export function SalesContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Service</Label>
-                  <p className="mt-1">{selectedTransaction.serviceName}</p>
-                  <p className="text-xs text-gray-500">Duration: {selectedTransaction.duration} minutes</p>
+                  <p className="mt-1">{selectedTransaction.serviceName || 'Multiple Services'}</p>
+                  {selectedTransaction.duration && (
+                    <p className="text-xs text-gray-500">Duration: {selectedTransaction.duration} minutes</p>
+                  )}
                   {selectedTransaction.isHomeVisit && (
                     <p className="text-xs text-blue-600">Home Visit</p>
                   )}
