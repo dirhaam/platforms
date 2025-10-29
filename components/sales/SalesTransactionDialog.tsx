@@ -206,6 +206,45 @@ export function SalesTransactionDialog({
       setSubmitting(true);
       onError?.(null);
 
+      // Validation for on-the-spot transactions
+      if (transactionType === "on_the_spot") {
+        if (!newOnTheSpotTransaction.customerId) {
+          throw new Error("Please select a customer");
+        }
+        if (!newOnTheSpotTransaction.items || newOnTheSpotTransaction.items.length === 0) {
+          throw new Error("Please add at least one service item");
+        }
+        const totalAmount = calculateOnTheSpotTotal();
+        if (totalAmount <= 0) {
+          throw new Error("Total amount must be greater than 0");
+        }
+        if (newOnTheSpotTransaction.paymentAmount <= 0) {
+          throw new Error("Payment amount must be greater than 0");
+        }
+        if (newOnTheSpotTransaction.paymentAmount > totalAmount) {
+          throw new Error("Payment amount cannot exceed total amount");
+        }
+      }
+
+      // Validation for from-booking transactions
+      if (transactionType === "from_booking") {
+        if (!newTransactionFromBooking.bookingId) {
+          throw new Error("Please select a booking");
+        }
+        if (!newTransactionFromBooking.customerId) {
+          throw new Error("Please select a customer");
+        }
+        if (newTransactionFromBooking.totalAmount <= 0) {
+          throw new Error("Total amount must be greater than 0");
+        }
+        if (newTransactionFromBooking.paymentAmount <= 0) {
+          throw new Error("Payment amount must be greater than 0");
+        }
+        if (newTransactionFromBooking.paymentAmount > newTransactionFromBooking.totalAmount) {
+          throw new Error("Payment amount cannot exceed total amount");
+        }
+      }
+
       const requestBody =
         transactionType === "on_the_spot"
           ? {

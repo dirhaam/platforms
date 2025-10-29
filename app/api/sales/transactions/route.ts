@@ -114,25 +114,52 @@ export async function POST(request: NextRequest) {
     let transaction;
 
     if (type === 'on_the_spot') {
-      // Create on-the-spot transaction
-      const requiredFields = ['customerId', 'serviceId', 'paymentMethod'];
-      for (const field of requiredFields) {
-        if (!transactionData[field]) {
-          return NextResponse.json(
-            { error: `${field} is required for on-the-spot transaction` },
-            { status: 400 }
-          );
+      // NEW: Check if items array is provided (multi-service with split payment)
+      if (transactionData.items && Array.isArray(transactionData.items) && transactionData.items.length > 0) {
+        // Multi-service with split payment support
+        const requiredFields = ['customerId', 'totalAmount', 'paymentAmount', 'paymentMethod'];
+        for (const field of requiredFields) {
+          if (transactionData[field] === undefined || transactionData[field] === null) {
+            return NextResponse.json(
+              { error: `${field} is required for multi-service transaction` },
+              { status: 400 }
+            );
+          }
         }
-      }
 
-      transaction = await salesService.createOnTheSpotTransaction({
-        tenantId: resolvedTenantId,
-        customerId: transactionData.customerId,
-        serviceId: transactionData.serviceId,
-        staffId: transactionData.staffId,
-        paymentMethod: transactionData.paymentMethod,
-        notes: transactionData.notes,
-      });
+        transaction = await salesService.createTransactionWithItems({
+          tenantId: resolvedTenantId,
+          customerId: transactionData.customerId,
+          items: transactionData.items,
+          totalAmount: transactionData.totalAmount,
+          paymentAmount: transactionData.paymentAmount,
+          paymentMethod: transactionData.paymentMethod,
+          paymentReference: transactionData.paymentReference,
+          taxRate: transactionData.taxRate,
+          discountAmount: transactionData.discountAmount,
+          notes: transactionData.notes,
+        });
+      } else {
+        // OLD: Single service on-the-spot transaction
+        const requiredFields = ['customerId', 'serviceId', 'paymentMethod'];
+        for (const field of requiredFields) {
+          if (!transactionData[field]) {
+            return NextResponse.json(
+              { error: `${field} is required for on-the-spot transaction` },
+              { status: 400 }
+            );
+          }
+        }
+
+        transaction = await salesService.createOnTheSpotTransaction({
+          tenantId: resolvedTenantId,
+          customerId: transactionData.customerId,
+          serviceId: transactionData.serviceId,
+          staffId: transactionData.staffId,
+          paymentMethod: transactionData.paymentMethod,
+          notes: transactionData.notes,
+        });
+      }
     } else if (type === 'from_booking') {
       // Create transaction from booking
       const requiredFields = ['bookingId', 'customerId', 'serviceId', 'scheduledAt', 'totalAmount', 'paymentMethod'];
