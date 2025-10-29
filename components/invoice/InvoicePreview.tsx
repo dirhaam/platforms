@@ -18,64 +18,43 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   const captureReceiptCanvas = async () => {
+    if (!printAreaRef.current) return null;
+
     try {
-      if (!printAreaRef.current) return;
       const html2canvas = (await import('html2canvas')).default;
-      const sourceNode = printAreaRef.current;
-      const clonedNode = sourceNode.cloneNode(true) as HTMLElement;
-
-      const sanitizeColorFunctions = (value: string) =>
-        value ? value.replace(/oklch\([^)]*\)/g, '#000000') : value;
-
-      const applyComputedStyles = (original: Element, clone: Element) => {
-        const computed = window.getComputedStyle(original);
-        const safeValue = (value: string) => sanitizeColorFunctions(value || '');
-        (clone as HTMLElement).style.color = safeValue(computed.color);
-        (clone as HTMLElement).style.backgroundColor = safeValue(computed.backgroundColor);
-        (clone as HTMLElement).style.borderColor = safeValue(computed.borderColor);
-        (clone as HTMLElement).style.borderTopColor = safeValue(computed.borderTopColor);
-        (clone as HTMLElement).style.borderRightColor = safeValue(computed.borderRightColor);
-        (clone as HTMLElement).style.borderBottomColor = safeValue(computed.borderBottomColor);
-        (clone as HTMLElement).style.borderLeftColor = safeValue(computed.borderLeftColor);
-        (clone as HTMLElement).style.outlineColor = safeValue(computed.outlineColor);
-        (clone as HTMLElement).style.boxShadow = safeValue(computed.boxShadow);
-        (clone as HTMLElement).style.backgroundImage = safeValue(computed.backgroundImage);
-        (clone as HTMLElement).style.textShadow = safeValue(computed.textShadow);
-        (clone as HTMLElement).style.font = computed.font;
-        (clone as HTMLElement).style.textTransform = computed.textTransform;
-        (clone as HTMLElement).style.letterSpacing = computed.letterSpacing;
-
-        Array.from(original.children).forEach((child, index) => {
-          const cloneChild = clone.children[index];
-          if (cloneChild) {
-            applyComputedStyles(child, cloneChild);
-          }
-        });
-      };
-
-      applyComputedStyles(sourceNode, clonedNode);
-
-      clonedNode.style.width = '80mm';
-      clonedNode.style.position = 'fixed';
-      clonedNode.style.inset = '0';
-      clonedNode.style.zIndex = '-1';
-      clonedNode.style.background = '#ffffff';
-      clonedNode.style.color = '#000000';
-      clonedNode.style.borderColor = '#000000';
-
-      document.body.appendChild(clonedNode);
-
-      const canvas = await html2canvas(clonedNode, {
+      const canvas = await html2canvas(printAreaRef.current, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
-      });
+        onclone: (doc) => {
+          const target = doc.querySelector('.invoice-print-area');
+          if (target instanceof HTMLElement) {
+            target.classList.add('invoice-print-area-clone');
+            target.style.width = '80mm';
+            target.style.background = '#ffffff';
+            target.style.color = '#111827';
+          }
 
-      document.body.removeChild(clonedNode);
+          const style = doc.createElement('style');
+          style.textContent = `
+            .invoice-print-area-clone,
+            .invoice-print-area-clone * {
+              color: #111827 !important;
+              background: transparent !important;
+              box-shadow: none !important;
+              border-color: #d1d5db !important;
+              text-shadow: none !important;
+              outline: none !important;
+            }
+          `;
+          doc.head.appendChild(style);
+        }
+      });
 
       return canvas;
     } catch (error) {
       console.error('Error capturing receipt canvas:', error);
+      return null;
     }
   };
 
@@ -138,14 +117,14 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="invoice-dialog max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="invoice-dialog w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap justify-between items-center gap-4">
             <DialogTitle>Invoice Preview</DialogTitle>
             <DialogDescription className="sr-only">
               Pratinjau struk sebelum dicetak atau diunduh
             </DialogDescription>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print
@@ -162,7 +141,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
           </div>
         </DialogHeader>
 
-        <div className="invoice-print-wrapper flex justify-center">
+        <div className="invoice-print-wrapper flex justify-center lg:justify-start">
           <div
             className="invoice-preview invoice-print-area bg-white border rounded-lg px-4 py-6 text-sm space-y-4"
             style={{ width: '80mm' }}
