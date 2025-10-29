@@ -234,29 +234,24 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
           body {
             margin: 0;
             padding: 0;
-          }
-          body * {
-            visibility: hidden !important;
-          }
-          .invoice-dialog > * {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          .invoice-dialog .invoice-print-wrapper,
-          .invoice-dialog .invoice-print-wrapper * {
-            display: block !important;
-            visibility: visible !important;
-          }
-          .invoice-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            margin: 0;
-            box-shadow: none !important;
+            background: white;
           }
           .invoice-dialog {
             box-shadow: none !important;
             padding: 0;
+            background: none;
+          }
+          .invoice-dialog > *:not(.invoice-print-wrapper) {
+            display: none !important;
+          }
+          .invoice-print-wrapper {
+            display: block !important;
+          }
+          .invoice-print-area {
+            width: 80mm !important;
+            margin: 0 auto;
+            box-shadow: none !important;
+            border: none;
           }
           @page {
             size: 80mm auto;
