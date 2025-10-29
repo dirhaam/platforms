@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Invoice, InvoiceStatus } from '@/types/invoice';
@@ -21,11 +21,46 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     try {
       if (!printAreaRef.current) return;
       const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(printAreaRef.current, {
+      const sourceNode = printAreaRef.current;
+      const clonedNode = sourceNode.cloneNode(true) as HTMLElement;
+
+      const applyComputedStyles = (original: Element, clone: Element) => {
+        const computed = window.getComputedStyle(original);
+        (clone as HTMLElement).style.color = computed.color;
+        (clone as HTMLElement).style.backgroundColor = computed.backgroundColor;
+        (clone as HTMLElement).style.borderColor = computed.borderColor;
+        (clone as HTMLElement).style.borderTopColor = computed.borderTopColor;
+        (clone as HTMLElement).style.borderRightColor = computed.borderRightColor;
+        (clone as HTMLElement).style.borderBottomColor = computed.borderBottomColor;
+        (clone as HTMLElement).style.borderLeftColor = computed.borderLeftColor;
+        (clone as HTMLElement).style.outlineColor = computed.outlineColor;
+        (clone as HTMLElement).style.boxShadow = computed.boxShadow;
+        (clone as HTMLElement).style.font = computed.font;
+        (clone as HTMLElement).style.textTransform = computed.textTransform;
+        (clone as HTMLElement).style.letterSpacing = computed.letterSpacing;
+
+        Array.from(original.children).forEach((child, index) => {
+          applyComputedStyles(child, clone.children[index]);
+        });
+      };
+
+      applyComputedStyles(sourceNode, clonedNode);
+
+      clonedNode.style.width = '80mm';
+      clonedNode.style.position = 'absolute';
+      clonedNode.style.left = '-10000px';
+      clonedNode.style.top = '0';
+      clonedNode.style.background = '#ffffff';
+
+      document.body.appendChild(clonedNode);
+
+      const canvas = await html2canvas(clonedNode, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
       });
+
+      document.body.removeChild(clonedNode);
 
       const imgData = canvas.toDataURL('image/png');
       const pdfWidth = 80; // mm
@@ -70,6 +105,9 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
         <DialogHeader>
           <div className="flex justify-between items-center">
             <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogDescription className="sr-only">
+              Pratinjau struk sebelum dicetak atau diunduh
+            </DialogDescription>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
