@@ -256,6 +256,45 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     [resolvedTenantId]
   );
 
+  const createBookingInvoiceAndPreview = useCallback(
+    async (bookingId: string) => {
+      if (!resolvedTenantId) return;
+
+      try {
+        setInvoiceGenerating(true);
+        const response = await fetch(
+          `/api/invoices/from-booking/${bookingId}?tenantId=${encodeURIComponent(resolvedTenantId)}`,
+          {
+            method: 'POST',
+            headers: {
+              'x-tenant-id': resolvedTenantId,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to create invoice');
+        }
+
+        const invoiceData = await response.json();
+        const invoice = normalizeInvoiceResponse(invoiceData);
+        setInvoicePreview(invoice);
+        setShowInvoicePreview(false);
+        setShowInvoicePrompt(true);
+        toast.success('Invoice siap dicetak');
+      } catch (error) {
+        console.error('Error creating invoice from booking:', error);
+        toast.error(
+          error instanceof Error ? error.message : 'Gagal membuat invoice dari booking'
+        );
+      } finally {
+        setInvoiceGenerating(false);
+      }
+    },
+    [resolvedTenantId]
+  );
+
   const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking);
     setShowDetailsDrawer(true);
@@ -619,6 +658,8 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         isOpen={showDetailsDrawer}
         onOpenChange={setShowDetailsDrawer}
         onBookingUpdate={handleBookingUpdate}
+        onGenerateInvoice={createBookingInvoiceAndPreview}
+        isGeneratingInvoice={invoiceGenerating}
       />
 
       <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>

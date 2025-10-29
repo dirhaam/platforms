@@ -23,6 +23,8 @@ interface UnifiedBookingPanelProps {
   tenantId: string;
   onBookingUpdate?: (bookingId: string, updates: Partial<Booking>) => Promise<void>;
   onClose?: () => void;
+  onGenerateInvoice?: (bookingId: string) => Promise<void>;
+  isGeneratingInvoice?: boolean;
 }
 
 interface BookingHistory {
@@ -36,7 +38,9 @@ export function UnifiedBookingPanel({
   booking,
   tenantId,
   onBookingUpdate,
-  onClose
+  onClose,
+  onGenerateInvoice,
+  isGeneratingInvoice,
 }: UnifiedBookingPanelProps) {
   const [activeTab, setActiveTab] = useState('summary');
   const [loading, setLoading] = useState(false);
@@ -166,9 +170,22 @@ export function UnifiedBookingPanel({
   };
 
   const handleGenerateInvoice = async () => {
+    if (onGenerateInvoice) {
+      try {
+        setLoading(true);
+        await onGenerateInvoice(booking.id);
+        await fetchRelatedData();
+      } catch (error) {
+        console.error('Error forwarding invoice generation:', error);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       setLoading(true);
-      
+
       const response = await fetch(`/api/invoices/from-booking/${booking.id}`, {
         method: 'POST',
         headers: {
@@ -192,7 +209,6 @@ export function UnifiedBookingPanel({
           const errorData = await response.json();
           errorMsg = errorData.error || errorMsg;
         } catch (e) {
-          // If response is not JSON, use status text
           errorMsg = response.statusText || errorMsg;
         }
         console.error('API Error:', errorMsg);
@@ -506,9 +522,9 @@ export function UnifiedBookingPanel({
                   ) : booking.paymentStatus === PaymentStatus.PAID ? (
                     <Button 
                       onClick={handleGenerateInvoice}
-                      disabled={loading}
+                      disabled={loading || isGeneratingInvoice}
                     >
-                      {loading ? 'Generating...' : 'Generate Invoice'}
+                      {loading || isGeneratingInvoice ? 'Generating...' : 'Generate Invoice'}
                     </Button>
                   ) : null}
                 </div>

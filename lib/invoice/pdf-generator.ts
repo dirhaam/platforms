@@ -275,6 +275,14 @@ export class InvoicePDFGenerator {
       currentY = this.drawKeyValue('Metode Bayar', invoice.paymentMethod.toUpperCase(), currentY);
     }
 
+    if (invoice.paymentReference) {
+      currentY = this.drawKeyValue('Referensi', invoice.paymentReference, currentY);
+    }
+
+    if (invoice.paidDate) {
+      currentY = this.drawKeyValue('Tgl Bayar', this.formatDate(invoice.paidDate), currentY);
+    }
+
     currentY += 2;
     this.drawDivider(currentY);
     return currentY + 3;

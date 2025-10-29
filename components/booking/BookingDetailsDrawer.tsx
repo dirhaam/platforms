@@ -13,6 +13,8 @@ interface BookingDetailsDrawerProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onBookingUpdate?: (bookingId: string, updates: Partial<Booking>) => Promise<void>;
+  onGenerateInvoice?: (bookingId: string) => Promise<void>;
+  isGeneratingInvoice?: boolean;
 }
 
 export function BookingDetailsDrawer({
@@ -20,7 +22,9 @@ export function BookingDetailsDrawer({
   tenantId,
   isOpen,
   onOpenChange,
-  onBookingUpdate
+  onBookingUpdate,
+  onGenerateInvoice,
+  isGeneratingInvoice,
 }: BookingDetailsDrawerProps) {
   if (!booking) return null;
 
@@ -50,6 +54,8 @@ export function BookingDetailsDrawer({
             booking={booking}
             tenantId={tenantId}
             onBookingUpdate={onBookingUpdate}
+            onGenerateInvoice={onGenerateInvoice}
+            isGeneratingInvoice={isGeneratingInvoice}
             onClose={() => onOpenChange(false)}
           />
         </div>
