@@ -3,7 +3,7 @@ import { BookingService } from '@/lib/booking/booking-service';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
@@ -30,7 +30,7 @@ export async function POST(
       );
     }
 
-    const bookingId = params.id;
+    const { id: bookingId } = await params;
     if (!bookingId) {
       return NextResponse.json(
         { error: 'Booking ID is required' },
@@ -71,10 +71,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const bookingId = params.id;
+    const { id: bookingId } = await params;
     if (!bookingId) {
       return NextResponse.json(
         { error: 'Booking ID is required' },
