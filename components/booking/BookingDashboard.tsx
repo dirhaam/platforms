@@ -21,6 +21,8 @@ interface BookingDashboardProps {
 }
 
 export function BookingDashboard({ tenantId }: BookingDashboardProps) {
+  const tenantSubdomain = tenantId;
+  const [resolvedTenantId, setResolvedTenantId] = useState<string>('');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -40,12 +42,44 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'sales'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
+  useEffect(() => {
+    if (!tenantSubdomain) {
+      setResolvedTenantId('');
+      return;
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(tenantSubdomain)) {
+      setResolvedTenantId(tenantSubdomain);
+      return;
+    }
+
+    const resolveTenant = async () => {
+      try {
+        const response = await fetch(`/api/tenants/${tenantSubdomain}`);
+        if (!response.ok) {
+          throw new Error('Tenant not found');
+        }
+
+        const tenant = await response.json();
+        setResolvedTenantId(tenant.id);
+      } catch (error) {
+        console.error('Error resolving tenant for booking dashboard:', error);
+        toast.error('Failed to resolve tenant information');
+        setResolvedTenantId('');
+      }
+    };
+
+    resolveTenant();
+  }, [tenantSubdomain]);
+
   // Fetch bookings with related metadata
   useEffect(() => {
+    if (!resolvedTenantId) return;
     fetchBookings();
     fetchSalesTransactions();
     fetchSalesSummary();
-  }, [tenantId]);
+  }, [resolvedTenantId]);
 
   // Apply filters
   useEffect(() => {
@@ -74,18 +108,19 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   }, [bookings, searchTerm, statusFilter, paymentFilter]);
 
   const fetchBookings = async () => {
+    if (!resolvedTenantId) return;
     setLoading(true);
     try {
       // Fetch all needed data in parallel
       const [bookingsRes, customersRes, servicesRes] = await Promise.all([
-        fetch(`/api/bookings?tenantId=${encodeURIComponent(tenantId)}`, {
-          headers: { 'x-tenant-id': tenantId }
+        fetch(`/api/bookings?tenantId=${encodeURIComponent(resolvedTenantId)}`, {
+          headers: { 'x-tenant-id': resolvedTenantId }
         }),
-        fetch(`/api/customers?tenantId=${encodeURIComponent(tenantId)}`, {
-          headers: { 'x-tenant-id': tenantId }
+        fetch(`/api/customers?tenantId=${encodeURIComponent(resolvedTenantId)}`, {
+          headers: { 'x-tenant-id': resolvedTenantId }
         }),
-        fetch(`/api/services?tenantId=${encodeURIComponent(tenantId)}`, {
-          headers: { 'x-tenant-id': tenantId }
+        fetch(`/api/services?tenantId=${encodeURIComponent(resolvedTenantId)}`, {
+          headers: { 'x-tenant-id': resolvedTenantId }
         })
       ]);
 
@@ -124,12 +159,12 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   };
 
   const fetchSalesTransactions = async () => {
-    if (!tenantId) return;
+    if (!resolvedTenantId) return;
 
     setLoadingSales(true);
     try {
-      const response = await fetch(`/api/sales/transactions?tenantId=${encodeURIComponent(tenantId)}`, {
-        headers: { 'x-tenant-id': tenantId }
+      const response = await fetch(`/api/sales/transactions?tenantId=${encodeURIComponent(resolvedTenantId)}`, {
+        headers: { 'x-tenant-id': resolvedTenantId }
       });
 
       if (!response.ok) {
@@ -137,15 +172,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       }
 
       const data = await response.json();
-      const transactions: SalesTransaction[] = (data.transactions || []).map((transaction: any) => ({
-        ...transaction,
-        transactionDate: transaction.transactionDate ? new Date(transaction.transactionDate) : new Date(),
-        createdAt: transaction.createdAt ? new Date(transaction.createdAt) : new Date(),
-        updatedAt: transaction.updatedAt ? new Date(transaction.updatedAt) : new Date(),
-        paidAt: transaction.paidAt ? new Date(transaction.paidAt) : undefined,
-        scheduledAt: transaction.scheduledAt ? new Date(transaction.scheduledAt) : undefined,
-        completedAt: transaction.completedAt ? new Date(transaction.completedAt) : undefined,
-      }));
+      const transactions: SalesTransaction[] = data.transactions || [];
 
       setSalesTransactions(transactions);
     } catch (error) {
@@ -157,11 +184,11 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   };
 
   const fetchSalesSummary = async () => {
-    if (!tenantId) return;
+    if (!resolvedTenantId) return;
 
     try {
-      const response = await fetch(`/api/sales/summary?tenantId=${encodeURIComponent(tenantId)}`, {
-        headers: { 'x-tenant-id': tenantId }
+      const response = await fetch(`/api/sales/summary?tenantId=${encodeURIComponent(resolvedTenantId)}`, {
+        headers: { 'x-tenant-id': resolvedTenantId }
       });
 
       if (!response.ok) {
@@ -181,12 +208,13 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   };
 
   const handleBookingUpdate = async (bookingId: string, updates: Partial<Booking>) => {
+    if (!resolvedTenantId) return;
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': tenantId
+          'x-tenant-id': resolvedTenantId
         },
         body: JSON.stringify(updates)
       });
@@ -227,7 +255,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         <div className="flex gap-2">
           <Button
             onClick={() => {
-              const searchParams = new URLSearchParams({ subdomain: tenantId });
+              const searchParams = new URLSearchParams({ subdomain: tenantSubdomain });
               window.location.href = `/tenant/admin/bookings/new?${searchParams.toString()}`;
             }}
           >
@@ -237,6 +265,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <Button 
             variant="outline"
             onClick={() => setShowQuickSaleDialog(true)}
+            disabled={!resolvedTenantId}
           >
             <Plus className="h-4 w-4 mr-2" />
             Quick Sale
@@ -518,8 +547,8 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       <SalesTransactionDialog
         open={showQuickSaleDialog}
         onOpenChange={setShowQuickSaleDialog}
-        tenantId={tenantId}
-        subdomain=""
+        tenantId={resolvedTenantId}
+        subdomain={tenantSubdomain}
         allowedTypes={["on_the_spot"]}
         defaultType="on_the_spot"
         onCreated={async (_transaction) => {
@@ -531,7 +560,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       {/* Booking Details Drawer */}
       <BookingDetailsDrawer
         booking={selectedBooking}
-        tenantId={tenantId}
+        tenantId={resolvedTenantId || tenantSubdomain}
         isOpen={showDetailsDrawer}
         onOpenChange={setShowDetailsDrawer}
         onBookingUpdate={handleBookingUpdate}
