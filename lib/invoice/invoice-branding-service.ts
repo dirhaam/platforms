@@ -6,7 +6,7 @@ export interface InvoiceBrandingSettings {
   footerText?: string;
 }
 
-const CACHE_KEY_PREFIX = 'invoice_branding:';
+const TABLE_NAME = 'invoice_branding_settings';
 
 const createSupabaseClient = () =>
   createClient(
@@ -31,12 +31,11 @@ export class InvoiceBrandingService {
   static async getSettings(tenantId: string): Promise<InvoiceBrandingSettings> {
     try {
       const supabase = createSupabaseClient();
-      const cacheKey = `${CACHE_KEY_PREFIX}${tenantId}`;
 
       const { data, error } = await supabase
-        .from('cache')
-        .select('value')
-        .eq('key', cacheKey)
+        .from(TABLE_NAME)
+        .select('logo_url, header_text, footer_text')
+        .eq('tenant_id', tenantId)
         .maybeSingle();
 
       if (error) {
@@ -44,12 +43,15 @@ export class InvoiceBrandingService {
         return {};
       }
 
-      if (!data?.value) {
+      if (!data) {
         return {};
       }
 
-      const settings = data.value as InvoiceBrandingSettings;
-      return sanitizeSettings(settings);
+      return sanitizeSettings({
+        logoUrl: data.logo_url ?? undefined,
+        headerText: data.header_text ?? undefined,
+        footerText: data.footer_text ?? undefined,
+      });
     } catch (error) {
       console.error('[InvoiceBranding] Unexpected error loading settings:', error);
       return {};
@@ -62,20 +64,18 @@ export class InvoiceBrandingService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const supabase = createSupabaseClient();
-      const cacheKey = `${CACHE_KEY_PREFIX}${tenantId}`;
-
       const sanitized = sanitizeSettings(settings);
+      const payload = {
+        tenant_id: tenantId,
+        logo_url: sanitized.logoUrl ?? null,
+        header_text: sanitized.headerText ?? null,
+        footer_text: sanitized.footerText ?? null,
+        updated_at: new Date().toISOString(),
+      };
 
       const { error } = await supabase
-        .from('cache')
-        .upsert(
-          {
-            key: cacheKey,
-            value: sanitized,
-            expires_at: null,
-          },
-          { onConflict: 'key' }
-        );
+        .from(TABLE_NAME)
+        .upsert(payload, { onConflict: 'tenant_id' });
 
       if (error) {
         console.error('[InvoiceBranding] Failed to save settings:', error);

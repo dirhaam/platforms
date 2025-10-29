@@ -9,17 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
-import { Calendar, List, Search, Plus, Filter, X, DollarSign, TrendingUp, CreditCard, Users } from 'lucide-react';
+import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
-import {
-  SalesTransaction,
-  SalesTransactionStatus,
-  SalesTransactionSource,
-  SalesPaymentMethod,
-  SalesSummary,
-} from '@/types/sales';
+import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
+import { SalesTransaction, SalesSummary } from '@/types/sales';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -213,61 +208,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       toast.error('Failed to update booking');
       throw error;
     }
-  };
-
-  const getSalesStatusBadge = (status: SalesTransactionStatus) => {
-    const variants: Record<SalesTransactionStatus, string> = {
-      [SalesTransactionStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
-      [SalesTransactionStatus.COMPLETED]: 'bg-green-100 text-green-800',
-      [SalesTransactionStatus.CANCELLED]: 'bg-red-100 text-red-800',
-      [SalesTransactionStatus.REFUNDED]: 'bg-gray-100 text-gray-800',
-    };
-
-    return (
-      <Badge className={variants[status]}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  const getSalesSourceBadge = (source: SalesTransactionSource) => {
-    const variants: Record<SalesTransactionSource, string> = {
-      [SalesTransactionSource.ON_THE_SPOT]: 'bg-blue-100 text-blue-800',
-      [SalesTransactionSource.FROM_BOOKING]: 'bg-purple-100 text-purple-800',
-    };
-
-    const labels: Record<SalesTransactionSource, string> = {
-      [SalesTransactionSource.ON_THE_SPOT]: 'On-the-Spot',
-      [SalesTransactionSource.FROM_BOOKING]: 'From Booking',
-    };
-
-    return (
-      <Badge className={variants[source]}>
-        {labels[source]}
-      </Badge>
-    );
-  };
-
-  const getSalesPaymentBadge = (method: SalesPaymentMethod) => {
-    const variants: Record<SalesPaymentMethod, string> = {
-      [SalesPaymentMethod.CASH]: 'bg-green-100 text-green-800',
-      [SalesPaymentMethod.CARD]: 'bg-purple-100 text-purple-800',
-      [SalesPaymentMethod.TRANSFER]: 'bg-blue-100 text-blue-800',
-      [SalesPaymentMethod.QRIS]: 'bg-indigo-100 text-indigo-800',
-    };
-
-    return (
-      <Badge className={variants[method]}>
-        {method.toUpperCase()}
-      </Badge>
-    );
-  };
-
-  const getSalesCustomerName = (transaction: SalesTransaction) => {
-    const name = (transaction as any).customerName;
-    if (name && typeof name === 'string') return name;
-    if (transaction.customer?.name) return transaction.customer.name;
-    return 'Unknown';
   };
 
   // Get bookings for selected date
@@ -564,51 +504,11 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
             <CardContent>
               {loadingSales ? (
                 <p className="text-sm text-gray-600">Loading sales data...</p>
-              ) : salesTransactions.length === 0 ? (
-                <p className="text-sm text-gray-600">No sales transactions found.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-4 font-medium">Transaction #</th>
-                        <th className="text-left py-2 px-4 font-medium">Date</th>
-                        <th className="text-left py-2 px-4 font-medium">Customer</th>
-                        <th className="text-left py-2 px-4 font-medium">Service</th>
-                        <th className="text-left py-2 px-4 font-medium">Source</th>
-                        <th className="text-left py-2 px-4 font-medium">Amount</th>
-                        <th className="text-left py-2 px-4 font-medium">Payment</th>
-                        <th className="text-left py-2 px-4 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesTransactions.map((transaction) => (
-                        <tr key={transaction.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4 font-medium">{transaction.transactionNumber}</td>
-                          <td className="py-3 px-4">
-                            {transaction.transactionDate
-                              ? new Date(transaction.transactionDate).toLocaleString('id-ID')
-                              : '-'}
-                          </td>
-                          <td className="py-3 px-4">
-                            {getSalesCustomerName(transaction)}
-                          </td>
-                          <td className="py-3 px-4">{transaction.serviceName}</td>
-                          <td className="py-3 px-4">{getSalesSourceBadge(transaction.source)}</td>
-                          <td className="py-3 px-4 font-medium">
-                            Rp {transaction.totalAmount.toLocaleString('id-ID')}
-                          </td>
-                          <td className="py-3 px-4">
-                            {getSalesPaymentBadge(transaction.paymentMethod)}
-                          </td>
-                          <td className="py-3 px-4">
-                            {getSalesStatusBadge(transaction.status)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <SalesTransactionsTable
+                  transactions={salesTransactions}
+                  emptyMessage="No sales transactions found."
+                />
               )}
             </CardContent>
           </Card>
