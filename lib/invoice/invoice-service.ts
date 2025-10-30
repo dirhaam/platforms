@@ -285,9 +285,10 @@ export class InvoiceService {
         );
         
         // Override paidAmount from payment history if it's more accurate
-        if (totalPaid > baseInvoice.paidAmount) {
+        const dbPaidAmount = baseInvoice.paidAmount || 0;
+        if (totalPaid > dbPaidAmount) {
           console.log(`[InvoiceService] Recalculating invoice ${invoiceId} paidAmount from payment history:`, {
-            databaseAmount: baseInvoice.paidAmount,
+            databaseAmount: dbPaidAmount,
             calculatedAmount: totalPaid
           });
           baseInvoice.paidAmount = totalPaid;
