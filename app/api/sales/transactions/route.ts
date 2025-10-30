@@ -117,14 +117,27 @@ export async function POST(request: NextRequest) {
       // NEW: Check if items array is provided (multi-service with split payment)
       if (transactionData.items && Array.isArray(transactionData.items) && transactionData.items.length > 0) {
         // Multi-service with split payment support
-        const requiredFields = ['customerId', 'totalAmount', 'paymentAmount', 'paymentMethod'];
-        for (const field of requiredFields) {
-          if (transactionData[field] === undefined || transactionData[field] === null) {
-            return NextResponse.json(
-              { error: `${field} is required for multi-service transaction` },
-              { status: 400 }
-            );
-          }
+        if (!transactionData.customerId || !transactionData.totalAmount) {
+          return NextResponse.json(
+            { error: 'customerId and totalAmount are required for multi-service transaction' },
+            { status: 400 }
+          );
+        }
+
+        // Support both new payments array and legacy single payment
+        let paymentAmount = transactionData.paymentAmount || 0;
+        let paymentMethod = transactionData.paymentMethod;
+        let payments = transactionData.payments;
+
+        if (payments && Array.isArray(payments) && payments.length > 0) {
+          // New format: multiple payments
+          paymentAmount = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+          paymentMethod = payments[0]?.method; // Use first payment method as primary
+        } else if (!paymentMethod) {
+          return NextResponse.json(
+            { error: 'Either paymentMethod or payments array is required for multi-service transaction' },
+            { status: 400 }
+          );
         }
 
         transaction = await salesService.createTransactionWithItems({
@@ -132,9 +145,10 @@ export async function POST(request: NextRequest) {
           customerId: transactionData.customerId,
           items: transactionData.items,
           totalAmount: transactionData.totalAmount,
-          paymentAmount: transactionData.paymentAmount,
-          paymentMethod: transactionData.paymentMethod,
+          paymentAmount: paymentAmount,
+          paymentMethod: paymentMethod,
           paymentReference: transactionData.paymentReference,
+          payments: payments,
           taxRate: transactionData.taxRate,
           discountAmount: transactionData.discountAmount,
           notes: transactionData.notes,

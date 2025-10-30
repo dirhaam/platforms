@@ -532,6 +532,7 @@ export class SalesService {
     paymentAmount: number; // Amount paid now (can be partial)
     paymentMethod: SalesPaymentMethod;
     paymentReference?: string;
+    payments?: Array<{ method: SalesPaymentMethod; amount: number; reference?: string }>; // Multiple payments
     taxRate?: number;
     discountAmount?: number;
     notes?: string;
@@ -625,11 +626,26 @@ export class SalesService {
         throw new Error('Failed to create transaction items');
       }
 
-      // Record initial payment if any
+      // Record payments (support both multiple and single payment formats)
       if (transactionData.paymentAmount > 0) {
-        const { error: paymentError } = await supabase
-          .from('sales_transaction_payments')
-          .insert({
+        let paymentRecords: any[] = [];
+
+        if (transactionData.payments && Array.isArray(transactionData.payments) && transactionData.payments.length > 0) {
+          // New format: multiple payments
+          paymentRecords = transactionData.payments.map(p => ({
+            id: uuidv4(),
+            sales_transaction_id: transactionId,
+            payment_amount: p.amount,
+            payment_method: p.method,
+            payment_reference: p.reference || null,
+            paid_at: new Date().toISOString(),
+            notes: `Payment via ${p.method}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }));
+        } else {
+          // Legacy format: single payment
+          paymentRecords = [{
             id: uuidv4(),
             sales_transaction_id: transactionId,
             payment_amount: transactionData.paymentAmount,
@@ -639,7 +655,12 @@ export class SalesService {
             notes: 'Initial payment',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          });
+          }];
+        }
+
+        const { error: paymentError } = await supabase
+          .from('sales_transaction_payments')
+          .insert(paymentRecords);
 
         if (paymentError) {
           throw new Error('Failed to record payment');
