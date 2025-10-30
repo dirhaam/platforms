@@ -49,6 +49,8 @@ interface BookingFormData {
   homeVisitAddress: string;
   homeVisitCoordinates?: { lat: number; lng: number };
   notes: string;
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
+  dpAmount?: number;
 }
 
 export default function BookingDialog({ 
@@ -80,6 +82,8 @@ export default function BookingDialog({
     homeVisitAddress: '',
     homeVisitCoordinates: undefined,
     notes: '',
+    paymentMethod: 'cash',
+    dpAmount: 0,
   });
   const [calculatedPrice, setCalculatedPrice] = useState<number>(selectedService ? Number(selectedService.price) : 0);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
@@ -222,6 +226,8 @@ export default function BookingDialog({
         serviceId: selectedService.id,
         scheduledAt: scheduledAt.toISOString(),
         isHomeVisit: formData.isHomeVisit,
+        paymentMethod: formData.paymentMethod || 'cash',
+        dpAmount: formData.dpAmount || 0,
         ...(formData.isHomeVisit && formData.homeVisitAddress ? { homeVisitAddress: formData.homeVisitAddress.trim() } : {}),
         ...(formData.isHomeVisit && formData.homeVisitCoordinates ? { homeVisitCoordinates: formData.homeVisitCoordinates } : {}),
         ...(formData.notes ? { notes: formData.notes.trim() } : {}),
@@ -269,6 +275,8 @@ export default function BookingDialog({
       homeVisitAddress: '',
       homeVisitCoordinates: undefined,
       notes: '',
+      paymentMethod: 'cash',
+      dpAmount: 0,
     });
     setCalculatedPrice(selectedService ? Number(selectedService.price) : 0);
     setSelectedAddress(null);
