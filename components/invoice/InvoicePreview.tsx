@@ -374,25 +374,30 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
               </div>
             )}
 
-            <div className="border-t border-dashed border-gray-300 pt-3 text-xs text-gray-600">
-              <p className="font-semibold mb-2">Riwayat Pembayaran</p>
+            <div className="border-t border-dashed border-gray-300 pt-3 text-xs text-gray-700 space-y-3">
+              <p className="font-semibold text-center">Riwayat Pembayaran</p>
               
               {invoice.paymentHistory && invoice.paymentHistory.length > 0 ? (
-                <div className="space-y-1">
+                <div>
                   {invoice.paymentHistory.map((payment, index) => {
                     const paidDate = payment.paidAt instanceof Date ? payment.paidAt : new Date(payment.paidAt);
                     return (
-                    <div key={index} className="flex justify-between gap-2 py-1 border-b border-gray-200 last:border-b-0">
-                      <div>
-                        <span className="font-medium">{payment.paymentMethod.replace('_', ' ').toUpperCase()}</span>
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium text-gray-900">{payment.paymentMethod.replace('_', ' ').toUpperCase()}</span>
+                        <span className="font-medium">{formatCurrency(payment.paymentAmount)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-gray-500">
                         {paidDate && (
-                          <p className="text-[10px] text-gray-500">{paidDate.toLocaleDateString('id-ID')}</p>
+                          <span>{paidDate.toLocaleDateString('id-ID')}</span>
                         )}
                         {payment.paymentReference && (
-                          <p className="text-[10px] text-gray-500">Ref: {payment.paymentReference}</p>
+                          <span>Ref: {payment.paymentReference}</span>
                         )}
                       </div>
-                      <span className="font-medium">{formatCurrency(payment.paymentAmount)}</span>
+                      {index !== invoice.paymentHistory.length - 1 && (
+                        <div className="border-b border-dashed border-gray-200" />
+                      )}
                     </div>
                     );
                   })}
