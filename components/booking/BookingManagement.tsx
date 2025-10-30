@@ -16,6 +16,7 @@ import { BookingCalendar } from './BookingCalendar';
 import { TimeSlotPicker } from './TimeSlotPicker';
 import { RecurringBookingManager } from './RecurringBookingManager';
 import { BlackoutDatesManager } from './BlackoutDatesManager';
+import { NewBookingDialog } from './NewBookingDialog';
 import { Booking, Service, Customer, TimeSlot, PaymentStatus } from '@/types/booking';
 import { ReminderTemplate, reminderService } from '@/lib/reminder/reminder-service';
 
@@ -52,6 +53,7 @@ export function BookingManagement({
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
   const [scheduleViewMode, setScheduleViewMode] = useState<'day' | 'week'>('day');
+  const [showNewBookingDialog, setShowNewBookingDialog] = useState(false);
   
   // Reminder states
   const [showReminderDialog, setShowReminderDialog] = useState(false);
@@ -670,6 +672,14 @@ export function BookingManagement({
       </div>
 
       {/* Main Content */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Bookings</h2>
+        <Button onClick={() => setShowNewBookingDialog(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          New Booking
+        </Button>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -1824,6 +1834,17 @@ export function BookingManagement({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* New Booking Dialog */}
+      <NewBookingDialog
+        open={showNewBookingDialog}
+        onOpenChange={setShowNewBookingDialog}
+        subdomain={tenantId}
+        onBookingCreated={() => {
+          fetchBookings();
+          setShowNewBookingDialog(false);
+        }}
+      />
     </div>
   );
 }
