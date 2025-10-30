@@ -607,16 +607,21 @@ export class SalesService {
 
       // Fetch service names for all items
       const serviceIds = transactionData.items.map(item => item.serviceId);
+      console.log(`[SalesService] Fetching service names for serviceIds:`, serviceIds);
+      
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select('id, name')
         .in('id', serviceIds);
+
+      console.log(`[SalesService] Services fetched:`, { error: servicesError?.message, data: servicesData });
 
       if (servicesError) {
         console.warn('[SalesService] Warning fetching service names:', servicesError);
       }
 
       const serviceNameMap = new Map(servicesData?.map(s => [s.id, s.name]) || []);
+      console.log(`[SalesService] Service name map:`, Array.from(serviceNameMap.entries()));
 
       // Insert items
       const items = transactionData.items.map(item => ({
@@ -631,13 +636,18 @@ export class SalesService {
         updated_at: new Date().toISOString(),
       }));
 
+      console.log(`[SalesService] Items to be inserted:`, items);
+
       const { error: itemsError } = await supabase
         .from('sales_transaction_items')
         .insert(items);
 
       if (itemsError) {
+        console.error(`[SalesService] Error inserting items:`, itemsError);
         throw new Error('Failed to create transaction items');
       }
+      
+      console.log(`[SalesService] Items inserted successfully`);
 
       // Record payments (support both multiple and single payment formats)
       if (transactionData.paymentAmount > 0) {
