@@ -630,21 +630,30 @@ export class SalesService {
       if (transactionData.paymentAmount > 0) {
         let paymentRecords: any[] = [];
 
+        console.log(`[SalesService] Recording payments for transaction ${transactionId}:`, {
+          hasPaymentsArray: !!transactionData.payments,
+          paymentsArrayLength: transactionData.payments?.length,
+          paymentAmount: transactionData.paymentAmount,
+          paymentMethod: transactionData.paymentMethod,
+        });
+
         if (transactionData.payments && Array.isArray(transactionData.payments) && transactionData.payments.length > 0) {
           // New format: multiple payments
-          paymentRecords = transactionData.payments.map(p => ({
+          console.log(`[SalesService] Using NEW format with ${transactionData.payments.length} payment(s)`, transactionData.payments);
+          paymentRecords = transactionData.payments.map((p, idx) => ({
             id: uuidv4(),
             sales_transaction_id: transactionId,
             payment_amount: p.amount,
             payment_method: p.method,
             payment_reference: p.reference || null,
             paid_at: new Date().toISOString(),
-            notes: `Payment via ${p.method}`,
+            notes: `Payment ${idx + 1} via ${p.method}`,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }));
         } else {
           // Legacy format: single payment
+          console.log(`[SalesService] Using LEGACY format - single payment`);
           paymentRecords = [{
             id: uuidv4(),
             sales_transaction_id: transactionId,
@@ -658,13 +667,16 @@ export class SalesService {
           }];
         }
 
+        console.log(`[SalesService] Inserting ${paymentRecords.length} payment record(s)`, paymentRecords);
         const { error: paymentError } = await supabase
           .from('sales_transaction_payments')
           .insert(paymentRecords);
 
         if (paymentError) {
-          throw new Error('Failed to record payment');
+          console.error(`[SalesService] Payment insertion error:`, paymentError);
+          throw new Error(`Failed to record payment: ${paymentError.message}`);
         }
+        console.log(`[SalesService] Successfully recorded ${paymentRecords.length} payment(s)`);
       }
 
       return mapToSalesTransaction(savedTransaction);
