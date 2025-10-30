@@ -379,12 +379,14 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
               
               {invoice.paymentHistory && invoice.paymentHistory.length > 0 ? (
                 <div className="space-y-1">
-                  {invoice.paymentHistory.map((payment, index) => (
+                  {invoice.paymentHistory.map((payment, index) => {
+                    const paidDate = payment.paidAt instanceof Date ? payment.paidAt : new Date(payment.paidAt);
+                    return (
                     <div key={index} className="flex justify-between gap-2 py-1 border-b border-gray-200 last:border-b-0">
                       <div>
                         <span className="font-medium">{payment.paymentMethod.replace('_', ' ').toUpperCase()}</span>
-                        {payment.paidAt && (
-                          <p className="text-[10px] text-gray-500">{payment.paidAt.toLocaleDateString('id-ID')}</p>
+                        {paidDate && (
+                          <p className="text-[10px] text-gray-500">{paidDate.toLocaleDateString('id-ID')}</p>
                         )}
                         {payment.paymentReference && (
                           <p className="text-[10px] text-gray-500">Ref: {payment.paymentReference}</p>
@@ -392,7 +394,8 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                       </div>
                       <span className="font-medium">{formatCurrency(payment.paymentAmount)}</span>
                     </div>
-                  ))}
+                    );
+                  })}
                   <div className="flex justify-between font-semibold pt-2 mt-2 border-t border-gray-300">
                     <span>Total Dibayar</span>
                     <span>{formatCurrency(invoice.paidAmount || 0)}</span>
