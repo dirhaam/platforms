@@ -48,6 +48,7 @@ export function UnifiedBookingPanel({
   // Related data
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [history, setHistory] = useState<BookingHistory[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   
   // UI state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -103,6 +104,20 @@ export function UnifiedBookingPanel({
           (inv: Invoice) => inv.bookingId === booking.id
         ) || [];
         setInvoices(relatedInvoices);
+      }
+
+      // Fetch payment history
+      try {
+        const paymentRes = await fetch(`/api/bookings/${booking.id}/payments`, {
+          headers: { 'x-tenant-id': tenantId }
+        });
+        if (paymentRes.ok) {
+          const paymentData = await paymentRes.json();
+          setPaymentHistory(paymentData.payments || []);
+        }
+      } catch (error) {
+        console.error('Error fetching payment history:', error);
+        setPaymentHistory(booking.paymentHistory || []);
       }
 
       // Mock history data (in production, fetch from audit log)
@@ -481,6 +496,7 @@ export function UnifiedBookingPanel({
 
             {/* Payment Tab */}
             <TabsContent value="payment" className="space-y-4 mt-4">
+              {/* Payment Summary */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-600">Status</Label>
@@ -489,15 +505,70 @@ export function UnifiedBookingPanel({
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-gray-600">Method</Label>
-                  <p className="font-medium capitalize">{booking.paymentMethod || 'Not set'}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Amount</Label>
+                  <Label className="text-gray-600">Total Amount</Label>
                   <p className="font-medium">Rp {booking.totalAmount.toLocaleString('id-ID')}</p>
                 </div>
               </div>
 
+              {/* Payment Progress */}
+              {booking.paidAmount !== undefined && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Paid Amount:</span>
+                    <span className="font-medium">Rp {(booking.paidAmount || 0).toLocaleString('id-ID')}</span>
+                  </div>
+                  {booking.remainingBalance !== undefined && booking.remainingBalance > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Remaining Balance:</span>
+                      <span className="font-medium text-orange-600">Rp {booking.remainingBalance.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full transition-all"
+                      style={{ width: `${((booking.paidAmount || 0) / booking.totalAmount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Payment History */}
+              {paymentHistory.length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm">Payment History</h3>
+                  <div className="border rounded-lg divide-y">
+                    {paymentHistory.map((payment, index) => (
+                      <div key={index} className="p-3 space-y-1">
+                        <div className="flex justify-between">
+                          <span className="font-medium text-sm">{payment.paymentMethod?.toUpperCase() || 'Unknown'}</span>
+                          <span className="font-semibold">Rp {(payment.paymentAmount || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>{new Date(payment.paidAt).toLocaleDateString('id-ID')}</span>
+                          <span>{new Date(payment.paidAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        {payment.paymentReference && (
+                          <div className="text-xs text-gray-600">
+                            Ref: {payment.paymentReference}
+                          </div>
+                        )}
+                        {payment.notes && (
+                          <div className="text-xs text-gray-600">
+                            Notes: {payment.notes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No payment history
+                </div>
+              )}
+
+              {/* Action Buttons */}
               <div className="flex gap-2 pt-4">
                 {booking.paymentStatus === PaymentStatus.PENDING && (
                   <>
