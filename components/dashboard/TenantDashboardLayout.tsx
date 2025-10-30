@@ -192,14 +192,40 @@ export default function TenantDashboardLayout({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop Sidebar - Collapsible */}
-      <aside className={`hidden lg:flex flex-col bg-white border-r border-gray-200 py-4 sticky top-0 h-screen shadow-md transition-all duration-300 ${
-        sidebarCollapsed ? 'w-24 items-center' : 'w-64 items-stretch'
-      }`}>
-        {/* Top Section: Hamburger + Logo */}
-        <div className={`flex flex-row items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2 justify-center' : 'px-4 justify-between'
-        }`}>
+      {/* Desktop Layout (YouTube Style) */}
+      <div className="hidden lg:flex flex-col w-full">
+        {/* Top Bar */}
+        <div className="h-16 bg-white border-b border-gray-200 flex items-center px-4 sticky top-0 z-30 shadow-sm">
+          {/* Hamburger + Logo Section */}
+          <div className="flex items-center gap-4 flex-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="text-gray-600 hover:text-gray-900 w-10 h-10 rounded-lg"
+              title={sidebarCollapsed ? "Expand" : "Collapse"}
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                D
+              </div>
+              <span className="font-semibold text-gray-900 hidden lg:inline">Dashboard</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Content with Sidebar */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <aside className={`bg-white border-r border-gray-200 transition-all duration-300 overflow-y-auto ${
+            sidebarCollapsed ? 'w-20' : 'w-64'
+          }`}>
+            <nav className="py-2 space-y-1">
+              {filteredNavigation.map((item) => {
+                const isActive = pathname === item.href;
           {/* Hamburger Button */}
           <Button
             variant="ghost"

@@ -142,14 +142,14 @@ function TenantAdminLayoutContent({
   );
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-50">
       {/* Mobile Sidebar Sheet */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden fixed top-4 left-4 z-40"
+            className="md:hidden fixed top-4 left-4 z-40 text-gray-700"
           >
             <Menu className="h-6 w-6" />
           </Button>
@@ -161,98 +161,91 @@ function TenantAdminLayoutContent({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop Sidebar - Collapsible */}
-      <aside className={`hidden md:flex flex-col bg-white border-r border-gray-200 py-4 sticky top-0 h-screen shadow-md transition-all duration-300 ${
-        sidebarCollapsed ? 'w-24 items-center' : 'w-64 items-stretch'
-      }`}>
-        {/* Top Section: Hamburger + Logo */}
-        <div className={`flex flex-row items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2 justify-center' : 'px-4 justify-between'
-        }`}>
-          {/* Hamburger Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="text-gray-600 hover:text-gray-900 w-10 h-10"
-            title={sidebarCollapsed ? "Expand" : "Collapse"}
-          >
-            {sidebarCollapsed ? (
-              <Menu className="h-5 w-5" />
-            ) : (
-              <X className="h-5 w-5" />
-            )}
-          </Button>
+      {/* Desktop Top Bar + Sidebar (YouTube Style) */}
+      <div className="hidden md:flex flex-col w-full">
+        {/* Top Bar */}
+        <div className="h-16 bg-white border-b border-gray-200 flex items-center px-4 sticky top-0 z-30 shadow-sm">
+          {/* Hamburger + Logo Section */}
+          <div className="flex items-center gap-4 flex-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="text-gray-600 hover:text-gray-900 w-10 h-10 rounded-lg"
+              title={sidebarCollapsed ? "Expand" : "Collapse"}
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
 
-          {/* Logo */}
-          {!sidebarCollapsed && (
             <Link 
               href={`https://${subdomain}.booqing.my.id`} 
               target="_blank" 
-              title="Admin Panel"
-              className="flex-shrink-0"
+              className="flex items-center gap-2 flex-shrink-0"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">
                 A
               </div>
+              <span className="font-semibold text-gray-900 hidden lg:inline">Admin</span>
             </Link>
-          )}
+          </div>
         </div>
 
-        {/* Navigation Icons */}
-        <nav className={`flex flex-col gap-1 flex-1 pt-4 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2' : 'px-3'
-        }`}>
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}>
-                <Button
-                  variant="ghost"
-                  className={`text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-300 ${
-                    sidebarCollapsed 
-                      ? 'w-10 h-10 p-0 justify-center' 
-                      : 'w-full justify-start px-3 py-2'
-                  }`}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="ml-3 text-sm">{item.label}</span>}
-                </Button>
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Content with Sidebar */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <aside className={`bg-white border-r border-gray-200 transition-all duration-300 overflow-y-auto ${
+            sidebarCollapsed ? 'w-20' : 'w-64'
+          }`}>
+            <nav className="py-2 space-y-1">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className={`text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors ${
+                        sidebarCollapsed 
+                          ? 'w-full justify-center h-12 rounded-none' 
+                          : 'w-full justify-start px-4 h-12 rounded-none'
+                      }`}
+                      title={sidebarCollapsed ? item.label : undefined}
+                    >
+                      <Icon className="w-6 h-6 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-4 text-sm font-medium">{item.label}</span>}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </nav>
 
-        {/* Logout Button */}
-        <div className={`border-t border-gray-200 pt-4 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2' : 'px-3'
-        }`}>
-          <Button 
-            asChild 
-            variant="ghost"
-            className={`text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-300 ${
-              sidebarCollapsed 
-                ? 'w-10 h-10 p-0 justify-center' 
-                : 'w-full justify-start px-3 py-2'
-            }`}
-            title={sidebarCollapsed ? "Logout" : undefined}
-          >
-            <Link href={`/tenant/login?subdomain=${subdomain}`}>
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span className="ml-3 text-sm">Logout</span>}
-            </Link>
-          </Button>
-        </div>
-      </aside>
+            {/* Logout Section */}
+            <div className="border-t border-gray-200 py-2">
+              <Button 
+                asChild 
+                variant="ghost"
+                className={`text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors ${
+                  sidebarCollapsed 
+                    ? 'w-full justify-center h-12 rounded-none' 
+                    : 'w-full justify-start px-4 h-12 rounded-none'
+                }`}
+                title={sidebarCollapsed ? "Logout" : undefined}
+              >
+                <Link href={`/tenant/login?subdomain=${subdomain}`}>
+                  <LogOut className="w-6 h-6 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="ml-4 text-sm font-medium">Logout</span>}
+                </Link>
+              </Button>
+            </div>
+          </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto flex flex-col">
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          {children}
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-6">
+              {children}
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
