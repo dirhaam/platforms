@@ -46,7 +46,7 @@ export class InvoiceService {
     return `INV-${year}${month}-${sequence}`;
   }
 
-  static async createInvoice(tenantId: string, data: CreateInvoiceRequest): Promise<Invoice> {
+  static async createInvoice(tenantId: string, data: CreateInvoiceRequest, initialStatus?: string, paidAmount?: number): Promise<Invoice> {
     try {
       const supabase = getSupabaseClient();
       const invoiceNumber = await this.generateInvoiceNumber(tenantId);
@@ -72,7 +72,7 @@ export class InvoiceService {
           customer_id: data.customerId,
           booking_id: data.bookingId,
           invoice_number: invoiceNumber,
-          status: 'draft',
+          status: initialStatus || 'draft',
           issue_date: nowIso,
           due_date: data.dueDate,
           subtotal: subtotal.toNumber(),
@@ -80,6 +80,7 @@ export class InvoiceService {
           tax_amount: taxAmount.toNumber(),
           discount_amount: discountAmount.toNumber(),
           total_amount: totalAmount.toNumber(),
+          paid_amount: paidAmount || 0,
           notes: data.notes,
           terms: data.terms,
           created_at: nowIso,
@@ -654,7 +655,19 @@ export class InvoiceService {
           : undefined,
       };
 
-      const invoice = await this.createInvoice(tenantId, invoiceData);
+      // Map transaction payment status to invoice status
+      let invoiceStatus = 'draft';
+      let invoicePaidAmount = 0;
+      
+      if (transaction.payment_status === 'paid') {
+        invoiceStatus = 'paid';
+        invoicePaidAmount = parseDecimal(transaction.total_amount ?? 0);
+      } else if (transaction.payment_status === 'partial') {
+        invoiceStatus = 'sent';
+        invoicePaidAmount = parseDecimal(transaction.paid_amount ?? 0);
+      }
+
+      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount);
 
       await supabase
         .from('sales_transactions')
