@@ -395,7 +395,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                           <span>Ref: {payment.paymentReference}</span>
                         )}
                       </div>
-                      {index !== invoice.paymentHistory.length - 1 && (
+                      {index !== (invoice.paymentHistory?.length ?? 0) - 1 && (
                         <div className="border-b border-dashed border-gray-200" />
                       )}
                     </div>
