@@ -37,6 +37,12 @@ interface TransactionItem {
   unitPrice: number;
 }
 
+interface PaymentEntry {
+  method: SalesPaymentMethod;
+  amount: number;
+  reference?: string;
+}
+
 interface SalesTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -74,9 +80,7 @@ export function SalesTransactionDialog({
     customerId: "",
     items: [] as TransactionItem[],
     totalAmount: 0,
-    paymentMethod: SalesPaymentMethod.CASH,
-    paymentAmount: 0, // Initial payment (untuk split payment)
-    paymentReference: "",
+    payments: [] as PaymentEntry[], // Multiple payment methods
     notes: "",
   });
 
@@ -87,9 +91,7 @@ export function SalesTransactionDialog({
     scheduledAt: "",
     isHomeVisit: false,
     totalAmount: 0,
-    paymentMethod: SalesPaymentMethod.CASH,
-    paymentAmount: 0,
-    paymentReference: "",
+    payments: [] as PaymentEntry[], // Multiple payment methods
     notes: "",
   });
 
@@ -178,9 +180,7 @@ export function SalesTransactionDialog({
         customerId: "",
         items: [],
         totalAmount: 0,
-        paymentMethod: SalesPaymentMethod.CASH,
-        paymentAmount: 0,
-        paymentReference: "",
+        payments: [],
         notes: "",
       });
       setNewTransactionFromBooking({
@@ -190,9 +190,7 @@ export function SalesTransactionDialog({
         scheduledAt: "",
         isHomeVisit: false,
         totalAmount: 0,
-        paymentMethod: SalesPaymentMethod.CASH,
-        paymentAmount: 0,
-        paymentReference: "",
+        payments: [],
         notes: "",
       });
       setShowNewCustomerDialog(false);
@@ -218,11 +216,15 @@ export function SalesTransactionDialog({
         if (totalAmount <= 0) {
           throw new Error("Total amount must be greater than 0");
         }
-        if (newOnTheSpotTransaction.paymentAmount <= 0) {
-          throw new Error("Payment amount must be greater than 0");
+        if (!newOnTheSpotTransaction.payments || newOnTheSpotTransaction.payments.length === 0) {
+          throw new Error("Please add at least one payment method");
         }
-        if (newOnTheSpotTransaction.paymentAmount > totalAmount) {
-          throw new Error("Payment amount cannot exceed total amount");
+        const totalPayment = calculateTotalPayment(newOnTheSpotTransaction.payments);
+        if (totalPayment <= 0) {
+          throw new Error("Total payment amount must be greater than 0");
+        }
+        if (totalPayment > totalAmount) {
+          throw new Error("Total payment cannot exceed service total amount");
         }
       }
 
@@ -237,11 +239,15 @@ export function SalesTransactionDialog({
         if (newTransactionFromBooking.totalAmount <= 0) {
           throw new Error("Total amount must be greater than 0");
         }
-        if (newTransactionFromBooking.paymentAmount <= 0) {
-          throw new Error("Payment amount must be greater than 0");
+        if (!newTransactionFromBooking.payments || newTransactionFromBooking.payments.length === 0) {
+          throw new Error("Please add at least one payment method");
         }
-        if (newTransactionFromBooking.paymentAmount > newTransactionFromBooking.totalAmount) {
-          throw new Error("Payment amount cannot exceed total amount");
+        const totalPayment = calculateTotalPayment(newTransactionFromBooking.payments);
+        if (totalPayment <= 0) {
+          throw new Error("Total payment amount must be greater than 0");
+        }
+        if (totalPayment > newTransactionFromBooking.totalAmount) {
+          throw new Error("Total payment cannot exceed service total amount");
         }
       }
 
@@ -252,9 +258,8 @@ export function SalesTransactionDialog({
               customerId: newOnTheSpotTransaction.customerId,
               items: newOnTheSpotTransaction.items,
               totalAmount: calculateOnTheSpotTotal(),
-              paymentAmount: newOnTheSpotTransaction.paymentAmount,
-              paymentMethod: newOnTheSpotTransaction.paymentMethod,
-              paymentReference: newOnTheSpotTransaction.paymentReference,
+              paymentAmount: calculateTotalPayment(newOnTheSpotTransaction.payments),
+              payments: newOnTheSpotTransaction.payments,
               notes: newOnTheSpotTransaction.notes,
               tenantId,
             }
@@ -262,10 +267,11 @@ export function SalesTransactionDialog({
               type: "from_booking",
               bookingId: newTransactionFromBooking.bookingId,
               customerId: newTransactionFromBooking.customerId,
+              serviceId: newTransactionFromBooking.serviceId,
+              scheduledAt: newTransactionFromBooking.scheduledAt,
               totalAmount: newTransactionFromBooking.totalAmount,
-              paymentAmount: newTransactionFromBooking.paymentAmount,
-              paymentMethod: newTransactionFromBooking.paymentMethod,
-              paymentReference: newTransactionFromBooking.paymentReference,
+              paymentAmount: calculateTotalPayment(newTransactionFromBooking.payments),
+              payments: newTransactionFromBooking.payments,
               notes: newTransactionFromBooking.notes,
               tenantId,
             };
@@ -292,9 +298,7 @@ export function SalesTransactionDialog({
           customerId: "",
           items: [],
           totalAmount: 0,
-          paymentMethod: SalesPaymentMethod.CASH,
-          paymentAmount: 0,
-          paymentReference: "",
+          payments: [],
           notes: "",
         });
       } else {
@@ -305,9 +309,7 @@ export function SalesTransactionDialog({
           scheduledAt: "",
           isHomeVisit: false,
           totalAmount: 0,
-          paymentMethod: SalesPaymentMethod.CASH,
-          paymentAmount: 0,
-          paymentReference: "",
+          payments: [],
           notes: "",
         });
       }
@@ -338,23 +340,74 @@ export function SalesTransactionDialog({
     );
   };
 
+  const calculateTotalPayment = (payments: PaymentEntry[]) => {
+    return payments.reduce((sum, payment) => sum + payment.amount, 0);
+  };
+
+  const addPaymentEntry = () => {
+    setNewOnTheSpotTransaction((prev) => ({
+      ...prev,
+      payments: [...prev.payments, { method: SalesPaymentMethod.CASH, amount: 0 }],
+    }));
+  };
+
+  const removePaymentEntry = (index: number) => {
+    setNewOnTheSpotTransaction((prev) => ({
+      ...prev,
+      payments: prev.payments.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updatePaymentEntry = (index: number, field: keyof PaymentEntry, value: any) => {
+    setNewOnTheSpotTransaction((prev) => {
+      const updatedPayments = [...prev.payments];
+      updatedPayments[index] = { ...updatedPayments[index], [field]: value };
+      return { ...prev, payments: updatedPayments };
+    });
+  };
+
+  const addPaymentEntryFromBooking = () => {
+    setNewTransactionFromBooking((prev) => ({
+      ...prev,
+      payments: [...prev.payments, { method: SalesPaymentMethod.CASH, amount: 0 }],
+    }));
+  };
+
+  const removePaymentEntryFromBooking = (index: number) => {
+    setNewTransactionFromBooking((prev) => ({
+      ...prev,
+      payments: prev.payments.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updatePaymentEntryFromBooking = (index: number, field: keyof PaymentEntry, value: any) => {
+    setNewTransactionFromBooking((prev) => {
+      const updatedPayments = [...prev.payments];
+      updatedPayments[index] = { ...updatedPayments[index], [field]: value };
+      return { ...prev, payments: updatedPayments };
+    });
+  };
+
   const canSubmit = useMemo(() => {
     if (transactionType === "on_the_spot") {
       const hasValidItems = newOnTheSpotTransaction.items.length > 0;
       const totalAmount = calculateOnTheSpotTotal();
-      const hasPayment = newOnTheSpotTransaction.paymentAmount > 0;
+      const totalPayment = calculateTotalPayment(newOnTheSpotTransaction.payments);
+      const hasValidPayments = newOnTheSpotTransaction.payments.length > 0 && totalPayment > 0;
       return (
         newOnTheSpotTransaction.customerId !== "" &&
         hasValidItems &&
         totalAmount > 0 &&
-        hasPayment
+        hasValidPayments
       );
     }
 
+    const totalPaymentFromBooking = calculateTotalPayment(newTransactionFromBooking.payments);
+    const hasValidPayments = newTransactionFromBooking.payments.length > 0 && totalPaymentFromBooking > 0;
     return (
       newTransactionFromBooking.bookingId !== "" &&
       newTransactionFromBooking.totalAmount > 0 &&
-      newTransactionFromBooking.paymentAmount > 0
+      hasValidPayments
     );
   }, [transactionType, newOnTheSpotTransaction, newTransactionFromBooking]);
 
