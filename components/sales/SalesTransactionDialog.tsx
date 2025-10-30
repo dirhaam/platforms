@@ -454,31 +454,31 @@ export function SalesTransactionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-5xl max-h-[95vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader className="mb-4 sm:mb-6">
-          <DialogTitle className="text-xl sm:text-2xl">Create New Transaction</DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Choose transaction type and enter details below.
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="mb-6">
+          <DialogTitle>Create New Transaction</DialogTitle>
+          <DialogDescription>
+            Enter transaction details below
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 py-2">
+        <div className="space-y-6">
           {transactionTypeOptions && (
-            <div className="grid gap-2 col-span-1 md:col-span-1">
-              <Label className="text-xs sm:text-sm font-semibold">Transaction Type</Label>
+            <div className="space-y-2">
+              <Label>Transaction Type</Label>
               <Select
                 value={transactionType}
                 onValueChange={(value) =>
                   setTransactionType(value as TransactionType)
                 }
               >
-                <SelectTrigger className="text-xs sm:text-sm">
+                <SelectTrigger>
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   {allowedTypes.includes("on_the_spot") && (
                     <SelectItem value="on_the_spot">
-                      On-the-Spot
+                      On-the-Spot Transaction
                     </SelectItem>
                   )}
                   {allowedTypes.includes("from_booking") && (
@@ -492,19 +492,18 @@ export function SalesTransactionDialog({
           )}
 
           {transactionType === "on_the_spot" && (
-            <div className="space-y-3 col-span-1 md:col-span-2 lg:col-span-3">
-              <div className="grid gap-2 col-span-1 md:col-span-1">
-                <div className="flex justify-between items-center gap-2">
-                  <Label htmlFor="customerId" className="text-xs sm:text-sm font-semibold">Customer *</Label>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="customerId">Customer *</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setShowNewCustomerDialog(true)}
-                    className="h-8 px-2 text-xs"
                   >
-                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline ml-1">New</span>
+                    <Plus className="w-4 h-4 mr-1" />
+                    New Customer
                   </Button>
                 </div>
                 <Select
@@ -517,7 +516,7 @@ export function SalesTransactionDialog({
                   }
                   disabled={loadingData}
                 >
-                  <SelectTrigger className="text-xs sm:text-sm h-9">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select customer" />
                   </SelectTrigger>
                   <SelectContent>
@@ -531,23 +530,20 @@ export function SalesTransactionDialog({
               </div>
 
               {/* Services Items */}
-              <Card className="col-span-1 md:col-span-3 lg:col-span-3">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center gap-2">
-                    <CardTitle className="text-xs sm:text-sm font-semibold">Services</CardTitle>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addItem}
-                      className="text-xs h-8 px-2"
-                    >
-                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      <span className="hidden sm:inline">Add</span>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>Services *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addItem}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Service
+                  </Button>
+                </div>
+                <div className="space-y-3 p-3 border rounded-md bg-gray-50">
                   {newOnTheSpotTransaction.items.length === 0 ? (
                     <p className="text-sm text-gray-500">No services added yet</p>
                   ) : (
@@ -614,12 +610,12 @@ export function SalesTransactionDialog({
                       </div>
                     ))
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Totals */}
               {newOnTheSpotTransaction.items.length > 0 && (
-                <div className="grid gap-2 p-2 sm:p-3 bg-gray-50 rounded-lg text-xs sm:text-sm col-span-1 md:col-span-3 lg:col-span-3">
+                <div className="p-3 bg-gray-50 rounded-lg border text-sm">
                   <div className="flex justify-between font-semibold">
                     <span>Total Amount:</span>
                     <span>Rp {calculateOnTheSpotTotal().toLocaleString("id-ID")}</span>
@@ -628,25 +624,22 @@ export function SalesTransactionDialog({
               )}
 
               {/* Multiple Payment Entries */}
-              <Card className="col-span-1 md:col-span-3 lg:col-span-3">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center gap-2">
-                    <CardTitle className="text-xs sm:text-sm font-semibold">Payments *</CardTitle>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addPaymentEntry}
-                      className="text-xs h-8 px-2"
-                    >
-                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      <span className="hidden sm:inline">Add</span>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>Payment Methods *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPaymentEntry}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Payment
+                  </Button>
+                </div>
+                <div className="space-y-3 p-3 border rounded-md bg-gray-50">
                   {newOnTheSpotTransaction.payments.length === 0 ? (
-                    <p className="text-xs sm:text-sm text-gray-500">Click "Add" to add payment method.</p>
+                    <p className="text-sm text-gray-500">No payments added. Click "Add Payment" to add.</p>
                   ) : (
                     newOnTheSpotTransaction.payments.map((payment, index) => (
                       <div key={index} className="grid grid-cols-12 gap-1 sm:gap-2 items-end border-b pb-2 sm:pb-3 last:border-b-0">
@@ -710,12 +703,12 @@ export function SalesTransactionDialog({
                       </div>
                     ))
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Total Payment Summary */}
               {newOnTheSpotTransaction.payments.length > 0 && (
-                <div className="grid gap-2 p-2 sm:p-3 bg-blue-50 rounded-lg text-xs sm:text-sm border border-blue-200 col-span-1 md:col-span-3 lg:col-span-3">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
                   <div className="flex justify-between font-semibold text-blue-900">
                     <span>Total Payment:</span>
                     <span>Rp {calculateTotalPayment(newOnTheSpotTransaction.payments).toLocaleString("id-ID")}</span>
@@ -735,8 +728,8 @@ export function SalesTransactionDialog({
                 </div>
               )}
 
-              <div className="grid gap-2 col-span-1 md:col-span-3 lg:col-span-3">
-                <Label htmlFor="notes" className="text-xs sm:text-sm font-semibold">Notes (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
                 <Textarea
                   id="notes"
                   value={newOnTheSpotTransaction.notes}
@@ -747,18 +740,16 @@ export function SalesTransactionDialog({
                     }))
                   }
                   placeholder="Add any notes..."
-                  rows={2}
-                  className="text-xs sm:text-sm"
+                  rows={3}
                 />
               </div>
             </div>
           )}
 
           {transactionType === "from_booking" && (
-            <div className="space-y-3 col-span-1 md:col-span-3 lg:col-span-3">
-              <>
-              <div className="grid gap-2 col-span-1 md:col-span-1">
-                <Label htmlFor="bookingId" className="text-xs sm:text-sm font-semibold">Booking</Label>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="bookingId">Booking *</Label>
                 <Select
                   value={newTransactionFromBooking.bookingId}
                   onValueChange={(value) =>
@@ -769,7 +760,7 @@ export function SalesTransactionDialog({
                   }
                   disabled={loadingData}
                 >
-                  <SelectTrigger className="text-xs sm:text-sm h-9">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select booking" />
                   </SelectTrigger>
                   <SelectContent>
@@ -783,8 +774,8 @@ export function SalesTransactionDialog({
                 </Select>
               </div>
 
-              <div className="grid gap-2 col-span-1 md:col-span-1">
-                <Label htmlFor="scheduledAt" className="text-xs sm:text-sm font-semibold">Scheduled Date</Label>
+              <div className="space-y-2">
+                <Label htmlFor="scheduledAt">Scheduled Date</Label>
                 <Input
                   id="scheduledAt"
                   type="datetime-local"
@@ -795,12 +786,11 @@ export function SalesTransactionDialog({
                       scheduledAt: e.target.value,
                     }))
                   }
-                  className="text-xs sm:text-sm h-9"
                 />
               </div>
 
-              <div className="grid gap-2 col-span-1 md:col-span-1">
-                <Label htmlFor="totalAmount" className="text-xs sm:text-sm font-semibold">Total (Rp) *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="totalAmount">Total Amount (Rp) *</Label>
                 <Input
                   id="totalAmount"
                   type="number"
@@ -813,31 +803,27 @@ export function SalesTransactionDialog({
                       totalAmount: parseFloat(e.target.value) || 0,
                     }))
                   }
-                  placeholder="Enter total amount"
-                  className="text-xs sm:text-sm h-9"
+                  placeholder="0"
                 />
               </div>
 
               {/* Multiple Payment Entries */}
-              <Card className="col-span-1 md:col-span-3 lg:col-span-3">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center gap-2">
-                    <CardTitle className="text-xs sm:text-sm font-semibold">Payments *</CardTitle>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addPaymentEntryFromBooking}
-                      className="text-xs h-8 px-2"
-                    >
-                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      <span className="hidden sm:inline">Add</span>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>Payment Methods *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPaymentEntryFromBooking}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Payment
+                  </Button>
+                </div>
+                <div className="space-y-3 p-3 border rounded-md bg-gray-50">
                   {newTransactionFromBooking.payments.length === 0 ? (
-                    <p className="text-xs sm:text-sm text-gray-500">Click "Add" to add payment method.</p>
+                    <p className="text-sm text-gray-500">No payments added. Click "Add Payment" to add.</p>
                   ) : (
                     newTransactionFromBooking.payments.map((payment, index) => (
                       <div key={index} className="grid grid-cols-12 gap-1 sm:gap-2 items-end border-b pb-2 sm:pb-3 last:border-b-0">
@@ -901,12 +887,12 @@ export function SalesTransactionDialog({
                       </div>
                     ))
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Total Payment Summary */}
               {newTransactionFromBooking.payments.length > 0 && (
-                <div className="grid gap-2 p-2 sm:p-3 bg-blue-50 rounded-lg text-xs sm:text-sm border border-blue-200 col-span-1 md:col-span-3 lg:col-span-3">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
                   <div className="flex justify-between font-semibold text-blue-900">
                     <span>Total Payment:</span>
                     <span>Rp {calculateTotalPayment(newTransactionFromBooking.payments).toLocaleString("id-ID")}</span>
@@ -926,8 +912,8 @@ export function SalesTransactionDialog({
                 </div>
               )}
 
-              <div className="grid gap-2 col-span-1 md:col-span-3 lg:col-span-3">
-                <Label htmlFor="notes" className="text-xs sm:text-sm font-semibold">Notes (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
                 <Textarea
                   id="notes"
                   value={newTransactionFromBooking.notes}
@@ -938,22 +924,19 @@ export function SalesTransactionDialog({
                     }))
                   }
                   placeholder="Add any notes..."
-                  rows={2}
-                  className="text-xs sm:text-sm"
+                  rows={3}
                 />
               </div>
-              </>
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-4 sm:pt-6">
+        <DialogFooter className="flex gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={submitting}
-            className="w-full sm:w-auto text-xs sm:text-sm"
           >
             Cancel
           </Button>
@@ -961,9 +944,8 @@ export function SalesTransactionDialog({
             type="button"
             onClick={handleCreateTransaction}
             disabled={!canSubmit || submitting || loadingData}
-            className="w-full sm:w-auto text-xs sm:text-sm"
           >
-            {submitting ? "Creating..." : "Create"}
+            {submitting ? "Creating..." : "Create Transaction"}
           </Button>
         </DialogFooter>
         </DialogContent>
