@@ -620,8 +620,12 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         {/* Sales View */}
         <TabsContent value="sales" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex items-center justify-between">
               <CardTitle>Sales Transactions</CardTitle>
+              <Button onClick={() => setShowQuickSaleDialog(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                New Sale
+              </Button>
             </CardHeader>
             <CardContent>
               {loadingSales ? (
