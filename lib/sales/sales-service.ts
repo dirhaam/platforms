@@ -17,7 +17,7 @@ const getSupabaseClient = () => {
   );
 };
 
-const mapToSalesTransaction = (dbData: any): SalesTransaction => {
+const mapToSalesTransaction = (dbData: any, payments?: any[]): SalesTransaction => {
   return {
     id: dbData.id,
     tenantId: dbData.tenant_id,
@@ -51,6 +51,17 @@ const mapToSalesTransaction = (dbData: any): SalesTransaction => {
     transactionDate: dbData.created_at ? new Date(dbData.created_at) : new Date(),
     createdAt: dbData.created_at ? new Date(dbData.created_at) : new Date(),
     updatedAt: dbData.updated_at ? new Date(dbData.updated_at) : new Date(),
+    payments: payments ? payments.map((p: any) => ({
+      id: p.id,
+      salesTransactionId: p.sales_transaction_id,
+      paymentAmount: p.payment_amount,
+      paymentMethod: p.payment_method as SalesPaymentMethod,
+      paymentReference: p.payment_reference || undefined,
+      paidAt: p.paid_at ? new Date(p.paid_at) : new Date(),
+      notes: p.notes || undefined,
+      createdAt: p.created_at ? new Date(p.created_at) : new Date(),
+      updatedAt: p.updated_at ? new Date(p.updated_at) : new Date(),
+    })) : undefined,
   };
 };
 
@@ -315,7 +326,18 @@ export class SalesService {
         return null;
       }
 
-      return mapToSalesTransaction(data);
+      // Fetch payments for this transaction
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('sales_transaction_payments')
+        .select()
+        .eq('sales_transaction_id', transactionId)
+        .order('created_at', { ascending: true });
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+      }
+
+      return mapToSalesTransaction(data, paymentsData || []);
     } catch (error) {
       console.error('Error getting transaction:', error);
       return null;
@@ -349,7 +371,28 @@ export class SalesService {
         return [];
       }
 
-      return data.map(mapToSalesTransaction);
+      // Fetch all payments for all transactions in one query for efficiency
+      const transactionIds = data.map(t => t.id);
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('sales_transaction_payments')
+        .select()
+        .in('sales_transaction_id', transactionIds);
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+      }
+
+      // Group payments by transaction ID
+      const paymentsMap = new Map<string, any[]>();
+      (paymentsData || []).forEach(payment => {
+        const txnId = payment.sales_transaction_id;
+        if (!paymentsMap.has(txnId)) {
+          paymentsMap.set(txnId, []);
+        }
+        paymentsMap.get(txnId)!.push(payment);
+      });
+
+      return data.map(txn => mapToSalesTransaction(txn, paymentsMap.get(txn.id) || []));
     } catch (error) {
       console.error('Error getting transactions:', error);
       return [];
