@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -226,165 +224,140 @@ export default function TenantDashboardLayout({
             <nav className="py-2 space-y-1">
               {filteredNavigation.map((item) => {
                 const isActive = pathname === item.href;
-          {/* Hamburger Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="text-gray-600 hover:text-gray-900 w-10 h-10"
-            title={sidebarCollapsed ? "Expand" : "Collapse"}
-          >
-            {sidebarCollapsed ? (
-              <Menu className="h-5 w-5" />
-            ) : (
-              <X className="h-5 w-5" />
-            )}
-          </Button>
+                return (
+                  <Link key={item.name} href={item.href}>
+                    <Button
+                      variant="ghost"
+                      className={`text-gray-700 hover:text-gray-900 transition-colors ${
+                        isActive
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'hover:bg-gray-100'
+                      } ${
+                        sidebarCollapsed 
+                          ? 'w-full justify-center h-12 rounded-none' 
+                          : 'w-full justify-start px-4 h-12 rounded-none'
+                      }`}
+                      title={sidebarCollapsed ? item.name : undefined}
+                    >
+                      <item.icon className="w-6 h-6 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-4 text-sm font-medium">{item.name}</span>}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Logo */}
-          {!sidebarCollapsed && (
-            <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm hover:shadow-md transition-shadow">
-                D
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Navigation Icons */}
-        <nav className={`flex flex-col gap-1 flex-1 pt-4 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2' : 'px-3'
-        }`}>
-          {filteredNavigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link key={item.name} href={item.href}>
-                <Button
-                  variant="ghost"
-                  className={`text-gray-600 hover:text-gray-900 transition-all duration-300 ${
-                    isActive
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'hover:bg-gray-100'
-                  } ${
+            {/* User Menu */}
+            <div className="border-t border-gray-200 py-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className={`text-gray-700 hover:text-gray-900 transition-colors ${
                     sidebarCollapsed 
-                      ? 'w-10 h-10 p-0 justify-center' 
-                      : 'w-full justify-start px-3 py-2'
-                  }`}
-                  title={sidebarCollapsed ? item.name : undefined}
-                >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="ml-3 text-sm">{item.name}</span>}
-                </Button>
+                      ? 'w-full justify-center h-12 rounded-none' 
+                      : 'w-full justify-start px-4 h-12 rounded-none'
+                  }`} title="User menu">
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback className="text-xs font-semibold">
+                        {getUserInitials(session.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {!sidebarCollapsed && <span className="ml-4 text-sm text-gray-700 font-medium">{session.name}</span>}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{session.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {session.email}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {getRoleDisplayName(session.role)}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-6">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {/* Mobile Top Navigation */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center px-4 shadow-sm z-40">
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <span className="font-semibold text-gray-900 ml-4">Dashboard</span>
+        <div className="flex-1" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-xs font-semibold">
+                  {getUserInitials(session.name)}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{session.name}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {session.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/admin/profile">
+                <User className="mr-2 h-4 w-4" />
+                Profile
               </Link>
-            );
-          })}
-        </nav>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-        {/* User Menu */}
-        <div className={`border-t border-gray-200 pt-4 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2' : 'px-3'
-        }`}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className={`p-0 rounded-full transition-all duration-300 ${
-                sidebarCollapsed ? 'w-10 h-10' : 'w-full justify-start px-3 py-2'
-              }`} title="User menu">
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback className="text-xs font-semibold">
-                    {getUserInitials(session.name)}
-                  </AvatarFallback>
-                </Avatar>
-                {!sidebarCollapsed && <span className="ml-3 text-sm text-gray-700">{session.name}</span>}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{session.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {session.email}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {getRoleDisplayName(session.role)}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/profile">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/admin/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto flex flex-col">
-        {/* Top navigation - Mobile only */}
-        <div className="lg:hidden sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <span className="font-semibold text-gray-900">Dashboard</span>
-          <div className="flex-1" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs font-semibold">
-                    {getUserInitials(session.name)}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{session.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {session.email}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/profile">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Page content */}
-        <div className="flex-1 overflow-y-auto py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
+      {/* Mobile Content */}
+      <main className="lg:hidden mt-16 flex-1 overflow-y-auto">
+        <div className="p-4">
+          {children}
         </div>
       </main>
     </div>
