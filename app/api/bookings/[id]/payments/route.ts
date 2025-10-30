@@ -92,7 +92,14 @@ export async function GET(
       );
     }
 
-    // Get booking with payment history
+    // Import Supabase client
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Get booking
     const booking = await BookingService.getBooking(tenantId, bookingId);
 
     if (!booking) {
@@ -102,9 +109,22 @@ export async function GET(
       );
     }
 
+    // Fetch payment history from booking_payments table
+    const { data: payments, error: paymentsError } = await supabase
+      .from('booking_payments')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .eq('tenant_id', tenantId)
+      .order('paid_at', { ascending: true });
+
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError);
+    }
+
     return NextResponse.json({
       success: true,
-      booking
+      booking,
+      payments: payments || []
     });
   } catch (error) {
     console.error('Error fetching booking payment history:', error);

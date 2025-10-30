@@ -108,12 +108,16 @@ export function UnifiedBookingPanel({
 
       // Fetch payment history
       try {
-        const paymentRes = await fetch(`/api/bookings/${booking.id}/payments`, {
+        const paymentRes = await fetch(`/api/bookings/${booking.id}/payments?tenantId=${encodeURIComponent(tenantId)}`, {
           headers: { 'x-tenant-id': tenantId }
         });
         if (paymentRes.ok) {
           const paymentData = await paymentRes.json();
+          console.log('[BookingDetailsDrawer] Payment data:', paymentData);
           setPaymentHistory(paymentData.payments || []);
+        } else {
+          console.warn('[BookingDetailsDrawer] Payment fetch failed:', paymentRes.status);
+          setPaymentHistory(booking.paymentHistory || []);
         }
       } catch (error) {
         console.error('Error fetching payment history:', error);
