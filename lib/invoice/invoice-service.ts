@@ -64,28 +64,34 @@ export class InvoiceService {
 
       const nowIso = new Date().toISOString();
 
+      const insertData: any = {
+        id: invoiceId,
+        tenant_id: tenantId,
+        customer_id: data.customerId,
+        booking_id: data.bookingId,
+        invoice_number: invoiceNumber,
+        status: initialStatus || 'draft',
+        issue_date: nowIso,
+        due_date: data.dueDate,
+        subtotal: subtotal.toNumber(),
+        tax_rate: taxRate.toNumber(),
+        tax_amount: taxAmount.toNumber(),
+        discount_amount: discountAmount.toNumber(),
+        total_amount: totalAmount.toNumber(),
+        notes: data.notes,
+        terms: data.terms,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+
+      // Add paid_amount only if provided (requires migration 0010)
+      if (paidAmount !== undefined && paidAmount > 0) {
+        insertData.paid_amount = paidAmount;
+      }
+
       const { error } = await supabase
         .from('invoices')
-        .insert({
-          id: invoiceId,
-          tenant_id: tenantId,
-          customer_id: data.customerId,
-          booking_id: data.bookingId,
-          invoice_number: invoiceNumber,
-          status: initialStatus || 'draft',
-          issue_date: nowIso,
-          due_date: data.dueDate,
-          subtotal: subtotal.toNumber(),
-          tax_rate: taxRate.toNumber(),
-          tax_amount: taxAmount.toNumber(),
-          discount_amount: discountAmount.toNumber(),
-          total_amount: totalAmount.toNumber(),
-          paid_amount: paidAmount || 0,
-          notes: data.notes,
-          terms: data.terms,
-          created_at: nowIso,
-          updated_at: nowIso,
-        });
+        .insert(insertData);
 
       if (error) {
         console.error('Error creating invoice:', error);
@@ -599,7 +605,7 @@ export class InvoiceService {
   static async createInvoiceFromSalesTransaction(tenantId: string, transactionId: string): Promise<Invoice> {
     try {
       const supabase = getSupabaseClient();
-      const { data: transaction } = await supabase
+      const { data: transaction, error: transactionError } = await supabase
         .from('sales_transactions')
         .select('*')
         .eq('id', transactionId)
@@ -607,8 +613,8 @@ export class InvoiceService {
         .limit(1)
         .single();
 
-      if (!transaction) {
-        throw new Error('Sales transaction not found');
+      if (transactionError || !transaction) {
+        throw new Error(`Sales transaction not found: ${transactionError?.message || 'Unknown error'}`);
       }
 
       if (transaction.invoice_id) {
@@ -621,26 +627,49 @@ export class InvoiceService {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 7);
 
-      const baseItemPrice = parseDecimal(
-        transaction.unit_price ?? transaction.subtotal ?? transaction.total_amount ?? 0
-      );
+      let items: CreateInvoiceRequest['items'] = [];
 
-      const items: CreateInvoiceRequest['items'] = [
-        {
-          description: transaction.service_name ?? 'Service',
-          quantity: 1,
-          unitPrice: baseItemPrice,
-          serviceId: transaction.service_id ?? undefined,
-        },
-      ];
+      // Check if this is a multi-service transaction (has items in sales_transaction_items)
+      if (!transaction.service_id && transaction.id) {
+        const { data: transactionItems, error: itemsError } = await supabase
+          .from('sales_transaction_items')
+          .select('*')
+          .eq('sales_transaction_id', transaction.id);
 
-      const homeVisitSurcharge = parseDecimal(transaction.home_visit_surcharge ?? 0);
-      if (homeVisitSurcharge > 0) {
-        items.push({
-          description: 'Home Visit Surcharge',
-          quantity: 1,
-          unitPrice: homeVisitSurcharge,
-        });
+        if (!itemsError && Array.isArray(transactionItems) && transactionItems.length > 0) {
+          // Multi-service transaction
+          items = transactionItems.map(item => ({
+            description: item.service_name ?? 'Service',
+            quantity: item.quantity ?? 1,
+            unitPrice: parseDecimal(item.unit_price ?? 0),
+            serviceId: item.service_id ?? undefined,
+          }));
+        }
+      }
+
+      // Single service transaction
+      if (items.length === 0) {
+        const baseItemPrice = parseDecimal(
+          transaction.unit_price ?? transaction.subtotal ?? transaction.total_amount ?? 0
+        );
+
+        items = [
+          {
+            description: transaction.service_name ?? 'Service',
+            quantity: 1,
+            unitPrice: baseItemPrice,
+            serviceId: transaction.service_id ?? undefined,
+          },
+        ];
+
+        const homeVisitSurcharge = parseDecimal(transaction.home_visit_surcharge ?? 0);
+        if (homeVisitSurcharge > 0) {
+          items.push({
+            description: 'Home Visit Surcharge',
+            quantity: 1,
+            unitPrice: homeVisitSurcharge,
+          });
+        }
       }
 
       const invoiceData: CreateInvoiceRequest = {

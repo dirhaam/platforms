@@ -23,9 +23,10 @@ export async function POST(
 
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
-    console.error('Error creating invoice from sales transaction:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error creating invoice from sales transaction:', errorMessage, error);
     return NextResponse.json(
-      { error: 'Failed to create invoice from sales transaction' },
+      { error: errorMessage || 'Failed to create invoice from sales transaction' },
       { status: 500 }
     );
   }
