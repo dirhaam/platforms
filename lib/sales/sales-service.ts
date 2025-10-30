@@ -605,12 +605,25 @@ export class SalesService {
         throw new Error('Failed to create transaction');
       }
 
+      // Fetch service names for all items
+      const serviceIds = transactionData.items.map(item => item.serviceId);
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('id, name')
+        .in('id', serviceIds);
+
+      if (servicesError) {
+        console.warn('[SalesService] Warning fetching service names:', servicesError);
+      }
+
+      const serviceNameMap = new Map(servicesData?.map(s => [s.id, s.name]) || []);
+
       // Insert items
       const items = transactionData.items.map(item => ({
         id: uuidv4(),
         sales_transaction_id: transactionId,
         service_id: item.serviceId,
-        service_name: item.serviceId, // Will be replaced with actual service name
+        service_name: serviceNameMap.get(item.serviceId) || item.serviceId, // Use actual service name or fallback to ID
         quantity: item.quantity,
         unit_price: item.unitPrice,
         total_price: item.quantity * item.unitPrice,
