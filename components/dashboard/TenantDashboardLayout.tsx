@@ -1,4 +1,3 @@
-import { useState } from 'react';
 'use client';
 
 import { useState } from 'react';
@@ -108,7 +107,6 @@ export default function TenantDashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Filter navigation items based on user permissions
   const filteredNavigation = navigation.filter((item) => {
     if (item.permission && !RBAC.hasPermission(session, item.permission as any)) {
       return false;
