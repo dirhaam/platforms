@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
-import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users } from 'lucide-react';
+import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
@@ -26,6 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -634,6 +640,36 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                 <SalesTransactionsTable
                   transactions={salesTransactions}
                   emptyMessage="No sales transactions found."
+                  renderActions={(transaction) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          // View details logic here
+                          toast.info('View details for transaction: ' + transaction.transactionNumber);
+                        }}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => createInvoiceAndPreview(transaction)}>
+                          <Printer className="w-4 h-4 mr-2" />
+                          Generate Invoice
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 />
               )}
             </CardContent>
