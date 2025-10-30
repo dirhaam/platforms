@@ -459,7 +459,7 @@ export class SalesService {
         return this.getEmptySummary();
       }
 
-      const transactions = data.map(mapToSalesTransaction);
+      const transactions = data.map(t => mapToSalesTransaction(t));
       
       const summary: SalesSummary = {
         totalTransactions: transactions.length,
