@@ -157,10 +157,14 @@ export default function SuperAdminLayout({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop Sidebar - New Design */}
-      <aside className="hidden lg:flex w-24 bg-white border-r border-gray-200 flex-col items-center py-4 sticky top-0 h-screen shadow-md">
+      {/* Desktop Sidebar - Collapsible */}
+      <aside className={`hidden lg:flex flex-col bg-white border-r border-gray-200 py-4 sticky top-0 h-screen shadow-md transition-all duration-300 ${
+        sidebarCollapsed ? 'w-24 items-center' : 'w-64 items-stretch'
+      }`}>
         {/* Top Section: Hamburger + Logo */}
-        <div className="flex flex-col items-center gap-3 pb-6 border-b border-gray-200 w-full">
+        <div className={`flex flex-col items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2' : 'px-4'
+        }`}>
           {/* Hamburger Button */}
           <Button
             variant="ghost"
@@ -185,22 +189,28 @@ export default function SuperAdminLayout({
         </div>
 
         {/* Navigation Icons */}
-        <nav className="flex flex-col gap-2 flex-1 pt-4 w-full px-2">
+        <nav className={`flex flex-col gap-1 flex-1 pt-4 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2' : 'px-3'
+        }`}>
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link key={item.name} href={item.href}>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className={`w-10 h-10 ${
+                  className={`text-gray-600 hover:text-gray-900 transition-all duration-300 ${
                     isActive
                       ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      : 'hover:bg-gray-100'
+                  } ${
+                    sidebarCollapsed 
+                      ? 'w-10 h-10 p-0 justify-center' 
+                      : 'w-full justify-start px-3 py-2'
                   }`}
-                  title={item.name}
+                  title={sidebarCollapsed ? item.name : undefined}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="ml-3 text-sm">{item.name}</span>}
                 </Button>
               </Link>
             );
@@ -208,15 +218,20 @@ export default function SuperAdminLayout({
         </nav>
 
         {/* User Menu */}
-        <div className="border-t border-gray-200 pt-4 w-full px-2">
+        <div className={`border-t border-gray-200 pt-4 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2' : 'px-3'
+        }`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-10 h-10 p-0 rounded-full" title="User menu">
-                <Avatar className="h-8 w-8">
+              <Button variant="ghost" className={`p-0 rounded-full transition-all duration-300 ${
+                sidebarCollapsed ? 'w-10 h-10' : 'w-full justify-start px-3 py-2'
+              }`} title="User menu">
+                <Avatar className="h-8 w-8 flex-shrink-0">
                   <AvatarFallback className="text-xs font-semibold">
                     {getUserInitials(session.name)}
                   </AvatarFallback>
                 </Avatar>
+                {!sidebarCollapsed && <span className="ml-3 text-sm text-gray-700">{session.name}</span>}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>

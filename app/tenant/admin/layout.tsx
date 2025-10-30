@@ -161,10 +161,14 @@ function TenantAdminLayoutContent({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop Sidebar - New Design */}
-      <aside className="hidden md:flex w-24 bg-white border-r border-gray-200 flex-col items-center py-4 sticky top-0 h-screen shadow-md">
+      {/* Desktop Sidebar - Collapsible */}
+      <aside className={`hidden md:flex flex-col bg-white border-r border-gray-200 py-4 sticky top-0 h-screen shadow-md transition-all duration-300 ${
+        sidebarCollapsed ? 'w-24 items-center' : 'w-64 items-stretch'
+      }`}>
         {/* Top Section: Hamburger + Logo */}
-        <div className="flex flex-col items-center gap-3 pb-6 border-b border-gray-200 w-full">
+        <div className={`flex flex-col items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2' : 'px-4'
+        }`}>
           {/* Hamburger Button */}
           <Button
             variant="ghost"
@@ -194,18 +198,24 @@ function TenantAdminLayoutContent({
         </div>
 
         {/* Navigation Icons */}
-        <nav className="flex flex-col gap-2 flex-1 pt-4 w-full px-2">
+        <nav className={`flex flex-col gap-1 flex-1 pt-4 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2' : 'px-3'
+        }`}>
           {navigationItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="w-10 h-10 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  title={item.label}
+                  className={`text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-300 ${
+                    sidebarCollapsed 
+                      ? 'w-10 h-10 p-0 justify-center' 
+                      : 'w-full justify-start px-3 py-2'
+                  }`}
+                  title={sidebarCollapsed ? item.label : undefined}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="ml-3 text-sm">{item.label}</span>}
                 </Button>
               </Link>
             );
@@ -213,16 +223,22 @@ function TenantAdminLayoutContent({
         </nav>
 
         {/* Logout Button */}
-        <div className="border-t border-gray-200 pt-4 w-full px-2">
+        <div className={`border-t border-gray-200 pt-4 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2' : 'px-3'
+        }`}>
           <Button 
             asChild 
-            variant="ghost" 
-            size="icon"
-            className="w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50"
-            title="Logout"
+            variant="ghost"
+            className={`text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-300 ${
+              sidebarCollapsed 
+                ? 'w-10 h-10 p-0 justify-center' 
+                : 'w-full justify-start px-3 py-2'
+            }`}
+            title={sidebarCollapsed ? "Logout" : undefined}
           >
             <Link href={`/tenant/login?subdomain=${subdomain}`}>
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              {!sidebarCollapsed && <span className="ml-3 text-sm">Logout</span>}
             </Link>
           </Button>
         </div>
