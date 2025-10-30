@@ -162,8 +162,8 @@ export default function SuperAdminLayout({
         sidebarCollapsed ? 'w-24 items-center' : 'w-64 items-stretch'
       }`}>
         {/* Top Section: Hamburger + Logo */}
-        <div className={`flex flex-col items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2' : 'px-4'
+        <div className={`flex flex-row items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2 justify-center' : 'px-4 justify-between'
         }`}>
           {/* Hamburger Button */}
           <Button
@@ -181,11 +181,13 @@ export default function SuperAdminLayout({
           </Button>
 
           {/* Logo */}
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm hover:shadow-md transition-shadow">
-              <Shield className="w-5 h-5" />
+          {!sidebarCollapsed && (
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm hover:shadow-md transition-shadow">
+                <Shield className="w-5 h-5" />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Navigation Icons */}

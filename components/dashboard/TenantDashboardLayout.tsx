@@ -197,8 +197,8 @@ export default function TenantDashboardLayout({
         sidebarCollapsed ? 'w-24 items-center' : 'w-64 items-stretch'
       }`}>
         {/* Top Section: Hamburger + Logo */}
-        <div className={`flex flex-col items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
-          sidebarCollapsed ? 'px-2' : 'px-4'
+        <div className={`flex flex-row items-center gap-3 pb-6 border-b border-gray-200 w-full transition-all duration-300 ${
+          sidebarCollapsed ? 'px-2 justify-center' : 'px-4 justify-between'
         }`}>
           {/* Hamburger Button */}
           <Button
@@ -216,11 +216,13 @@ export default function TenantDashboardLayout({
           </Button>
 
           {/* Logo */}
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm hover:shadow-md transition-shadow">
-              D
+          {!sidebarCollapsed && (
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm hover:shadow-md transition-shadow">
+                D
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Navigation Icons */}
