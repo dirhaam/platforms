@@ -294,7 +294,7 @@ export class InvoiceService {
           baseInvoice.paidAmount = totalPaid;
         }
         
-        baseInvoice.remainingBalance = baseInvoice.totalAmount - baseInvoice.paidAmount;
+        baseInvoice.remainingBalance = baseInvoice.totalAmount - (baseInvoice.paidAmount || 0);
       } else {
         baseInvoice.remainingBalance = baseInvoice.totalAmount - (baseInvoice.paidAmount || 0);
       }
