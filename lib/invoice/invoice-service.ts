@@ -265,7 +265,7 @@ export class InvoiceService {
       }
 
       // Process payment history
-      if (paymentsResult && Array.isArray(paymentsResult.data)) {
+      if (paymentsResult && Array.isArray(paymentsResult.data) && paymentsResult.data.length > 0) {
         baseInvoice.paymentHistory = paymentsResult.data.map((payment: any) => ({
           id: payment.id,
           invoiceId,
@@ -283,8 +283,17 @@ export class InvoiceService {
           (sum, payment) => sum + payment.paymentAmount,
           0
         );
-        baseInvoice.paidAmount = totalPaid;
-        baseInvoice.remainingBalance = baseInvoice.totalAmount - totalPaid;
+        
+        // Override paidAmount from payment history if it's more accurate
+        if (totalPaid > baseInvoice.paidAmount) {
+          console.log(`[InvoiceService] Recalculating invoice ${invoiceId} paidAmount from payment history:`, {
+            databaseAmount: baseInvoice.paidAmount,
+            calculatedAmount: totalPaid
+          });
+          baseInvoice.paidAmount = totalPaid;
+        }
+        
+        baseInvoice.remainingBalance = baseInvoice.totalAmount - baseInvoice.paidAmount;
       } else {
         baseInvoice.remainingBalance = baseInvoice.totalAmount - (baseInvoice.paidAmount || 0);
       }
