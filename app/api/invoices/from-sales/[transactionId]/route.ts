@@ -16,17 +16,39 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log(`[Invoice] Creating invoice from sales transaction: ${transactionId} for tenant: ${tenant.id}`);
+
     const invoice = await InvoiceService.createInvoiceFromSalesTransaction(
       tenant.id,
       transactionId
     );
 
+    console.log(`[Invoice] Successfully created invoice: ${invoice.id}`);
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error creating invoice from sales transaction:', errorMessage, error);
+    let errorMessage = 'Failed to create invoice from sales transaction';
+    let errorDetails = '';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = error.stack || '';
+    } else if (typeof error === 'object' && error !== null) {
+      errorDetails = JSON.stringify(error);
+    } else {
+      errorMessage = String(error);
+    }
+
+    console.error('[Invoice] Error creating invoice from sales transaction:', {
+      message: errorMessage,
+      details: errorDetails,
+      fullError: error
+    });
+
     return NextResponse.json(
-      { error: errorMessage || 'Failed to create invoice from sales transaction' },
+      { 
+        error: errorMessage,
+        details: errorDetails 
+      },
       { status: 500 }
     );
   }

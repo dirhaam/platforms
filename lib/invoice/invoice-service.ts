@@ -94,8 +94,14 @@ export class InvoiceService {
         .insert(insertData);
 
       if (error) {
-        console.error('Error creating invoice:', error);
-        throw error;
+        console.error('[InvoiceService] Error inserting invoice into database:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          fullError: error
+        });
+        throw new Error(`Failed to create invoice: ${error.message || 'Database error'}`);
       }
 
       const items = (data.items || []).map(item => ({
@@ -706,7 +712,13 @@ export class InvoiceService {
 
       return invoice;
     } catch (error) {
-      console.error('Error creating invoice from sales transaction:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : '';
+      console.error('[InvoiceService] Error creating invoice from sales transaction:', {
+        message: errorMsg,
+        stack,
+        error
+      });
       throw error;
     }
   }
