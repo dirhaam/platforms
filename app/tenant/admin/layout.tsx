@@ -149,7 +149,7 @@ function TenantAdminLayoutContent({
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden absolute top-4 left-4 z-40"
+            className="md:hidden fixed top-4 left-4 z-40"
           >
             <Menu className="h-6 w-6" />
           </Button>
@@ -161,24 +161,17 @@ function TenantAdminLayoutContent({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex bg-white shadow-md overflow-y-auto flex-col transition-all duration-300 ${
-        sidebarCollapsed ? 'w-16' : 'w-64'
-      }`}>
-        <SidebarContent isCollapsed={sidebarCollapsed} />
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto flex flex-col">
-        {/* Top Bar with Toggle Button */}
-        <div className="hidden md:flex items-center justify-between bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-30">
-          <div className="flex-1" />
+      {/* Desktop Sidebar - New Design */}
+      <aside className="hidden md:flex w-24 bg-white border-r border-gray-200 flex-col items-center py-4 sticky top-0 h-screen shadow-md">
+        {/* Top Section: Hamburger + Logo */}
+        <div className="flex flex-col items-center gap-3 pb-6 border-b border-gray-200 w-full">
+          {/* Hamburger Button */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="text-gray-600 hover:text-gray-900"
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="text-gray-600 hover:text-gray-900 w-10 h-10"
+            title={sidebarCollapsed ? "Expand" : "Collapse"}
           >
             {sidebarCollapsed ? (
               <Menu className="h-5 w-5" />
@@ -186,10 +179,59 @@ function TenantAdminLayoutContent({
               <X className="h-5 w-5" />
             )}
           </Button>
+
+          {/* Logo */}
+          <Link 
+            href={`https://${subdomain}.booqing.my.id`} 
+            target="_blank" 
+            title="Admin Panel"
+            className="flex-shrink-0"
+          >
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm hover:shadow-md transition-shadow">
+              A
+            </div>
+          </Link>
         </div>
 
+        {/* Navigation Icons */}
+        <nav className="flex flex-col gap-2 flex-1 pt-4 w-full px-2">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-10 h-10 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  title={item.label}
+                >
+                  <Icon className="w-5 h-5" />
+                </Button>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Logout Button */}
+        <div className="border-t border-gray-200 pt-4 w-full px-2">
+          <Button 
+            asChild 
+            variant="ghost" 
+            size="icon"
+            className="w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50"
+            title="Logout"
+          >
+            <Link href={`/tenant/login?subdomain=${subdomain}`}>
+              <LogOut className="w-5 h-5" />
+            </Link>
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto flex flex-col">
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
           {children}
         </div>
       </main>
