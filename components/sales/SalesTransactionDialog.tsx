@@ -454,31 +454,31 @@ export function SalesTransactionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Transaction</DialogTitle>
-          <DialogDescription>
+        <DialogContent className="w-[95vw] max-w-5xl max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="mb-4 sm:mb-6">
+          <DialogTitle className="text-xl sm:text-2xl">Create New Transaction</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Choose transaction type and enter details below.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 py-2">
           {transactionTypeOptions && (
-            <div className="grid gap-2">
-              <Label>Transaction Type</Label>
+            <div className="grid gap-2 col-span-1 md:col-span-1">
+              <Label className="text-xs sm:text-sm font-semibold">Transaction Type</Label>
               <Select
                 value={transactionType}
                 onValueChange={(value) =>
                   setTransactionType(value as TransactionType)
                 }
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select transaction type" />
+                <SelectTrigger className="text-xs sm:text-sm">
+                  <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   {allowedTypes.includes("on_the_spot") && (
                     <SelectItem value="on_the_spot">
-                      On-the-Spot Transaction
+                      On-the-Spot
                     </SelectItem>
                   )}
                   {allowedTypes.includes("from_booking") && (
@@ -492,18 +492,19 @@ export function SalesTransactionDialog({
           )}
 
           {transactionType === "on_the_spot" && (
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="customerId">Customer *</Label>
+            <div className="space-y-3 col-span-1 md:col-span-2 lg:col-span-3">
+              <div className="grid gap-2 col-span-1 md:col-span-1">
+                <div className="flex justify-between items-center gap-2">
+                  <Label htmlFor="customerId" className="text-xs sm:text-sm font-semibold">Customer *</Label>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setShowNewCustomerDialog(true)}
-                    className="h-8 w-8 p-0"
+                    className="h-8 px-2 text-xs"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline ml-1">New</span>
                   </Button>
                 </div>
                 <Select
@@ -516,7 +517,7 @@ export function SalesTransactionDialog({
                   }
                   disabled={loadingData}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs sm:text-sm h-9">
                     <SelectValue placeholder="Select customer" />
                   </SelectTrigger>
                   <SelectContent>
@@ -530,39 +531,39 @@ export function SalesTransactionDialog({
               </div>
 
               {/* Services Items */}
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm">Services</CardTitle>
+              <Card className="col-span-1 md:col-span-3 lg:col-span-3">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-semibold">Services</CardTitle>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={addItem}
+                      className="text-xs h-8 px-2"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Service
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Add</span>
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   {newOnTheSpotTransaction.items.length === 0 ? (
                     <p className="text-sm text-gray-500">No services added yet</p>
                   ) : (
                     newOnTheSpotTransaction.items.map((item, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2 items-end border-b pb-3">
-                        <div className="col-span-5">
+                      <div key={index} className="grid grid-cols-12 gap-1 sm:gap-2 items-end border-b pb-2 sm:pb-3">
+                        <div className="col-span-6 sm:col-span-6">
                           <Label className="text-xs">Service</Label>
                           <Select
                             value={item.serviceId}
                             onValueChange={(value) => {
                               updateItem(index, "serviceId", value);
-                              // Auto-populate unit price
                               const price = getServicePrice(value);
                               updateItem(index, "unitPrice", price);
                             }}
                           >
-                            <SelectTrigger className="h-8">
+                            <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                             <SelectContent>
@@ -583,11 +584,11 @@ export function SalesTransactionDialog({
                             onChange={(e) =>
                               updateItem(index, "quantity", parseInt(e.target.value) || 1)
                             }
-                            className="h-8"
+                            className="h-8 text-xs"
                           />
                         </div>
-                        <div className="col-span-3">
-                          <Label className="text-xs">Price</Label>
+                        <div className="col-span-3 sm:col-span-3">
+                          <Label className="text-xs">Price (Rp)</Label>
                           <Input
                             type="number"
                             min="0"
@@ -596,17 +597,18 @@ export function SalesTransactionDialog({
                             onChange={(e) =>
                               updateItem(index, "unitPrice", parseFloat(e.target.value) || 0)
                             }
-                            className="h-8"
+                            className="h-8 text-xs"
                           />
                         </div>
-                        <div className="col-span-2 text-right">
+                        <div className="col-span-1 text-center">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => removeItem(index)}
+                            className="h-8 w-8 p-0"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -617,7 +619,7 @@ export function SalesTransactionDialog({
 
               {/* Totals */}
               {newOnTheSpotTransaction.items.length > 0 && (
-                <div className="grid gap-2 p-3 bg-gray-50 rounded-lg text-sm">
+                <div className="grid gap-2 p-2 sm:p-3 bg-gray-50 rounded-lg text-xs sm:text-sm col-span-1 md:col-span-3 lg:col-span-3">
                   <div className="flex justify-between font-semibold">
                     <span>Total Amount:</span>
                     <span>Rp {calculateOnTheSpotTotal().toLocaleString("id-ID")}</span>
@@ -626,36 +628,37 @@ export function SalesTransactionDialog({
               )}
 
               {/* Multiple Payment Entries */}
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm">Payments *</CardTitle>
+              <Card className="col-span-1 md:col-span-3 lg:col-span-3">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-semibold">Payments *</CardTitle>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={addPaymentEntry}
+                      className="text-xs h-8 px-2"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Payment
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Add</span>
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   {newOnTheSpotTransaction.payments.length === 0 ? (
-                    <p className="text-sm text-gray-500">No payments added yet. Click "Add Payment" to add a payment method.</p>
+                    <p className="text-xs sm:text-sm text-gray-500">Click "Add" to add payment method.</p>
                   ) : (
                     newOnTheSpotTransaction.payments.map((payment, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2 items-end border-b pb-3 last:border-b-0">
-                        <div className="col-span-6">
-                          <Label className="text-xs">Payment Method</Label>
+                      <div key={index} className="grid grid-cols-12 gap-1 sm:gap-2 items-end border-b pb-2 sm:pb-3 last:border-b-0">
+                        <div className="col-span-5 sm:col-span-6">
+                          <Label className="text-xs">Method</Label>
                           <Select
                             value={payment.method}
                             onValueChange={(value) =>
                               updatePaymentEntry(index, "method", value as SalesPaymentMethod)
                             }
                           >
-                            <SelectTrigger className="h-8">
+                            <SelectTrigger className="h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -666,7 +669,7 @@ export function SalesTransactionDialog({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="col-span-4">
+                        <div className="col-span-6 sm:col-span-5">
                           <Label className="text-xs">Amount (Rp)</Label>
                           <Input
                             type="number"
@@ -676,17 +679,18 @@ export function SalesTransactionDialog({
                             onChange={(e) =>
                               updatePaymentEntry(index, "amount", parseFloat(e.target.value) || 0)
                             }
-                            className="h-8"
+                            className="h-8 text-xs"
                           />
                         </div>
-                        <div className="col-span-2 text-right">
+                        <div className="col-span-1 text-center">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => removePaymentEntry(index)}
+                            className="h-8 w-8 p-0"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                         {payment.reference && (
@@ -711,7 +715,7 @@ export function SalesTransactionDialog({
 
               {/* Total Payment Summary */}
               {newOnTheSpotTransaction.payments.length > 0 && (
-                <div className="grid gap-2 p-3 bg-blue-50 rounded-lg text-sm border border-blue-200">
+                <div className="grid gap-2 p-2 sm:p-3 bg-blue-50 rounded-lg text-xs sm:text-sm border border-blue-200 col-span-1 md:col-span-3 lg:col-span-3">
                   <div className="flex justify-between font-semibold text-blue-900">
                     <span>Total Payment:</span>
                     <span>Rp {calculateTotalPayment(newOnTheSpotTransaction.payments).toLocaleString("id-ID")}</span>
@@ -731,8 +735,8 @@ export function SalesTransactionDialog({
                 </div>
               )}
 
-              <div className="grid gap-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
+              <div className="grid gap-2 col-span-1 md:col-span-3 lg:col-span-3">
+                <Label htmlFor="notes" className="text-xs sm:text-sm font-semibold">Notes (Optional)</Label>
                 <Textarea
                   id="notes"
                   value={newOnTheSpotTransaction.notes}
@@ -743,7 +747,8 @@ export function SalesTransactionDialog({
                     }))
                   }
                   placeholder="Add any notes..."
-                  rows={3}
+                  rows={2}
+                  className="text-xs sm:text-sm"
                 />
               </div>
             </div>
@@ -936,12 +941,13 @@ export function SalesTransactionDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-4 sm:pt-6">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={submitting}
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
             Cancel
           </Button>
@@ -949,8 +955,9 @@ export function SalesTransactionDialog({
             type="button"
             onClick={handleCreateTransaction}
             disabled={!canSubmit || submitting || loadingData}
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
-            {submitting ? "Creating..." : "Create Transaction"}
+            {submitting ? "Creating..." : "Create"}
           </Button>
         </DialogFooter>
         </DialogContent>
