@@ -276,6 +276,12 @@ export function SalesTransactionDialog({
               tenantId,
             };
 
+      console.log("[SalesDialog] Submitting transaction request with payments:", {
+        paymentsCount: requestBody.payments?.length,
+        payments: requestBody.payments,
+        totalPayment: requestBody.paymentAmount,
+      });
+
       const response = await fetch("/api/sales/transactions", {
         method: "POST",
         headers: {

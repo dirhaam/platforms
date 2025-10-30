@@ -78,6 +78,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tenantId, type, ...transactionData } = body;
     
+    console.log("[API] POST /api/sales/transactions received:", {
+      type,
+      hasPayments: !!transactionData.payments,
+      paymentsLength: transactionData.payments?.length,
+      paymentsData: transactionData.payments,
+      totalPayment: transactionData.paymentAmount,
+    });
+    
     if (!tenantId) {
       return NextResponse.json(
         { error: 'Tenant ID is required' },
