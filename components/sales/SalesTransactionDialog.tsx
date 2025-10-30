@@ -755,10 +755,10 @@ export function SalesTransactionDialog({
           )}
 
           {transactionType === "from_booking" && (
-            <div className="space-y-4">
+            <div className="space-y-3 col-span-1 md:col-span-3 lg:col-span-3">
               <>
-              <div className="grid gap-2">
-                <Label htmlFor="bookingId">Booking</Label>
+              <div className="grid gap-2 col-span-1 md:col-span-1">
+                <Label htmlFor="bookingId" className="text-xs sm:text-sm font-semibold">Booking</Label>
                 <Select
                   value={newTransactionFromBooking.bookingId}
                   onValueChange={(value) =>
@@ -769,7 +769,7 @@ export function SalesTransactionDialog({
                   }
                   disabled={loadingData}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs sm:text-sm h-9">
                     <SelectValue placeholder="Select booking" />
                   </SelectTrigger>
                   <SelectContent>
@@ -783,8 +783,8 @@ export function SalesTransactionDialog({
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="scheduledAt">Scheduled Date</Label>
+              <div className="grid gap-2 col-span-1 md:col-span-1">
+                <Label htmlFor="scheduledAt" className="text-xs sm:text-sm font-semibold">Scheduled Date</Label>
                 <Input
                   id="scheduledAt"
                   type="datetime-local"
@@ -795,11 +795,12 @@ export function SalesTransactionDialog({
                       scheduledAt: e.target.value,
                     }))
                   }
+                  className="text-xs sm:text-sm h-9"
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="totalAmount">Total Amount (Rp) *</Label>
+              <div className="grid gap-2 col-span-1 md:col-span-1">
+                <Label htmlFor="totalAmount" className="text-xs sm:text-sm font-semibold">Total (Rp) *</Label>
                 <Input
                   id="totalAmount"
                   type="number"
@@ -812,41 +813,43 @@ export function SalesTransactionDialog({
                       totalAmount: parseFloat(e.target.value) || 0,
                     }))
                   }
-                  placeholder="Enter total service amount"
+                  placeholder="Enter total amount"
+                  className="text-xs sm:text-sm h-9"
                 />
               </div>
 
               {/* Multiple Payment Entries */}
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm">Payments *</CardTitle>
+              <Card className="col-span-1 md:col-span-3 lg:col-span-3">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-semibold">Payments *</CardTitle>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={addPaymentEntryFromBooking}
+                      className="text-xs h-8 px-2"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Payment
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Add</span>
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   {newTransactionFromBooking.payments.length === 0 ? (
-                    <p className="text-sm text-gray-500">No payments added yet. Click "Add Payment" to add a payment method.</p>
+                    <p className="text-xs sm:text-sm text-gray-500">Click "Add" to add payment method.</p>
                   ) : (
                     newTransactionFromBooking.payments.map((payment, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2 items-end border-b pb-3 last:border-b-0">
-                        <div className="col-span-6">
-                          <Label className="text-xs">Payment Method</Label>
+                      <div key={index} className="grid grid-cols-12 gap-1 sm:gap-2 items-end border-b pb-2 sm:pb-3 last:border-b-0">
+                        <div className="col-span-5 sm:col-span-6">
+                          <Label className="text-xs">Method</Label>
                           <Select
                             value={payment.method}
                             onValueChange={(value) =>
                               updatePaymentEntryFromBooking(index, "method", value as SalesPaymentMethod)
                             }
                           >
-                            <SelectTrigger className="h-8">
+                            <SelectTrigger className="h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -857,7 +860,7 @@ export function SalesTransactionDialog({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="col-span-4">
+                        <div className="col-span-6 sm:col-span-5">
                           <Label className="text-xs">Amount (Rp)</Label>
                           <Input
                             type="number"
@@ -867,17 +870,18 @@ export function SalesTransactionDialog({
                             onChange={(e) =>
                               updatePaymentEntryFromBooking(index, "amount", parseFloat(e.target.value) || 0)
                             }
-                            className="h-8"
+                            className="h-8 text-xs"
                           />
                         </div>
-                        <div className="col-span-2 text-right">
+                        <div className="col-span-1 text-center">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => removePaymentEntryFromBooking(index)}
+                            className="h-8 w-8 p-0"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                         {payment.reference && (
@@ -902,7 +906,7 @@ export function SalesTransactionDialog({
 
               {/* Total Payment Summary */}
               {newTransactionFromBooking.payments.length > 0 && (
-                <div className="grid gap-2 p-3 bg-blue-50 rounded-lg text-sm border border-blue-200">
+                <div className="grid gap-2 p-2 sm:p-3 bg-blue-50 rounded-lg text-xs sm:text-sm border border-blue-200 col-span-1 md:col-span-3 lg:col-span-3">
                   <div className="flex justify-between font-semibold text-blue-900">
                     <span>Total Payment:</span>
                     <span>Rp {calculateTotalPayment(newTransactionFromBooking.payments).toLocaleString("id-ID")}</span>
@@ -922,8 +926,8 @@ export function SalesTransactionDialog({
                 </div>
               )}
 
-              <div className="grid gap-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
+              <div className="grid gap-2 col-span-1 md:col-span-3 lg:col-span-3">
+                <Label htmlFor="notes" className="text-xs sm:text-sm font-semibold">Notes (Optional)</Label>
                 <Textarea
                   id="notes"
                   value={newTransactionFromBooking.notes}
@@ -934,6 +938,8 @@ export function SalesTransactionDialog({
                     }))
                   }
                   placeholder="Add any notes..."
+                  rows={2}
+                  className="text-xs sm:text-sm"
                 />
               </div>
               </>
