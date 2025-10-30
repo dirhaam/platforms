@@ -247,7 +247,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
         <div className="invoice-print-wrapper flex justify-center lg:justify-start">
           <div
-            className="invoice-preview invoice-print-area bg-white border rounded-lg px-4 py-6 text-sm space-y-4"
+            className="invoice-preview invoice-print-area bg-white border border-dashed border-gray-300 rounded-lg px-4 py-6 text-sm space-y-4"
             style={{ width: '80mm' }}
             ref={printAreaRef}
           >
@@ -367,7 +367,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
             {invoice.qrCodeData && (
               <div className="border-t border-dashed border-gray-300 pt-3 text-center">
-                <div className="w-28 h-28 mx-auto bg-gray-100 border rounded flex items-center justify-center text-[10px] text-gray-500">
+                <div className="w-28 h-28 mx-auto bg-gray-100 border border-dashed border-gray-300 rounded flex items-center justify-center text-[10px] text-gray-500">
                   QR CODE
                 </div>
                 <p className="mt-2 text-[11px] text-gray-600">Scan untuk membayar</p>
@@ -401,7 +401,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                     </div>
                     );
                   })}
-                  <div className="flex justify-between font-semibold pt-2 mt-2 border-t border-gray-300">
+                  <div className="flex justify-between font-semibold pt-2 mt-2 border-t border-dashed border-gray-200">
                     <span>Total Dibayar</span>
                     <span>{formatCurrency(invoice.paidAmount || 0)}</span>
                   </div>
