@@ -221,31 +221,34 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="invoice-dialog w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex flex-wrap justify-between items-center gap-4">
-            <DialogTitle>Invoice Preview</DialogTitle>
-            <DialogDescription className="sr-only">
-              Pratinjau struk sebelum dicetak atau diunduh
-            </DialogDescription>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={handlePrint}>
+      <DialogContent className="invoice-dialog w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
+            <div>
+              <DialogTitle className="text-2xl">Invoice Preview</DialogTitle>
+              <DialogDescription className="mt-1">
+                Pratinjau struk sebelum dicetak atau diunduh
+              </DialogDescription>
+            </div>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={handlePrint} className="flex-1 sm:flex-none">
                 <Printer className="h-4 w-4 mr-2" />
                 Print
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF} className="flex-1 sm:flex-none">
                 <Download className="h-4 w-4 mr-2" />
-                Download PDF
+                PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadImage}>
+              <Button variant="outline" size="sm" onClick={handleDownloadImage} className="flex-1 sm:flex-none">
                 <ImageDown className="h-4 w-4 mr-2" />
-                Download PNG
+                PNG
               </Button>
             </div>
           </div>
-        </DialogHeader>
 
-        <div className="invoice-print-wrapper flex justify-center lg:justify-start">
+          {/* Invoice Preview */}
+          <div className="invoice-print-wrapper flex justify-center overflow-x-auto bg-gray-50 rounded-lg p-4">
           <div
             className="invoice-preview invoice-print-area bg-white border border-dashed border-gray-300 rounded-lg px-4 py-6 text-sm space-y-4"
             style={{ width: '80mm' }}
@@ -427,6 +430,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
             <div className="border-t border-dashed border-gray-300 pt-3 text-center text-xs text-gray-500">
               <p>{branding?.footerText || 'Terima kasih atas kunjungan Anda!'}</p>
             </div>
+          </div>
           </div>
         </div>
       </DialogContent>
