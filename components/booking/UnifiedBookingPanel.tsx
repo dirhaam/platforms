@@ -255,6 +255,69 @@ export function UnifiedBookingPanel({
     }
   };
 
+  const handleMarkInvoicePaid = async (invoiceId: string) => {
+    if (!onBookingUpdate) return;
+    try {
+      setLoading(true);
+      // Update invoice status via API
+      const response = await fetch(`/api/invoices/${invoiceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          status: InvoiceStatus.PAID
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark invoice as paid');
+      }
+
+      toast.success('Invoice marked as paid');
+      await fetchRelatedData();
+    } catch (error) {
+      console.error('Error marking invoice as paid:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to mark invoice as paid');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadInvoicePDF = async (invoiceId: string, invoiceNumber: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/${invoiceId}/pdf`, {
+        headers: {
+          'x-tenant-id': tenantId
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download invoice');
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Invoice downloaded');
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to download invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const recommended = getRecommendedAction();
   const statusColor = {
     [BookingStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
@@ -491,13 +554,26 @@ export function UnifiedBookingPanel({
                             onClick={() => handleSendInvoiceWhatsApp(invoice.id)}
                             disabled={loading}
                           >
+                            <Send className="h-3 w-3 mr-1" />
                             Send
                           </Button>
                         )}
                         {invoice.status !== InvoiceStatus.PAID && (
-                          <Button size="sm" variant="outline">Mark Paid</Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleMarkInvoicePaid(invoice.id)}
+                            disabled={loading}
+                          >
+                            Mark Paid
+                          </Button>
                         )}
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownloadInvoicePDF(invoice.id, invoice.invoiceNumber)}
+                          disabled={loading}
+                        >
                           <Download className="h-3 w-3 mr-1" />
                           PDF
                         </Button>
