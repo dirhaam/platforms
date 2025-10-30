@@ -170,17 +170,37 @@ export function UnifiedBookingPanel({
   };
 
   const handleRecordPayment = async () => {
-    if (!onBookingUpdate) return;
     try {
-      await onBookingUpdate(booking.id, {
-        paymentStatus: PaymentStatus.PAID,
-        paymentMethod: paymentMethod as any
+      setLoading(true);
+      
+      // Use the payment endpoint to record payment properly
+      const response = await fetch(`/api/bookings/${booking.id}/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          tenantId,
+          paymentAmount: booking.totalAmount - (booking.paidAmount || 0),
+          paymentMethod: paymentMethod,
+          paymentReference: '',
+          notes: 'Payment recorded'
+        })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to record payment');
+      }
+
       toast.success('Payment recorded');
       setShowPaymentDialog(false);
       await fetchRelatedData();
     } catch (error) {
-      toast.error('Failed to record payment');
+      console.error('Error recording payment:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to record payment');
+    } finally {
+      setLoading(false);
     }
   };
 
