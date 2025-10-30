@@ -5,6 +5,7 @@ import { Booking, BookingStatus, PaymentStatus } from '@/types/booking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
@@ -55,6 +56,8 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [invoiceGenerating, setInvoiceGenerating] = useState(false);
   const [showInvoicePrompt, setShowInvoicePrompt] = useState(false);
+  const [selectedSalesTransaction, setSelectedSalesTransaction] = useState<SalesTransaction | null>(null);
+  const [showSalesDetailsDialog, setShowSalesDetailsDialog] = useState(false);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -334,6 +337,30 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       console.error('Error updating booking:', error);
       toast.error('Failed to update booking');
       throw error;
+    }
+  };
+
+  const handleDeleteSalesTransaction = async (transactionId: string) => {
+    if (!resolvedTenantId) return;
+
+    if (!confirm('Yakin ingin menghapus transaksi ini?')) return;
+
+    try {
+      const response = await fetch(`/api/sales/transactions/${transactionId}?tenantId=${encodeURIComponent(resolvedTenantId)}`, {
+        method: 'DELETE',
+        headers: { 'x-tenant-id': resolvedTenantId }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete transaction');
+      }
+
+      setSalesTransactions(prev => prev.filter(t => t.id !== transactionId));
+      await fetchSalesSummary();
+      toast.success('Transaction deleted');
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete transaction');
     }
   };
 
@@ -649,21 +676,21 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => {
-                          // View details logic here
-                          toast.info('View details for transaction: ' + transaction.transactionNumber);
+                          setSelectedSalesTransaction(transaction);
+                          setShowSalesDetailsDialog(true);
                         }}>
                           <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => createInvoiceAndPreview(transaction)}>
+                        <DropdownMenuItem onClick={() => createInvoiceAndPreview(transaction)} disabled={invoiceGenerating}>
                           <Printer className="w-4 h-4 mr-2" />
                           Generate Invoice
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info('Edit functionality coming soon')}>
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem onClick={() => handleDeleteSalesTransaction(transaction.id)} className="text-red-600">
                           <Trash2 className="w-4 h-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -728,6 +755,77 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
               disabled={!invoicePreview}
             >
               Cetak Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sales Transaction Details Dialog */}
+      <Dialog open={showSalesDetailsDialog} onOpenChange={setShowSalesDetailsDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+          </DialogHeader>
+          {selectedSalesTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Transaction #</Label>
+                  <p className="mt-1">{selectedSalesTransaction.transactionNumber}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Date</Label>
+                  <p className="mt-1">
+                    {new Date(selectedSalesTransaction.transactionDate).toLocaleString('id-ID')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Amount</Label>
+                  <p className="mt-1 font-medium">IDR {selectedSalesTransaction.totalAmount.toLocaleString('id-ID')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Payment Method</Label>
+                  <p className="mt-1">{selectedSalesTransaction.paymentMethod.toUpperCase()}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Status</Label>
+                  <Badge className="mt-1 bg-green-100 text-green-800">
+                    {selectedSalesTransaction.status.charAt(0).toUpperCase() + selectedSalesTransaction.status.slice(1)}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Source</Label>
+                  <p className="mt-1">{selectedSalesTransaction.source}</p>
+                </div>
+              </div>
+
+              {selectedSalesTransaction.serviceName && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Service</Label>
+                  <p className="mt-1">{selectedSalesTransaction.serviceName}</p>
+                </div>
+              )}
+
+              {selectedSalesTransaction.notes && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Notes</Label>
+                  <p className="mt-1 text-gray-700">{selectedSalesTransaction.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSalesDetailsDialog(false)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
