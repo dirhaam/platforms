@@ -61,6 +61,7 @@ import {
 } from '@/types/sales';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
+import { SalesTransactionDetailsDialog } from '@/components/sales/SalesTransactionDetailsDialog';
 import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
@@ -631,139 +632,12 @@ export function SalesContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Transaction Details Dialog */}
-      <Dialog open={showTransactionDetailsDialog} onOpenChange={setShowTransactionDetailsDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Transaction Details</DialogTitle>
-          </DialogHeader>
-          {selectedTransaction && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Transaction #</Label>
-                  <p className="mt-1">{selectedTransaction.transactionNumber}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Date</Label>
-                  <p className="mt-1">
-                    {new Date(selectedTransaction.transactionDate).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Service</Label>
-                  <p className="mt-1">{selectedTransaction.serviceName || 'Multiple Services'}</p>
-                  {selectedTransaction.duration && (
-                    <p className="text-xs text-gray-500">Duration: {selectedTransaction.duration} minutes</p>
-                  )}
-                  {selectedTransaction.isHomeVisit && (
-                    <p className="text-xs text-blue-600">Home Visit</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Source</Label>
-                  <p className="mt-1">{getSourceBadge(selectedTransaction.source)}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Status</Label>
-                  <p className="mt-1">{getStatusBadge(selectedTransaction.status)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Payment Method</Label>
-                  <p className="mt-1">{getPaymentMethodBadge(selectedTransaction.paymentMethod)}</p>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <div className="space-y-2">
-                  {selectedTransaction.unitPrice && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Unit Price:</span>
-                      <span>IDR {selectedTransaction.unitPrice.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {selectedTransaction.homeVisitSurcharge && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Home Visit Surcharge:</span>
-                      <span>IDR {selectedTransaction.homeVisitSurcharge.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span>IDR {selectedTransaction.subtotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tax:</span>
-                    <span>IDR {selectedTransaction.taxAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Discount:</span>
-                    <span>-IDR {selectedTransaction.discountAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total:</span>
-                    <span>IDR {selectedTransaction.totalAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Payment Method</Label>
-                  <p className="mt-1">{getPaymentMethodBadge(selectedTransaction.paymentMethod)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Paid Amount</Label>
-                  <p className="mt-1">IDR {selectedTransaction.paidAmount.toLocaleString()}</p>
-                </div>
-              </div>
-
-              {selectedTransaction.scheduledAt && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Scheduled At</Label>
-                    <p className="mt-1">
-                      {new Date(selectedTransaction.scheduledAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {selectedTransaction.completedAt && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Completed At</Label>
-                    <p className="mt-1">
-                      {new Date(selectedTransaction.completedAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {selectedTransaction.notes && (
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Notes</Label>
-                  <p className="mt-1 text-gray-700">{selectedTransaction.notes}</p>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowTransactionDetailsDialog(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Transaction Details Dialog - Reusable Component */}
+      <SalesTransactionDetailsDialog
+        open={showTransactionDetailsDialog}
+        onOpenChange={setShowTransactionDetailsDialog}
+        transaction={selectedTransaction}
+      />
 
       <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>
         <DialogContent className="sm:max-w-[560px]">

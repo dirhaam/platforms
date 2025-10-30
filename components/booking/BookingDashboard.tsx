@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
+import { SalesTransactionDetailsDialog } from '@/components/sales/SalesTransactionDetailsDialog';
 import { SalesTransaction, SalesSummary } from '@/types/sales';
 import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
@@ -760,76 +761,12 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Sales Transaction Details Dialog */}
-      <Dialog open={showSalesDetailsDialog} onOpenChange={setShowSalesDetailsDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Transaction Details</DialogTitle>
-          </DialogHeader>
-          {selectedSalesTransaction && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Transaction #</Label>
-                  <p className="mt-1">{selectedSalesTransaction.transactionNumber}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Date</Label>
-                  <p className="mt-1">
-                    {new Date(selectedSalesTransaction.transactionDate).toLocaleString('id-ID')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Amount</Label>
-                  <p className="mt-1 font-medium">IDR {selectedSalesTransaction.totalAmount.toLocaleString('id-ID')}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Payment Method</Label>
-                  <p className="mt-1">{selectedSalesTransaction.paymentMethod.toUpperCase()}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Status</Label>
-                  <Badge className="mt-1 bg-green-100 text-green-800">
-                    {selectedSalesTransaction.status.charAt(0).toUpperCase() + selectedSalesTransaction.status.slice(1)}
-                  </Badge>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Source</Label>
-                  <p className="mt-1">{selectedSalesTransaction.source}</p>
-                </div>
-              </div>
-
-              {selectedSalesTransaction.serviceName && (
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Service</Label>
-                  <p className="mt-1">{selectedSalesTransaction.serviceName}</p>
-                </div>
-              )}
-
-              {selectedSalesTransaction.notes && (
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Notes</Label>
-                  <p className="mt-1 text-gray-700">{selectedSalesTransaction.notes}</p>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowSalesDetailsDialog(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Sales Transaction Details Dialog - Reusable Component */}
+      <SalesTransactionDetailsDialog
+        open={showSalesDetailsDialog}
+        onOpenChange={setShowSalesDetailsDialog}
+        transaction={selectedSalesTransaction}
+      />
 
       {invoicePreview && (
         <InvoicePreview
