@@ -619,81 +619,111 @@ export function SalesTransactionDialog({
                 </div>
               )}
 
-              {/* Split Payment Section */}
+              {/* Multiple Payment Entries */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Payment Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="paymentMethod">Payment Method *</Label>
-                    <Select
-                      value={newOnTheSpotTransaction.paymentMethod}
-                      onValueChange={(value) =>
-                        setNewOnTheSpotTransaction((prev) => ({
-                          ...prev,
-                          paymentMethod: value as SalesPaymentMethod,
-                        }))
-                      }
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm">Payments *</CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPaymentEntry}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.TRANSFER}>
-                          Transfer
-                        </SelectItem>
-                        <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Payment
+                    </Button>
                   </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="paymentAmount">Payment Amount (Rp) *</Label>
-                    <Input
-                      id="paymentAmount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={newOnTheSpotTransaction.paymentAmount}
-                      onChange={(e) =>
-                        setNewOnTheSpotTransaction((prev) => ({
-                          ...prev,
-                          paymentAmount: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      placeholder="Amount received"
-                    />
-                    {newOnTheSpotTransaction.paymentAmount > 0 &&
-                      newOnTheSpotTransaction.paymentAmount < calculateOnTheSpotTotal() && (
-                        <p className="text-xs text-orange-600">
-                          Remaining: Rp{" "}
-                          {(
-                            calculateOnTheSpotTotal() -
-                            newOnTheSpotTransaction.paymentAmount
-                          ).toLocaleString("id-ID")}
-                        </p>
-                      )}
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="paymentReference">Payment Reference (Optional)</Label>
-                    <Input
-                      id="paymentReference"
-                      value={newOnTheSpotTransaction.paymentReference}
-                      onChange={(e) =>
-                        setNewOnTheSpotTransaction((prev) => ({
-                          ...prev,
-                          paymentReference: e.target.value,
-                        }))
-                      }
-                      placeholder="Receipt/Transaction ID"
-                    />
-                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {newOnTheSpotTransaction.payments.length === 0 ? (
+                    <p className="text-sm text-gray-500">No payments added yet. Click "Add Payment" to add a payment method.</p>
+                  ) : (
+                    newOnTheSpotTransaction.payments.map((payment, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 items-end border-b pb-3 last:border-b-0">
+                        <div className="col-span-6">
+                          <Label className="text-xs">Payment Method</Label>
+                          <Select
+                            value={payment.method}
+                            onValueChange={(value) =>
+                              updatePaymentEntry(index, "method", value as SalesPaymentMethod)
+                            }
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
+                              <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
+                              <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
+                              <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-4">
+                          <Label className="text-xs">Amount (Rp)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={payment.amount}
+                            onChange={(e) =>
+                              updatePaymentEntry(index, "amount", parseFloat(e.target.value) || 0)
+                            }
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePaymentEntry(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {payment.reference && (
+                          <div className="col-span-12">
+                            <Label className="text-xs">Reference</Label>
+                            <Input
+                              type="text"
+                              value={payment.reference}
+                              onChange={(e) =>
+                                updatePaymentEntry(index, "reference", e.target.value)
+                              }
+                              placeholder="Receipt/Transaction ID (Optional)"
+                              className="h-8"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
+
+              {/* Total Payment Summary */}
+              {newOnTheSpotTransaction.payments.length > 0 && (
+                <div className="grid gap-2 p-3 bg-blue-50 rounded-lg text-sm border border-blue-200">
+                  <div className="flex justify-between font-semibold text-blue-900">
+                    <span>Total Payment:</span>
+                    <span>Rp {calculateTotalPayment(newOnTheSpotTransaction.payments).toLocaleString("id-ID")}</span>
+                  </div>
+                  {calculateTotalPayment(newOnTheSpotTransaction.payments) < calculateOnTheSpotTotal() && (
+                    <div className="flex justify-between text-orange-600 text-xs font-medium">
+                      <span>Remaining:</span>
+                      <span>Rp {(calculateOnTheSpotTotal() - calculateTotalPayment(newOnTheSpotTransaction.payments)).toLocaleString("id-ID")}</span>
+                    </div>
+                  )}
+                  {calculateTotalPayment(newOnTheSpotTransaction.payments) > calculateOnTheSpotTotal() && (
+                    <div className="flex justify-between text-red-600 text-xs font-medium">
+                      <span>Overpay:</span>
+                      <span>Rp {(calculateTotalPayment(newOnTheSpotTransaction.payments) - calculateOnTheSpotTotal()).toLocaleString("id-ID")}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid gap-2">
                 <Label htmlFor="notes">Notes (Optional)</Label>
@@ -775,82 +805,111 @@ export function SalesTransactionDialog({
                 />
               </div>
 
-              {/* Split Payment Section */}
+              {/* Multiple Payment Entries */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Payment Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="paymentMethod">Payment Method *</Label>
-                    <Select
-                      value={newTransactionFromBooking.paymentMethod}
-                      onValueChange={(value) =>
-                        setNewTransactionFromBooking((prev) => ({
-                          ...prev,
-                          paymentMethod: value as SalesPaymentMethod,
-                        }))
-                      }
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm">Payments *</CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPaymentEntryFromBooking}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
-                        <SelectItem value={SalesPaymentMethod.TRANSFER}>
-                          Transfer
-                        </SelectItem>
-                        <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Payment
+                    </Button>
                   </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="bookingPaymentAmount">Payment Amount (Rp) *</Label>
-                    <Input
-                      id="bookingPaymentAmount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={newTransactionFromBooking.paymentAmount}
-                      onChange={(e) =>
-                        setNewTransactionFromBooking((prev) => ({
-                          ...prev,
-                          paymentAmount: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      placeholder="Amount received"
-                    />
-                    {newTransactionFromBooking.paymentAmount > 0 &&
-                      newTransactionFromBooking.paymentAmount <
-                        newTransactionFromBooking.totalAmount && (
-                        <p className="text-xs text-orange-600">
-                          Remaining: Rp{" "}
-                          {(
-                            newTransactionFromBooking.totalAmount -
-                            newTransactionFromBooking.paymentAmount
-                          ).toLocaleString("id-ID")}
-                        </p>
-                      )}
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="bookingPaymentReference">Payment Reference (Optional)</Label>
-                    <Input
-                      id="bookingPaymentReference"
-                      value={newTransactionFromBooking.paymentReference}
-                      onChange={(e) =>
-                        setNewTransactionFromBooking((prev) => ({
-                          ...prev,
-                          paymentReference: e.target.value,
-                        }))
-                      }
-                      placeholder="Receipt/Transaction ID"
-                    />
-                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {newTransactionFromBooking.payments.length === 0 ? (
+                    <p className="text-sm text-gray-500">No payments added yet. Click "Add Payment" to add a payment method.</p>
+                  ) : (
+                    newTransactionFromBooking.payments.map((payment, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 items-end border-b pb-3 last:border-b-0">
+                        <div className="col-span-6">
+                          <Label className="text-xs">Payment Method</Label>
+                          <Select
+                            value={payment.method}
+                            onValueChange={(value) =>
+                              updatePaymentEntryFromBooking(index, "method", value as SalesPaymentMethod)
+                            }
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
+                              <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
+                              <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
+                              <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-4">
+                          <Label className="text-xs">Amount (Rp)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={payment.amount}
+                            onChange={(e) =>
+                              updatePaymentEntryFromBooking(index, "amount", parseFloat(e.target.value) || 0)
+                            }
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePaymentEntryFromBooking(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {payment.reference && (
+                          <div className="col-span-12">
+                            <Label className="text-xs">Reference</Label>
+                            <Input
+                              type="text"
+                              value={payment.reference}
+                              onChange={(e) =>
+                                updatePaymentEntryFromBooking(index, "reference", e.target.value)
+                              }
+                              placeholder="Receipt/Transaction ID (Optional)"
+                              className="h-8"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
+
+              {/* Total Payment Summary */}
+              {newTransactionFromBooking.payments.length > 0 && (
+                <div className="grid gap-2 p-3 bg-blue-50 rounded-lg text-sm border border-blue-200">
+                  <div className="flex justify-between font-semibold text-blue-900">
+                    <span>Total Payment:</span>
+                    <span>Rp {calculateTotalPayment(newTransactionFromBooking.payments).toLocaleString("id-ID")}</span>
+                  </div>
+                  {calculateTotalPayment(newTransactionFromBooking.payments) < newTransactionFromBooking.totalAmount && (
+                    <div className="flex justify-between text-orange-600 text-xs font-medium">
+                      <span>Remaining:</span>
+                      <span>Rp {(newTransactionFromBooking.totalAmount - calculateTotalPayment(newTransactionFromBooking.payments)).toLocaleString("id-ID")}</span>
+                    </div>
+                  )}
+                  {calculateTotalPayment(newTransactionFromBooking.payments) > newTransactionFromBooking.totalAmount && (
+                    <div className="flex justify-between text-red-600 text-xs font-medium">
+                      <span>Overpay:</span>
+                      <span>Rp {(calculateTotalPayment(newTransactionFromBooking.payments) - newTransactionFromBooking.totalAmount).toLocaleString("id-ID")}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid gap-2">
                 <Label htmlFor="notes">Notes (Optional)</Label>
