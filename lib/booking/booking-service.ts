@@ -560,6 +560,15 @@ export class BookingService {
     try {
       const supabase = getSupabaseClient();
 
+      console.log('[recordPayment] Input:', {
+        bookingId,
+        tenantId,
+        paymentAmount,
+        paymentMethod,
+        paymentReference,
+        notes
+      });
+
       // Get current booking
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
@@ -569,37 +578,56 @@ export class BookingService {
         .single();
 
       if (bookingError || !booking) {
+        console.error('[recordPayment] Booking not found:', bookingError);
         return { error: 'Booking not found' };
       }
 
-      // Record payment
-      const { error: paymentError } = await supabase
+      console.log('[recordPayment] Current booking:', {
+        paidAmount: booking.paid_amount,
+        totalAmount: booking.total_amount,
+        paymentStatus: booking.payment_status
+      });
+
+      // Record payment in booking_payments table
+      const { data: paymentRecord, error: paymentError } = await supabase
         .from('booking_payments')
         .insert({
           id: randomUUID(),
           booking_id: bookingId,
           tenant_id: tenantId,
-          payment_amount: paymentAmount,
+          payment_amount: Number(paymentAmount),
           payment_method: paymentMethod,
           payment_reference: paymentReference || null,
-          notes: notes || 'Additional payment',
+          notes: notes || 'Payment recorded',
           paid_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        });
+        })
+        .select()
+        .single();
 
       if (paymentError) {
-        console.error('Failed to record payment:', paymentError);
+        console.error('[recordPayment] Failed to record payment in table:', paymentError);
         return { error: 'Failed to record payment' };
       }
 
+      console.log('[recordPayment] Payment recorded:', paymentRecord);
+
       // Calculate new paid amount
-      const currentPaidAmount = booking.paid_amount || 0;
-      const newPaidAmount = currentPaidAmount + paymentAmount;
-      const totalAmount = booking.total_amount;
+      const currentPaidAmount = Number(booking.paid_amount) || 0;
+      const newPaidAmount = currentPaidAmount + Number(paymentAmount);
+      const totalAmount = Number(booking.total_amount);
 
       // Determine new payment status
       const paymentStatus = newPaidAmount >= totalAmount ? 'paid' : 'pending';
+
+      console.log('[recordPayment] Calculating:', {
+        currentPaidAmount,
+        paymentAmount: Number(paymentAmount),
+        newPaidAmount,
+        totalAmount,
+        newPaymentStatus: paymentStatus
+      });
 
       // Update booking with new paid amount and status
       const { data: updatedBooking, error: updateError } = await supabase
@@ -612,17 +640,25 @@ export class BookingService {
           updated_at: new Date().toISOString()
         })
         .eq('id', bookingId)
+        .eq('tenant_id', tenantId)
         .select()
         .single();
 
       if (updateError || !updatedBooking) {
+        console.error('[recordPayment] Failed to update booking:', updateError);
         return { error: 'Failed to update booking' };
       }
+
+      console.log('[recordPayment] Booking updated:', {
+        paidAmount: updatedBooking.paid_amount,
+        paymentStatus: updatedBooking.payment_status,
+        paymentMethod: updatedBooking.payment_method
+      });
 
       return { booking: mapToBooking(updatedBooking) };
     } catch (error) {
       console.error('Error recording payment:', error);
-      return { error: 'Failed to record payment' };
+      return { error: error instanceof Error ? error.message : 'Failed to record payment' };
     }
   }
 }
