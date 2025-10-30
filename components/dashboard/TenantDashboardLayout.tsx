@@ -26,6 +26,7 @@ import {
   User,
   Shield,
   Briefcase,
+  X,
 } from 'lucide-react';
 import type { TenantSession } from '@/lib/auth/types';
 import { RBAC } from '@/lib/auth/rbac';
@@ -104,6 +105,7 @@ export default function TenantDashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Filter navigation items based on user permissions
   const filteredNavigation = navigation.filter((item) => {
@@ -191,30 +193,50 @@ export default function TenantDashboardLayout({
       </Sheet>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+      <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${
+        sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+      }`}>
         <div className="flex min-h-0 flex-1 flex-col bg-white border-r border-gray-200">
-          <div className="flex h-16 items-center px-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Dashboard</h2>
+          <div className={`flex h-16 items-center border-b border-gray-200 transition-all duration-300 ${
+            sidebarCollapsed ? 'px-3 justify-center' : 'px-6'
+          }`}>
+            {!sidebarCollapsed && (
+              <h2 className="text-lg font-semibold text-gray-900">Dashboard</h2>
+            )}
+            {sidebarCollapsed && (
+              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                D
+              </div>
+            )}
           </div>
-          <nav className="flex-1 space-y-1 px-3 py-4">
+          <nav className={`flex-1 space-y-1 transition-all duration-300 ${
+            sidebarCollapsed ? 'px-2 py-3' : 'px-3 py-4'
+          }`}>
             {filteredNavigation.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  title={sidebarCollapsed ? item.name : undefined}
+                  className={`group flex items-center rounded-md transition-all duration-300 ${
+                    sidebarCollapsed 
+                      ? 'justify-center w-10 h-10 p-0' 
+                      : 'px-3 py-2 text-sm font-medium'
+                  } ${
                     isActive
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
                   <item.icon
-                    className={`mr-3 h-5 w-5 ${
+                    className={`w-5 h-5 flex-shrink-0 ${
                       isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
                     }`}
                   />
-                  {item.name}
+                  {!sidebarCollapsed && (
+                    <span className="ml-3">{item.name}</span>
+                  )}
                 </Link>
               );
             })}
@@ -223,7 +245,9 @@ export default function TenantDashboardLayout({
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`transition-all duration-300 ${
+        sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+      }`}>
         {/* Top navigation */}
         <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <Button 
@@ -236,7 +260,20 @@ export default function TenantDashboardLayout({
           </Button>
 
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            <div className="flex flex-1"></div>
+            <div className="hidden lg:flex flex-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden lg:flex text-gray-600 hover:text-gray-900"
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? (
+                <Menu className="h-5 w-5" />
+              ) : (
+                <X className="h-5 w-5" />
+              )}
+            </Button>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               {/* User menu */}
               <DropdownMenu>
