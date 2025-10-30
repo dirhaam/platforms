@@ -127,13 +127,18 @@ export class InvoiceService {
         try {
           const { error: updateError } = await supabase
             .from('invoices')
-            .update({ paid_amount: paidAmount, updated_at: new Date().toISOString() })
+            .update({ 
+              paid_amount: paidAmount,
+              updated_at: new Date().toISOString() 
+            })
             .eq('id', invoiceId)
             .eq('tenant_id', tenantId);
 
           if (updateError) {
             console.warn('[InvoiceService] Warning: Could not update paid_amount:', updateError.message);
             // Don't throw - continue anyway, paid_amount update is optional
+          } else {
+            console.log(`[InvoiceService] Updated invoice ${invoiceId} paid_amount to ${paidAmount}`);
           }
         } catch (e) {
           console.warn('[InvoiceService] Warning: Error updating paid_amount:', e);
@@ -141,7 +146,17 @@ export class InvoiceService {
         }
       }
 
-      return this.getInvoiceById(tenantId, invoiceId) as Promise<Invoice>;
+      const finalInvoice = await this.getInvoiceById(tenantId, invoiceId) as Invoice;
+      
+      // Log for debugging
+      console.log(`[InvoiceService] Invoice created successfully:`, {
+        invoiceId: finalInvoice.id,
+        status: finalInvoice.status,
+        totalAmount: finalInvoice.totalAmount,
+        paidAmount: finalInvoice.paidAmount,
+      });
+
+      return finalInvoice;
     } catch (error) {
       console.error('Error creating invoice:', error);
       throw error;
