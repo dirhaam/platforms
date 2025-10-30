@@ -265,7 +265,15 @@ export class InvoiceService {
       }
 
       // Process payment history
+      console.log(`[InvoiceService] Processing payment history for invoice ${invoiceId}:`, {
+        paymentsResultExists: !!paymentsResult,
+        isArray: Array.isArray(paymentsResult?.data),
+        length: paymentsResult?.data?.length,
+      });
+
       if (paymentsResult && Array.isArray(paymentsResult.data) && paymentsResult.data.length > 0) {
+        console.log(`[InvoiceService] Found ${paymentsResult.data.length} payment record(s):`, paymentsResult.data);
+        
         baseInvoice.paymentHistory = paymentsResult.data.map((payment: any) => ({
           id: payment.id,
           invoiceId,
@@ -284,6 +292,8 @@ export class InvoiceService {
           0
         );
         
+        console.log(`[InvoiceService] Total paid from history: ${totalPaid}, DB paid_amount: ${baseInvoice.paidAmount}`);
+        
         // Override paidAmount from payment history if it's more accurate
         const dbPaidAmount = baseInvoice.paidAmount || 0;
         if (totalPaid > dbPaidAmount) {
@@ -296,6 +306,7 @@ export class InvoiceService {
         
         baseInvoice.remainingBalance = baseInvoice.totalAmount - (baseInvoice.paidAmount || 0);
       } else {
+        console.log(`[InvoiceService] No payment history found for invoice ${invoiceId}`);
         baseInvoice.remainingBalance = baseInvoice.totalAmount - (baseInvoice.paidAmount || 0);
       }
 
