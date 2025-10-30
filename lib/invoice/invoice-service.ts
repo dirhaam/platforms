@@ -84,11 +84,6 @@ export class InvoiceService {
         updated_at: nowIso,
       };
 
-      // Add paid_amount only if provided (requires migration 0010)
-      if (paidAmount !== undefined && paidAmount > 0) {
-        insertData.paid_amount = paidAmount;
-      }
-
       const { error } = await supabase
         .from('invoices')
         .insert(insertData);
@@ -124,6 +119,25 @@ export class InvoiceService {
         if (itemsError) {
           console.error('Error creating invoice items:', itemsError);
           throw itemsError;
+        }
+      }
+
+      // Update paid_amount if provided (after invoice is created)
+      if (paidAmount !== undefined && paidAmount > 0) {
+        try {
+          const { error: updateError } = await supabase
+            .from('invoices')
+            .update({ paid_amount: paidAmount, updated_at: new Date().toISOString() })
+            .eq('id', invoiceId)
+            .eq('tenant_id', tenantId);
+
+          if (updateError) {
+            console.warn('[InvoiceService] Warning: Could not update paid_amount:', updateError.message);
+            // Don't throw - continue anyway, paid_amount update is optional
+          }
+        } catch (e) {
+          console.warn('[InvoiceService] Warning: Error updating paid_amount:', e);
+          // Don't throw - continue anyway
         }
       }
 
