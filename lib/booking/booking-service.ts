@@ -134,6 +134,14 @@ export class BookingService {
       const dpAmount = data.dpAmount || 0;
       const paidAmount = dpAmount > 0 ? dpAmount : 0;
 
+      // Determine payment_status based on paid amount
+      let paymentStatus = 'pending';
+      if (paidAmount >= totalAmount) {
+        paymentStatus = 'paid';
+      } else if (paidAmount > 0) {
+        paymentStatus = 'partial';
+      }
+
       // Create the booking
       const bookingId = randomUUID();
       const now = new Date();
@@ -155,6 +163,7 @@ export class BookingService {
           notes: data.notes,
           total_amount: totalAmount,
           status: BookingStatus.PENDING,
+          payment_status: paymentStatus,
           reminders_sent: [],
           dp_amount: dpAmount,
           paid_amount: paidAmount,
