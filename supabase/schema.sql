@@ -129,9 +129,9 @@ CREATE INDEX IF NOT EXISTS booking_payments_paid_at_idx ON booking_payments(paid
 
 -- Booking History table (audit log for all booking events)
 CREATE TABLE IF NOT EXISTS booking_history (
-    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
-    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     action TEXT NOT NULL,
     description TEXT,
     actor TEXT DEFAULT 'System',
