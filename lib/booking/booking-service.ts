@@ -12,6 +12,7 @@ import {
   BookingStatus 
 } from '@/types/booking';
 import { validateBookingTime, validateBusinessHours } from '@/lib/validation/booking-validation';
+import { randomUUID as cryptoRandomUUID } from 'crypto';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -21,10 +22,21 @@ const getSupabaseClient = () => {
 };
 
 const randomUUID = () => {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
+  try {
+    // Try Node.js crypto module first (server-side)
+    return cryptoRandomUUID();
+  } catch (e) {
+    try {
+      // Fallback to globalThis.crypto (browser or modern Node.js)
+      if (typeof globalThis.crypto?.randomUUID === 'function') {
+        return globalThis.crypto.randomUUID();
+      }
+    } catch (e2) {
+      // Last resort: generate UUID-like string
+      console.warn('[randomUUID] Falling back to generated UUID-like string');
+      return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${Math.random().toString(36).substring(2, 15)}`;
+    }
   }
-  return Math.random().toString(36).slice(2);
 };
 
 // Map database snake_case fields to camelCase Booking interface
@@ -177,24 +189,46 @@ export class BookingService {
       
       // Record initial DP payment if provided
       if (dpAmount > 0 && data.paymentMethod) {
-        const { error: paymentError } = await supabase
+        const paymentId = randomUUID();
+        console.log('[BookingService.createBooking] Recording initial DP payment:', {
+          paymentId,
+          bookingId,
+          tenantId,
+          dpAmount,
+          paymentMethod: data.paymentMethod
+        });
+
+        const { error: paymentError, data: paymentData } = await supabase
           .from('booking_payments')
           .insert({
-            id: randomUUID(),
+            id: paymentId,
             booking_id: bookingId,
             tenant_id: tenantId,
-            payment_amount: dpAmount,
+            payment_amount: Number(dpAmount),
             payment_method: data.paymentMethod,
             payment_reference: data.paymentReference || null,
             notes: 'Down Payment (DP)',
             paid_at: new Date().toISOString(),
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          });
+          })
+          .select();
         
         if (paymentError) {
-          console.error('Failed to record DP payment:', paymentError);
+          console.error('[BookingService.createBooking] Failed to record DP payment:', {
+            error: paymentError.message,
+            code: paymentError.code,
+            details: paymentError.details,
+            hint: paymentError.hint,
+            bookingId,
+            dpAmount
+          });
           // Don't fail the booking creation, just log the error
+        } else {
+          console.log('[BookingService.createBooking] DP payment recorded successfully:', {
+            paymentId,
+            paymentData
+          });
         }
       }
       
