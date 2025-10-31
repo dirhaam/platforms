@@ -140,7 +140,6 @@ export function SalesTransactionPanel({
       }
 
       toast.success('Invoice sent via WhatsApp');
-      await fetchRelatedData();
     } catch (error) {
       console.error('Error sending invoice:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send invoice');
