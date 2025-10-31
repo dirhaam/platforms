@@ -139,12 +139,33 @@ export function UnifiedBookingPanel({
         setPaymentHistory(booking.paymentHistory || []);
       }
 
-      // Mock history data (in production, fetch from audit log)
-      setHistory([
-        { timestamp: booking.createdAt, action: 'Booking created', actor: 'System' },
-        { timestamp: new Date(booking.createdAt.getTime() + 5 * 60000), action: 'Status updated to CONFIRMED', actor: 'Admin' },
-        { timestamp: new Date(booking.createdAt.getTime() + 10 * 60000), action: 'Payment recorded', actor: 'Admin', details: 'CASH' }
-      ]);
+      // Fetch real booking history
+      try {
+        const historyUrl = new URL(`/api/bookings/${booking.id}/history`, window.location.origin);
+        historyUrl.searchParams.set('tenantId', tenantId);
+        const historyRes = await fetch(historyUrl.toString(), {
+          headers: { 'x-tenant-id': tenantId }
+        });
+        
+        if (historyRes.ok) {
+          const historyData = await historyRes.json();
+          if (historyData.history && Array.isArray(historyData.history)) {
+            const mappedHistory = historyData.history.map((event: any) => ({
+              timestamp: new Date(event.createdAt),
+              action: event.description || event.action,
+              actor: event.actor,
+              details: event.metadata ? JSON.stringify(event.metadata) : undefined
+            }));
+            setHistory(mappedHistory);
+          }
+        } else {
+          console.warn('[BookingDetailsDrawer] History fetch failed:', historyRes.status);
+          setHistory([]);
+        }
+      } catch (error) {
+        console.error('Error fetching booking history:', error);
+        setHistory([]);
+      }
     } catch (error) {
       console.error('Error fetching related data:', error);
     } finally {

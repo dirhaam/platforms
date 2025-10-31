@@ -127,6 +127,27 @@ CREATE INDEX IF NOT EXISTS booking_payments_booking_id_idx ON booking_payments(b
 CREATE INDEX IF NOT EXISTS booking_payments_tenant_id_idx ON booking_payments(tenant_id);
 CREATE INDEX IF NOT EXISTS booking_payments_paid_at_idx ON booking_payments(paid_at);
 
+-- Booking History table (audit log for all booking events)
+CREATE TABLE IF NOT EXISTS booking_history (
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    action TEXT NOT NULL,
+    description TEXT,
+    actor TEXT DEFAULT 'System',
+    actor_type TEXT DEFAULT 'system',
+    old_values JSONB,
+    new_values JSONB,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for booking_history
+CREATE INDEX IF NOT EXISTS booking_history_booking_id_idx ON booking_history(booking_id);
+CREATE INDEX IF NOT EXISTS booking_history_tenant_id_idx ON booking_history(tenant_id);
+CREATE INDEX IF NOT EXISTS booking_history_created_at_idx ON booking_history(created_at);
+CREATE INDEX IF NOT EXISTS booking_history_action_idx ON booking_history(action);
+
 -- Staff table
 CREATE TABLE IF NOT EXISTS staff (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),

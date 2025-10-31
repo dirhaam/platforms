@@ -12,6 +12,7 @@ import {
   BookingStatus 
 } from '@/types/booking';
 import { validateBookingTime, validateBusinessHours } from '@/lib/validation/booking-validation';
+import { BookingHistoryService } from '@/lib/booking/booking-history-service';
 import { randomUUID as cryptoRandomUUID } from 'crypto';
 
 const getSupabaseClient = () => {
@@ -307,6 +308,15 @@ export class BookingService {
           })
           .eq('id', data.customerId);
       }
+      
+      // Log booking created event
+      await BookingHistoryService.logBookingCreated(tenantId, bookingId, {
+        bookingNumber,
+        totalAmount,
+        dpAmount,
+        serviceId: data.serviceId,
+        paymentMethod: data.paymentMethod
+      });
       
       return { booking: mapToBooking(booking) };
     } catch (error) {
@@ -719,6 +729,14 @@ export class BookingService {
         paidAmount: updatedBooking.paid_amount,
         paymentStatus: updatedBooking.payment_status,
         paymentMethod: updatedBooking.payment_method
+      });
+
+      // Log payment recorded event
+      await BookingHistoryService.logPaymentRecorded(tenantId, bookingId, {
+        paymentAmount,
+        paymentMethod: paymentMethod || 'unknown',
+        notes: notes || '',
+        isDownPayment: false
       });
 
       return { booking: mapToBooking(updatedBooking) };
