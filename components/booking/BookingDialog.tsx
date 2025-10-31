@@ -115,7 +115,7 @@ export default function BookingDialog({
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: keyof BookingFormData, value: string | boolean) => {
+  const handleInputChange = (field: keyof BookingFormData, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
