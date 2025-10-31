@@ -136,10 +136,14 @@ export class BookingService {
 
       // Create the booking
       const bookingId = randomUUID();
+      const now = new Date();
+      const bookingNumber = `BK-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
       const { data: newBooking, error: insertError } = await supabase
         .from('bookings')
         .insert({
           id: bookingId,
+          booking_number: bookingNumber,
           tenant_id: tenantId,
           customer_id: data.customerId,
           service_id: data.serviceId,
@@ -156,8 +160,8 @@ export class BookingService {
           paid_amount: paidAmount,
           payment_method: data.paymentMethod || null,
           payment_reference: data.paymentReference || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: now.toISOString(),
+          updated_at: now.toISOString()
         })
         .select()
         .single();
