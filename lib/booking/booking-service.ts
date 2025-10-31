@@ -638,8 +638,13 @@ export class BookingService {
       const newPaidAmount = currentPaidAmount + Number(paymentAmount);
       const totalAmount = Number(booking.total_amount);
 
-      // Determine new payment status
-      const paymentStatus = newPaidAmount >= totalAmount ? 'paid' : 'pending';
+      // Determine new payment status based on paid amount
+      let paymentStatus = 'pending';
+      if (newPaidAmount >= totalAmount) {
+        paymentStatus = 'paid';
+      } else if (newPaidAmount > 0) {
+        paymentStatus = 'partial';
+      }
 
       console.log('[recordPayment] Calculating:', {
         currentPaidAmount,
