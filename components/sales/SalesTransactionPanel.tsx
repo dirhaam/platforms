@@ -278,31 +278,33 @@ export function SalesTransactionPanel({
               </Card>
             </div>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold">Customer Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {transaction.customerName && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Name:</span>
-                    <span className="font-medium">{transaction.customerName}</span>
-                  </div>
-                )}
-                {transaction.customerEmail && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Email:</span>
-                    <span className="font-medium text-xs">{transaction.customerEmail}</span>
-                  </div>
-                )}
-                {transaction.customerPhone && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Phone:</span>
-                    <span className="font-medium">{transaction.customerPhone}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {transaction.customer && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">Customer Info</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {transaction.customer.name && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Name:</span>
+                      <span className="font-medium">{transaction.customer.name}</span>
+                    </div>
+                  )}
+                  {transaction.customer.email && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Email:</span>
+                      <span className="font-medium text-xs">{transaction.customer.email}</span>
+                    </div>
+                  )}
+                  {transaction.customer.phone && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Phone:</span>
+                      <span className="font-medium">{transaction.customer.phone}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader className="pb-2">
