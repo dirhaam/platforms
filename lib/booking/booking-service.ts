@@ -310,13 +310,15 @@ export class BookingService {
       }
       
       // Log booking created event
-      await BookingHistoryService.logBookingCreated(tenantId, bookingId, {
-        bookingNumber,
-        totalAmount,
-        dpAmount,
-        serviceId: data.serviceId,
-        paymentMethod: data.paymentMethod
-      });
+      if (bookingId) {
+        await BookingHistoryService.logBookingCreated(tenantId, bookingId, {
+          bookingNumber,
+          totalAmount,
+          dpAmount,
+          serviceId: data.serviceId,
+          paymentMethod: data.paymentMethod
+        });
+      }
       
       return { booking: mapToBooking(booking) };
     } catch (error) {
@@ -732,12 +734,14 @@ export class BookingService {
       });
 
       // Log payment recorded event
-      await BookingHistoryService.logPaymentRecorded(tenantId, bookingId, {
-        paymentAmount,
-        paymentMethod: paymentMethod || 'unknown',
-        notes: notes || '',
-        isDownPayment: false
-      });
+      if (bookingId) {
+        await BookingHistoryService.logPaymentRecorded(tenantId, bookingId, {
+          paymentAmount,
+          paymentMethod: paymentMethod || 'unknown',
+          notes: notes || '',
+          isDownPayment: false
+        });
+      }
 
       return { booking: mapToBooking(updatedBooking) };
     } catch (error) {
