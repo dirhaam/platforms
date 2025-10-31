@@ -25,11 +25,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+
 import {
   TrendingUp,
   DollarSign,
@@ -38,9 +34,6 @@ import {
   Plus,
   Search,
   Filter,
-  MoreVertical,
-  Edit,
-  Trash2,
   Eye,
   Calendar,
   Download,
@@ -49,7 +42,6 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Printer,
 } from 'lucide-react';
 import {
   SalesTransaction,
@@ -61,7 +53,7 @@ import {
 } from '@/types/sales';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
-import { SalesTransactionDetailsDialog } from '@/components/sales/SalesTransactionDetailsDialog';
+import { SalesTransactionPanel } from '@/components/sales/SalesTransactionPanel';
 import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
@@ -210,29 +202,7 @@ export function SalesContent() {
     }
   }, [tenantId, fetchTransactions, fetchSummary]);
 
-  // Delete transaction
-  const handleDeleteTransaction = async (transactionId: string) => {
-    if (!tenantId) return;
 
-    if (!confirm('Are you sure you want to delete this transaction?')) return;
-
-    try {
-      setError(null);
-      const response = await fetch(`/api/sales/transactions/${transactionId}?tenantId=${tenantId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete transaction');
-      }
-
-      setTransactions(transactions.filter(t => t.id !== transactionId));
-      await fetchSummary();
-    } catch (error) {
-      console.error('Error deleting transaction:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete transaction');
-    }
-  };
 
   // Get status badge
   const getStatusBadge = (status: SalesTransactionStatus) => {
@@ -571,42 +541,17 @@ export function SalesContent() {
                 transactions={filteredTransactions}
                 emptyMessage="No transactions found"
                 renderActions={(transaction) => (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSelectedTransaction(transaction);
-                          setShowTransactionDetailsDialog(true);
-                        }}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => createInvoiceAndPreview(transaction)}
-                        disabled={invoiceGenerating}
-                      >
-                        <Printer className="w-4 h-4 mr-2" />
-                        Generate Invoice
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteTransaction(transaction.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedTransaction(transaction);
+                      setShowTransactionDetailsDialog(true);
+                    }}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View
+                  </Button>
                 )}
               />
             </CardContent>
@@ -632,11 +577,12 @@ export function SalesContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Transaction Details Dialog - Reusable Component */}
-      <SalesTransactionDetailsDialog
+      {/* Transaction Details Panel - Reusable Component */}
+      <SalesTransactionPanel
+        transaction={selectedTransaction}
+        tenantId={tenantId}
         open={showTransactionDetailsDialog}
         onOpenChange={setShowTransactionDetailsDialog}
-        transaction={selectedTransaction}
       />
 
       <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>
