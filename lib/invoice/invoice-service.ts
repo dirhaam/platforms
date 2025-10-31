@@ -224,26 +224,58 @@ export class InvoiceService {
           .eq('id', tenantId)
           .limit(1)
           .single(),
-        // Query payments from sales_transaction_payments (if this invoice is from a sales transaction)
-        Promise.resolve(
-          supabase
+        // Query payments: first check if booking invoice, then sales transaction
+        (async () => {
+          // Check if this is a booking invoice
+          if (data.booking_id || data.bookingId) {
+            const bookingId = data.booking_id || data.bookingId;
+            const bookingPayments = await supabase
+              .from('booking_payments')
+              .select('*')
+              .eq('booking_id', bookingId)
+              .eq('tenant_id', tenantId)
+              .order('paid_at', { ascending: true });
+            
+            if (bookingPayments.data && bookingPayments.data.length > 0) {
+              console.log(`[InvoiceService.getInvoiceById] 📋 Found ${bookingPayments.data.length} booking payment(s)`, {
+                invoiceId,
+                bookingId,
+                payments: bookingPayments.data.map(p => ({
+                  amount: p.payment_amount,
+                  method: p.payment_method,
+                  date: p.paid_at
+                }))
+              });
+              return bookingPayments;
+            }
+          }
+          
+          // Check if this is a sales transaction invoice
+          const transResult = await supabase
             .from('sales_transactions')
             .select('id')
             .eq('invoice_id', invoiceId)
             .limit(1)
-            .single()
-        )
-          .then(async (transResult) => {
-            if (transResult.data?.id) {
-              return supabase
-                .from('sales_transaction_payments')
-                .select('*')
-                .eq('sales_transaction_id', transResult.data.id)
-                .order('paid_at', { ascending: true });
+            .single();
+            
+          if (transResult.data?.id) {
+            const salesPayments = await supabase
+              .from('sales_transaction_payments')
+              .select('*')
+              .eq('sales_transaction_id', transResult.data.id)
+              .order('paid_at', { ascending: true });
+            
+            if (salesPayments.data && salesPayments.data.length > 0) {
+              console.log(`[InvoiceService.getInvoiceById] 💳 Found ${salesPayments.data.length} sales payment(s)`, {
+                invoiceId,
+                transactionId: transResult.data.id
+              });
             }
-            return { data: null, error: null };
-          })
-          .catch(() => ({ data: null, error: null })),
+            return salesPayments;
+          }
+          
+          return { data: null, error: null };
+        })(),
       ]);
 
       if (!itemsResult.error && Array.isArray(itemsResult.data)) {
