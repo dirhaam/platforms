@@ -33,38 +33,27 @@ export function SalesTransactionPanel({
 
   if (!transaction) return null;
 
-  useEffect(() => {
-    if (open) {
-      fetchRelatedData();
+  // Initialize payment history and invoices from transaction data
+  React.useMemo(() => {
+    // Use payment data from transaction (already fetched from API)
+    if (transaction.payments && Array.isArray(transaction.payments)) {
+      const mappedPayments = transaction.payments.map((p: any) => ({
+        id: p.id,
+        paymentAmount: p.paymentAmount,
+        paymentMethod: p.paymentMethod,
+        paymentReference: p.paymentReference,
+        notes: p.notes,
+        paidAt: p.paidAt,
+        createdAt: p.createdAt
+      }));
+      setPaymentHistory(mappedPayments);
+    } else {
+      setPaymentHistory([]);
     }
-  }, [transaction?.id, open]);
-
-  const fetchRelatedData = async () => {
-    try {
-      setLoading(true);
-
-      // Use payment data from transaction (sales_transaction_payments already fetched)
-      if (transaction.payments && Array.isArray(transaction.payments)) {
-        const mappedPayments = transaction.payments.map((p: any) => ({
-          id: p.id,
-          paymentAmount: p.paymentAmount,
-          paymentMethod: p.paymentMethod,
-          paymentReference: p.paymentReference,
-          notes: p.notes,
-          paidAt: p.paidAt,
-          createdAt: p.createdAt
-        }));
-        setPaymentHistory(mappedPayments);
-      }
-      
-      // Invoices will be empty until generated
-      setInvoices([]);
-    } catch (error) {
-      console.error('Error fetching related data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    
+    // Invoices will be empty until generated
+    setInvoices([]);
+  }, [transaction.id]);
 
   const handleGenerateInvoice = async () => {
     try {
