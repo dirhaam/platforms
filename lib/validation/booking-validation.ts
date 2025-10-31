@@ -12,7 +12,9 @@ export const createBookingSchema = z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180)
   }).optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  paymentMethod: z.enum(['cash', 'card', 'transfer', 'qris']).optional().default('cash'),
+  dpAmount: z.number().min(0).optional().default(0)
 }).refine((data: any) => {
   // If it's a home visit, address is required
   if (data.isHomeVisit && !data.homeVisitAddress) {

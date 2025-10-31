@@ -543,6 +543,65 @@ export default function BookingDialog({
               />
             </div>
 
+            {/* Payment Information */}
+            <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold">Payment Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="paymentMethod">Payment Method *</Label>
+                  <select
+                    id="paymentMethod"
+                    value={formData.paymentMethod || 'cash'}
+                    onChange={(e) => handleInputChange('paymentMethod', e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="cash">💵 Cash</option>
+                    <option value="card">💳 Credit/Debit Card</option>
+                    <option value="transfer">🏦 Bank Transfer</option>
+                    <option value="qris">📱 QRIS</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">How would you like to pay?</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="dpAmount">Down Payment (DP) - Optional</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="dpAmount"
+                      type="number"
+                      min="0"
+                      max={Number(calculateTotal())}
+                      value={formData.dpAmount || 0}
+                      onChange={(e) => handleInputChange('dpAmount', parseInt(e.target.value) || 0)}
+                      placeholder="Enter DP amount (IDR)"
+                    />
+                    <div className="flex items-center justify-center px-3 py-2 bg-gray-100 rounded-md border border-gray-300 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                      / {Number(calculateTotal()).toLocaleString('id-ID')}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Leave empty or 0 for no down payment</p>
+                </div>
+              </div>
+
+              {formData.dpAmount && formData.dpAmount > 0 && (
+                <div className="bg-white p-3 rounded border border-blue-300">
+                  <div className="flex justify-between text-sm">
+                    <span>Total Service Amount:</span>
+                    <span className="font-semibold">IDR {Number(calculateTotal()).toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span>Down Payment:</span>
+                    <span className="font-semibold text-blue-600">IDR {Number(formData.dpAmount).toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1 pt-1 border-t border-gray-200">
+                    <span>Remaining Balance:</span>
+                    <span className="font-semibold text-orange-600">IDR {Number(calculateTotal() - (formData.dpAmount || 0)).toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Action Buttons */}
             <div className="flex space-x-3">
               <Button 
