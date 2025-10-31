@@ -617,6 +617,27 @@ export class InvoiceService {
         throw new Error('Booking not found');
       }
 
+      // Fetch payment history for this booking
+      const { data: paymentHistory, error: paymentError } = await supabase
+        .from('booking_payments')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .eq('tenant_id', tenantId)
+        .order('paid_at', { ascending: true });
+
+      if (!paymentError && paymentHistory) {
+        console.log('[InvoiceService.createInvoiceFromBooking] Payment history found:', {
+          bookingId,
+          paymentCount: paymentHistory.length,
+          payments: paymentHistory.map(p => ({
+            amount: p.payment_amount,
+            method: p.payment_method,
+            date: p.paid_at,
+            notes: p.notes
+          }))
+        });
+      }
+
       const customerId = booking.customer_id;
       const serviceId = booking.service_id;
       const totalAmount = parseDecimal(booking.total_amount);
@@ -661,7 +682,8 @@ export class InvoiceService {
         bookingPaymentStatus,
         paidAmount,
         totalAmount,
-        initialStatus
+        initialStatus,
+        paymentHistoryCount: paymentHistory?.length || 0
       });
 
       return this.createInvoice(tenantId, invoiceData, initialStatus, paidAmount > 0 ? paidAmount : undefined);
