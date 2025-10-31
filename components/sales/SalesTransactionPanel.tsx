@@ -44,17 +44,15 @@ export function SalesTransactionPanel({
       setLoading(true);
 
       // Fetch invoices
+      // Note: Invoices from sales transactions are not directly linked back to the transaction
+      // They will appear here once generated from this transaction
       const invoicesUrl = new URL('/api/invoices', window.location.origin);
       invoicesUrl.searchParams.set('tenantId', tenantId);
       const invoicesRes = await fetch(invoicesUrl.toString());
       if (invoicesRes.ok) {
         const invoicesData = await invoicesRes.json();
-        // Filter invoices by transaction ID (not by bookingId since sales doesn't have bookingId)
-        const relatedInvoices = invoicesData.invoices?.filter(
-          (inv: Invoice) => inv.metadata?.sourceTransactionId === transaction.id || 
-                           inv.metadata?.salesTransactionId === transaction.id
-        ) || [];
-        setInvoices(relatedInvoices);
+        // For now, just set empty - invoices will be fetched/shown when generated
+        setInvoices([]);
       }
 
       // Use payment data from transaction (sales_transaction_payments already fetched)
