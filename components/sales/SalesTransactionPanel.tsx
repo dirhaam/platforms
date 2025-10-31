@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SalesTransaction } from '@/types/sales';
 import { Invoice, InvoiceStatus } from '@/types/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,13 +33,7 @@ export function SalesTransactionPanel({
 
   if (!transaction) return null;
 
-  useEffect(() => {
-    if (open) {
-      fetchRelatedData();
-    }
-  }, [transaction?.id, open]);
-
-  const fetchRelatedData = async () => {
+  const fetchRelatedData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -73,7 +67,13 @@ export function SalesTransactionPanel({
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, transaction.payments]);
+
+  useEffect(() => {
+    if (open) {
+      fetchRelatedData();
+    }
+  }, [transaction?.id, open, fetchRelatedData]);
 
   const handleGenerateInvoice = async () => {
     try {
