@@ -186,7 +186,14 @@ export class BookingService {
       }
       
       if (insertError || !newBooking) {
-        return { error: 'Failed to create booking' };
+        console.error('[BookingService.createBooking] Insert failed:', {
+          insertError,
+          newBooking,
+          paymentMethod: data.paymentMethod,
+          dpAmount,
+          paidAmount
+        });
+        return { error: `Failed to create booking: ${insertError?.message || 'Unknown error'}` };
       }
       
       // Get the created booking with customer and service data
