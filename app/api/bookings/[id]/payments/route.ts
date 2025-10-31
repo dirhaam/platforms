@@ -118,7 +118,28 @@ export async function GET(
       .order('paid_at', { ascending: true });
 
     if (paymentsError) {
-      console.error('Error fetching payments:', paymentsError);
+      console.error('[GET /api/bookings/{id}/payments] ❌ Error fetching payments:', {
+        bookingId,
+        tenantId,
+        error: paymentsError.message,
+        code: paymentsError.code,
+        details: paymentsError.details
+      });
+    } else {
+      console.log('[GET /api/bookings/{id}/payments] ✅ Payment history fetched:', {
+        bookingId,
+        bookingStatus: booking.status,
+        paymentStatus: booking.paymentStatus,
+        totalAmount: booking.totalAmount,
+        paidAmount: booking.paidAmount,
+        paymentCount: payments?.length || 0,
+        payments: payments?.map(p => ({
+          amount: p.payment_amount,
+          method: p.payment_method,
+          notes: p.notes,
+          date: p.paid_at
+        })) || []
+      });
     }
 
     return NextResponse.json({

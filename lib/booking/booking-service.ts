@@ -190,45 +190,51 @@ export class BookingService {
       // Record initial DP payment if provided
       if (dpAmount > 0 && data.paymentMethod) {
         const paymentId = randomUUID();
-        console.log('[BookingService.createBooking] Recording initial DP payment:', {
+        const dpPaymentRecord = {
+          id: paymentId,
+          booking_id: bookingId,
+          tenant_id: tenantId,
+          payment_amount: Number(dpAmount),
+          payment_method: data.paymentMethod,
+          payment_reference: data.paymentReference || null,
+          notes: 'Down Payment (DP)',
+          paid_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('[BookingService.createBooking] Attempting to record DP payment:', {
           paymentId,
           bookingId,
           tenantId,
           dpAmount,
-          paymentMethod: data.paymentMethod
+          paymentMethod: data.paymentMethod,
+          payload: dpPaymentRecord
         });
 
-        const { error: paymentError, data: paymentData } = await supabase
+        const { error: paymentError, data: paymentData, status: paymentStatus } = await supabase
           .from('booking_payments')
-          .insert({
-            id: paymentId,
-            booking_id: bookingId,
-            tenant_id: tenantId,
-            payment_amount: Number(dpAmount),
-            payment_method: data.paymentMethod,
-            payment_reference: data.paymentReference || null,
-            notes: 'Down Payment (DP)',
-            paid_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .insert([dpPaymentRecord])
           .select()
           .single();
         
         if (paymentError) {
-          console.error('[BookingService.createBooking] Failed to record DP payment:', {
+          console.error('[BookingService.createBooking] ❌ Failed to record DP payment:', {
             error: paymentError.message,
             code: paymentError.code,
+            status: paymentStatus,
             details: paymentError.details,
             hint: paymentError.hint,
             bookingId,
-            dpAmount
+            dpAmount,
+            payload: dpPaymentRecord
           });
           // Don't fail the booking creation, just log the error
         } else {
-          console.log('[BookingService.createBooking] DP payment recorded successfully:', {
+          console.log('[BookingService.createBooking] ✅ DP payment recorded successfully:', {
             paymentId,
-            paymentData
+            paymentData,
+            status: paymentStatus
           });
         }
       }
