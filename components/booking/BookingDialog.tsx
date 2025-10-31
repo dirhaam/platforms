@@ -246,7 +246,17 @@ export default function BookingDialog({
 
       if (!bookingRes.ok) {
         const errData = await bookingRes.json();
-        console.error('[BookingDialog] Booking API error:', { status: bookingRes.status, error: errData });
+        console.error('[BookingDialog] Booking API error:', { 
+          status: bookingRes.status, 
+          error: errData.error,
+          details: errData.details || []
+        });
+        
+        // Show validation errors with details
+        if (errData.details && Array.isArray(errData.details)) {
+          const detailsText = errData.details.map((d: any) => `${d.path?.join('.') || 'field'}: ${d.message}`).join(', ');
+          throw new Error(`${errData.error} - ${detailsText}`);
+        }
         throw new Error(errData.error || `Failed to create booking (${bookingRes.status})`);
       }
 
