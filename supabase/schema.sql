@@ -99,10 +99,33 @@ CREATE TABLE IF NOT EXISTS bookings (
     notes TEXT,
     total_amount REAL NOT NULL,
     payment_status TEXT NOT NULL DEFAULT 'pending',
+    dp_amount NUMERIC DEFAULT 0,
+    paid_amount NUMERIC DEFAULT 0,
+    payment_method TEXT,
+    payment_reference TEXT,
     reminders_sent JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Booking Payments table (tracks payment history)
+CREATE TABLE IF NOT EXISTS booking_payments (
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    payment_amount NUMERIC NOT NULL,
+    payment_method TEXT NOT NULL,
+    payment_reference TEXT,
+    notes TEXT,
+    paid_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for booking_payments
+CREATE INDEX IF NOT EXISTS booking_payments_booking_id_idx ON booking_payments(booking_id);
+CREATE INDEX IF NOT EXISTS booking_payments_tenant_id_idx ON booking_payments(tenant_id);
+CREATE INDEX IF NOT EXISTS booking_payments_paid_at_idx ON booking_payments(paid_at);
 
 -- Staff table
 CREATE TABLE IF NOT EXISTS staff (
