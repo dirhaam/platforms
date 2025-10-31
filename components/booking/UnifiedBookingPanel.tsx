@@ -114,7 +114,22 @@ export function UnifiedBookingPanel({
         if (paymentRes.ok) {
           const paymentData = await paymentRes.json();
           console.log('[BookingDetailsDrawer] Payment data:', paymentData);
-          setPaymentHistory(paymentData.payments || []);
+          
+          // Map snake_case to camelCase
+          const mappedPayments = (paymentData.payments || []).map((p: any) => ({
+            id: p.id,
+            bookingId: p.booking_id,
+            tenantId: p.tenant_id,
+            paymentAmount: p.payment_amount,
+            paymentMethod: p.payment_method,
+            paymentReference: p.payment_reference,
+            notes: p.notes,
+            paidAt: p.paid_at,
+            createdAt: p.created_at,
+            updatedAt: p.updated_at
+          }));
+          
+          setPaymentHistory(mappedPayments);
         } else {
           console.warn('[BookingDetailsDrawer] Payment fetch failed:', paymentRes.status);
           setPaymentHistory(booking.paymentHistory || []);
@@ -562,15 +577,25 @@ export function UnifiedBookingPanel({
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm">Payment History</h3>
                   <div className="border rounded-lg divide-y">
-                    {paymentHistory.map((payment, index) => (
+                    {paymentHistory.map((payment, index) => {
+                      const methodLabels: Record<string, string> = {
+                        'cash': '💵 Cash',
+                        'card': '💳 Card',
+                        'transfer': '🏦 Transfer',
+                        'qris': '📱 QRIS'
+                      };
+                      const methodLabel = methodLabels[payment.paymentMethod] || '❓ Unknown';
+                      const paidDate = payment.paidAt ? new Date(payment.paidAt) : null;
+                      
+                      return (
                       <div key={index} className="p-3 space-y-1">
                         <div className="flex justify-between">
-                          <span className="font-medium text-sm">{payment.paymentMethod?.toUpperCase() || 'Unknown'}</span>
+                          <span className="font-medium text-sm">{methodLabel}</span>
                           <span className="font-semibold">Rp {(payment.paymentAmount || 0).toLocaleString('id-ID')}</span>
                         </div>
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>{new Date(payment.paidAt).toLocaleDateString('id-ID')}</span>
-                          <span>{new Date(payment.paidAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>{paidDate?.toLocaleDateString('id-ID') || 'Invalid Date'}</span>
+                          <span>{paidDate?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) || ''}</span>
                         </div>
                         {payment.paymentReference && (
                           <div className="text-xs text-gray-600">
@@ -583,7 +608,9 @@ export function UnifiedBookingPanel({
                           </div>
                         )}
                       </div>
-                    ))}
+                    );
+                    })}
+
                   </div>
                 </div>
               ) : (
