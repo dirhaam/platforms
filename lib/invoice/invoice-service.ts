@@ -651,7 +651,20 @@ export class InvoiceService {
           : undefined,
       };
 
-      return this.createInvoice(tenantId, invoiceData);
+      // Determine invoice status based on booking payment status
+      const bookingPaymentStatus = booking.payment_status || 'pending';
+      const paidAmount = parseDecimal(booking.paid_amount);
+      const initialStatus = bookingPaymentStatus === 'paid' ? 'paid' : 'draft';
+
+      console.log('[InvoiceService.createInvoiceFromBooking] Setting invoice status:', {
+        bookingId: booking.id,
+        bookingPaymentStatus,
+        paidAmount,
+        totalAmount,
+        initialStatus
+      });
+
+      return this.createInvoice(tenantId, invoiceData, initialStatus, paidAmount > 0 ? paidAmount : undefined);
     } catch (error) {
       console.error('Error creating invoice from booking:', error);
       throw error;
