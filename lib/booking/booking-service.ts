@@ -212,7 +212,8 @@ export class BookingService {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-          .select();
+          .select()
+          .single();
         
         if (paymentError) {
           console.error('[BookingService.createBooking] Failed to record DP payment:', {
