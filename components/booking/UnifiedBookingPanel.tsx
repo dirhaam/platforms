@@ -778,7 +778,7 @@ export function UnifiedBookingPanel({
               {(booking.paidAmount || 0) > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Already Paid:</span>
-                  <span className="font-semibold">Rp {booking.paidAmount.toLocaleString('id-ID')}</span>
+                  <span className="font-semibold">Rp {(booking.paidAmount || 0).toLocaleString('id-ID')}</span>
                 </div>
               )}
               <div className="border-t pt-2 flex justify-between text-sm">
