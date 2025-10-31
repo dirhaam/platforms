@@ -1510,12 +1510,56 @@ export function BookingManagement({
                       <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="qris">QRIS</SelectItem>
+                      <SelectItem value="cash">💵 Cash</SelectItem>
+                      <SelectItem value="card">💳 Card</SelectItem>
+                      <SelectItem value="transfer">🏦 Bank Transfer</SelectItem>
+                      <SelectItem value="qris">📱 QRIS</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Down Payment Amount */}
+                <div>
+                  <Label htmlFor="dpAmount">Down Payment (DP) - Optional (IDR)</Label>
+                  <Input
+                    id="dpAmount"
+                    type="number"
+                    min="0"
+                    step="100"
+                    placeholder="Enter down payment amount"
+                    value={(editingBooking as any).dpAmount || 0}
+                    onChange={(e) => setEditingBooking({ ...editingBooking, dpAmount: parseInt(e.target.value) || 0 } as any)}
+                    disabled={updating}
+                  />
+                </div>
+
+                {/* Home Visit */}
+                <div className="border rounded-lg p-3 space-y-3 bg-blue-50">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="isHomeVisit"
+                      type="checkbox"
+                      checked={(editingBooking as any).isHomeVisit || false}
+                      onChange={(e) => setEditingBooking({ ...editingBooking, isHomeVisit: e.target.checked } as any)}
+                      disabled={updating}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="isHomeVisit" className="cursor-pointer">
+                      Home Visit Service
+                    </Label>
+                  </div>
+                  {(editingBooking as any).isHomeVisit && (
+                    <div>
+                      <Label htmlFor="homeVisitAddress">Home Visit Address</Label>
+                      <Input
+                        id="homeVisitAddress"
+                        placeholder="Enter home visit address"
+                        value={(editingBooking as any).homeVisitAddress || ''}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, homeVisitAddress: e.target.value } as any)}
+                        disabled={updating}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}

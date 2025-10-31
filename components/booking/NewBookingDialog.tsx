@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus } from 'lucide-react';
+import { Plus, MapPin } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -34,6 +35,10 @@ interface NewBooking {
   serviceId: string;
   scheduledAt: string;
   scheduledTime: string;
+  isHomeVisit: boolean;
+  homeVisitAddress: string;
+  paymentMethod: string;
+  dpAmount: number;
   notes: string;
 }
 
@@ -56,6 +61,10 @@ export function NewBookingDialog({
     serviceId: '',
     scheduledAt: '',
     scheduledTime: '',
+    isHomeVisit: false,
+    homeVisitAddress: '',
+    paymentMethod: 'cash',
+    dpAmount: 0,
     notes: ''
   });
 
@@ -179,6 +188,10 @@ export function NewBookingDialog({
           customerId: booking.customerId,
           serviceId: booking.serviceId,
           scheduledAt,
+          isHomeVisit: booking.isHomeVisit,
+          homeVisitAddress: booking.homeVisitAddress,
+          paymentMethod: booking.paymentMethod,
+          dpAmount: booking.dpAmount,
           notes: booking.notes
         })
       });
@@ -193,6 +206,10 @@ export function NewBookingDialog({
         serviceId: '',
         scheduledAt: '',
         scheduledTime: '',
+        isHomeVisit: false,
+        homeVisitAddress: '',
+        paymentMethod: 'cash',
+        dpAmount: 0,
         notes: ''
       });
       onOpenChange(false);
@@ -300,6 +317,66 @@ export function NewBookingDialog({
                     onChange={(e) => setBooking({ ...booking, scheduledTime: e.target.value })}
                     required
                   />
+                </div>
+              </div>
+
+              {/* Home Visit */}
+              <div className="space-y-3 border rounded-lg p-4 bg-blue-50">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="homeVisit"
+                    checked={booking.isHomeVisit}
+                    onCheckedChange={(checked) => setBooking({ ...booking, isHomeVisit: checked as boolean })}
+                  />
+                  <Label htmlFor="homeVisit" className="cursor-pointer">
+                    <MapPin className="inline w-4 h-4 mr-2" />
+                    Home Visit Service
+                  </Label>
+                </div>
+                {booking.isHomeVisit && (
+                  <div className="space-y-2">
+                    <Label htmlFor="homeAddress">Home Visit Address</Label>
+                    <Input
+                      id="homeAddress"
+                      placeholder="Enter customer's home address"
+                      value={booking.homeVisitAddress}
+                      onChange={(e) => setBooking({ ...booking, homeVisitAddress: e.target.value })}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Information */}
+              <div className="space-y-4 bg-green-50 p-4 rounded-lg border border-green-200">
+                <h3 className="text-sm font-semibold">Payment Information</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="paymentMethod">Payment Method *</Label>
+                    <Select value={booking.paymentMethod} onValueChange={(value) => setBooking({ ...booking, paymentMethod: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">💵 Cash</SelectItem>
+                        <SelectItem value="card">💳 Card</SelectItem>
+                        <SelectItem value="transfer">🏦 Transfer</SelectItem>
+                        <SelectItem value="qris">📱 QRIS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="dpAmount">Down Payment (DP) - Optional</Label>
+                    <Input
+                      id="dpAmount"
+                      type="number"
+                      min="0"
+                      placeholder="Enter DP amount (IDR)"
+                      value={booking.dpAmount || 0}
+                      onChange={(e) => setBooking({ ...booking, dpAmount: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
                 </div>
               </div>
 
