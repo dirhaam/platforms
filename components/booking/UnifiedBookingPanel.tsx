@@ -150,12 +150,32 @@ export function UnifiedBookingPanel({
         if (historyRes.ok) {
           const historyData = await historyRes.json();
           if (historyData.history && Array.isArray(historyData.history)) {
-            const mappedHistory = historyData.history.map((event: any) => ({
-              timestamp: new Date(event.createdAt),
-              action: event.description || event.action,
-              actor: event.actor,
-              details: event.metadata ? JSON.stringify(event.metadata) : undefined
-            }));
+            const mappedHistory = historyData.history.map((event: any) => {
+              let details = undefined;
+              
+              // Format metadata into readable details
+              if (event.metadata) {
+                const meta = event.metadata;
+                const detailParts: string[] = [];
+                
+                if (meta.totalAmount) detailParts.push(`Total: Rp ${(meta.totalAmount || 0).toLocaleString('id-ID')}`);
+                if (meta.dpAmount) detailParts.push(`DP: Rp ${(meta.dpAmount || 0).toLocaleString('id-ID')}`);
+                if (meta.paymentAmount) detailParts.push(`Amount: Rp ${(meta.paymentAmount || 0).toLocaleString('id-ID')}`);
+                if (meta.paymentMethod) detailParts.push(`Method: ${meta.paymentMethod.toUpperCase()}`);
+                if (meta.invoiceNumber) detailParts.push(`Invoice: ${meta.invoiceNumber}`);
+                
+                if (detailParts.length > 0) {
+                  details = detailParts.join(' • ');
+                }
+              }
+              
+              return {
+                timestamp: new Date(event.createdAt),
+                action: event.description || event.action,
+                actor: event.actor,
+                details
+              };
+            });
             setHistory(mappedHistory);
           }
         } else {
@@ -762,12 +782,14 @@ export function UnifiedBookingPanel({
                       )}
                     </div>
                     <div className="flex-1 pt-1">
-                      <p className="font-medium text-sm">{item.action}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-sm text-gray-900">{item.action}</p>
+                      <p className="text-xs text-gray-500 mt-1">
                         {new Date(item.timestamp).toLocaleString('id-ID')} by {item.actor}
                       </p>
                       {item.details && (
-                        <p className="text-xs text-gray-600 mt-1">{item.details}</p>
+                        <p className="text-xs text-gray-700 mt-2 p-2 bg-gray-50 rounded border-l-2 border-blue-400">
+                          {item.details}
+                        </p>
                       )}
                     </div>
                   </div>
