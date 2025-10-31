@@ -621,10 +621,10 @@ export function UnifiedBookingPanel({
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4">
-                {booking.paymentStatus === PaymentStatus.PENDING && (
+                {booking.paymentStatus !== PaymentStatus.PAID && (
                   <>
                     <Button onClick={() => setShowPaymentDialog(true)}>
-                      Mark as Paid
+                      {booking.paymentStatus === PaymentStatus.PENDING ? 'Mark as Paid' : 'Record Additional Payment'}
                     </Button>
                     <Button variant="outline" onClick={() => setShowRefundDialog(true)}>
                       Process Refund
@@ -761,16 +761,35 @@ export function UnifiedBookingPanel({
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>{booking.paymentStatus === PaymentStatus.PENDING ? 'Mark as Paid' : 'Record Additional Payment'}</DialogTitle>
             <DialogDescription>
-              Mark this booking payment as received
+              {booking.paymentStatus === PaymentStatus.PENDING 
+                ? 'Confirm that payment has been received' 
+                : 'Record the additional payment received'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Amount</Label>
-              <p className="text-2xl font-bold">Rp {booking.totalAmount.toLocaleString('id-ID')}</p>
+            {/* Payment Summary */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Total Amount:</span>
+                <span className="font-semibold">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
+              </div>
+              {(booking.paidAmount || 0) > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Already Paid:</span>
+                  <span className="font-semibold">Rp {booking.paidAmount.toLocaleString('id-ID')}</span>
+                </div>
+              )}
+              <div className="border-t pt-2 flex justify-between text-sm">
+                <span className="font-semibold">Remaining to Receive:</span>
+                <span className="font-bold text-lg text-blue-600">
+                  Rp {(booking.totalAmount - (booking.paidAmount || 0)).toLocaleString('id-ID')}
+                </span>
+              </div>
             </div>
+
+            {/* Payment Method */}
             <div>
               <Label>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -778,19 +797,21 @@ export function UnifiedBookingPanel({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="qris">QRIS</SelectItem>
+                  <SelectItem value="cash">💵 Cash</SelectItem>
+                  <SelectItem value="card">💳 Card</SelectItem>
+                  <SelectItem value="transfer">🏦 Bank Transfer</SelectItem>
+                  <SelectItem value="qris">📱 QRIS</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Action Buttons */}
             <div className="flex gap-2 pt-4">
               <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleRecordPayment}>
-                Confirm Payment
+              <Button onClick={handleRecordPayment} className="flex-1">
+                Confirm Payment Received
               </Button>
             </div>
           </div>
