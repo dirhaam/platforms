@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SalesTransaction } from '@/types/sales';
 import { Invoice, InvoiceStatus } from '@/types/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,21 +33,15 @@ export function SalesTransactionPanel({
 
   if (!transaction) return null;
 
-  const fetchRelatedData = useCallback(async () => {
+  useEffect(() => {
+    if (open) {
+      fetchRelatedData();
+    }
+  }, [transaction?.id, open]);
+
+  const fetchRelatedData = async () => {
     try {
       setLoading(true);
-
-      // Fetch invoices
-      // Note: Invoices from sales transactions are not directly linked back to the transaction
-      // They will appear here once generated from this transaction
-      const invoicesUrl = new URL('/api/invoices', window.location.origin);
-      invoicesUrl.searchParams.set('tenantId', tenantId);
-      const invoicesRes = await fetch(invoicesUrl.toString());
-      if (invoicesRes.ok) {
-        const invoicesData = await invoicesRes.json();
-        // For now, just set empty - invoices will be fetched/shown when generated
-        setInvoices([]);
-      }
 
       // Use payment data from transaction (sales_transaction_payments already fetched)
       if (transaction.payments && Array.isArray(transaction.payments)) {
@@ -62,18 +56,15 @@ export function SalesTransactionPanel({
         }));
         setPaymentHistory(mappedPayments);
       }
+      
+      // Invoices will be empty until generated
+      setInvoices([]);
     } catch (error) {
       console.error('Error fetching related data:', error);
     } finally {
       setLoading(false);
     }
-  }, [tenantId, transaction.payments]);
-
-  useEffect(() => {
-    if (open) {
-      fetchRelatedData();
-    }
-  }, [transaction?.id, open, fetchRelatedData]);
+  };
 
   const handleGenerateInvoice = async () => {
     try {
