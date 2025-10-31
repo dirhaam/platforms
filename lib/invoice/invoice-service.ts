@@ -605,7 +605,7 @@ export class InvoiceService {
   static async createInvoiceFromBooking(tenantId: string, bookingId: string): Promise<Invoice> {
     try {
       const supabase = getSupabaseClient();
-      const { data: booking } = await supabase
+      const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .select('*')
         .eq('id', bookingId)
@@ -613,8 +613,27 @@ export class InvoiceService {
         .limit(1)
         .single();
 
-      if (!booking) {
-        throw new Error('Booking not found');
+      if (bookingError || !booking) {
+        throw new Error(`Booking not found: ${bookingError?.message || 'Unknown error'}`);
+      }
+
+      // Check for existing invoice (idempotency - reuse sales logic)
+      const { data: existingInvoices } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('booking_id', bookingId)
+        .eq('tenant_id', tenantId)
+        .limit(1);
+
+      if (existingInvoices && existingInvoices.length > 0) {
+        console.log('[InvoiceService.createInvoiceFromBooking] ♻️ Invoice already exists, fetching existing:', {
+          bookingId,
+          invoiceId: existingInvoices[0].id
+        });
+        const existingInvoice = await this.getInvoiceById(tenantId, existingInvoices[0].id);
+        if (existingInvoice) {
+          return existingInvoice;
+        }
       }
 
       // Fetch payment history for this booking
@@ -625,10 +644,11 @@ export class InvoiceService {
         .eq('tenant_id', tenantId)
         .order('paid_at', { ascending: true });
 
-      if (!paymentError && paymentHistory) {
-        console.log('[InvoiceService.createInvoiceFromBooking] Payment history found:', {
+      if (!paymentError && paymentHistory && paymentHistory.length > 0) {
+        console.log('[InvoiceService.createInvoiceFromBooking] ✅ Payment history found:', {
           bookingId,
           paymentCount: paymentHistory.length,
+          totalPaid: paymentHistory.reduce((sum, p) => sum + parseDecimal(p.payment_amount), 0),
           payments: paymentHistory.map(p => ({
             amount: p.payment_amount,
             method: p.payment_method,
@@ -636,6 +656,13 @@ export class InvoiceService {
             notes: p.notes
           }))
         });
+      } else if (paymentError) {
+        console.warn('[InvoiceService.createInvoiceFromBooking] ⚠️  Error fetching payment history:', {
+          bookingId,
+          error: paymentError.message
+        });
+      } else {
+        console.log('[InvoiceService.createInvoiceFromBooking] ℹ️  No payment history found for booking:', { bookingId });
       }
 
       const customerId = booking.customer_id;
@@ -672,23 +699,44 @@ export class InvoiceService {
           : undefined,
       };
 
-      // Determine invoice status based on booking payment status
-      const bookingPaymentStatus = booking.payment_status || 'pending';
-      const paidAmount = parseDecimal(booking.paid_amount);
-      const initialStatus = bookingPaymentStatus === 'paid' ? 'paid' : 'draft';
+      // Determine invoice status based on booking payment status (same logic as sales)
+      let invoiceStatus = 'draft';
+      let invoicePaidAmount = 0;
+      
+      if (booking.payment_status === 'paid') {
+        invoiceStatus = 'paid';
+        invoicePaidAmount = parseDecimal(booking.paid_amount ?? 0);
+      } else if (booking.payment_status === 'partial') {
+        invoiceStatus = 'sent';
+        invoicePaidAmount = parseDecimal(booking.paid_amount ?? 0);
+      }
 
-      console.log('[InvoiceService.createInvoiceFromBooking] Setting invoice status:', {
+      console.log('[InvoiceService.createInvoiceFromBooking] 📄 Creating invoice:', {
         bookingId: booking.id,
-        bookingPaymentStatus,
-        paidAmount,
+        bookingPaymentStatus: booking.payment_status,
+        paidAmount: invoicePaidAmount,
         totalAmount,
-        initialStatus,
+        invoiceStatus,
         paymentHistoryCount: paymentHistory?.length || 0
       });
 
-      return this.createInvoice(tenantId, invoiceData, initialStatus, paidAmount > 0 ? paidAmount : undefined);
+      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount > 0 ? invoicePaidAmount : undefined);
+
+      console.log('[InvoiceService.createInvoiceFromBooking] ✅ Invoice created successfully:', {
+        bookingId,
+        invoiceId: invoice.id,
+        invoiceStatus
+      });
+
+      return invoice;
     } catch (error) {
-      console.error('Error creating invoice from booking:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : '';
+      console.error('[InvoiceService.createInvoiceFromBooking] ❌ Error creating invoice from booking:', {
+        message: errorMsg,
+        stack,
+        error
+      });
       throw error;
     }
   }
