@@ -76,7 +76,6 @@ export function SalesTransactionPanel({
       }
 
       toast.success('Invoice generated successfully');
-      await fetchRelatedData();
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate invoice');
