@@ -294,23 +294,14 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 />
               ) : null}
               <div className="space-y-1">
-                {branding?.showHeaderText === true && branding?.headerText && (
-                  <p className="text-[11px] uppercase tracking-wide text-gray-600">
-                    {branding.headerText}
-                  </p>
-                )}
-                {branding?.showBusinessName === true && (
-                  <>
-                    <h1 className="text-lg font-semibold text-gray-900">
-                      {invoice.tenant?.businessName || 'Business Name'}
-                    </h1>
-                    <div className="text-xs text-gray-600 space-y-1">
-                      {invoice.tenant?.address && <p>{invoice.tenant.address}</p>}
-                      {invoice.tenant?.phone && <p>Tel: {invoice.tenant.phone}</p>}
-                      {invoice.tenant?.email && <p>Email: {invoice.tenant.email}</p>}
-                    </div>
-                  </>
-                )}
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {displayInvoice.tenant?.businessName || 'Business Name'}
+                </h1>
+                <div className="text-xs text-gray-600 space-y-1">
+                  {displayInvoice.tenant?.address && <p>{displayInvoice.tenant.address}</p>}
+                  {displayInvoice.tenant?.phone && <p>Tel: {displayInvoice.tenant.phone}</p>}
+                  {displayInvoice.tenant?.email && <p>Email: {displayInvoice.tenant.email}</p>}
+                </div>
               </div>
             </div>
 

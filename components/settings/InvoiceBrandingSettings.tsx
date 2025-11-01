@@ -279,47 +279,9 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="show-header-text"
-                    checked={form.showHeaderText}
-                    onCheckedChange={(checked) => {
-                      const value = typeof checked === 'boolean' ? checked : false;
-                      setForm(prev => ({ ...prev, showHeaderText: value }));
-                    }}
-                    disabled={loading || saving}
-                  />
-                  <Label htmlFor="show-header-text" className="cursor-pointer">
-                    Tampilkan Header Kustom di Invoice
-                  </Label>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Jika dinonaktifkan, header kustom tidak akan ditampilkan di invoice.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="show-business-name"
-                    checked={form.showBusinessName}
-                    onCheckedChange={(checked) => {
-                      const value = typeof checked === 'boolean' ? checked : false;
-                      setForm(prev => ({ ...prev, showBusinessName: value }));
-                    }}
-                    disabled={loading || saving}
-                  />
-                  <Label htmlFor="show-business-name" className="cursor-pointer">
-                    Tampilkan Nama Bisnis di Invoice
-                  </Label>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Jika dinonaktifkan, nama bisnis tidak akan ditampilkan di invoice.
-                </p>
-              </div>
-            </div>
+            <p className="text-sm text-gray-600 italic">
+              Catatan: Nama bisnis dan informasi kontak selalu ditampilkan di invoice. Header kustom tidak ditampilkan.
+            </p>
           </div>
 
           <div className="rounded-lg border bg-white p-6 shadow-sm space-y-4">
@@ -338,25 +300,9 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
                   </div>
                 )}
                 <div className="flex-1 space-y-2">
-                  {form.showHeaderText ? (
-                    form.headerText ? (
-                      <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                        {form.headerText}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-gray-400 italic">Header kustom akan ditampilkan di sini</p>
-                    )
-                  ) : (
-                    <p className="text-sm text-gray-400 italic">Header kustom disembunyikan</p>
-                  )}
-                  {form.showBusinessName ? (
-                    <>
-                      <p className="text-lg font-semibold">Nama Bisnis Anda</p>
-                      <p className="text-sm text-gray-600">Alamat, Telepon, Email dari profil</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-400 italic">Nama bisnis disembunyikan</p>
-                  )}
+                  <p className="text-lg font-semibold">Nama Bisnis Anda</p>
+                  <p className="text-sm text-gray-600">Alamat, Telepon, Email dari profil</p>
+                  <p className="text-xs text-gray-400 italic mt-2">Header kustom tidak ditampilkan di invoice</p>
                 </div>
               </div>
 

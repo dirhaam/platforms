@@ -116,33 +116,24 @@ export class InvoicePDFGenerator {
       }
     }
 
+    // Always show business name and info
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.setFontSize(12);
+    this.pdf.setFontSize(14);
+    this.pdf.text(tenant?.businessName || 'Business Name', this.pageWidth / 2, currentY, { align: 'center' });
+    currentY += 6;
 
-    if (branding?.showHeaderText === true && branding?.headerText) {
-      const headerLines = this.pdf.splitTextToSize(branding.headerText, this.pageWidth - 2 * this.margin);
-      this.pdf.text(headerLines, this.pageWidth / 2, currentY, { align: 'center' });
-      currentY += headerLines.length * 4 + 2;
-    }
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(9);
 
-    if (branding?.showBusinessName === true) {
-      this.pdf.setFontSize(14);
-      this.pdf.text(tenant?.businessName || 'Business Name', this.pageWidth / 2, currentY, { align: 'center' });
-      currentY += 6;
+    const infoParts: string[] = [];
+    if (tenant?.address) infoParts.push(tenant.address);
+    if (tenant?.phone) infoParts.push(`Tel: ${tenant.phone}`);
+    if (tenant?.email) infoParts.push(`Email: ${tenant.email}`);
 
-      this.pdf.setFont('helvetica', 'normal');
-      this.pdf.setFontSize(9);
-
-      const infoParts: string[] = [];
-      if (tenant?.address) infoParts.push(tenant.address);
-      if (tenant?.phone) infoParts.push(`Tel: ${tenant.phone}`);
-      if (tenant?.email) infoParts.push(`Email: ${tenant.email}`);
-
-      if (infoParts.length) {
-        const lines = this.pdf.splitTextToSize(infoParts.join(' • '), this.pageWidth - 2 * this.margin);
-        this.pdf.text(lines, this.pageWidth / 2, currentY, { align: 'center' });
-        currentY += lines.length * 4;
-      }
+    if (infoParts.length) {
+      const lines = this.pdf.splitTextToSize(infoParts.join(' • '), this.pageWidth - 2 * this.margin);
+      this.pdf.text(lines, this.pageWidth / 2, currentY, { align: 'center' });
+      currentY += lines.length * 4;
     }
 
     this.pdf.setFont('helvetica', 'bold');
