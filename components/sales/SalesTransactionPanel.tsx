@@ -114,12 +114,12 @@ export function SalesTransactionPanel({
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Service:</span>
-                    <span className="font-medium">{transaction.serviceName}</span>
+                    <span className="font-medium">{transaction.serviceName || transaction.service?.name || '-'}</span>
                   </div>
-                  {transaction.duration && (
+                  {(transaction.duration || transaction.service?.duration) && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Duration:</span>
-                      <span className="font-medium">{transaction.duration} min</span>
+                      <span className="font-medium">{transaction.duration || transaction.service?.duration} min</span>
                     </div>
                   )}
                   {transaction.isHomeVisit && (
