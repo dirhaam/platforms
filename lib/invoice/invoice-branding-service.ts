@@ -53,8 +53,8 @@ export class InvoiceBrandingService {
         logoUrl: data.logo_url ?? undefined,
         headerText: data.header_text ?? undefined,
         footerText: data.footer_text ?? undefined,
-        showBusinessName: data.show_business_name !== false, // Default to true
-        showHeaderText: data.show_header_text !== false // Default to true
+        showBusinessName: data.show_business_name === true ? true : false,
+        showHeaderText: data.show_header_text === true ? true : false
       });
     } catch (error) {
       console.error('[InvoiceBranding] Unexpected error loading settings:', error);
@@ -74,8 +74,8 @@ export class InvoiceBrandingService {
         logo_url: sanitized.logoUrl ?? null,
         header_text: sanitized.headerText ?? null,
         footer_text: sanitized.footerText ?? null,
-        show_business_name: sanitized.showBusinessName !== false,
-        show_header_text: sanitized.showHeaderText !== false,
+        show_business_name: sanitized.showBusinessName === true ? true : false,
+        show_header_text: sanitized.showHeaderText === true ? true : false,
         updated_at: new Date().toISOString(),
       };
 
