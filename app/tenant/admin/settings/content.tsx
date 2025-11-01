@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Loader } from 'lucide-react';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
-import InvoiceBrandingSettings from '@/components/settings/InvoiceBrandingSettings';
+import InvoiceSettings from '@/components/settings/InvoiceSettings';
 
 interface TenantData {
   id: string;
@@ -58,8 +58,8 @@ export default function SettingsPageContent() {
       {/* Blocked Dates Section */}
       {tenantId && <BlockedDatesManager tenantId={tenantId} />}
 
-      {/* Invoice Branding Section */}
-      {tenantId && <InvoiceBrandingSettings tenantId={tenantId} />}
+      {/* Invoice Settings Section */}
+      {tenantId && <InvoiceSettings tenantId={tenantId} />}
 
       {/* Landing Page Style Section */}
       <LandingPageStyleSettings subdomain={subdomain} currentTemplate="modern" />
