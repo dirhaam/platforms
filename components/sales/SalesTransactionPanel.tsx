@@ -34,7 +34,7 @@ export function SalesTransactionPanel({
   if (!transaction) return null;
 
   // Initialize payment history and invoices from transaction data
-  React.useMemo(() => {
+  useEffect(() => {
     // Use payment data from transaction (already fetched from API)
     if (transaction.payments && Array.isArray(transaction.payments)) {
       const mappedPayments = transaction.payments.map((p: any) => ({
