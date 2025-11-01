@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Booking, BookingStatus, PaymentStatus, Customer, Service } from '@/types/booking';
 import { Invoice, InvoiceStatus, PaymentMethod } from '@/types/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,11 +60,7 @@ export function UnifiedBookingPanel({
   const [refundNotes, setRefundNotes] = useState('');
 
   // Fetch related data
-  useEffect(() => {
-    fetchRelatedData();
-  }, [booking.id]);
-
-  const fetchRelatedData = async () => {
+  const fetchRelatedData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -191,7 +187,11 @@ export function UnifiedBookingPanel({
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, booking.id]);
+
+  useEffect(() => {
+    fetchRelatedData();
+  }, [fetchRelatedData]);
 
   const getRecommendedAction = () => {
     if (booking.status === BookingStatus.PENDING) {
