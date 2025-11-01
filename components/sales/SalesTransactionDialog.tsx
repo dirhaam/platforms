@@ -28,6 +28,7 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { InvoiceSettingsData } from "@/lib/invoice/invoice-settings-service";
 
 type TransactionType = "on_the_spot" | "from_booking";
 
@@ -72,6 +73,7 @@ export function SalesTransactionDialog({
   const [customers, setCustomers] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettingsData | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
@@ -149,6 +151,21 @@ export function SalesTransactionDialog({
     setBookings(data.bookings || []);
   }, [tenantId, shouldFetchBookings]);
 
+  const fetchInvoiceSettings = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const response = await fetch(`/api/settings/invoice-config?tenantId=${tenantId}`);
+      if (!response.ok) {
+        console.warn("Failed to fetch invoice settings");
+        return;
+      }
+      const data = await response.json();
+      setInvoiceSettings(data.settings || null);
+    } catch (error) {
+      console.warn("Error fetching invoice settings:", error);
+    }
+  }, [tenantId]);
+
   const loadData = useCallback(async () => {
     if (!tenantId) return;
     setLoadingData(true);
@@ -157,6 +174,7 @@ export function SalesTransactionDialog({
         fetchCustomers(),
         fetchServices(),
         fetchBookings(),
+        fetchInvoiceSettings(),
       ]);
     } catch (error) {
       console.error("Error loading transaction dialog data:", error);
@@ -166,7 +184,7 @@ export function SalesTransactionDialog({
     } finally {
       setLoadingData(false);
     }
-  }, [tenantId, fetchCustomers, fetchServices, fetchBookings]);
+  }, [tenantId, fetchCustomers, fetchServices, fetchBookings, fetchInvoiceSettings]);
 
   useEffect(() => {
     if (open) {
@@ -340,10 +358,38 @@ export function SalesTransactionDialog({
   ]);
 
   const calculateOnTheSpotTotal = () => {
-    return newOnTheSpotTransaction.items.reduce(
+    const subtotal = newOnTheSpotTransaction.items.reduce(
       (sum, item) => sum + item.quantity * item.unitPrice,
       0
     );
+
+    // Apply invoice settings
+    let total = subtotal;
+    
+    // Tax
+    if (invoiceSettings?.taxServiceCharge?.taxPercentage) {
+      total += subtotal * (invoiceSettings.taxServiceCharge.taxPercentage / 100);
+    }
+    
+    // Service charge
+    if (invoiceSettings?.taxServiceCharge?.serviceChargeRequired) {
+      if (invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed') {
+        total += invoiceSettings.taxServiceCharge.serviceChargeValue || 0;
+      } else {
+        total += subtotal * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100);
+      }
+    }
+    
+    // Additional fees
+    invoiceSettings?.additionalFees?.forEach(fee => {
+      if (fee.type === 'fixed') {
+        total += fee.value;
+      } else {
+        total += subtotal * (fee.value / 100);
+      }
+    });
+
+    return total;
   };
 
   const calculateTotalPayment = (payments: PaymentEntry[]) => {
@@ -613,11 +659,46 @@ export function SalesTransactionDialog({
                 </div>
               </div>
 
-              {/* Totals */}
+              {/* Totals Breakdown */}
               {newOnTheSpotTransaction.items.length > 0 && (
-                <div className="p-3 bg-gray-50 rounded-lg border text-sm">
-                  <div className="flex justify-between font-semibold">
-                    <span>Total Amount:</span>
+                <div className="p-4 bg-gray-50 rounded-lg border space-y-2 text-sm">
+                  <h3 className="font-semibold mb-3">Amount Breakdown</h3>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span>Rp {newOnTheSpotTransaction.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0).toLocaleString("id-ID")}</span>
+                  </div>
+                  {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
+                      <span>Rp {(newOnTheSpotTransaction.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString("id-ID")}</span>
+                    </div>
+                  ) : null}
+                  {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue ? (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Service Charge</span>
+                      <span>
+                        {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
+                          ? `Rp ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString("id-ID")}`
+                          : `Rp ${(newOnTheSpotTransaction.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString("id-ID")}`}
+                      </span>
+                    </div>
+                  ) : null}
+                  {invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0 && (
+                    <>
+                      {invoiceSettings.additionalFees.map(fee => (
+                        <div key={fee.id} className="flex justify-between text-gray-600">
+                          <span>{fee.name}</span>
+                          <span>
+                            {fee.type === 'fixed'
+                              ? `Rp ${fee.value.toLocaleString("id-ID")}`
+                              : `Rp ${(newOnTheSpotTransaction.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) * (fee.value / 100)).toLocaleString("id-ID")}`}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Total Amount</span>
                     <span>Rp {calculateOnTheSpotTotal().toLocaleString("id-ID")}</span>
                   </div>
                 </div>
