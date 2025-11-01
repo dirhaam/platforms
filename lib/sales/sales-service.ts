@@ -602,6 +602,30 @@ export class SalesService {
         paymentStatus = 'partial';
       }
 
+      // Fetch service names for all items FIRST
+      const serviceIds = transactionData.items.map(item => item.serviceId);
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('id, name')
+        .in('id', serviceIds);
+
+      if (servicesError) {
+        console.warn('[SalesService] Warning fetching service names:', servicesError);
+      }
+
+      const serviceNameMap = new Map(servicesData?.map(s => [s.id, s.name]) || []);
+      
+      // Determine service name based on items count
+      let serviceName: string | null = null;
+      if (transactionData.items.length === 1) {
+        // Single service
+        const firstServiceId = transactionData.items[0].serviceId;
+        serviceName = serviceNameMap.get(firstServiceId) || null;
+      } else if (transactionData.items.length > 1) {
+        // Multiple services
+        serviceName = 'Multiple Services';
+      }
+
       // Create transaction
       const transactionId = uuidv4();
       const newTransaction = {
@@ -612,8 +636,8 @@ export class SalesService {
         transaction_number: this.generateTransactionNumber(),
         source: SalesTransactionSource.ON_THE_SPOT,
         status: SalesTransactionStatus.COMPLETED,
-        service_id: null,
-        service_name: null,
+        service_id: transactionData.items.length === 1 ? transactionData.items[0].serviceId : null,
+        service_name: serviceName,
         duration: null,
         is_home_visit: false,
         home_visit_address: null,
@@ -648,23 +672,7 @@ export class SalesService {
         throw new Error('Failed to create transaction');
       }
 
-      // Fetch service names for all items
-      const serviceIds = transactionData.items.map(item => item.serviceId);
-      console.log(`[SalesService] Fetching service names for serviceIds:`, serviceIds);
-      
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('id, name')
-        .in('id', serviceIds);
 
-      console.log(`[SalesService] Services fetched:`, { error: servicesError?.message, data: servicesData });
-
-      if (servicesError) {
-        console.warn('[SalesService] Warning fetching service names:', servicesError);
-      }
-
-      const serviceNameMap = new Map(servicesData?.map(s => [s.id, s.name]) || []);
-      console.log(`[SalesService] Service name map:`, Array.from(serviceNameMap.entries()));
 
       // Insert items
       const items = transactionData.items.map(item => ({
