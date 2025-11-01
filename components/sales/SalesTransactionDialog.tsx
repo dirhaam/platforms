@@ -363,15 +363,15 @@ export function SalesTransactionDialog({
       0
     );
 
-    // Apply invoice settings
+    // Apply invoice settings - calculate all percentages from subtotal
     let total = subtotal;
     
-    // Tax
+    // Tax - percentage of subtotal, not total
     if (invoiceSettings?.taxServiceCharge?.taxPercentage) {
       total += subtotal * (invoiceSettings.taxServiceCharge.taxPercentage / 100);
     }
     
-    // Service charge
+    // Service charge - percentage of subtotal, not total
     if (invoiceSettings?.taxServiceCharge?.serviceChargeRequired) {
       if (invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed') {
         total += invoiceSettings.taxServiceCharge.serviceChargeValue || 0;
@@ -380,7 +380,7 @@ export function SalesTransactionDialog({
       }
     }
     
-    // Additional fees
+    // Additional fees - percentage of subtotal, not total
     invoiceSettings?.additionalFees?.forEach(fee => {
       if (fee.type === 'fixed') {
         total += fee.value;

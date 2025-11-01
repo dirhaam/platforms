@@ -404,18 +404,19 @@ export function NewBookingDialog({
                       IDR {(() => {
                         const service = services.find(s => s.id === booking.serviceId);
                         if (!service) return 0;
-                        let total = Number(service.price);
+                        let subtotal = Number(service.price);
                         if (booking.isHomeVisit && service.homeVisitSurcharge) {
-                          total += Number(service.homeVisitSurcharge);
+                          subtotal += Number(service.homeVisitSurcharge);
                         }
+                        let total = subtotal;
                         if (invoiceSettings?.taxServiceCharge?.taxPercentage) {
-                          total += total * (invoiceSettings.taxServiceCharge.taxPercentage / 100);
+                          total += subtotal * (invoiceSettings.taxServiceCharge.taxPercentage / 100);
                         }
                         if (invoiceSettings?.taxServiceCharge?.serviceChargeRequired) {
                           if (invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed') {
                             total += invoiceSettings.taxServiceCharge.serviceChargeValue || 0;
                           } else {
-                            total += total * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100);
+                            total += subtotal * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100);
                           }
                         }
                         if (invoiceSettings?.additionalFees) {
@@ -423,7 +424,7 @@ export function NewBookingDialog({
                             if (fee.type === 'fixed') {
                               total += fee.value;
                             } else {
-                              total += total * (fee.value / 100);
+                              total += subtotal * (fee.value / 100);
                             }
                           });
                         }
