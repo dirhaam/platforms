@@ -277,10 +277,34 @@ export function UnifiedBookingPanel({
     try {
       setLoading(true);
       const newDate = new Date(newScheduledDate);
+      const oldDate = new Date(booking.scheduledAt);
       
       await onBookingUpdate(booking.id, {
         scheduledAt: newDate
       });
+
+      // Log reschedule to history
+      try {
+        await fetch(`/api/bookings/${booking.id}/history-log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': tenantId
+          },
+          body: JSON.stringify({
+            action: 'RESCHEDULED',
+            description: `Booking rescheduled from ${oldDate.toLocaleDateString('id-ID')} to ${newDate.toLocaleDateString('id-ID')}`,
+            oldValues: { scheduledAt: oldDate.toISOString() },
+            newValues: { scheduledAt: newDate.toISOString() },
+            metadata: {
+              oldDate: oldDate.toISOString(),
+              newDate: newDate.toISOString()
+            }
+          })
+        });
+      } catch (historyError) {
+        console.error('Error logging reschedule to history:', historyError);
+      }
 
       toast.success('Booking rescheduled successfully');
       setShowRescheduleDialog(false);
