@@ -30,6 +30,7 @@ export interface InvoiceBranding {
   headerText?: string;
   footerText?: string;
   showBusinessName?: boolean;
+  showHeaderText?: boolean;
 }
 
 // Payment record for invoice

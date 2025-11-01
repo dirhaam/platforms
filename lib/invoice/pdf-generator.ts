@@ -119,7 +119,7 @@ export class InvoicePDFGenerator {
     this.pdf.setFont('helvetica', 'bold');
     this.pdf.setFontSize(12);
 
-    if (branding?.headerText) {
+    if (branding?.showHeaderText !== false && branding?.headerText) {
       const headerLines = this.pdf.splitTextToSize(branding.headerText, this.pageWidth - 2 * this.margin);
       this.pdf.text(headerLines, this.pageWidth / 2, currentY, { align: 'center' });
       currentY += headerLines.length * 4 + 2;

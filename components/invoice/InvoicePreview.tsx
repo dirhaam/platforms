@@ -263,7 +263,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 />
               ) : null}
               <div className="space-y-1">
-                {branding?.headerText && (
+                {branding?.showHeaderText !== false && branding?.headerText && (
                   <p className="text-[11px] uppercase tracking-wide text-gray-600">
                     {branding.headerText}
                   </p>

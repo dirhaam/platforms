@@ -19,6 +19,7 @@ interface BrandingFormState {
   headerText: string;
   footerText: string;
   showBusinessName: boolean;
+  showHeaderText: boolean;
 }
 
 const DEFAULT_FORM: BrandingFormState = {
@@ -26,6 +27,7 @@ const DEFAULT_FORM: BrandingFormState = {
   headerText: '',
   footerText: '',
   showBusinessName: true,
+  showHeaderText: true,
 };
 
 export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsProps) {
@@ -60,6 +62,7 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
           headerText: settings?.headerText || '',
           footerText: settings?.footerText || '',
           showBusinessName: settings?.showBusinessName !== false,
+          showHeaderText: settings?.showHeaderText !== false,
         };
 
         setForm(next);
@@ -123,6 +126,7 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
         headerText: settings?.headerText || '',
         footerText: settings?.footerText || '',
         showBusinessName: settings?.showBusinessName !== false,
+        showHeaderText: settings?.showHeaderText !== false,
       };
 
       setForm(next);
@@ -275,23 +279,44 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
               </p>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="show-business-name"
-                  checked={form.showBusinessName}
-                  onCheckedChange={(checked) =>
-                    setForm(prev => ({ ...prev, showBusinessName: checked as boolean }))
-                  }
-                  disabled={loading || saving}
-                />
-                <Label htmlFor="show-business-name" className="cursor-pointer">
-                  Tampilkan Nama Bisnis di Invoice
-                </Label>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-header-text"
+                    checked={form.showHeaderText}
+                    onCheckedChange={(checked) =>
+                      setForm(prev => ({ ...prev, showHeaderText: checked as boolean }))
+                    }
+                    disabled={loading || saving}
+                  />
+                  <Label htmlFor="show-header-text" className="cursor-pointer">
+                    Tampilkan Header Kustom di Invoice
+                  </Label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Jika dinonaktifkan, header kustom tidak akan ditampilkan di invoice.
+                </p>
               </div>
-              <p className="text-xs text-gray-500">
-                Jika dinonaktifkan, hanya header kustom yang ditampilkan di bagian atas invoice.
-              </p>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-business-name"
+                    checked={form.showBusinessName}
+                    onCheckedChange={(checked) =>
+                      setForm(prev => ({ ...prev, showBusinessName: checked as boolean }))
+                    }
+                    disabled={loading || saving}
+                  />
+                  <Label htmlFor="show-business-name" className="cursor-pointer">
+                    Tampilkan Nama Bisnis di Invoice
+                  </Label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Jika dinonaktifkan, nama bisnis tidak akan ditampilkan di invoice.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -310,11 +335,17 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
                     <ImageIcon className="h-6 w-6" />
                   </div>
                 )}
-                <div className="flex-1">
-                  {form.headerText && (
-                    <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                      {form.headerText}
-                    </p>
+                <div className="flex-1 space-y-2">
+                  {form.showHeaderText ? (
+                    form.headerText ? (
+                      <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                        {form.headerText}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-400 italic">Header kustom akan ditampilkan di sini</p>
+                    )
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Header kustom disembunyikan</p>
                   )}
                   {form.showBusinessName ? (
                     <>
