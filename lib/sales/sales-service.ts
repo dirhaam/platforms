@@ -382,6 +382,16 @@ export class SalesService {
         console.error('Error fetching payments:', paymentsError);
       }
 
+      // Fetch all items for all transactions in one query
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('sales_transaction_items')
+        .select()
+        .in('sales_transaction_id', transactionIds);
+
+      if (itemsError) {
+        console.error('Error fetching items:', itemsError);
+      }
+
       // Group payments by transaction ID
       const paymentsMap = new Map<string, any[]>();
       (paymentsData || []).forEach(payment => {
@@ -392,7 +402,35 @@ export class SalesService {
         paymentsMap.get(txnId)!.push(payment);
       });
 
-      return data.map(txn => mapToSalesTransaction(txn, paymentsMap.get(txn.id) || []));
+      // Group items by transaction ID
+      const itemsMap = new Map<string, any[]>();
+      (itemsData || []).forEach(item => {
+        const txnId = item.sales_transaction_id;
+        if (!itemsMap.has(txnId)) {
+          itemsMap.set(txnId, []);
+        }
+        itemsMap.get(txnId)!.push(item);
+      });
+
+      return data.map(txn => {
+        const transaction = mapToSalesTransaction(txn, paymentsMap.get(txn.id) || []);
+        // Add items to transaction
+        const items = itemsMap.get(txn.id) || [];
+        if (items.length > 0) {
+          transaction.items = items.map((item: any) => ({
+            id: item.id,
+            salesTransactionId: item.sales_transaction_id,
+            serviceId: item.service_id,
+            serviceName: item.service_name,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            totalPrice: item.total_price,
+            createdAt: item.created_at ? new Date(item.created_at) : new Date(),
+            updatedAt: item.updated_at ? new Date(item.updated_at) : new Date(),
+          }));
+        }
+        return transaction;
+      });
     } catch (error) {
       console.error('Error getting transactions:', error);
       return [];
