@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
-import { SalesTransactionDetailsDialog } from '@/components/sales/SalesTransactionDetailsDialog';
+import { SalesTransactionPanel } from '@/components/sales/SalesTransactionPanel';
 import { SalesTransaction, SalesSummary } from '@/types/sales';
 import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
@@ -669,34 +669,17 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
                   transactions={salesTransactions}
                   emptyMessage="No sales transactions found."
                   renderActions={(transaction) => (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedSalesTransaction(transaction);
-                          setShowSalesDetailsDialog(true);
-                        }}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => createInvoiceAndPreview(transaction)} disabled={invoiceGenerating}>
-                          <Printer className="w-4 h-4 mr-2" />
-                          Generate Invoice
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('Edit functionality coming soon')}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteSalesTransaction(transaction.id)} className="text-red-600">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSalesTransaction(transaction);
+                        setShowSalesDetailsDialog(true);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View
+                    </Button>
                   )}
                 />
               )}
@@ -761,11 +744,13 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Sales Transaction Details Dialog - Reusable Component */}
-      <SalesTransactionDetailsDialog
+      {/* Sales Transaction Panel - Reusable Component with Tabs */}
+      <SalesTransactionPanel
+        transaction={selectedSalesTransaction}
         open={showSalesDetailsDialog}
         onOpenChange={setShowSalesDetailsDialog}
-        transaction={selectedSalesTransaction}
+        onGenerateInvoice={createInvoiceAndPreview}
+        isGeneratingInvoice={invoiceGenerating}
       />
 
       {invoicePreview && (
