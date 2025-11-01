@@ -283,6 +283,7 @@ CREATE TABLE IF NOT EXISTS invoice_branding_settings (
     logo_url TEXT,
     header_text TEXT,
     footer_text TEXT,
+    show_business_name BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
