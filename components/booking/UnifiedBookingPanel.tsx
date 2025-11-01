@@ -54,10 +54,14 @@ export function UnifiedBookingPanel({
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<BookingStatus>(booking.status);
   const [paymentMethod, setPaymentMethod] = useState<string>(booking.paymentMethod || 'cash');
   const [refundAmount, setRefundAmount] = useState(booking.totalAmount);
   const [refundNotes, setRefundNotes] = useState('');
+  const [newScheduledDate, setNewScheduledDate] = useState<string>(
+    booking.scheduledAt ? new Date(booking.scheduledAt).toISOString().slice(0, 16) : ''
+  );
 
   // Fetch related data
   const fetchRelatedData = useCallback(async () => {
@@ -259,6 +263,31 @@ export function UnifiedBookingPanel({
     } catch (error) {
       console.error('Error recording payment:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to record payment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!onBookingUpdate || !newScheduledDate) {
+      toast.error('Please select a new date and time');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const newDate = new Date(newScheduledDate);
+      
+      await onBookingUpdate(booking.id, {
+        scheduledAt: newDate
+      });
+
+      toast.success('Booking rescheduled successfully');
+      setShowRescheduleDialog(false);
+      await fetchRelatedData();
+    } catch (error) {
+      console.error('Error rescheduling booking:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to reschedule booking');
     } finally {
       setLoading(false);
     }
@@ -559,7 +588,7 @@ export function UnifiedBookingPanel({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => toast.info('Reschedule feature coming soon')}
+                  onClick={() => setShowRescheduleDialog(true)}
                   disabled={booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED}
                 >
                   Reschedule
@@ -893,6 +922,43 @@ export function UnifiedBookingPanel({
               </Button>
               <Button>
                 Process Refund
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={showRescheduleDialog} onOpenChange={setShowRescheduleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reschedule Booking</DialogTitle>
+            <DialogDescription>
+              Select a new date and time for this booking
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Current Scheduled Date</Label>
+              <p className="text-sm text-gray-600 mt-1">
+                {new Date(booking.scheduledAt).toLocaleString('id-ID')}
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="newDate">New Date & Time *</Label>
+              <Input 
+                id="newDate"
+                type="datetime-local" 
+                value={newScheduledDate}
+                onChange={(e) => setNewScheduledDate(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowRescheduleDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleReschedule} disabled={loading || !newScheduledDate}>
+                Confirm Reschedule
               </Button>
             </div>
           </div>
