@@ -243,6 +243,16 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
   const displayInvoice = refreshedInvoice || invoice;
   const branding = displayInvoice?.branding || {};
 
+  console.log('[InvoicePreview] Invoice branding:', {
+    invoiceId: displayInvoice?.id,
+    headerText: branding?.headerText,
+    logoUrl: branding?.logoUrl,
+    footerText: branding?.footerText,
+    showBusinessName: branding?.showBusinessName,
+    showHeaderText: branding?.showHeaderText,
+    fullBranding: branding
+  });
+
   if (!displayInvoice) {
     return null;
   }
