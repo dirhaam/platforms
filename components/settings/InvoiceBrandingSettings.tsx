@@ -285,9 +285,10 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
                   <Checkbox
                     id="show-header-text"
                     checked={form.showHeaderText}
-                    onCheckedChange={(checked) =>
-                      setForm(prev => ({ ...prev, showHeaderText: checked as boolean }))
-                    }
+                    onCheckedChange={(checked) => {
+                      const value = typeof checked === 'boolean' ? checked : false;
+                      setForm(prev => ({ ...prev, showHeaderText: value }));
+                    }}
                     disabled={loading || saving}
                   />
                   <Label htmlFor="show-header-text" className="cursor-pointer">
@@ -304,9 +305,10 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
                   <Checkbox
                     id="show-business-name"
                     checked={form.showBusinessName}
-                    onCheckedChange={(checked) =>
-                      setForm(prev => ({ ...prev, showBusinessName: checked as boolean }))
-                    }
+                    onCheckedChange={(checked) => {
+                      const value = typeof checked === 'boolean' ? checked : false;
+                      setForm(prev => ({ ...prev, showBusinessName: value }));
+                    }}
                     disabled={loading || saving}
                   />
                   <Label htmlFor="show-business-name" className="cursor-pointer">
