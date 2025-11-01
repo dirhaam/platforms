@@ -460,9 +460,6 @@ export class InvoiceService {
           updateData.paidDate = data.paidDate;
         }
       }
-      if (data.dueDate) {
-        updateData.dueDate = data.dueDate;
-      }
       if (data.paymentMethod) {
         updateData.paymentMethod = data.paymentMethod;
       }

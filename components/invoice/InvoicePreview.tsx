@@ -208,10 +208,10 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     }
 
     if (paymentStatus === PaymentStatus.OVERDUE) {
-      return `Overdue: Rp ${invoice.totalAmount.toLocaleString('id-ID')} | Due: ${invoice.dueDate.toLocaleDateString('id-ID')}`;
+      return `Overdue: Rp ${invoice.totalAmount.toLocaleString('id-ID')}`;
     }
 
-    return `Unpaid: Rp ${invoice.totalAmount.toLocaleString('id-ID')} | Due: ${invoice.dueDate.toLocaleDateString('id-ID')}`;
+    return `Unpaid: Rp ${invoice.totalAmount.toLocaleString('id-ID')}`;
   };
 
   const branding = invoice.branding;
@@ -287,10 +287,6 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
               <div className="flex justify-between">
                 <span>Tanggal</span>
                 <span>{formatDate(invoice.issueDate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Jatuh Tempo</span>
-                <span>{formatDate(invoice.dueDate)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span>Payment Status</span>

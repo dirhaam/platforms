@@ -135,7 +135,7 @@ export interface InvoiceItem {
 export interface CreateInvoiceRequest {
   customerId: string;
   bookingId?: string;
-  dueDate: string; // ISO string
+  dueDate?: string; // ISO string - optional now
   items: CreateInvoiceItemRequest[];
   taxRate?: number;
   discountAmount?: number;
@@ -155,7 +155,6 @@ export interface CreateInvoiceItemRequest {
 // Update invoice request
 export interface UpdateInvoiceRequest {
   status?: InvoiceStatus;
-  dueDate?: string;
   paymentMethod?: PaymentMethod;
   paymentReference?: string;
   paidDate?: string;

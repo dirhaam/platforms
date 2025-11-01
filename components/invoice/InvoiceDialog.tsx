@@ -25,7 +25,6 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     customerId: '',
-    dueDate: '',
     taxRate: 0,
     discountAmount: 0,
     notes: '',
@@ -47,7 +46,6 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId
         // Edit mode - populate form with invoice data
         setFormData({
           customerId: invoice.customerId,
-          dueDate: invoice.dueDate.toISOString().split('T')[0],
           taxRate: Number(invoice.taxRate ?? 0),
           discountAmount: Number(invoice.discountAmount ?? 0),
           notes: invoice.notes || '',
@@ -66,12 +64,8 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId
         })));
       } else {
         // Create mode - reset form
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 7);
-        
         setFormData({
           customerId: '',
-          dueDate: tomorrow.toISOString().split('T')[0],
           taxRate: 0,
           discountAmount: 0,
           notes: '',
@@ -117,7 +111,6 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId
         // Update existing invoice
         const updateData: UpdateInvoiceRequest = {
           status: formData.status,
-          dueDate: formData.dueDate,
           paymentMethod: formData.paymentMethod,
           paymentReference: formData.paymentReference,
           notes: formData.notes,
@@ -144,7 +137,6 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId
         // Create new invoice
         const createData: CreateInvoiceRequest = {
           customerId: formData.customerId,
-          dueDate: formData.dueDate,
           items: items.filter(item => item.description && item.unitPrice > 0),
           taxRate: formData.taxRate,
           discountAmount: formData.discountAmount,
@@ -231,16 +223,6 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="dueDate">Due Date *</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                required
-              />
-            </div>
           </div>
 
           {/* Invoice Status (for edit mode) */}

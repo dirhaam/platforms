@@ -320,7 +320,6 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
 
   const handleOpenSendDialog = (invoice: Invoice) => {
     const customerName = invoice.customer?.name || '';
-    const dueDate = invoice.dueDate ? invoice.dueDate.toLocaleDateString() : '';
     const totalAmount = invoice.totalAmount.toLocaleString('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -331,7 +330,6 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
     setWhatsappMessage(
       [`Halo ${customerName}`.trim(),
       `Berikut kami kirimkan invoice ${invoice.invoiceNumber} dengan total ${totalAmount}.`,
-      dueDate ? `Jatuh tempo pada ${dueDate}.` : '',
       'Terima kasih.'
       ].filter(Boolean).join(' ')
     );
@@ -594,9 +592,6 @@ export function InvoiceManagement({ tenantId }: InvoiceManagementProps) {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm">
-                          Due: {invoice.dueDate.toLocaleDateString()}
-                        </p>
                         <p className="text-sm font-medium">
                           Rp {invoice.totalAmount.toFixed(2)}
                         </p>
