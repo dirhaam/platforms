@@ -114,7 +114,10 @@ export function NewBookingDialog({
 
       if (settingsRes.ok) {
         const data = await settingsRes.json();
+        console.log('[NewBookingDialog] Invoice settings loaded:', data.settings);
         setInvoiceSettings(data.settings || null);
+      } else {
+        console.warn('[NewBookingDialog] Failed to fetch invoice settings:', settingsRes.status);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
