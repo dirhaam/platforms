@@ -112,10 +112,22 @@ export function SalesTransactionPanel({
                   <CardTitle className="text-sm font-semibold">Service Info</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Service:</span>
-                    <span className="font-medium">{transaction.serviceName || transaction.service?.name || '-'}</span>
-                  </div>
+                  {transaction.items && transaction.items.length > 0 ? (
+                    <>
+                      <div className="text-sm font-medium mb-2">Services ({transaction.items.length}):</div>
+                      {transaction.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm border-t pt-2">
+                          <span className="text-gray-600">{item.serviceName}</span>
+                          <span className="font-medium">Qty: {item.quantity}</span>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Service:</span>
+                      <span className="font-medium">{transaction.serviceName || transaction.service?.name || '-'}</span>
+                    </div>
+                  )}
                   {(transaction.duration || transaction.service?.duration) && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Duration:</span>
