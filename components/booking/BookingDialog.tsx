@@ -99,17 +99,19 @@ export default function BookingDialog({
       try {
         const response = await fetch(`/api/settings/invoice-config?tenantId=${tenant.id}`);
         if (!response.ok) {
-          console.warn("Failed to fetch invoice settings");
+          console.warn('[BookingDialog] Failed to fetch invoice settings:', response.status);
           return;
         }
         const data = await response.json();
+        console.log('[BookingDialog] Invoice settings loaded:', data.settings);
         setInvoiceSettings(data.settings || null);
       } catch (error) {
-        console.warn("Error fetching invoice settings:", error);
+        console.warn('[BookingDialog] Error fetching invoice settings:', error);
       }
     };
     
     if (tenant?.id) {
+      console.log('[BookingDialog] Fetching invoice settings for tenant:', tenant.id);
       fetchSettings();
     }
   }, [tenant?.id]);
