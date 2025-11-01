@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { ImageIcon, RefreshCw } from 'lucide-react';
+import { ImageIcon, RefreshCw, Upload, X } from 'lucide-react';
 
 interface InvoiceBrandingSettingsProps {
   tenantId: string;
@@ -30,6 +30,7 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
   const [initialForm, setInitialForm] = useState<BrandingFormState>(DEFAULT_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -134,6 +135,44 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
     setForm(initialForm);
   };
 
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload/invoice-logo', {
+        method: 'POST',
+        headers: {
+          'x-tenant-id': tenantId,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(data.error || 'Failed to upload logo');
+      }
+
+      const { url } = await response.json();
+      setForm(prev => ({ ...prev, logoUrl: url }));
+      toast.success('Logo uploaded successfully');
+    } catch (error) {
+      console.error('[InvoiceBranding] upload error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload logo');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setForm(prev => ({ ...prev, logoUrl: '' }));
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -146,17 +185,59 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="invoice-logo">Logo URL</Label>
-              <Input
-                id="invoice-logo"
-                placeholder="https://example.com/logo.png"
-                value={form.logoUrl}
-                onChange={handleInputChange('logoUrl')}
-                disabled={loading || saving}
-              />
-              <p className="text-xs text-gray-500">
-                Gunakan tautan gambar (PNG/JPG) yang dapat diakses publik. Logo akan ditampilkan di bagian atas invoice.
-              </p>
+              <Label>Logo</Label>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                      onChange={handleLogoUpload}
+                      disabled={loading || saving || uploading}
+                      className="hidden"
+                      id="logo-upload"
+                    />
+                    <label htmlFor="logo-upload">
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="w-full cursor-pointer"
+                        disabled={loading || saving || uploading}
+                      >
+                        <span>
+                          <Upload className="w-4 h-4 mr-2" />
+                          {uploading ? 'Uploading...' : 'Upload Logo'}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                  {form.logoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveLogo}
+                      disabled={loading || saving || uploading}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                {form.logoUrl && !form.logoUrl.startsWith('data:') && (
+                  <p className="text-xs text-gray-500 break-all">
+                    {form.logoUrl}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Atau paste URL gambar publik di bawah. Format: PNG/JPG/WebP/SVG, Max 5MB.
+                </p>
+                <Input
+                  placeholder="https://example.com/logo.png (optional)"
+                  value={form.logoUrl}
+                  onChange={handleInputChange('logoUrl')}
+                  disabled={loading || saving || uploading}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
