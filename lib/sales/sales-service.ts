@@ -9,6 +9,7 @@ import {
   SalesAnalytics
 } from '@/types/sales';
 import { v4 as uuidv4 } from 'uuid';
+import { InvoiceSettingsService } from '@/lib/invoice/invoice-settings-service';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -622,15 +623,41 @@ export class SalesService {
     try {
       const supabase = getSupabaseClient();
 
-      // Calculate totals
+      // Calculate subtotal
       const subtotal = transactionData.items.reduce(
         (sum, item) => sum + item.quantity * item.unitPrice,
         0
       );
-      const taxRate = transactionData.taxRate || 0;
-      const taxAmount = subtotal * taxRate;
+
+      // Fetch invoice settings (tax, service charge, additional fees)
+      const settings = await InvoiceSettingsService.getSettings(transactionData.tenantId);
+      
+      // Calculate tax from settings
+      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
+      const taxAmount = subtotal * (taxPercentage / 100);
+      
+      // Calculate service charge
+      let serviceChargeAmount = 0;
+      if (settings?.taxServiceCharge?.serviceChargeRequired) {
+        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
+          serviceChargeAmount = settings.taxServiceCharge.serviceChargeValue || 0;
+        } else {
+          serviceChargeAmount = subtotal * ((settings.taxServiceCharge.serviceChargeValue || 0) / 100);
+        }
+      }
+      
+      // Calculate additional fees
+      let additionalFeesAmount = 0;
+      (settings?.additionalFees || []).forEach(fee => {
+        if (fee.type === 'fixed') {
+          additionalFeesAmount += fee.value;
+        } else {
+          additionalFeesAmount += subtotal * (fee.value / 100);
+        }
+      });
+
       const discountAmount = transactionData.discountAmount || 0;
-      const totalAmount = subtotal + taxAmount - discountAmount;
+      const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount - discountAmount;
 
       // Determine payment status
       let paymentStatus: 'paid' | 'partial' | 'pending' = 'pending';
@@ -682,10 +709,13 @@ export class SalesService {
         unit_price: null,
         home_visit_surcharge: 0,
         subtotal,
-        tax_rate: taxRate,
-        tax_amount: taxAmount,
+        tax_rate: 0,
+        tax_amount: 0,
         discount_amount: discountAmount,
         total_amount: totalAmount,
+        tax_percentage: taxPercentage,
+        service_charge_amount: serviceChargeAmount,
+        additional_fees_amount: additionalFeesAmount,
         payment_method: transactionData.paymentMethod,
         payment_status: paymentStatus,
         paid_amount: transactionData.paymentAmount,
