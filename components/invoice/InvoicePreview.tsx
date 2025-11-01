@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,30 @@ interface InvoicePreviewProps {
 
 export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
+  const [refreshedInvoice, setRefreshedInvoice] = useState<Invoice>(invoice);
+
+  // Refetch invoice when preview opens to ensure branding is latest
+  useEffect(() => {
+    if (!open || !invoice?.id) return;
+
+    const refetchInvoice = async () => {
+      try {
+        const response = await fetch(`/api/invoices/${invoice.id}`, {
+          headers: { 'x-tenant-id': invoice.tenantId }
+        });
+        if (response.ok) {
+          const { invoice: updated } = await response.json();
+          setRefreshedInvoice(updated);
+        }
+      } catch (error) {
+        console.error('Error refetching invoice:', error);
+        // Fallback to original invoice
+        setRefreshedInvoice(invoice);
+      }
+    };
+
+    refetchInvoice();
+  }, [open, invoice?.id, invoice?.tenantId]);
 
   const captureReceiptCanvas = async () => {
     if (!printAreaRef.current) return null;
@@ -214,7 +238,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     return `Unpaid: Rp ${invoice.totalAmount.toLocaleString('id-ID')}`;
   };
 
-  const branding = invoice.branding;
+  const branding = refreshedInvoice.branding;
 
   const formatCurrency = (value: number) => `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
   const formatDate = (date?: Date) => (date ? date.toLocaleDateString('id-ID') : '-');

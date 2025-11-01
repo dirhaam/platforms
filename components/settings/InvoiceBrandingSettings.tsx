@@ -61,8 +61,8 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
           logoUrl: settings?.logoUrl || '',
           headerText: settings?.headerText || '',
           footerText: settings?.footerText || '',
-          showBusinessName: settings?.showBusinessName !== false,
-          showHeaderText: settings?.showHeaderText !== false,
+          showBusinessName: settings?.showBusinessName === true,
+          showHeaderText: settings?.showHeaderText === true,
         };
 
         setForm(next);
@@ -125,8 +125,8 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
         logoUrl: settings?.logoUrl || '',
         headerText: settings?.headerText || '',
         footerText: settings?.footerText || '',
-        showBusinessName: settings?.showBusinessName !== false,
-        showHeaderText: settings?.showHeaderText !== false,
+        showBusinessName: settings?.showBusinessName === true,
+        showHeaderText: settings?.showHeaderText === true,
       };
 
       setForm(next);
