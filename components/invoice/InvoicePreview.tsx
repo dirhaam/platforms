@@ -16,7 +16,7 @@ interface InvoicePreviewProps {
 
 export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
-  const [refreshedInvoice, setRefreshedInvoice] = useState<Invoice>(invoice);
+  const [refreshedInvoice, setRefreshedInvoice] = useState<Invoice | null>(invoice || null);
 
   // Refetch invoice when preview opens to ensure branding is latest
   useEffect(() => {
@@ -238,7 +238,14 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     return `Unpaid: Rp ${invoice.totalAmount.toLocaleString('id-ID')}`;
   };
 
-  const branding = refreshedInvoice.branding;
+  // Use refreshed invoice if available, otherwise use original
+  // Add safe fallback for branding if it doesn't exist
+  const displayInvoice = refreshedInvoice || invoice;
+  const branding = displayInvoice?.branding || {};
+
+  if (!displayInvoice) {
+    return null;
+  }
 
   const formatCurrency = (value: number) => `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
   const formatDate = (date?: Date) => (date ? date.toLocaleDateString('id-ID') : '-');
