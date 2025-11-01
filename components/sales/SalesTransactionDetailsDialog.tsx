@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,20 +11,42 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Printer } from 'lucide-react';
 import { SalesTransaction, SalesPaymentMethod } from '@/types/sales';
 
 interface SalesTransactionDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transaction: SalesTransaction | null;
+  onGenerateInvoice?: (transaction: SalesTransaction) => Promise<void>;
+  isGeneratingInvoice?: boolean;
 }
 
 export function SalesTransactionDetailsDialog({
   open,
   onOpenChange,
   transaction,
+  onGenerateInvoice,
+  isGeneratingInvoice,
 }: SalesTransactionDetailsDialogProps) {
+  const [localGenerating, setLocalGenerating] = useState(false);
+  
   if (!transaction) return null;
+
+  const handleGenerateInvoice = async () => {
+    if (!onGenerateInvoice || !transaction) return;
+    
+    try {
+      setLocalGenerating(true);
+      await onGenerateInvoice(transaction);
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+    } finally {
+      setLocalGenerating(false);
+    }
+  };
+
+  const isLoading = localGenerating || isGeneratingInvoice;
 
   const STATUS_VARIANTS: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
@@ -215,6 +238,16 @@ export function SalesTransactionDetailsDialog({
           >
             Close
           </Button>
+          {onGenerateInvoice && (
+            <Button
+              onClick={handleGenerateInvoice}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              {isLoading ? 'Generating...' : 'Generate Invoice'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

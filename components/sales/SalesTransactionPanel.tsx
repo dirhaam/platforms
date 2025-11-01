@@ -1,173 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { SalesTransaction } from '@/types/sales';
-import { Invoice, InvoiceStatus } from '@/types/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  Download, Send, AlertCircle, CheckCircle, RefreshCw
+  AlertCircle, Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SalesTransactionPanelProps {
   transaction: SalesTransaction | null;
-  tenantId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onGenerateInvoice?: (transaction: SalesTransaction) => Promise<void>;
+  isGeneratingInvoice?: boolean;
 }
 
 export function SalesTransactionPanel({
   transaction,
-  tenantId,
   open,
   onOpenChange,
+  onGenerateInvoice,
+  isGeneratingInvoice,
 }: SalesTransactionPanelProps) {
   const [activeTab, setActiveTab] = useState('summary');
-  const [loading, setLoading] = useState(false);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [localGenerating, setLocalGenerating] = useState(false);
 
   if (!transaction) return null;
 
-  // Initialize payment history and invoices from transaction data
-  useEffect(() => {
-    // Use payment data from transaction (already fetched from API)
-    if (transaction.payments && Array.isArray(transaction.payments)) {
-      const mappedPayments = transaction.payments.map((p: any) => ({
-        id: p.id,
-        paymentAmount: p.paymentAmount,
-        paymentMethod: p.paymentMethod,
-        paymentReference: p.paymentReference,
-        notes: p.notes,
-        paidAt: p.paidAt,
-        createdAt: p.createdAt
-      }));
-      setPaymentHistory(mappedPayments);
-    } else {
-      setPaymentHistory([]);
-    }
-    
-    // Invoices will be empty until generated
-    setInvoices([]);
-  }, [transaction.id]);
-
   const handleGenerateInvoice = async () => {
+    if (!onGenerateInvoice || !transaction) return;
+    
     try {
-      setLoading(true);
-      const url = new URL(`/api/invoices/from-sales/${transaction.id}`, window.location.origin);
-      if (tenantId) {
-        url.searchParams.set('tenantId', tenantId);
-      }
-
-      const response = await fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-          'x-tenant-id': tenantId,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to generate invoice (${response.status})`);
-      }
-
-      toast.success('Invoice generated successfully');
+      setLocalGenerating(true);
+      await onGenerateInvoice(transaction);
     } catch (error) {
       console.error('Error generating invoice:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate invoice');
     } finally {
-      setLoading(false);
+      setLocalGenerating(false);
     }
   };
 
-  const handleDownloadInvoicePDF = async (invoiceId: string, invoiceNumber: string) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/invoices/${invoiceId}/pdf`, {
-        headers: {
-          'x-tenant-id': tenantId
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to download invoice');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${invoiceNumber}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to download invoice');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSendInvoiceWhatsApp = async (invoiceId: string) => {
-    try {
-      setLoading(true);
-      const url = new URL(`/api/invoices/${invoiceId}/whatsapp`, window.location.origin);
-      if (tenantId) {
-        url.searchParams.set('tenantId', tenantId);
-      }
-
-      const response = await fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenantId,
-        },
-        body: JSON.stringify({
-          customerId: transaction.customerId,
-          invoiceId
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to send invoice (${response.status})`);
-      }
-
-      toast.success('Invoice sent via WhatsApp');
-    } catch (error) {
-      console.error('Error sending invoice:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to send invoice');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePreviewInvoice = async (invoice: Invoice) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/invoices/${invoice.id}`, {
-        headers: { 'x-tenant-id': tenantId }
-      });
-      if (response.ok) {
-        const fullInvoice = await response.json();
-        setSelectedInvoice(fullInvoice);
-        setShowInvoicePreview(true);
-      } else {
-        toast.error('Failed to load invoice');
-      }
-    } catch (error) {
-      console.error('Error fetching invoice:', error);
-      toast.error('Failed to load invoice');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isLoading = localGenerating || isGeneratingInvoice;
 
   const isMultiplePayment = transaction.payments && transaction.payments.length > 1;
   const formatCurrency = (value?: number) => `Rp ${(value || 0).toLocaleString('id-ID')}`;
@@ -408,90 +284,26 @@ export function SalesTransactionPanel({
 
           {/* Invoice Tab */}
           <TabsContent value="invoice" className="space-y-4 mt-4">
-            {invoices.length > 0 ? (
-              <div className="space-y-3">
-                {invoices.map((invoice) => (
-                  <Card key={invoice.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-semibold">{invoice.invoiceNumber}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {invoice.status && (
-                              <Badge className={invoice.status === InvoiceStatus.PAID ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
-                                {invoice.status.toUpperCase()}
-                              </Badge>
-                            )}
-                            <span className="ml-2">{formatCurrency(invoice.totalAmount)}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePreviewInvoice(invoice)}
-                            disabled={loading}
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadInvoicePDF(invoice.id, invoice.invoiceNumber)}
-                            disabled={loading}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSendInvoiceWhatsApp(invoice.id)}
-                            disabled={loading}
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">No invoices yet</p>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Invoices will appear here after generation</p>
+              </CardContent>
+            </Card>
 
-            {invoices.length === 0 && (
+            {onGenerateInvoice && (
               <Button
                 onClick={handleGenerateInvoice}
-                disabled={loading}
-                className="w-full"
+                disabled={isLoading}
+                className="w-full gap-2"
               >
-                {loading ? 'Generating...' : 'Generate Invoice'}
+                <Printer className="w-4 h-4" />
+                {isLoading ? 'Generating...' : 'Generate Invoice'}
               </Button>
             )}
           </TabsContent>
         </Tabs>
       </DialogContent>
-
-      {/* Invoice Preview Dialog */}
-      {showInvoicePreview && selectedInvoice && (
-        <Dialog open={showInvoicePreview} onOpenChange={setShowInvoicePreview}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Invoice Preview</DialogTitle>
-            </DialogHeader>
-            {/* Invoice preview content would go here */}
-            <div className="text-sm text-gray-600">
-              Invoice: {selectedInvoice.invoiceNumber}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </Dialog>
   );
 }

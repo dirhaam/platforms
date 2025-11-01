@@ -51,7 +51,7 @@ import {
 } from '@/types/sales';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
-import { SalesTransactionDetailsDialog } from '@/components/sales/SalesTransactionDetailsDialog';
+import { SalesTransactionPanel } from '@/components/sales/SalesTransactionPanel';
 import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
@@ -575,11 +575,13 @@ export function SalesContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Transaction Details Dialog - Reusable Component */}
-      <SalesTransactionDetailsDialog
+      {/* Transaction Details Panel - Reusable Component with Tabs */}
+      <SalesTransactionPanel
         transaction={selectedTransaction}
         open={showTransactionDetailsDialog}
         onOpenChange={setShowTransactionDetailsDialog}
+        onGenerateInvoice={createInvoiceAndPreview}
+        isGeneratingInvoice={invoiceGenerating}
       />
 
       <Dialog open={showInvoicePrompt} onOpenChange={setShowInvoicePrompt}>
