@@ -304,9 +304,11 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 />
               ) : null}
               <div className="space-y-1">
-                <h1 className="text-lg font-semibold text-gray-900">
-                  {displayInvoice.tenant?.businessName || 'Business Name'}
-                </h1>
+                {branding?.headerText && (
+                  <h1 className="text-lg font-semibold text-gray-900">
+                    {branding.headerText}
+                  </h1>
+                )}
                 <div className="text-xs text-gray-600 space-y-1">
                   {displayInvoice.tenant?.address && <p>{displayInvoice.tenant.address}</p>}
                   {displayInvoice.tenant?.phone && <p>Tel: {displayInvoice.tenant.phone}</p>}

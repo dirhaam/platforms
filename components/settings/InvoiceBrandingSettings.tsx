@@ -280,7 +280,7 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
             </div>
 
             <p className="text-sm text-gray-600 italic">
-              Catatan: Nama bisnis dan informasi kontak selalu ditampilkan di invoice. Header kustom tidak ditampilkan.
+              Catatan: Invoice menampilkan Header Kustom, Alamat, Telepon, dan Email. Nama bisnis dari profil tidak ditampilkan.
             </p>
           </div>
 

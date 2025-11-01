@@ -116,11 +116,13 @@ export class InvoicePDFGenerator {
       }
     }
 
-    // Always show business name and info
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.setFontSize(14);
-    this.pdf.text(tenant?.businessName || 'Business Name', this.pageWidth / 2, currentY, { align: 'center' });
-    currentY += 6;
+    // Show header text from branding, not business name
+    if (branding?.headerText) {
+      this.pdf.setFont('helvetica', 'bold');
+      this.pdf.setFontSize(14);
+      this.pdf.text(branding.headerText, this.pageWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
+    }
 
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(9);
