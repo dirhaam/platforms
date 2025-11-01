@@ -14,6 +14,7 @@ import {
 import { validateBookingTime, validateBusinessHours } from '@/lib/validation/booking-validation';
 import { BookingHistoryService } from '@/lib/booking/booking-history-service';
 import { randomUUID as cryptoRandomUUID } from 'crypto';
+import { InvoiceSettingsService } from '@/lib/invoice/invoice-settings-service';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -61,6 +62,9 @@ const mapToBooking = (dbData: any): Booking => {
     homeVisitCoordinates: dbData.home_visit_coordinates,
     notes: dbData.notes,
     totalAmount,
+    taxPercentage: dbData.tax_percentage,
+    serviceChargeAmount: dbData.service_charge_amount,
+    additionalFeesAmount: dbData.additional_fees_amount,
     paymentStatus: dbData.payment_status,
     remindersSent: dbData.reminders_sent,
     createdAt: new Date(dbData.created_at),
@@ -134,14 +138,42 @@ export class BookingService {
         return { error: hoursValidation.message };
       }
       
-      // Calculate total amount including location-based surcharges
-      let totalAmount = service.price;
+      // Calculate subtotal including location-based surcharges
+      let subtotal = Number(service.price);
       
-      if (data.isHomeVisit) {
-        if (service.homeVisitSurcharge) {
-          totalAmount = (Number(totalAmount) + Number(service.homeVisitSurcharge));
+      if (data.isHomeVisit && service.homeVisitSurcharge) {
+        subtotal = subtotal + Number(service.homeVisitSurcharge);
+      }
+
+      // Fetch invoice settings (tax, service charge, additional fees)
+      const settings = await InvoiceSettingsService.getSettings(tenantId);
+      
+      // Calculate tax
+      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
+      const taxAmount = subtotal * (taxPercentage / 100);
+      
+      // Calculate service charge
+      let serviceChargeAmount = 0;
+      if (settings?.taxServiceCharge?.serviceChargeRequired) {
+        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
+          serviceChargeAmount = settings.taxServiceCharge.serviceChargeValue || 0;
+        } else {
+          serviceChargeAmount = subtotal * ((settings.taxServiceCharge.serviceChargeValue || 0) / 100);
         }
       }
+      
+      // Calculate additional fees
+      let additionalFeesAmount = 0;
+      (settings?.additionalFees || []).forEach(fee => {
+        if (fee.type === 'fixed') {
+          additionalFeesAmount += fee.value;
+        } else {
+          additionalFeesAmount += subtotal * (fee.value / 100);
+        }
+      });
+
+      // Total = subtotal + tax + service charge + additional fees
+      const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount;
       
       // Prepare DP payment data
       const dpAmount = data.dpAmount || 0;
@@ -175,6 +207,9 @@ export class BookingService {
           home_visit_coordinates: data.homeVisitCoordinates,
           notes: data.notes,
           total_amount: totalAmount,
+          tax_percentage: taxPercentage,
+          service_charge_amount: serviceChargeAmount,
+          additional_fees_amount: additionalFeesAmount,
           status: BookingStatus.PENDING,
           payment_status: paymentStatus,
           reminders_sent: [],

@@ -46,6 +46,9 @@ export interface Booking {
   };
   notes?: string;
   totalAmount: number;
+  taxPercentage?: number;
+  serviceChargeAmount?: number;
+  additionalFeesAmount?: number;
   paymentStatus: PaymentStatus;
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
   remindersSent: Date[];
