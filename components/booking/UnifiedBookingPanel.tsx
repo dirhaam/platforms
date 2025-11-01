@@ -568,14 +568,47 @@ export function UnifiedBookingPanel({
                   <p className="font-medium">{booking.service?.duration} minutes</p>
                 </div>
                 <div>
-                  <Label className="text-gray-600">Amount</Label>
-                  <p className="font-medium">Rp {booking.totalAmount.toLocaleString('id-ID')}</p>
-                </div>
-                <div>
                   <Label className="text-gray-600">Status</Label>
                   <Badge className={statusColor[booking.status]}>
                     {booking.status.toUpperCase()}
                   </Badge>
+                </div>
+              </div>
+
+              {/* Amount Breakdown */}
+              <div className="p-4 bg-gray-50 rounded-lg border space-y-2">
+                <h3 className="font-semibold text-sm mb-3">Amount Breakdown</h3>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Base Service Amount</span>
+                  <span>Rp {(booking.service?.price ?? 0).toLocaleString('id-ID')}</span>
+                </div>
+                {booking.isHomeVisit && booking.service?.homeVisitSurcharge && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Home Visit Surcharge</span>
+                    <span>Rp {(booking.service.homeVisitSurcharge).toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+                {Number(booking.taxPercentage ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Tax {Number(booking.taxPercentage).toFixed(2)}%</span>
+                    <span>Rp {((Number(booking.service?.price ?? 0) + (booking.isHomeVisit ? booking.service?.homeVisitSurcharge ?? 0 : 0)) * Number(booking.taxPercentage ?? 0) / 100).toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+                {Number(booking.serviceChargeAmount ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Service Charge</span>
+                    <span>Rp {Number(booking.serviceChargeAmount ?? 0).toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+                {Number(booking.additionalFeesAmount ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Additional Fees</span>
+                    <span>Rp {Number(booking.additionalFeesAmount ?? 0).toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+                <div className="border-t pt-2 flex justify-between font-semibold">
+                  <span>Total Amount</span>
+                  <span>Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
                 </div>
               </div>
 
