@@ -29,6 +29,7 @@ export interface InvoiceBranding {
   logoUrl?: string;
   headerText?: string;
   footerText?: string;
+  showBusinessName?: boolean;
 }
 
 // Payment record for invoice

@@ -4,6 +4,7 @@ export interface InvoiceBrandingSettings {
   logoUrl?: string;
   headerText?: string;
   footerText?: string;
+  showBusinessName?: boolean;
 }
 
 const TABLE_NAME = 'invoice_branding_settings';
@@ -34,7 +35,7 @@ export class InvoiceBrandingService {
 
       const { data, error } = await supabase
         .from(TABLE_NAME)
-        .select('logo_url, header_text, footer_text')
+        .select('logo_url, header_text, footer_text, show_business_name')
         .eq('tenant_id', tenantId)
         .maybeSingle();
 
@@ -44,13 +45,14 @@ export class InvoiceBrandingService {
       }
 
       if (!data) {
-        return {};
+        return { showBusinessName: true }; // Default to showing business name
       }
 
       return sanitizeSettings({
         logoUrl: data.logo_url ?? undefined,
         headerText: data.header_text ?? undefined,
         footerText: data.footer_text ?? undefined,
+        showBusinessName: data.show_business_name !== false // Default to true
       });
     } catch (error) {
       console.error('[InvoiceBranding] Unexpected error loading settings:', error);
@@ -70,6 +72,7 @@ export class InvoiceBrandingService {
         logo_url: sanitized.logoUrl ?? null,
         header_text: sanitized.headerText ?? null,
         footer_text: sanitized.footerText ?? null,
+        show_business_name: sanitized.showBusinessName !== false,
         updated_at: new Date().toISOString(),
       };
 

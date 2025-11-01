@@ -125,22 +125,24 @@ export class InvoicePDFGenerator {
       currentY += headerLines.length * 4 + 2;
     }
 
-    this.pdf.setFontSize(14);
-    this.pdf.text(tenant?.businessName || 'Business Name', this.pageWidth / 2, currentY, { align: 'center' });
-    currentY += 6;
+    if (branding?.showBusinessName !== false) {
+      this.pdf.setFontSize(14);
+      this.pdf.text(tenant?.businessName || 'Business Name', this.pageWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
 
-    this.pdf.setFont('helvetica', 'normal');
-    this.pdf.setFontSize(9);
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.setFontSize(9);
 
-    const infoParts: string[] = [];
-    if (tenant?.address) infoParts.push(tenant.address);
-    if (tenant?.phone) infoParts.push(`Tel: ${tenant.phone}`);
-    if (tenant?.email) infoParts.push(`Email: ${tenant.email}`);
+      const infoParts: string[] = [];
+      if (tenant?.address) infoParts.push(tenant.address);
+      if (tenant?.phone) infoParts.push(`Tel: ${tenant.phone}`);
+      if (tenant?.email) infoParts.push(`Email: ${tenant.email}`);
 
-    if (infoParts.length) {
-      const lines = this.pdf.splitTextToSize(infoParts.join(' • '), this.pageWidth - 2 * this.margin);
-      this.pdf.text(lines, this.pageWidth / 2, currentY, { align: 'center' });
-      currentY += lines.length * 4;
+      if (infoParts.length) {
+        const lines = this.pdf.splitTextToSize(infoParts.join(' • '), this.pageWidth - 2 * this.margin);
+        this.pdf.text(lines, this.pageWidth / 2, currentY, { align: 'center' });
+        currentY += lines.length * 4;
+      }
     }
 
     this.pdf.setFont('helvetica', 'bold');

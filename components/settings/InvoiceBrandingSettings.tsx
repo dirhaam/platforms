@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { ImageIcon, RefreshCw, Upload, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface InvoiceBrandingSettingsProps {
   tenantId: string;
@@ -17,12 +18,14 @@ interface BrandingFormState {
   logoUrl: string;
   headerText: string;
   footerText: string;
+  showBusinessName: boolean;
 }
 
 const DEFAULT_FORM: BrandingFormState = {
   logoUrl: '',
   headerText: '',
   footerText: '',
+  showBusinessName: true,
 };
 
 export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsProps) {
@@ -56,6 +59,7 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
           logoUrl: settings?.logoUrl || '',
           headerText: settings?.headerText || '',
           footerText: settings?.footerText || '',
+          showBusinessName: settings?.showBusinessName !== false,
         };
 
         setForm(next);
@@ -118,6 +122,7 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
         logoUrl: settings?.logoUrl || '',
         headerText: settings?.headerText || '',
         footerText: settings?.footerText || '',
+        showBusinessName: settings?.showBusinessName !== false,
       };
 
       setForm(next);
@@ -269,6 +274,25 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
                 Muncul di bagian bawah invoice sebagai catatan penutup atau informasi pembayaran tambahan.
               </p>
             </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="show-business-name"
+                  checked={form.showBusinessName}
+                  onCheckedChange={(checked) =>
+                    setForm(prev => ({ ...prev, showBusinessName: checked as boolean }))
+                  }
+                  disabled={loading || saving}
+                />
+                <Label htmlFor="show-business-name" className="cursor-pointer">
+                  Tampilkan Nama Bisnis di Invoice
+                </Label>
+              </div>
+              <p className="text-xs text-gray-500">
+                Jika dinonaktifkan, hanya header kustom yang ditampilkan di bagian atas invoice.
+              </p>
+            </div>
           </div>
 
           <div className="rounded-lg border bg-white p-6 shadow-sm space-y-4">
@@ -287,10 +311,19 @@ export function InvoiceBrandingSettings({ tenantId }: InvoiceBrandingSettingsPro
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-lg font-semibold">
-                    {form.headerText || 'Header invoice akan muncul di sini'}
-                  </p>
-                  <p className="text-sm text-gray-600">Nama bisnis dan informasi kontak tetap akan ditampilkan dari profil tenant.</p>
+                  {form.headerText && (
+                    <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                      {form.headerText}
+                    </p>
+                  )}
+                  {form.showBusinessName ? (
+                    <>
+                      <p className="text-lg font-semibold">Nama Bisnis Anda</p>
+                      <p className="text-sm text-gray-600">Alamat, Telepon, Email dari profil</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Nama bisnis disembunyikan</p>
+                  )}
                 </div>
               </div>
 
