@@ -30,6 +30,14 @@ export function SalesTransactionPanel({
 
   if (!transaction) return null;
 
+  // Debug: Log transaction object to see what data is available
+  console.log('[SalesTransactionPanel] Transaction:', {
+    serviceName: transaction.serviceName,
+    service: transaction.service,
+    items: transaction.items,
+    fullTransaction: transaction
+  });
+
   const handleGenerateInvoice = async () => {
     if (!onGenerateInvoice || !transaction) return;
     
