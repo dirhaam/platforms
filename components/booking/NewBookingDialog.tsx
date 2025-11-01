@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Customer, Service } from '@/types/booking';
+import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
 
 interface NewBookingDialogProps {
   open: boolean;
@@ -78,6 +79,7 @@ export function NewBookingDialog({
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettingsData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,9 +96,10 @@ export function NewBookingDialog({
     if (!subdomain) return;
 
     try {
-      const [customersRes, servicesRes] = await Promise.all([
+      const [customersRes, servicesRes, settingsRes] = await Promise.all([
         fetch('/api/customers', { headers: { 'x-tenant-id': subdomain } }),
-        fetch('/api/services', { headers: { 'x-tenant-id': subdomain } })
+        fetch('/api/services', { headers: { 'x-tenant-id': subdomain } }),
+        fetch(`/api/settings/invoice-config?tenantId=${subdomain}`, { headers: { 'x-tenant-id': subdomain } })
       ]);
 
       if (customersRes.ok) {
@@ -107,6 +110,11 @@ export function NewBookingDialog({
       if (servicesRes.ok) {
         const data = await servicesRes.json();
         setServices(data.services || []);
+      }
+
+      if (settingsRes.ok) {
+        const data = await settingsRes.json();
+        setInvoiceSettings(data.settings || null);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -345,6 +353,86 @@ export function NewBookingDialog({
                   </div>
                 )}
               </div>
+
+              {/* Amount Breakdown */}
+              {booking.serviceId && services.find(s => s.id === booking.serviceId) && (
+                <div className="p-4 bg-gray-50 rounded-lg border space-y-2">
+                  <h3 className="font-semibold text-sm mb-3">Amount Breakdown</h3>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Base Service Amount</span>
+                    <span>IDR {Number(services.find(s => s.id === booking.serviceId)?.price || 0).toLocaleString('id-ID')}</span>
+                  </div>
+                  {booking.isHomeVisit && services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Home Visit Surcharge</span>
+                      <span>IDR {Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0).toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
+                      <span>IDR {((Number(services.find(s => s.id === booking.serviceId)?.price || 0) + (booking.isHomeVisit ? Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0) : 0)) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString('id-ID')}</span>
+                    </div>
+                  ) : null}
+                  {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue ? (
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Service Charge</span>
+                      <span>
+                        {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
+                          ? `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`
+                          : `IDR ${((Number(services.find(s => s.id === booking.serviceId)?.price || 0) + (booking.isHomeVisit ? Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0) : 0)) * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
+                      </span>
+                    </div>
+                  ) : null}
+                  {invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0 && (
+                    <>
+                      {invoiceSettings.additionalFees.map(fee => (
+                        <div key={fee.id} className="flex justify-between text-sm text-gray-600">
+                          <span>{fee.name}</span>
+                          <span>
+                            {fee.type === 'fixed'
+                              ? `IDR ${fee.value.toLocaleString('id-ID')}`
+                              : `IDR ${((Number(services.find(s => s.id === booking.serviceId)?.price || 0) + (booking.isHomeVisit ? Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0) : 0)) * (fee.value / 100)).toLocaleString('id-ID')}`}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Total Amount</span>
+                    <span>
+                      IDR {(() => {
+                        const service = services.find(s => s.id === booking.serviceId);
+                        if (!service) return 0;
+                        let total = Number(service.price);
+                        if (booking.isHomeVisit && service.homeVisitSurcharge) {
+                          total += Number(service.homeVisitSurcharge);
+                        }
+                        if (invoiceSettings?.taxServiceCharge?.taxPercentage) {
+                          total += total * (invoiceSettings.taxServiceCharge.taxPercentage / 100);
+                        }
+                        if (invoiceSettings?.taxServiceCharge?.serviceChargeRequired) {
+                          if (invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed') {
+                            total += invoiceSettings.taxServiceCharge.serviceChargeValue || 0;
+                          } else {
+                            total += total * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100);
+                          }
+                        }
+                        if (invoiceSettings?.additionalFees) {
+                          invoiceSettings.additionalFees.forEach(fee => {
+                            if (fee.type === 'fixed') {
+                              total += fee.value;
+                            } else {
+                              total += total * (fee.value / 100);
+                            }
+                          });
+                        }
+                        return Math.round(total).toLocaleString('id-ID');
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Payment Information */}
               <div className="space-y-4 bg-green-50 p-4 rounded-lg border border-green-200">
