@@ -294,12 +294,12 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 />
               ) : null}
               <div className="space-y-1">
-                {branding?.showHeaderText !== false && branding?.headerText && (
+                {branding?.showHeaderText === true && branding?.headerText && (
                   <p className="text-[11px] uppercase tracking-wide text-gray-600">
                     {branding.headerText}
                   </p>
                 )}
-                {branding?.showBusinessName !== false && (
+                {branding?.showBusinessName === true && (
                   <>
                     <h1 className="text-lg font-semibold text-gray-900">
                       {invoice.tenant?.businessName || 'Business Name'}

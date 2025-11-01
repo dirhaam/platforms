@@ -119,13 +119,13 @@ export class InvoicePDFGenerator {
     this.pdf.setFont('helvetica', 'bold');
     this.pdf.setFontSize(12);
 
-    if (branding?.showHeaderText !== false && branding?.headerText) {
+    if (branding?.showHeaderText === true && branding?.headerText) {
       const headerLines = this.pdf.splitTextToSize(branding.headerText, this.pageWidth - 2 * this.margin);
       this.pdf.text(headerLines, this.pageWidth / 2, currentY, { align: 'center' });
       currentY += headerLines.length * 4 + 2;
     }
 
-    if (branding?.showBusinessName !== false) {
+    if (branding?.showBusinessName === true) {
       this.pdf.setFontSize(14);
       this.pdf.text(tenant?.businessName || 'Business Name', this.pageWidth / 2, currentY, { align: 'center' });
       currentY += 6;
