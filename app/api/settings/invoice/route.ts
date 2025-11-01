@@ -31,13 +31,22 @@ export async function POST(request: NextRequest) {
 
     const payload = (await request.json()) as Partial<InvoiceBrandingSettings>;
 
+    console.log('[InvoiceBranding] POST payload received:', {
+      tenantId: tenant.id,
+      payload,
+      keys: Object.keys(payload)
+    });
+
     const result = await InvoiceBrandingService.updateSettings(tenant.id, payload);
 
     if (!result.success) {
+      console.log('[InvoiceBranding] POST update failed:', result.error);
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
     const refreshed = await InvoiceBrandingService.getSettings(tenant.id);
+
+    console.log('[InvoiceBranding] POST settings saved and refreshed:', refreshed);
 
     return NextResponse.json({ settings: refreshed }, { status: 200 });
   } catch (error) {
