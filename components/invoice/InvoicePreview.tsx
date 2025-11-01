@@ -366,14 +366,26 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 <span>Subtotal</span>
                 <span>{formatCurrency(invoice.subtotal)}</span>
               </div>
-              {Number(invoice.taxAmount ?? 0) > 0 && (
-                <div className="flex justify-between">
-                  <span>Pajak {(Number(invoice.taxRate ?? 0) * 100).toFixed(1)}%</span>
-                  <span>{formatCurrency(invoice.taxAmount)}</span>
+              {Number(invoice.taxPercentage ?? 0) > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Pajak {Number(invoice.taxPercentage).toFixed(2)}%</span>
+                  <span>{formatCurrency(Number(invoice.subtotal) * Number(invoice.taxPercentage ?? 0) / 100)}</span>
+                </div>
+              )}
+              {Number(invoice.serviceChargeAmount ?? 0) > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Service Charge</span>
+                  <span>{formatCurrency(Number(invoice.serviceChargeAmount ?? 0))}</span>
+                </div>
+              )}
+              {Number(invoice.additionalFeesAmount ?? 0) > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Biaya Tambahan</span>
+                  <span>{formatCurrency(Number(invoice.additionalFeesAmount ?? 0))}</span>
                 </div>
               )}
               {Number(invoice.discountAmount ?? 0) > 0 && (
-                <div className="flex justify-between">
+                <div className="flex justify-between text-gray-600">
                   <span>Diskon</span>
                   <span>-{formatCurrency(invoice.discountAmount)}</span>
                 </div>

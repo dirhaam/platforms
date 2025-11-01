@@ -62,6 +62,9 @@ export interface Invoice {
   taxRate: number;
   taxAmount: number;
   discountAmount: number;
+  taxPercentage?: number;
+  serviceChargeAmount?: number;
+  additionalFeesAmount?: number;
   totalAmount: number;
   paidAmount?: number;
   remainingBalance?: number; // totalAmount - paidAmount

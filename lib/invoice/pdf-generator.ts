@@ -249,10 +249,27 @@ export class InvoicePDFGenerator {
 
     currentY = this.drawKeyValue('Subtotal', this.formatCurrency(invoice.subtotal), currentY);
 
-    if (invoice.taxAmount > 0) {
+    if (Number(invoice.taxPercentage ?? 0) > 0) {
+      const taxAmount = Number(invoice.subtotal) * Number(invoice.taxPercentage ?? 0) / 100;
       currentY = this.drawKeyValue(
-        `Pajak ${(invoice.taxRate * 100).toFixed(1)}%`,
-        this.formatCurrency(invoice.taxAmount),
+        `Pajak ${Number(invoice.taxPercentage).toFixed(2)}%`,
+        this.formatCurrency(taxAmount),
+        currentY,
+      );
+    }
+
+    if (Number(invoice.serviceChargeAmount ?? 0) > 0) {
+      currentY = this.drawKeyValue(
+        'Service Charge',
+        this.formatCurrency(Number(invoice.serviceChargeAmount ?? 0)),
+        currentY,
+      );
+    }
+
+    if (Number(invoice.additionalFeesAmount ?? 0) > 0) {
+      currentY = this.drawKeyValue(
+        'Biaya Tambahan',
+        this.formatCurrency(Number(invoice.additionalFeesAmount ?? 0)),
         currentY,
       );
     }

@@ -15,6 +15,7 @@ import {
 } from '@/types/invoice';
 import Decimal from 'decimal.js';
 import { InvoiceBrandingService } from './invoice-branding-service';
+import { InvoiceSettingsService } from './invoice-settings-service';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -57,10 +58,35 @@ export class InvoiceService {
         subtotal = subtotal.add(new Decimal(item.unitPrice).mul(item.quantity));
       });
 
-      const taxRate = new Decimal(data.taxRate || 0);
-      const taxAmount = subtotal.mul(taxRate);
+      // Fetch invoice settings (tax, service charge, additional fees)
+      const settings = await InvoiceSettingsService.getSettings(tenantId);
+      
+      // Calculate tax
+      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
+      const taxAmount = subtotal.mul(new Decimal(taxPercentage).div(100));
+      
+      // Calculate service charge
+      let serviceChargeAmount = new Decimal(0);
+      if (settings?.taxServiceCharge?.serviceChargeRequired) {
+        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
+          serviceChargeAmount = new Decimal(settings.taxServiceCharge.serviceChargeValue || 0);
+        } else {
+          serviceChargeAmount = subtotal.mul(new Decimal(settings.taxServiceCharge.serviceChargeValue || 0).div(100));
+        }
+      }
+      
+      // Calculate additional fees
+      let additionalFeesAmount = new Decimal(0);
+      (settings?.additionalFees || []).forEach(fee => {
+        if (fee.type === 'fixed') {
+          additionalFeesAmount = additionalFeesAmount.add(new Decimal(fee.value));
+        } else {
+          additionalFeesAmount = additionalFeesAmount.add(subtotal.mul(new Decimal(fee.value).div(100)));
+        }
+      });
+
       const discountAmount = new Decimal(data.discountAmount || 0);
-      const totalAmount = subtotal.add(taxAmount).sub(discountAmount);
+      const totalAmount = subtotal.add(taxAmount).add(serviceChargeAmount).add(additionalFeesAmount).sub(discountAmount);
 
       const nowIso = new Date().toISOString();
 
@@ -74,10 +100,13 @@ export class InvoiceService {
         issue_date: nowIso,
         due_date: data.dueDate,
         subtotal: subtotal.toNumber(),
-        tax_rate: taxRate.toNumber(),
-        tax_amount: taxAmount.toNumber(),
+        tax_rate: 0,
+        tax_amount: 0,
         discount_amount: discountAmount.toNumber(),
         total_amount: totalAmount.toNumber(),
+        tax_percentage: taxPercentage,
+        service_charge_amount: serviceChargeAmount.toNumber(),
+        additional_fees_amount: additionalFeesAmount.toNumber(),
         notes: data.notes,
         terms: data.terms,
         created_at: nowIso,
@@ -192,6 +221,9 @@ export class InvoiceService {
         taxRate: parseDecimal(data.taxRate ?? data.tax_rate),
         taxAmount: parseDecimal(data.taxAmount ?? data.tax_amount),
         discountAmount: parseDecimal(data.discountAmount ?? data.discount_amount),
+        taxPercentage: parseDecimal(data.tax_percentage),
+        serviceChargeAmount: parseDecimal(data.service_charge_amount),
+        additionalFeesAmount: parseDecimal(data.additional_fees_amount),
         totalAmount: parseDecimal(data.totalAmount ?? data.total_amount),
         paidAmount: parseDecimal(data.paidAmount ?? data.paid_amount),
         paymentMethod: data.paymentMethod ?? data.payment_method,
