@@ -115,8 +115,35 @@ export class SalesService {
       const unitPrice = serviceData.price || 0;
       const homeVisitSurcharge = 0;
       const subtotal = unitPrice + homeVisitSurcharge;
-      const taxAmount = 0;
-      const totalAmount = subtotal + taxAmount;
+
+      // Fetch invoice settings (tax, service charge, additional fees)
+      const settings = await InvoiceSettingsService.getSettings(transactionData.tenantId);
+      
+      // Calculate tax
+      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
+      const taxAmount = subtotal * (taxPercentage / 100);
+      
+      // Calculate service charge
+      let serviceChargeAmount = 0;
+      if (settings?.taxServiceCharge?.serviceChargeRequired) {
+        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
+          serviceChargeAmount = settings.taxServiceCharge.serviceChargeValue || 0;
+        } else {
+          serviceChargeAmount = subtotal * ((settings.taxServiceCharge.serviceChargeValue || 0) / 100);
+        }
+      }
+      
+      // Calculate additional fees
+      let additionalFeesAmount = 0;
+      (settings?.additionalFees || []).forEach(fee => {
+        if (fee.type === 'fixed') {
+          additionalFeesAmount += fee.value;
+        } else {
+          additionalFeesAmount += subtotal * (fee.value / 100);
+        }
+      });
+
+      const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount;
 
       const newTransaction = {
         id: uuidv4(),
@@ -136,9 +163,12 @@ export class SalesService {
         home_visit_surcharge: homeVisitSurcharge,
         subtotal,
         tax_rate: 0,
-        tax_amount: taxAmount,
+        tax_amount: 0,
         discount_amount: 0,
         total_amount: totalAmount,
+        tax_percentage: taxPercentage,
+        service_charge_amount: serviceChargeAmount,
+        additional_fees_amount: additionalFeesAmount,
         payment_method: transactionData.paymentMethod,
         payment_status: 'paid',
         paid_amount: totalAmount,
@@ -202,8 +232,35 @@ export class SalesService {
       const unitPrice = serviceData.price || 0;
       const homeVisitSurcharge = bookingData.isHomeVisit ? (serviceData.home_visit_surcharge || 0) : 0;
       const subtotal = unitPrice + homeVisitSurcharge;
-      const taxAmount = 0;
 
+      // Fetch invoice settings (tax, service charge, additional fees)
+      const settings = await InvoiceSettingsService.getSettings(bookingData.tenantId);
+      
+      // Calculate tax
+      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
+      const taxAmount = subtotal * (taxPercentage / 100);
+      
+      // Calculate service charge
+      let serviceChargeAmount = 0;
+      if (settings?.taxServiceCharge?.serviceChargeRequired) {
+        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
+          serviceChargeAmount = settings.taxServiceCharge.serviceChargeValue || 0;
+        } else {
+          serviceChargeAmount = subtotal * ((settings.taxServiceCharge.serviceChargeValue || 0) / 100);
+        }
+      }
+      
+      // Calculate additional fees
+      let additionalFeesAmount = 0;
+      (settings?.additionalFees || []).forEach(fee => {
+        if (fee.type === 'fixed') {
+          additionalFeesAmount += fee.value;
+        } else {
+          additionalFeesAmount += subtotal * (fee.value / 100);
+        }
+      });
+
+      // Total from booking already includes all fees, so use as is
       const newTransaction = {
         id: uuidv4(),
         tenant_id: bookingData.tenantId,
@@ -222,9 +279,12 @@ export class SalesService {
         home_visit_surcharge: homeVisitSurcharge,
         subtotal,
         tax_rate: 0,
-        tax_amount: taxAmount,
+        tax_amount: 0,
         discount_amount: 0,
         total_amount: bookingData.totalAmount,
+        tax_percentage: taxPercentage,
+        service_charge_amount: serviceChargeAmount,
+        additional_fees_amount: additionalFeesAmount,
         payment_method: bookingData.paymentMethod,
         payment_status: 'pending',
         paid_amount: 0,
