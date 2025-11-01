@@ -21,6 +21,7 @@ import { AddressInput } from '@/components/location/AddressInput';
 import { PricingCalculator } from '@/components/booking/PricingCalculator';
 import { Address } from '@/types/location';
 import { Service } from '@/types/booking';
+import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
 
 interface TenantData {
   id: string;
@@ -87,9 +88,31 @@ export default function BookingDialog({
   });
   const [calculatedPrice, setCalculatedPrice] = useState<number>(selectedService ? Number(selectedService.price) : 0);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettingsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Fetch invoice settings on mount
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`/api/settings/invoice-config?tenantId=${tenant.id}`);
+        if (!response.ok) {
+          console.warn("Failed to fetch invoice settings");
+          return;
+        }
+        const data = await response.json();
+        setInvoiceSettings(data.settings || null);
+      } catch (error) {
+        console.warn("Error fetching invoice settings:", error);
+      }
+    };
+    
+    if (tenant?.id) {
+      fetchSettings();
+    }
+  }, [tenant?.id]);
 
   // Sync selectedService with props when service changes
   React.useEffect(() => {
@@ -552,6 +575,57 @@ export default function BookingDialog({
                 rows={3}
               />
             </div>
+
+            {/* Amount Breakdown */}
+            {selectedService && (
+              <div className="p-4 bg-gray-50 rounded-lg border space-y-2">
+                <h3 className="font-semibold text-sm mb-3">Amount Breakdown</h3>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Base Service Amount</span>
+                  <span>IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
+                </div>
+                {formData.isHomeVisit && selectedService.homeVisitSurcharge && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Home Visit Surcharge</span>
+                    <span>IDR {Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+                {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
+                    <span>IDR {((Number(selectedService.price) + (formData.isHomeVisit ? Number(selectedService.homeVisitSurcharge || 0) : 0)) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString('id-ID')}</span>
+                  </div>
+                ) : null}
+                {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue ? (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Service Charge</span>
+                    <span>
+                      {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
+                        ? `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`
+                        : `IDR ${((Number(selectedService.price) + (formData.isHomeVisit ? Number(selectedService.homeVisitSurcharge || 0) : 0)) * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
+                    </span>
+                  </div>
+                ) : null}
+                {invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0 && (
+                  <>
+                    {invoiceSettings.additionalFees.map(fee => (
+                      <div key={fee.id} className="flex justify-between text-sm text-gray-600">
+                        <span>{fee.name}</span>
+                        <span>
+                          {fee.type === 'fixed'
+                            ? `IDR ${fee.value.toLocaleString('id-ID')}`
+                            : `IDR ${((Number(selectedService.price) + (formData.isHomeVisit ? Number(selectedService.homeVisitSurcharge || 0) : 0)) * (fee.value / 100)).toLocaleString('id-ID')}`}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                <div className="border-t pt-2 flex justify-between font-semibold">
+                  <span>Total Amount</span>
+                  <span>IDR {Number(calculateTotal()).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+            )}
 
             {/* Payment Information */}
             <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
