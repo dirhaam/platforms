@@ -49,6 +49,7 @@ export interface Booking {
   taxPercentage?: number;
   serviceChargeAmount?: number;
   additionalFeesAmount?: number;
+  travelSurchargeAmount?: number; // Additional surcharge based on travel distance
   paymentStatus: PaymentStatus;
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
   remindersSent: Date[];

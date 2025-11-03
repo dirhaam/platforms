@@ -1190,6 +1190,12 @@ export function BookingManagement({
                     <span className="text-gray-600">Total Amount:</span>
                     <span className="ml-2 font-medium">IDR {selectedBooking.totalAmount.toLocaleString('id-ID')}</span>
                   </div>
+                  {selectedBooking.isHomeVisit && selectedBooking.travelSurchargeAmount && selectedBooking.travelSurchargeAmount > 0 && (
+                    <div>
+                      <span className="text-gray-600">Travel Surcharge:</span>
+                      <span className="ml-2 font-medium text-blue-600">IDR {selectedBooking.travelSurchargeAmount.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
                   <div>
                     <span className="text-gray-600">Status:</span>
                     <span className="ml-2 capitalize">
@@ -1224,6 +1230,24 @@ export function BookingManagement({
                     <span className="text-gray-600">Total Amount:</span>
                     <span className="ml-2 font-medium">IDR {selectedBooking.totalAmount.toLocaleString('id-ID')}</span>
                   </div>
+                  {selectedBooking.isHomeVisit && selectedBooking.travelSurchargeAmount && selectedBooking.travelSurchargeAmount > 0 && (
+                    <div>
+                      <span className="text-gray-600">Travel Surcharge:</span>
+                      <span className="ml-2 font-medium text-blue-600">IDR {selectedBooking.travelSurchargeAmount.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  {selectedBooking.serviceChargeAmount && selectedBooking.serviceChargeAmount > 0 && (
+                    <div>
+                      <span className="text-gray-600">Service Charge:</span>
+                      <span className="ml-2">IDR {selectedBooking.serviceChargeAmount.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  {selectedBooking.additionalFeesAmount && selectedBooking.additionalFeesAmount > 0 && (
+                    <div>
+                      <span className="text-gray-600">Additional Fees:</span>
+                      <span className="ml-2">IDR {selectedBooking.additionalFeesAmount.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
                   <div>
                     <span className="text-gray-600">Payment Status:</span>
                     <span className="ml-2 capitalize">

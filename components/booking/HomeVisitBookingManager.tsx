@@ -9,6 +9,7 @@ import { MapPin, Clock, DollarSign, Route, AlertTriangle, CheckCircle } from 'lu
 import { Booking, Service } from '@/types/booking';
 import { TravelCalculation } from '@/types/location';
 import { TravelCalculator } from '@/components/location/TravelCalculator';
+import { LocationMap } from '@/components/location/LocationMap';
 import { toast } from 'sonner';
 
 interface HomeVisitBookingManagerProps {
@@ -236,6 +237,15 @@ export function HomeVisitBookingManager({
               startLocation={businessLocation}
             />
           )}
+
+          {/* Location Map */}
+          <LocationMap 
+            bookings={homeVisitBookings}
+            businessLocation={businessLocation} // Pass the address string directly - the component handles geocoding
+            center={{ lat: -6.2088, lng: 106.8456 }} // Default to Jakarta
+            zoom={12}
+            className="mt-4"
+          />
 
           {/* Individual Booking Cards */}
           <div className="space-y-4">

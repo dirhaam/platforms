@@ -12,6 +12,7 @@ import {
   LocationErrorType
 } from '@/types/location';
 import { CacheService } from '@/lib/cache/cache-service';
+import { createClient } from '@supabase/supabase-js';
 
 export class LocationService {
   private static config: LocationServiceConfig = {
@@ -179,6 +180,19 @@ export class LocationService {
       }
 
       const result = data[0];
+      const coordinates = {
+        lat: parseFloat(result.lat),
+        lng: parseFloat(result.lon)
+      };
+
+      // Validate coordinates are within Indonesia
+      if (!this.isValidIndonesiaCoordinate(coordinates)) {
+        return {
+          isValid: false,
+          error: 'Address coordinates are outside of Indonesia'
+        };
+      }
+
       const parsedAddress: Address = {
         street: result.display_name.split(',')[0] || '',
         city: result.address?.city || result.address?.town || result.address?.village || '',
@@ -186,29 +200,35 @@ export class LocationService {
         postalCode: result.address?.postcode || '',
         country: result.address?.country || this.config.defaultCountry,
         fullAddress: result.display_name,
-        coordinates: {
-          lat: parseFloat(result.lat),
-          lng: parseFloat(result.lon)
-        }
+        coordinates: coordinates
       };
 
-      const suggestions = data.slice(1, 4).map((item: any) => ({
-        street: item.display_name.split(',')[0] || '',
-        city: item.address?.city || item.address?.town || item.address?.village || '',
-        state: item.address?.state || '',
-        postalCode: item.address?.postcode || '',
-        country: item.address?.country || this.config.defaultCountry,
-        fullAddress: item.display_name,
-        coordinates: {
+      const suggestions = data.slice(1, 4).map((item: any) => {
+        const suggestionCoords = {
           lat: parseFloat(item.lat),
           lng: parseFloat(item.lon)
+        };
+
+        // Only include suggestions with valid Indonesia coordinates
+        if (!this.isValidIndonesiaCoordinate(suggestionCoords)) {
+          return null; // Will be filtered out below
         }
-      }));
+
+        return {
+          street: item.display_name.split(',')[0] || '',
+          city: item.address?.city || item.address?.town || item.address?.village || '',
+          state: item.address?.state || '',
+          postalCode: item.address?.postcode || '',
+          country: item.address?.country || this.config.defaultCountry,
+          fullAddress: item.display_name,
+          coordinates: suggestionCoords
+        };
+      }).filter(Boolean); // Remove null values
 
       return {
         isValid: true,
         address: parsedAddress,
-        suggestions,
+        suggestions: suggestions as Address[],
         confidence: parseFloat(result.importance) || 0.5
       };
     } catch (error) {
@@ -252,9 +272,14 @@ export class LocationService {
         serviceId
       );
 
+      // Apply buffer to the duration to account for traffic, stops, and real-world conditions
+      const bufferedDuration = routeInfo?.duration 
+        ? Math.ceil(routeInfo.duration * 1.2) // Add 20% buffer to OSRM time
+        : Math.ceil(straightLineDistance * 2); // Fallback: 2 min per km
+
       return {
         distance: routeInfo?.distance || straightLineDistance,
-        duration: routeInfo?.duration || Math.ceil(straightLineDistance * 2), // Rough estimate: 2 min per km
+        duration: bufferedDuration,
         route: routeInfo?.route,
         surcharge: serviceAreaCheck.surcharge,
         isWithinServiceArea: serviceAreaCheck.isWithinArea,
@@ -262,11 +287,11 @@ export class LocationService {
       };
     } catch (error) {
       console.error('Error calculating route:', error);
-      // Fallback to straight-line calculation
+      // Fallback to straight-line calculation with buffer
       const distance = this.calculateHaversineDistance(origin, destination);
       return {
         distance,
-        duration: Math.ceil(distance * 2),
+        duration: Math.ceil(distance * 2.4), // Apply buffer to fallback time too
         surcharge: 0,
         isWithinServiceArea: false
       };
@@ -331,13 +356,131 @@ export class LocationService {
     tenantId: string, 
     serviceId?: string
   ) {
-    // This would check against the service areas in the database
-    // For now, return a default response
-    return {
-      isWithinArea: true,
-      surcharge: 0,
-      serviceAreaId: undefined
-    };
+    // This checks against the service areas in the database
+    // Check if coordinates are within any service area for this tenant
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      // Query service areas for tenant and optionally for a specific service
+      let query = supabase
+        .from('service_areas')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
+
+      // Get all areas for this tenant
+      const { data: allAreas } = await query;
+
+      if (!allAreas || allAreas.length === 0) {
+        // No service areas defined for this tenant, assume customer is within service area
+        return {
+          isWithinArea: true,
+          surcharge: 0,
+          serviceAreaId: undefined
+        };
+      }
+
+      // Check each area
+      for (const area of allAreas) {
+        if (area.boundaries && this.isPointInPolygon(coordinates, area.boundaries.coordinates)) {
+          // Customer is within this area
+          let surcharge = area.base_travel_surcharge || 0;
+          
+          // If serviceId is provided, check if this area restricts available services
+          if (serviceId && area.available_services && Array.isArray(area.available_services) && area.available_services.length > 0) {
+            // Check if service is available in this area
+            if (!area.available_services.includes(serviceId)) {
+              // Service not available in this area - could apply higher surcharge or return error
+              // For now, apply a default surcharge if service not available
+              return {
+                isWithinArea: false, // Mark as outside service area since service isn't available
+                surcharge: area.base_travel_surcharge || 0,
+                serviceAreaId: area.id
+              };
+            }
+          }
+          
+          return {
+            isWithinArea: true,
+            surcharge: surcharge,
+            serviceAreaId: area.id
+          };
+        }
+      }
+
+      // If no areas matched, customer is outside all service areas
+      // Return the minimum surcharge of all areas as a default, or 0 if none defined
+      const minSurcharge = allAreas.reduce((min, area) => 
+        Math.min(min, area.base_travel_surcharge || 0), 
+        Infinity
+      );
+
+      return {
+        isWithinArea: false,
+        surcharge: isFinite(minSurcharge) ? minSurcharge : 0,
+        serviceAreaId: undefined
+      };
+    } catch (error) {
+      console.error('Error checking service area coverage:', error);
+      // On error, return safe defaults - assume within area with no surcharge
+      return {
+        isWithinArea: true,
+        surcharge: 0,
+        serviceAreaId: undefined
+      };
+    }
+  }
+
+  // Helper function to determine if a point is within a polygon
+  private static isPointInPolygon(point: Coordinates, polygon: any): boolean {
+    // Check if polygon is in the expected format
+    if (!polygon || (!Array.isArray(polygon) && (!polygon.coordinates || !Array.isArray(polygon.coordinates)))) {
+      return false;
+    }
+
+    // Handle different possible formats for polygon data
+    let coordinatesArray: {lat: number, lng: number}[] = [];
+    
+    if (Array.isArray(polygon)) {
+      // Direct array of coordinates
+      coordinatesArray = polygon;
+    } else if (polygon.coordinates && Array.isArray(polygon.coordinates)) {
+      // Nested in coordinates property
+      coordinatesArray = polygon.coordinates;
+    } else {
+      return false;
+    }
+
+    // Ray-casting algorithm to check if point is within polygon
+    const x = point.lat, y = point.lng;
+    let inside = false;
+
+    for (let i = 0, j = coordinatesArray.length - 1; i < coordinatesArray.length; j = i++) {
+      const xi = coordinatesArray[i].lat, yi = coordinatesArray[i].lng;
+      const xj = coordinatesArray[j].lat, yj = coordinatesArray[j].lng;
+
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+
+    return inside;
+  }
+
+  // Helper function to validate if coordinates are within Indonesia boundaries
+  private static isValidIndonesiaCoordinate(coords: Coordinates): boolean {
+    // Indonesia boundaries
+    const MIN_LAT = -11;   // Southernmost point of Indonesia
+    const MAX_LAT = 6;     // Northernmost point of Indonesia
+    const MIN_LNG = 95;    // Westernmost point of Indonesia
+    const MAX_LNG = 141;   // Easternmost point of Indonesia
+
+    return coords.lat >= MIN_LAT && 
+           coords.lat <= MAX_LAT && 
+           coords.lng >= MIN_LNG && 
+           coords.lng <= MAX_LNG;
   }
 
   private static calculateHaversineDistance(coord1: Coordinates, coord2: Coordinates): number {

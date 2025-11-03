@@ -15,6 +15,7 @@ import { validateBookingTime, validateBusinessHours } from '@/lib/validation/boo
 import { BookingHistoryService } from '@/lib/booking/booking-history-service';
 import { randomUUID as cryptoRandomUUID } from 'crypto';
 import { InvoiceSettingsService } from '@/lib/invoice/invoice-settings-service';
+import { LocationService } from '@/lib/location/location-service';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -65,6 +66,7 @@ const mapToBooking = (dbData: any): Booking => {
     taxPercentage: dbData.tax_percentage,
     serviceChargeAmount: dbData.service_charge_amount,
     additionalFeesAmount: dbData.additional_fees_amount,
+    travelSurchargeAmount: dbData.travel_surcharge_amount,
     paymentStatus: dbData.payment_status,
     remindersSent: dbData.reminders_sent,
     createdAt: new Date(dbData.created_at),
@@ -172,8 +174,42 @@ export class BookingService {
         }
       });
 
-      // Total = subtotal + tax + service charge + additional fees
-      const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount;
+      // Calculate travel surcharge for home visits if address is provided
+      let travelSurcharge = 0;
+      if (data.isHomeVisit && data.homeVisitAddress) {
+        try {
+          // Get tenant's business location for travel calculation
+          const { data: tenantData, error: tenantError } = await supabase
+            .from('tenants')
+            .select('address, business_location')
+            .eq('id', tenantId)
+            .single();
+          
+          if (tenantData && !tenantError) {
+            // Use business location if available, otherwise try address
+            const businessLocation = tenantData.business_location || tenantData.address;
+            
+            if (businessLocation) {
+              const travelCalc = await LocationService.calculateTravel({
+                origin: businessLocation,
+                destination: data.homeVisitAddress,
+                tenantId,
+                serviceId: data.serviceId
+              });
+              
+              if (travelCalc) {
+                travelSurcharge = travelCalc.surcharge || 0;
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Could not calculate travel surcharge:', error);
+          // Continue with booking creation even if travel calculation fails
+        }
+      }
+
+      // Total = subtotal + tax + service charge + additional fees + travel surcharge
+      const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount + travelSurcharge;
       
       // Prepare DP payment data
       const dpAmount = data.dpAmount || 0;
@@ -206,10 +242,11 @@ export class BookingService {
           home_visit_address: data.homeVisitAddress,
           home_visit_coordinates: data.homeVisitCoordinates,
           notes: data.notes,
-          total_amount: totalAmount,
+          total_amount: totalAmount, // This already includes the travel surcharge
           tax_percentage: taxPercentage,
           service_charge_amount: serviceChargeAmount,
           additional_fees_amount: additionalFeesAmount,
+          travel_surcharge_amount: travelSurcharge,
           status: BookingStatus.PENDING,
           payment_status: paymentStatus,
           reminders_sent: [],

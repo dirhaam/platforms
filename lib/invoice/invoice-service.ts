@@ -783,22 +783,36 @@ export class InvoiceService {
       const taxPercentage = parseDecimal(booking.tax_percentage ?? 0);
       const serviceChargeAmount = parseDecimal(booking.service_charge_amount ?? 0);
       const additionalFeesAmount = parseDecimal(booking.additional_fees_amount ?? 0);
+      const travelSurchargeAmount = parseDecimal(booking.travel_surcharge_amount ?? 0);
       
-      // Solve for base amount: total = subtotal * (1 + tax_percentage/100) + service_charge + additional_fees
-      // subtotal = (total - service_charge - additional_fees) / (1 + tax_percentage/100)
+      // Solve for base amount: total = (subtotal + travel_surcharge) * (1 + tax_percentage/100) + service_charge + additional_fees
+      // subtotal = (total - service_charge - additional_fees) / (1 + tax_percentage/100) - travel_surcharge
       const divisor = 1 + (taxPercentage / 100);
-      const baseAmount = (totalAmount - serviceChargeAmount - additionalFeesAmount) / divisor;
+      const amountBeforeTax = totalAmount - serviceChargeAmount - additionalFeesAmount;
+      const amountAfterTax = amountBeforeTax / divisor;
+      const baseAmount = amountAfterTax - travelSurchargeAmount;
+
+      // Update items to include travel surcharge as a separate line item if it exists
+      const items = [{
+        description: serviceName,
+        quantity: 1,
+        unitPrice: baseAmount,
+        serviceId,
+      }];
+      
+      if (travelSurchargeAmount > 0) {
+        items.push({
+          description: 'Home Visit Travel Surcharge',
+          quantity: 1,
+          unitPrice: travelSurchargeAmount,
+        });
+      }
 
       const invoiceData: CreateInvoiceRequest = {
         customerId,
         bookingId: booking.id,
         dueDate: dueDate.toISOString(),
-        items: [{
-          description: serviceName,
-          quantity: 1,
-          unitPrice: baseAmount,
-          serviceId,
-        }],
+        items: items,
         notes: booking.scheduled_at
           ? `Invoice for booking on ${new Date(booking.scheduled_at).toLocaleDateString()}`
           : undefined,
@@ -820,13 +834,14 @@ export class InvoiceService {
         invoicePaidAmount = parseDecimal(booking.paid_amount ?? 0);
       }
 
-      const taxAmount = baseAmount * (taxPercentage / 100);
+      const taxAmount = (baseAmount + travelSurchargeAmount) * (taxPercentage / 100);
       console.log('[InvoiceService.createInvoiceFromBooking] 📄 Creating invoice:', {
         bookingId: booking.id,
         bookingPaymentStatus: booking.payment_status,
         paidAmount: invoicePaidAmount,
         totalAmount: Number(totalAmount),
         baseAmount: Number(baseAmount),
+        travelSurchargeAmount: Number(travelSurchargeAmount),
         taxPercentage: `${taxPercentage}%`,
         taxAmount: Number(taxAmount),
         serviceChargeAmount: Number(serviceChargeAmount),
