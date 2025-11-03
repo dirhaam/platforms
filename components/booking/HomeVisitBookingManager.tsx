@@ -202,11 +202,14 @@ export function HomeVisitBookingManager({
             setBusinessCoords(data.coordinates);
           }
         } else {
+          // Graceful fallback: log warning but continue
           const errorData = await response.json().catch(() => ({}));
-          console.warn('Geocoding failed:', errorData.error || 'Unknown error');
+          console.warn('Could not geocode homebase address, using default location:', errorData.error);
+          // Don't set businessCoords - will use default Jakarta
         }
       } catch (error) {
-        console.error('Error geocoding business location:', error);
+        console.warn('Error geocoding business location, using default:', error);
+        // Graceful fallback - continue with default coordinates
       } finally {
         setGeocodingBusiness(false);
       }
