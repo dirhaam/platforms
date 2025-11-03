@@ -147,6 +147,10 @@ export interface CreateInvoiceRequest {
   notes?: string;
   terms?: string;
   paymentReference?: string;
+  // Pre-calculated tax/fees (to prevent double calculation when creating invoice from booking)
+  preTaxPercentage?: number;
+  preServiceChargeAmount?: number;
+  preAdditionalFeesAmount?: number;
 }
 
 // Create invoice item request

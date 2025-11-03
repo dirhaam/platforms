@@ -58,32 +58,56 @@ export class InvoiceService {
         subtotal = subtotal.add(new Decimal(item.unitPrice).mul(item.quantity));
       });
 
-      // Fetch invoice settings (tax, service charge, additional fees)
-      const settings = await InvoiceSettingsService.getSettings(tenantId);
-      
-      // Calculate tax
-      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
-      const taxAmount = subtotal.mul(new Decimal(taxPercentage).div(100));
-      
-      // Calculate service charge
-      let serviceChargeAmount = new Decimal(0);
-      if (settings?.taxServiceCharge?.serviceChargeRequired) {
-        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
-          serviceChargeAmount = new Decimal(settings.taxServiceCharge.serviceChargeValue || 0);
-        } else {
-          serviceChargeAmount = subtotal.mul(new Decimal(settings.taxServiceCharge.serviceChargeValue || 0).div(100));
+      // If pre-calculated tax/fees are provided (e.g., from booking), use them instead of recalculating
+      let taxAmount: Decimal;
+      let serviceChargeAmount: Decimal;
+      let additionalFeesAmount: Decimal;
+      let taxPercentage: number;
+
+      // Check if pre-calculated values are provided (to prevent double charge on booking invoices)
+      const hasPreCalculated = (data as any).preTaxPercentage !== undefined || 
+                               (data as any).preServiceChargeAmount !== undefined || 
+                               (data as any).preAdditionalFeesAmount !== undefined;
+
+      if (hasPreCalculated) {
+        console.log('[InvoiceService.createInvoice] Using pre-calculated tax/fees from booking:', {
+          preTaxPercentage: (data as any).preTaxPercentage,
+          preServiceChargeAmount: (data as any).preServiceChargeAmount,
+          preAdditionalFeesAmount: (data as any).preAdditionalFeesAmount
+        });
+        
+        taxPercentage = (data as any).preTaxPercentage || 0;
+        taxAmount = new Decimal((data as any).preTaxPercentage || 0);
+        serviceChargeAmount = new Decimal((data as any).preServiceChargeAmount || 0);
+        additionalFeesAmount = new Decimal((data as any).preAdditionalFeesAmount || 0);
+      } else {
+        // Fetch invoice settings (tax, service charge, additional fees)
+        const settings = await InvoiceSettingsService.getSettings(tenantId);
+        
+        // Calculate tax
+        taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
+        taxAmount = subtotal.mul(new Decimal(taxPercentage).div(100));
+        
+        // Calculate service charge
+        serviceChargeAmount = new Decimal(0);
+        if (settings?.taxServiceCharge?.serviceChargeRequired) {
+          if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
+            serviceChargeAmount = new Decimal(settings.taxServiceCharge.serviceChargeValue || 0);
+          } else {
+            serviceChargeAmount = subtotal.mul(new Decimal(settings.taxServiceCharge.serviceChargeValue || 0).div(100));
+          }
         }
+        
+        // Calculate additional fees
+        additionalFeesAmount = new Decimal(0);
+        (settings?.additionalFees || []).forEach(fee => {
+          if (fee.type === 'fixed') {
+            additionalFeesAmount = additionalFeesAmount.add(new Decimal(fee.value));
+          } else {
+            additionalFeesAmount = additionalFeesAmount.add(subtotal.mul(new Decimal(fee.value).div(100)));
+          }
+        });
       }
-      
-      // Calculate additional fees
-      let additionalFeesAmount = new Decimal(0);
-      (settings?.additionalFees || []).forEach(fee => {
-        if (fee.type === 'fixed') {
-          additionalFeesAmount = additionalFeesAmount.add(new Decimal(fee.value));
-        } else {
-          additionalFeesAmount = additionalFeesAmount.add(subtotal.mul(new Decimal(fee.value).div(100)));
-        }
-      });
 
       const discountAmount = new Decimal(data.discountAmount || 0);
       const totalAmount = subtotal.add(taxAmount).add(serviceChargeAmount).add(additionalFeesAmount).sub(discountAmount);
@@ -745,6 +769,13 @@ export class InvoiceService {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 7);
 
+      // Calculate base price (total - tax - service charge - additional fees)
+      const taxPercentage = parseDecimal(booking.tax_percentage ?? 0);
+      const serviceChargeAmount = parseDecimal(booking.service_charge_amount ?? 0);
+      const additionalFeesAmount = parseDecimal(booking.additional_fees_amount ?? 0);
+      
+      const baseAmount = totalAmount - taxPercentage - serviceChargeAmount - additionalFeesAmount;
+
       const invoiceData: CreateInvoiceRequest = {
         customerId,
         bookingId: booking.id,
@@ -752,12 +783,16 @@ export class InvoiceService {
         items: [{
           description: serviceName,
           quantity: 1,
-          unitPrice: totalAmount,
+          unitPrice: baseAmount,
           serviceId,
         }],
         notes: booking.scheduled_at
           ? `Invoice for booking on ${new Date(booking.scheduled_at).toLocaleDateString()}`
           : undefined,
+        // Pass pre-calculated tax and fees to prevent double calculation
+        preTaxPercentage: taxPercentage,
+        preServiceChargeAmount: serviceChargeAmount,
+        preAdditionalFeesAmount: additionalFeesAmount,
       };
 
       // Determine invoice status based on booking payment status (same logic as sales)
@@ -776,9 +811,14 @@ export class InvoiceService {
         bookingId: booking.id,
         bookingPaymentStatus: booking.payment_status,
         paidAmount: invoicePaidAmount,
+        baseAmount,
+        taxPercentage,
+        serviceChargeAmount,
+        additionalFeesAmount,
         totalAmount,
         invoiceStatus,
-        paymentHistoryCount: paymentHistory?.length || 0
+        paymentHistoryCount: paymentHistory?.length || 0,
+        note: 'Using pre-calculated tax/fees from booking to prevent double charge'
       });
 
       const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount > 0 ? invoicePaidAmount : undefined);
