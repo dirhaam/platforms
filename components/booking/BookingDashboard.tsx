@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
+import { NewBookingDialog } from './NewBookingDialog';
 import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
@@ -47,6 +48,9 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // New Booking states
+  const [showNewBookingDialog, setShowNewBookingDialog] = useState(false);
   
   // Quick Sale states
   const [showQuickSaleDialog, setShowQuickSaleDialog] = useState(false);
@@ -381,10 +385,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={() => {
-              const searchParams = new URLSearchParams({ subdomain: tenantSubdomain });
-              window.location.href = `/tenant/admin/bookings/new?${searchParams.toString()}`;
-            }}
+            onClick={() => setShowNewBookingDialog(true)}
           >
             <Plus className="h-4 w-4 mr-2" />
             New Booking
@@ -699,6 +700,18 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           toast.success('Quick sale created successfully!');
           void Promise.all([fetchBookings(), fetchSalesTransactions(), fetchSalesSummary()]);
           await createInvoiceAndPreview(transaction);
+        }}
+      />
+
+      {/* New Booking Dialog */}
+      <NewBookingDialog
+        open={showNewBookingDialog}
+        onOpenChange={setShowNewBookingDialog}
+        subdomain={tenantSubdomain}
+        onBookingCreated={async () => {
+          setShowNewBookingDialog(false);
+          toast.success('Booking created successfully!');
+          await fetchBookings();
         }}
       />
 

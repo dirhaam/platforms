@@ -1,22 +1,18 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { NewBookingDialog } from '@/components/booking/NewBookingDialog';
-import { useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function BookingNewPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const subdomain = searchParams?.get('subdomain') || '';
-  const [isOpen, setIsOpen] = useState(true);
 
-  return (
-    <NewBookingDialog
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      subdomain={subdomain}
-      onBookingCreated={() => {
-        // Dialog will close after booking is created
-      }}
-    />
-  );
+  useEffect(() => {
+    // Redirect to bookings page with dialog state
+    // The booking form is now a modal dialog on the main bookings page
+    router.push(`/tenant/admin/bookings?subdomain=${encodeURIComponent(subdomain)}`);
+  }, [subdomain, router]);
+
+  return null;
 }
