@@ -95,7 +95,16 @@ export function TravelCalculator({
       });
 
       if (response.ok) {
-        const result: RouteOptimization = await response.json();
+        const raw = await response.json();
+        const result: RouteOptimization = {
+          ...raw,
+          optimizedRoute: Array.isArray(raw.optimizedRoute)
+            ? raw.optimizedRoute.map((s: any) => ({
+                ...s,
+                estimatedArrival: new Date(s.estimatedArrival),
+              }))
+            : [],
+        };
         setRouteOptimization(result);
         onCalculationComplete?.(result);
         return result;
