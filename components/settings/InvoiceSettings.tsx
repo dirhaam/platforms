@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { ImageIcon, RefreshCw, Upload, X, Plus, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AddressInput } from '@/components/location/AddressInput';
 
 interface InvoiceSettingsProps {
   tenantId: string;
@@ -21,6 +22,8 @@ interface BrandingSettings {
   headerText: string;
   footerText: string;
   businessAddress: string;
+  businessLatitude?: number;
+  businessLongitude?: number;
 }
 
 interface TaxServiceChargeSettings {
@@ -49,6 +52,8 @@ const DEFAULT_FORM: InvoiceSettingsForm = {
     headerText: '',
     footerText: '',
     businessAddress: '',
+    businessLatitude: undefined,
+    businessLongitude: undefined,
   },
   taxServiceCharge: {
     taxPercentage: 0,
@@ -92,6 +97,8 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
             headerText: settings?.branding?.headerText || '',
             footerText: settings?.branding?.footerText || '',
             businessAddress: settings?.branding?.businessAddress || '',
+            businessLatitude: settings?.branding?.businessLatitude,
+            businessLongitude: settings?.branding?.businessLongitude,
           },
           taxServiceCharge: {
             taxPercentage: settings?.taxServiceCharge?.taxPercentage || 0,
@@ -137,6 +144,13 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
         branding: { ...prev.branding, [field]: event.target.value }
       }));
     };
+
+  const setBrandingCoords = (lat?: number, lng?: number) => {
+    setForm(prev => ({
+      ...prev,
+      branding: { ...prev.branding, businessLatitude: lat, businessLongitude: lng }
+    }));
+  };
 
   const handleTaxServiceChargeChange = (field: keyof TaxServiceChargeSettings) =>
     (value: any) => {
@@ -374,18 +388,83 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="business-address">Alamat Homebase</Label>
-                  <Textarea
-                    id="business-address"
-                    placeholder="Jln. Sudirman No. 123, Jakarta Selatan, DKI Jakarta 12345"
-                    value={form.branding.businessAddress}
-                    onChange={handleBrandingChange('businessAddress')}
-                    disabled={loading || saving}
-                    rows={3}
-                  />
+                <div className="space-y-3">
+                  <Label>Alamat Homebase</Label>
+                  {/* Searchable address input using existing AddressInput */}
+                  <div>
+                    <AddressInput
+                      label="Cari Alamat Homebase"
+                      placeholder="Ketik alamat dan pilih dari daftar"
+                      value={form.branding.businessAddress}
+                      tenantId={tenantId}
+                      onAddressSelect={(addr) => {
+                        setForm(prev => ({
+                          ...prev,
+                          branding: {
+                            ...prev.branding,
+                            businessAddress: addr.fullAddress,
+                          }
+                        }));
+                        setBrandingCoords(addr.coordinates?.lat, addr.coordinates?.lng);
+                      }}
+                      onAddressChange={(val) => {
+                        setForm(prev => ({
+                          ...prev,
+                          branding: { ...prev.branding, businessAddress: val }
+                        }));
+                        // don't clear coords automatically to allow manual edits
+                      }}
+                      required={false}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label htmlFor="business-lat">Latitude</Label>
+                      <Input
+                        id="business-lat"
+                        type="number"
+                        step="0.000001"
+                        value={typeof form.branding.businessLatitude === 'number' ? form.branding.businessLatitude : ''}
+                        onChange={(e) => setBrandingCoords(e.target.value === '' ? undefined : Number(e.target.value), form.branding.businessLongitude)}
+                        disabled={loading || saving}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="business-lng">Longitude</Label>
+                      <Input
+                        id="business-lng"
+                        type="number"
+                        step="0.000001"
+                        value={typeof form.branding.businessLongitude === 'number' ? form.branding.businessLongitude : ''}
+                        onChange={(e) => setBrandingCoords(form.branding.businessLatitude, e.target.value === '' ? undefined : Number(e.target.value))}
+                        disabled={loading || saving}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        disabled={loading || saving}
+                        onClick={() => {
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => setBrandingCoords(pos.coords.latitude, pos.coords.longitude),
+                              () => toast.error('Tidak dapat mengakses GPS browser'),
+                              { enableHighAccuracy: true, timeout: 8000 }
+                            );
+                          } else {
+                            toast.error('Browser tidak mendukung geolocation');
+                          }
+                        }}
+                      >
+                        Gunakan GPS Saat Ini
+                      </Button>
+                    </div>
+                  </div>
                   <p className="text-xs text-gray-500">
-                    Alamat lokasi bisnis utama Anda. Digunakan untuk home visit bookings dan perhitungan rute perjalanan.
+                    Gunakan pencarian untuk menentukan alamat, lalu koordinat akan terisi otomatis. Anda bisa mengedit lat/lng manual atau gunakan tombol GPS.
                   </p>
                 </div>
               </div>

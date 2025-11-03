@@ -75,6 +75,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   // Home Visits states
   const [services, setServices] = useState<any[]>([]);
   const [businessLocation, setBusinessLocation] = useState<string>('');
+  const [businessLocationCoords, setBusinessLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (!tenantSubdomain) {
@@ -196,6 +197,13 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
             const settingsData = await settingsRes.json();
             const addr = settingsData.settings?.branding?.businessAddress || '';
             setBusinessLocation(addr);
+            const lat = settingsData.settings?.branding?.businessLatitude;
+            const lng = settingsData.settings?.branding?.businessLongitude;
+            if (typeof lat === 'number' && typeof lng === 'number') {
+              setBusinessLocationCoords({ lat, lng });
+            } else {
+              setBusinessLocationCoords(null);
+            }
 
             // Fallback: use tenant address if invoice-config address is empty
             if (!addr && tenantSubdomain) {
@@ -737,6 +745,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
               bookings={bookings}
               services={services}
               businessLocation={businessLocation}
+              businessCoordinates={businessLocationCoords || undefined}
               onBookingUpdate={handleBookingUpdate}
             />
           )}

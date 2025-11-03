@@ -18,6 +18,7 @@ interface HomeVisitBookingManagerProps {
   bookings: Booking[];
   services: Service[];
   businessLocation?: string;
+  businessCoordinates?: { lat: number; lng: number };
   onBookingUpdate?: (bookingId: string, updates: Partial<Booking>) => void;
 }
 
@@ -26,6 +27,7 @@ export function HomeVisitBookingManager({
   bookings,
   services,
   businessLocation,
+  businessCoordinates,
   onBookingUpdate
 }: HomeVisitBookingManagerProps) {
   const [travelCalculations, setTravelCalculations] = useState<Record<string, TravelCalculation>>({});
@@ -183,8 +185,12 @@ export function HomeVisitBookingManager({
     return `${mins}m`;
   };
 
-  // Geocode business location (homebase address) to get coordinates for map
+  // Prefer coordinates from props; else geocode business address
   useEffect(() => {
+    if (businessCoordinates && typeof businessCoordinates.lat === 'number' && typeof businessCoordinates.lng === 'number') {
+      setBusinessCoords(businessCoordinates);
+      return;
+    }
     if (!businessLocation || typeof businessLocation !== 'string' || !tenantId) return;
 
     const geocodeBusinessLocation = async () => {
@@ -218,7 +224,7 @@ export function HomeVisitBookingManager({
     };
 
     geocodeBusinessLocation();
-  }, [businessLocation, tenantId]);
+  }, [businessCoordinates?.lat, businessCoordinates?.lng, businessLocation, tenantId]);
 
   // Auto-calculate travel for all bookings when component mounts or bookings change
   useEffect(() => {
