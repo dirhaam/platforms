@@ -805,6 +805,7 @@ export class InvoiceService {
           description: 'Home Visit Travel Surcharge',
           quantity: 1,
           unitPrice: travelSurchargeAmount,
+          serviceId: undefined,
         });
       }
 

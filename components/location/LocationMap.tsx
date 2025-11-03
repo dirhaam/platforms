@@ -171,7 +171,7 @@ export function LocationMap({
         const bounds = new window.google.maps.LatLngBounds();
         
         // Extend bounds to include business location
-        bounds.extend(new window.google.maps.LatLng(businessLocation.lat, businessLocation.lng));
+        bounds.extend(new window.google.maps.LatLng(businessCoords.lat, businessCoords.lng));
         
         // Extend bounds to include all booking locations
         bookings
