@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { MapPin, Clock, DollarSign, Route, Loader2 } from 'lucide-react';
-import { TravelCalculation, RouteOptimization } from '@/types/location';
+import { TravelCalculation, RouteOptimization, Coordinates } from '@/types/location';
 import { Booking } from '@/types/booking';
 import { toast } from 'sonner';
 
 interface TravelCalculatorProps {
   tenantId: string;
   bookings?: Booking[];
-  startLocation?: string;
+  startLocation?: string | Coordinates;
   onCalculationComplete?: (calculation: TravelCalculation | RouteOptimization) => void;
 }
 
@@ -26,8 +26,13 @@ export function TravelCalculator({
   const [calculating, setCalculating] = useState(false);
   const [calculation, setCalculation] = useState<TravelCalculation | null>(null);
   const [routeOptimization, setRouteOptimization] = useState<RouteOptimization | null>(null);
+  const startLabel = typeof startLocation === 'string'
+    ? startLocation
+    : startLocation
+    ? `${startLocation.lat.toFixed(6)}, ${startLocation.lng.toFixed(6)}`
+    : '';
 
-  const calculateSingleTravel = async (origin: string, destination: string, serviceId?: string) => {
+  const calculateSingleTravel = async (origin: string | Coordinates, destination: string, serviceId?: string) => {
     setCalculating(true);
     try {
       const response = await fetch('/api/location/calculate-travel', {
@@ -157,7 +162,7 @@ export function TravelCalculator({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Starting from</p>
-                  <p className="font-medium">{startLocation}</p>
+                  <p className="font-medium">{startLabel}</p>
                 </div>
                 <Button 
                   onClick={optimizeRoute} 
@@ -272,7 +277,7 @@ export function TravelCalculator({
                       variant="outline"
                       size="sm"
                       onClick={() => calculateSingleTravel(
-                        startLocation, 
+                        startLocation!, 
                         booking.homeVisitAddress!, 
                         booking.serviceId
                       )}

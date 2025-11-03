@@ -265,11 +265,11 @@ export function HomeVisitBookingManager({
       ) : (
         <>
           {/* Travel Calculator */}
-          {businessLocation && (
+          {(businessLocation || businessCoords) && (
             <TravelCalculator
               tenantId={tenantId}
               bookings={homeVisitBookings}
-              startLocation={businessLocation}
+              startLocation={businessCoords || businessLocation}
             />
           )}
 
