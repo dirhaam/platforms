@@ -32,6 +32,7 @@ export function HomeVisitBookingManager({
   const [calculating, setCalculating] = useState<Record<string, boolean>>({});
   const [businessCoords, setBusinessCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geocodingBusiness, setGeocodingBusiness] = useState(false);
+  const DEFAULT_ORIGIN = { lat: -6.2088, lng: 106.8456 }; // Jakarta fallback
 
   // Get all home visit bookings (no date filter) - sorted by scheduled date
   const homeVisitBookings = bookings
@@ -109,7 +110,7 @@ export function HomeVisitBookingManager({
   };
 
   const calculateTravelForBooking = async (booking: Booking) => {
-    if (!businessLocation || !booking.homeVisitAddress) return;
+    if (!booking.homeVisitAddress) return;
 
     setCalculating(prev => ({ ...prev, [booking.id]: true }));
 
@@ -120,7 +121,8 @@ export function HomeVisitBookingManager({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          origin: businessLocation,
+          // Prefer precise coords if available; else use address; else default Jakarta
+          origin: businessCoords || (businessLocation ? businessLocation : DEFAULT_ORIGIN),
           destination: booking.homeVisitAddress,
           tenantId,
           serviceId: booking.serviceId
@@ -220,14 +222,14 @@ export function HomeVisitBookingManager({
 
   // Auto-calculate travel for all bookings when component mounts or bookings change
   useEffect(() => {
-    if (businessLocation && homeVisitBookings.length > 0) {
+    if (homeVisitBookings.length > 0) {
       homeVisitBookings.forEach(booking => {
         if (!travelCalculations[booking.id] && !calculating[booking.id]) {
           calculateTravelForBooking(booking);
         }
       });
     }
-  }, [businessLocation, homeVisitBookings.length]);
+  }, [businessLocation, businessCoords?.lat, businessCoords?.lng, homeVisitBookings.length]);
 
   return (
     <div className="space-y-6">
@@ -329,7 +331,7 @@ export function HomeVisitBookingManager({
                         </div>
 
                         {/* Travel Information */}
-                        {businessLocation && (
+                        {(businessLocation || businessCoords) && (
                           <div className="bg-muted p-3 rounded-lg">
                             <h4 className="font-medium text-sm mb-3">Travel Information</h4>
                             
@@ -360,7 +362,7 @@ export function HomeVisitBookingManager({
 
                             {/* Mini Map showing route from homebase to customer */}
                             {(() => {
-                              const origin = businessCoords || (travelCalc?.route && travelCalc.route[0]);
+                              const origin = businessCoords || (travelCalc?.route && travelCalc.route[0]) || DEFAULT_ORIGIN;
                               const destination = booking.homeVisitCoordinates || (travelCalc?.route && travelCalc.route[travelCalc.route.length - 1]);
                               const hasAny = !!origin || !!destination || (travelCalc?.route && travelCalc.route.length > 1);
                               if (!hasAny) return null;

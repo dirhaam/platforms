@@ -194,7 +194,23 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           });
           if (settingsRes.ok) {
             const settingsData = await settingsRes.json();
-            setBusinessLocation(settingsData.settings?.branding?.businessAddress || '');
+            const addr = settingsData.settings?.branding?.businessAddress || '';
+            setBusinessLocation(addr);
+
+            // Fallback: use tenant address if invoice-config address is empty
+            if (!addr && tenantSubdomain) {
+              try {
+                const tenantRes = await fetch(`/api/tenants/${encodeURIComponent(tenantSubdomain)}`);
+                if (tenantRes.ok) {
+                  const tenant = await tenantRes.json();
+                  if (tenant?.address) {
+                    setBusinessLocation(tenant.address);
+                  }
+                }
+              } catch (e) {
+                console.warn('Fallback fetch tenant address failed:', e);
+              }
+            }
           }
         } catch (error) {
           console.error('Error fetching business location:', error);
