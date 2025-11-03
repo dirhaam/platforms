@@ -57,8 +57,8 @@ export function LocationMap({
           // Geocode the address to get coordinates
           try {
             const geocoder = new window.google.maps.Geocoder();
-            const response = await new Promise<google.maps.LatLng>((resolve, reject) => {
-              geocoder.geocode({ address: businessLocation }, (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
+            const response = await new Promise<any>((resolve, reject) => {
+              geocoder.geocode({ address: businessLocation }, (results: any, status: any) => {
                 if (status === 'OK' && results && results[0]) {
                   resolve(results[0].geometry.location);
                 } else {
