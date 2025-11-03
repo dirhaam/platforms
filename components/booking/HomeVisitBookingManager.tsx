@@ -27,16 +27,18 @@ export function HomeVisitBookingManager({
   businessLocation,
   onBookingUpdate
 }: HomeVisitBookingManagerProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [travelCalculations, setTravelCalculations] = useState<Record<string, TravelCalculation>>({});
   const [calculating, setCalculating] = useState<Record<string, boolean>>({});
+  const [businessCoords, setBusinessCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [geocodingBusiness, setGeocodingBusiness] = useState(false);
 
-  // Filter home visit bookings for the selected date
-  const homeVisitBookings = bookings.filter(booking => 
-    booking.isHomeVisit && 
-    booking.homeVisitAddress &&
-    new Date(booking.scheduledAt).toDateString() === selectedDate.toDateString()
-  );
+  // Get all home visit bookings (no date filter) - sorted by scheduled date
+  const homeVisitBookings = bookings
+    .filter(booking => 
+      booking.isHomeVisit && 
+      booking.homeVisitAddress
+    )
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 
   // Calculate travel time buffers and scheduling conflicts
   const calculateTravelBuffer = (booking: Booking, previousBooking?: Booking): number => {
@@ -178,20 +180,52 @@ export function HomeVisitBookingManager({
     return `${mins}m`;
   };
 
-  // Auto-calculate travel for all bookings when component mounts or date changes
+  // Geocode business location (homebase address) to get coordinates for map
   useEffect(() => {
-    if (businessLocation) {
+    if (!businessLocation || typeof businessLocation !== 'string') return;
+
+    const geocodeBusinessLocation = async () => {
+      setGeocodingBusiness(true);
+      try {
+        const response = await fetch('/api/location/geocode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: businessLocation,
+            tenantId
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.coordinates) {
+            setBusinessCoords(data.coordinates);
+          }
+        }
+      } catch (error) {
+        console.error('Error geocoding business location:', error);
+      } finally {
+        setGeocodingBusiness(false);
+      }
+    };
+
+    geocodeBusinessLocation();
+  }, [businessLocation, tenantId]);
+
+  // Auto-calculate travel for all bookings when component mounts or bookings change
+  useEffect(() => {
+    if (businessLocation && homeVisitBookings.length > 0) {
       homeVisitBookings.forEach(booking => {
-        if (!travelCalculations[booking.id]) {
+        if (!travelCalculations[booking.id] && !calculating[booking.id]) {
           calculateTravelForBooking(booking);
         }
       });
     }
-  }, [selectedDate, businessLocation, homeVisitBookings.length]);
+  }, [businessLocation, homeVisitBookings.length]);
 
   return (
     <div className="space-y-6">
-      {/* Date Selector */}
+      {/* Summary Header */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -199,22 +233,9 @@ export function HomeVisitBookingManager({
             Home Visit Schedule
           </CardTitle>
           <CardDescription>
-            Manage home visit bookings with travel time optimization
+            {homeVisitBookings.length} home visit{homeVisitBookings.length !== 1 ? 's' : ''} scheduled - All upcoming bookings
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <input
-              type="date"
-              value={selectedDate.toISOString().split('T')[0]}
-              onChange={(e) => setSelectedDate(new Date(e.target.value))}
-              className="px-3 py-2 border rounded-md"
-            />
-            <div className="text-sm text-muted-foreground">
-              {homeVisitBookings.length} home visit{homeVisitBookings.length !== 1 ? 's' : ''} scheduled
-            </div>
-          </div>
-        </CardContent>
       </Card>
 
       {homeVisitBookings.length === 0 ? (
@@ -223,7 +244,7 @@ export function HomeVisitBookingManager({
             <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No home visits scheduled</h3>
             <p className="text-muted-foreground text-center">
-              Home visit bookings for {selectedDate.toLocaleDateString('id-ID')} will appear here
+              No home visit bookings found. Create one to get started!
             </p>
           </CardContent>
         </Card>
@@ -241,13 +262,9 @@ export function HomeVisitBookingManager({
           {/* Location Map */}
           <LeafletMap 
             bookings={homeVisitBookings}
-            businessLocation={
-              typeof businessLocation === 'object' && businessLocation
-                ? businessLocation
-                : undefined
-            }
-            center={{ lat: -6.2088, lng: 106.8456 }} // Default to Jakarta
-            zoom={12}
+            businessLocation={businessCoords || undefined}
+            center={businessCoords || { lat: -6.2088, lng: 106.8456 }}
+            zoom={businessCoords ? 14 : 12}
             className="mt-4"
           />
 
@@ -308,21 +325,13 @@ export function HomeVisitBookingManager({
                         {/* Travel Information */}
                         {businessLocation && (
                           <div className="bg-muted p-3 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-sm">Travel Information</h4>
-                              {!travelCalc && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => calculateTravelForBooking(booking)}
-                                  disabled={isCalculating}
-                                >
-                                  {isCalculating ? 'Calculating...' : 'Calculate'}
-                                </Button>
-                              )}
-                            </div>
+                            <h4 className="font-medium text-sm mb-3">Travel Information</h4>
                             
-                            {travelCalc ? (
+                            {isCalculating ? (
+                              <p className="text-sm text-muted-foreground">
+                                ⏳ Calculating travel information...
+                              </p>
+                            ) : travelCalc ? (
                               <div className="grid grid-cols-3 gap-4 text-sm">
                                 <div>
                                   <p className="text-muted-foreground">Distance</p>
@@ -339,7 +348,7 @@ export function HomeVisitBookingManager({
                               </div>
                             ) : (
                               <p className="text-sm text-muted-foreground">
-                                {isCalculating ? 'Calculating travel information...' : 'Click calculate to get travel details'}
+                                No travel data available
                               </p>
                             )}
                           </div>
