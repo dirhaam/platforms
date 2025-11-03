@@ -182,7 +182,7 @@ export function HomeVisitBookingManager({
 
   // Geocode business location (homebase address) to get coordinates for map
   useEffect(() => {
-    if (!businessLocation || typeof businessLocation !== 'string') return;
+    if (!businessLocation || typeof businessLocation !== 'string' || !tenantId) return;
 
     const geocodeBusinessLocation = async () => {
       setGeocodingBusiness(true);
@@ -191,7 +191,7 @@ export function HomeVisitBookingManager({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            address: businessLocation,
+            address: businessLocation.trim(),
             tenantId
           })
         });
@@ -201,6 +201,9 @@ export function HomeVisitBookingManager({
           if (data.coordinates) {
             setBusinessCoords(data.coordinates);
           }
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn('Geocoding failed:', errorData.error || 'Unknown error');
         }
       } catch (error) {
         console.error('Error geocoding business location:', error);

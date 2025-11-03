@@ -34,6 +34,9 @@ export function LeafletMap({
   useEffect(() => {
     if (!mapRef.current) return;
 
+    // If map already initialized, skip reinitialization
+    if (mapInstance.current) return;
+
     // Load Leaflet CSS and JS if not already loaded
     if (!window.L) {
       const link = document.createElement('link');
@@ -51,7 +54,7 @@ export function LeafletMap({
     }
 
     async function initializeMap() {
-      if (!mapRef.current || !window.L) return;
+      if (!mapRef.current || !window.L || mapInstance.current) return;
 
       // Initialize map
       const mapCenter = businessLocation || center;
