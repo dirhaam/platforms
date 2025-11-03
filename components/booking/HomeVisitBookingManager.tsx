@@ -9,7 +9,7 @@ import { MapPin, Clock, DollarSign, Route, AlertTriangle, CheckCircle } from 'lu
 import { Booking, Service } from '@/types/booking';
 import { TravelCalculation } from '@/types/location';
 import { TravelCalculator } from '@/components/location/TravelCalculator';
-import { LocationMap } from '@/components/location/LocationMap';
+import { LeafletMap } from '@/components/location/LeafletMap';
 import { toast } from 'sonner';
 
 interface HomeVisitBookingManagerProps {
@@ -239,9 +239,13 @@ export function HomeVisitBookingManager({
           )}
 
           {/* Location Map */}
-          <LocationMap 
+          <LeafletMap 
             bookings={homeVisitBookings}
-            businessLocation={businessLocation} // Pass the address string directly - the component handles geocoding
+            businessLocation={
+              typeof businessLocation === 'object' && businessLocation
+                ? businessLocation
+                : undefined
+            }
             center={{ lat: -6.2088, lng: 106.8456 }} // Default to Jakarta
             zoom={12}
             className="mt-4"

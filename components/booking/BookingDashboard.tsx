@@ -184,19 +184,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
         setBookings(enrichedBookings);
         setServices(servicesData.services || []);
-
-        // Fetch business location from tenant settings
-        try {
-          const settingsRes = await fetch(`/api/tenants/${resolvedTenantId}/settings`, {
-            headers: { 'x-tenant-id': resolvedTenantId }
-          });
-          if (settingsRes.ok) {
-            const settingsData = await settingsRes.json();
-            setBusinessLocation(settingsData.businessAddress || '');
-          }
-        } catch (error) {
-          console.error('Error fetching business location:', error);
-        }
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
