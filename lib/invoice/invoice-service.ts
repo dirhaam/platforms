@@ -73,13 +73,23 @@ export class InvoiceService {
         console.log('[InvoiceService.createInvoice] Using pre-calculated tax/fees from booking:', {
           preTaxPercentage: (data as any).preTaxPercentage,
           preServiceChargeAmount: (data as any).preServiceChargeAmount,
-          preAdditionalFeesAmount: (data as any).preAdditionalFeesAmount
+          preAdditionalFeesAmount: (data as any).preAdditionalFeesAmount,
+          subtotal: subtotal.toNumber()
         });
         
+        // Pre-calculated values from booking - use them directly
         taxPercentage = (data as any).preTaxPercentage || 0;
-        taxAmount = new Decimal((data as any).preTaxPercentage || 0);
+        // Calculate tax amount from percentage and subtotal
+        taxAmount = subtotal.mul(new Decimal(taxPercentage).div(100));
         serviceChargeAmount = new Decimal((data as any).preServiceChargeAmount || 0);
         additionalFeesAmount = new Decimal((data as any).preAdditionalFeesAmount || 0);
+        
+        console.log('[InvoiceService.createInvoice] Pre-calculated values processed:', {
+          taxPercentage,
+          calculatedTaxAmount: taxAmount.toNumber(),
+          serviceChargeAmount: serviceChargeAmount.toNumber(),
+          additionalFeesAmount: additionalFeesAmount.toNumber()
+        });
       } else {
         // Fetch invoice settings (tax, service charge, additional fees)
         const settings = await InvoiceSettingsService.getSettings(tenantId);
@@ -769,12 +779,15 @@ export class InvoiceService {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 7);
 
-      // Calculate base price (total - tax - service charge - additional fees)
+      // Calculate base price (total - tax amount - service charge - additional fees)
       const taxPercentage = parseDecimal(booking.tax_percentage ?? 0);
       const serviceChargeAmount = parseDecimal(booking.service_charge_amount ?? 0);
       const additionalFeesAmount = parseDecimal(booking.additional_fees_amount ?? 0);
       
-      const baseAmount = totalAmount - taxPercentage - serviceChargeAmount - additionalFeesAmount;
+      // Solve for base amount: total = subtotal * (1 + tax_percentage/100) + service_charge + additional_fees
+      // subtotal = (total - service_charge - additional_fees) / (1 + tax_percentage/100)
+      const divisor = 1 + (taxPercentage / 100);
+      const baseAmount = (totalAmount - serviceChargeAmount - additionalFeesAmount) / divisor;
 
       const invoiceData: CreateInvoiceRequest = {
         customerId,
@@ -807,18 +820,19 @@ export class InvoiceService {
         invoicePaidAmount = parseDecimal(booking.paid_amount ?? 0);
       }
 
+      const taxAmount = baseAmount * (taxPercentage / 100);
       console.log('[InvoiceService.createInvoiceFromBooking] 📄 Creating invoice:', {
         bookingId: booking.id,
         bookingPaymentStatus: booking.payment_status,
         paidAmount: invoicePaidAmount,
-        baseAmount,
-        taxPercentage,
-        serviceChargeAmount,
-        additionalFeesAmount,
-        totalAmount,
+        totalAmount: Number(totalAmount),
+        baseAmount: Number(baseAmount),
+        taxPercentage: `${taxPercentage}%`,
+        taxAmount: Number(taxAmount),
+        serviceChargeAmount: Number(serviceChargeAmount),
+        additionalFeesAmount: Number(additionalFeesAmount),
         invoiceStatus,
-        paymentHistoryCount: paymentHistory?.length || 0,
-        note: 'Using pre-calculated tax/fees from booking to prevent double charge'
+        paymentHistoryCount: paymentHistory?.length || 0
       });
 
       const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount > 0 ? invoicePaidAmount : undefined);
