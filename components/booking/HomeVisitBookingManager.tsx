@@ -10,6 +10,7 @@ import { Booking, Service } from '@/types/booking';
 import { TravelCalculation } from '@/types/location';
 import { TravelCalculator } from '@/components/location/TravelCalculator';
 import { LeafletMap } from '@/components/location/LeafletMap';
+import { RouteMiniMap } from '@/components/location/RouteMiniMap';
 import { toast } from 'sonner';
 
 interface HomeVisitBookingManagerProps {
@@ -339,7 +340,7 @@ export function HomeVisitBookingManager({
                             ) : travelCalc ? (
                               <div className="grid grid-cols-3 gap-4 text-sm">
                                 <div>
-                                  <p className="text-muted-foreground">Distance</p>
+                                  <p className="text-muted-foreground">Distance (Homebase → Customer)</p>
                                   <p className="font-medium">{travelCalc.distance.toFixed(1)} km</p>
                                 </div>
                                 <div>
@@ -356,6 +357,23 @@ export function HomeVisitBookingManager({
                                 No travel data available
                               </p>
                             )}
+
+                            {/* Mini Map showing route from homebase to customer */}
+                            {(() => {
+                              const origin = businessCoords || (travelCalc?.route && travelCalc.route[0]);
+                              const destination = booking.homeVisitCoordinates || (travelCalc?.route && travelCalc.route[travelCalc.route.length - 1]);
+                              const hasAny = !!origin || !!destination || (travelCalc?.route && travelCalc.route.length > 1);
+                              if (!hasAny) return null;
+                              return (
+                                <RouteMiniMap
+                                  origin={origin || undefined}
+                                  destination={destination || undefined}
+                                  route={travelCalc?.route}
+                                  className="mt-3"
+                                  height={220}
+                                />
+                              );
+                            })()}
                           </div>
                         )}
 
