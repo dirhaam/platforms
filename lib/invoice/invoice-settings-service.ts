@@ -26,6 +26,7 @@ export interface InvoiceSettingsData {
     logoUrl?: string;
     headerText?: string;
     footerText?: string;
+    businessAddress?: string;
   };
   taxServiceCharge?: TaxServiceChargeSettings;
   additionalFees?: AdditionalFee[];
@@ -39,7 +40,7 @@ export class InvoiceSettingsService {
       // Get branding settings
       const { data: brandingData } = await supabase
         .from('invoice_branding_settings')
-        .select('logo_url, header_text, footer_text')
+        .select('logo_url, header_text, footer_text, business_address')
         .eq('tenant_id', tenantId)
         .maybeSingle();
 
@@ -63,6 +64,7 @@ export class InvoiceSettingsService {
               logoUrl: brandingData.logo_url ?? undefined,
               headerText: brandingData.header_text ?? undefined,
               footerText: brandingData.footer_text ?? undefined,
+              businessAddress: brandingData.business_address ?? undefined,
             }
           : undefined,
         taxServiceCharge: taxChargeData
@@ -102,6 +104,7 @@ export class InvoiceSettingsService {
             logo_url: settings.branding.logoUrl ?? null,
             header_text: settings.branding.headerText ?? null,
             footer_text: settings.branding.footerText ?? null,
+            business_address: settings.branding.businessAddress ?? null,
             updated_at: new Date().toISOString(),
           }, { onConflict: 'tenant_id' });
 
