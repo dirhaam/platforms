@@ -184,6 +184,21 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
         setBookings(enrichedBookings);
         setServices(servicesData.services || []);
+
+        // Fetch business location (homebase address) from invoice settings
+        try {
+          const settingsUrl = new URL('/api/settings/invoice-config', window.location.origin);
+          settingsUrl.searchParams.set('tenantId', resolvedTenantId);
+          const settingsRes = await fetch(settingsUrl.toString(), {
+            headers: { 'x-tenant-id': resolvedTenantId }
+          });
+          if (settingsRes.ok) {
+            const settingsData = await settingsRes.json();
+            setBusinessLocation(settingsData.settings?.branding?.businessAddress || '');
+          }
+        } catch (error) {
+          console.error('Error fetching business location:', error);
+        }
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);

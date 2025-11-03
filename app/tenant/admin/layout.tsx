@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,38 @@ function TenantAdminLayoutContent({
   const subdomain = searchParams?.get('subdomain') || '';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [tenantId, setTenantId] = useState<string>('');
+
+  // Fetch tenant ID and logo from invoice settings
+  useEffect(() => {
+    if (!subdomain) return;
+
+    const fetchLogo = async () => {
+      try {
+        // First resolve tenant ID
+        const tenantRes = await fetch(`/api/tenants/${subdomain}`);
+        if (!tenantRes.ok) return;
+        const tenantData = await tenantRes.json();
+        setTenantId(tenantData.id);
+
+        // Then fetch logo from invoice settings
+        const logoUrl = new URL('/api/settings/invoice-config', window.location.origin);
+        logoUrl.searchParams.set('tenantId', tenantData.id);
+        const logoRes = await fetch(logoUrl.toString(), {
+          headers: { 'x-tenant-id': tenantData.id }
+        });
+        if (logoRes.ok) {
+          const logoData = await logoRes.json();
+          setLogoUrl(logoData.settings?.branding?.logoUrl || '');
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+
+    fetchLogo();
+  }, [subdomain]);
 
   const navigationItems = [
     {
@@ -90,15 +122,36 @@ function TenantAdminLayoutContent({
       <div className={`border-b transition-all duration-300 ${isCollapsed ? 'p-3' : 'p-6'}`}>
         {!isCollapsed && (
           <Link href={`https://${subdomain}.booqing.my.id`} target="_blank" className="block">
+            <div className="flex items-center gap-2 mb-2">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="h-6 w-6 object-contain rounded"
+                />
+              ) : (
+                <div className="w-6 h-6 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-xs">
+                  A
+                </div>
+              )}
+            </div>
             <h2 className="text-xl font-bold text-gray-900">Admin Panel</h2>
             <p className="text-xs text-gray-500 mt-1">{subdomain}.booqing.my.id</p>
           </Link>
         )}
         {isCollapsed && (
           <Link href={`https://${subdomain}.booqing.my.id`} target="_blank" title="Admin Panel">
-            <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-              A
-            </div>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="w-8 h-8 object-contain rounded-lg"
+              />
+            ) : (
+              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                A
+              </div>
+            )}
           </Link>
         )}
       </div>
@@ -182,9 +235,17 @@ function TenantAdminLayoutContent({
               target="_blank" 
               className="flex items-center gap-2 flex-shrink-0"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                A
-              </div>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="h-8 w-8 object-contain rounded-lg"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                  A
+                </div>
+              )}
               <span className="font-semibold text-gray-900 hidden lg:inline">Admin</span>
             </Link>
           </div>

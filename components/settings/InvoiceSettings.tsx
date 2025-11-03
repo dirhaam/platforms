@@ -20,6 +20,7 @@ interface BrandingSettings {
   logoUrl: string;
   headerText: string;
   footerText: string;
+  businessAddress: string;
 }
 
 interface TaxServiceChargeSettings {
@@ -47,6 +48,7 @@ const DEFAULT_FORM: InvoiceSettingsForm = {
     logoUrl: '',
     headerText: '',
     footerText: '',
+    businessAddress: '',
   },
   taxServiceCharge: {
     taxPercentage: 0,
@@ -89,6 +91,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
             logoUrl: settings?.branding?.logoUrl || '',
             headerText: settings?.branding?.headerText || '',
             footerText: settings?.branding?.footerText || '',
+            businessAddress: settings?.branding?.businessAddress || '',
           },
           taxServiceCharge: {
             taxPercentage: settings?.taxServiceCharge?.taxPercentage || 0,
@@ -241,6 +244,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
           logoUrl: settings?.branding?.logoUrl || '',
           headerText: settings?.branding?.headerText || '',
           footerText: settings?.branding?.footerText || '',
+          businessAddress: settings?.branding?.businessAddress || '',
         },
         taxServiceCharge: {
           taxPercentage: settings?.taxServiceCharge?.taxPercentage || 0,
@@ -369,6 +373,21 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                     Muncul di bagian bawah invoice sebagai catatan penutup.
                   </p>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="business-address">Alamat Homebase</Label>
+                  <Textarea
+                    id="business-address"
+                    placeholder="Jln. Sudirman No. 123, Jakarta Selatan, DKI Jakarta 12345"
+                    value={form.branding.businessAddress}
+                    onChange={handleBrandingChange('businessAddress')}
+                    disabled={loading || saving}
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Alamat lokasi bisnis utama Anda. Digunakan untuk home visit bookings dan perhitungan rute perjalanan.
+                  </p>
+                </div>
               </div>
 
               <div className="rounded-lg border bg-white p-6 shadow-sm space-y-4">
@@ -390,7 +409,9 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                       <p className="text-lg font-semibold">
                         {form.branding.headerText || 'Header invoice akan muncul di sini'}
                       </p>
-                      <p className="text-sm text-gray-600">Alamat, Telepon, Email dari profil</p>
+                      <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                        {form.branding.businessAddress || 'Alamat homebase akan ditampilkan di sini'}
+                      </p>
                     </div>
                   </div>
 
