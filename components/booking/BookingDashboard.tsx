@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
 import { NewBookingDialog } from './NewBookingDialog';
-import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2 } from 'lucide-react';
+import { HomeVisitBookingManager } from './HomeVisitBookingManager';
+import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2, MapPin } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
@@ -68,8 +69,12 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'sales'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'sales' | 'home-visits'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // Home Visits states
+  const [services, setServices] = useState<any[]>([]);
+  const [businessLocation, setBusinessLocation] = useState<string>('');
 
   useEffect(() => {
     if (!tenantSubdomain) {
@@ -178,6 +183,20 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         }));
 
         setBookings(enrichedBookings);
+        setServices(servicesData.services || []);
+
+        // Fetch business location from tenant settings
+        try {
+          const settingsRes = await fetch(`/api/tenants/${resolvedTenantId}/settings`, {
+            headers: { 'x-tenant-id': resolvedTenantId }
+          });
+          if (settingsRes.ok) {
+            const settingsData = await settingsRes.json();
+            setBusinessLocation(settingsData.businessAddress || '');
+          }
+        } catch (error) {
+          console.error('Error fetching business location:', error);
+        }
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -507,7 +526,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       </Card>
 
       {/* View Toggle */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list' | 'sales')}>
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list' | 'sales' | 'home-visits')}>
         <TabsList>
           <TabsTrigger value="calendar">
             <Calendar className="h-4 w-4 mr-2" />
@@ -520,6 +539,10 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <TabsTrigger value="sales">
             <DollarSign className="h-4 w-4 mr-2" />
             Sales
+          </TabsTrigger>
+          <TabsTrigger value="home-visits">
+            <MapPin className="h-4 w-4 mr-2" />
+            Home Visits
           </TabsTrigger>
         </TabsList>
 
@@ -686,6 +709,19 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Home Visits View */}
+        <TabsContent value="home-visits" className="mt-4">
+          {resolvedTenantId && (
+            <HomeVisitBookingManager
+              tenantId={resolvedTenantId}
+              bookings={bookings}
+              services={services}
+              businessLocation={businessLocation}
+              onBookingUpdate={handleBookingUpdate}
+            />
+          )}
         </TabsContent>
       </Tabs>
 
