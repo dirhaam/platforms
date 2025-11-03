@@ -145,7 +145,41 @@ export default function BookingDialog({
   };
 
   const calculateTotal = () => {
-    return calculatedPrice;
+    if (!selectedService) return 0;
+    
+    let subtotal = Number(selectedService.price);
+    if (formData.isHomeVisit && selectedService.homeVisitSurcharge) {
+      subtotal += Number(selectedService.homeVisitSurcharge);
+    }
+    
+    let total = subtotal;
+    
+    // Add tax
+    if (invoiceSettings?.taxServiceCharge?.taxPercentage) {
+      total += subtotal * (invoiceSettings.taxServiceCharge.taxPercentage / 100);
+    }
+    
+    // Add service charge
+    if (invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue) {
+      if (invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed') {
+        total += invoiceSettings.taxServiceCharge.serviceChargeValue;
+      } else {
+        total += subtotal * (invoiceSettings.taxServiceCharge.serviceChargeValue / 100);
+      }
+    }
+    
+    // Add additional fees
+    if (invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0) {
+      invoiceSettings.additionalFees.forEach(fee => {
+        if (fee.type === 'fixed') {
+          total += fee.value;
+        } else {
+          total += subtotal * (fee.value / 100);
+        }
+      });
+    }
+    
+    return Math.round(total);
   };
 
   const validateForm = (): boolean => {
