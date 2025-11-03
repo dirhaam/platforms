@@ -31,19 +31,17 @@ export async function POST(request: NextRequest) {
       tenantId
     });
 
+    // If geocoding didn't find a result or outside bounds, return 200 with isValid=false (not a client error)
     if (!validation.isValid || !validation.address?.coordinates) {
       console.log('[Geocode API] Geocoding failed or address outside bounds:', {
         address,
         isValid: validation.isValid,
         error: validation.error
       });
-      return NextResponse.json(
-        { 
-          error: validation.error || 'Could not geocode address', 
-          isValid: validation.isValid 
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        isValid: false,
+        error: validation.error || 'Could not geocode address'
+      });
     }
 
     return NextResponse.json({

@@ -196,15 +196,14 @@ export function HomeVisitBookingManager({
           })
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.coordinates) {
-            setBusinessCoords(data.coordinates);
-          }
+        const data = await response.json().catch(() => null);
+
+        if (response.ok && data?.isValid && data?.coordinates) {
+          setBusinessCoords(data.coordinates);
         } else {
           // Graceful fallback: log warning but continue
-          const errorData = await response.json().catch(() => ({}));
-          console.warn('Could not geocode homebase address, using default location:', errorData.error);
+          const errMsg = data?.error || response.statusText || 'Unknown error';
+          console.warn('Could not geocode homebase address, using default location:', errMsg);
           // Don't set businessCoords - will use default Jakarta
         }
       } catch (error) {
