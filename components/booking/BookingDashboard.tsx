@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
 import { NewBookingDialog } from './NewBookingDialog';
-import { HomeVisitBookingManager } from './HomeVisitBookingManager';
+import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
 import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2, MapPin } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
@@ -746,7 +746,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
               services={services}
               businessLocation={businessLocation}
               businessCoordinates={businessLocationCoords || undefined}
-              onBookingUpdate={handleBookingUpdate}
             />
           )}
         </TabsContent>

@@ -491,14 +491,26 @@ export function NewBookingDialog({
                       </div>
                     </div>
 
-                    <p className="text-xs text-gray-600">Tips: ketik alamat lalu pilih dari daftar agar koordinat terisi otomatis. Anda juga bisa memasukkan lat/lng manual atau gunakan tombol GPS.</p>
+                    <p className="text-xs text-gray-600">💡 Tips: ketik alamat lalu pilih dari daftar. Koordinat akan terisi otomatis, dan biaya travel akan dihitung.</p>
+
+                    {/* Travel Estimate Placeholder or Card */}
+                    {!booking.homeVisitAddress || !booking.homeVisitLat || !booking.homeVisitLng ? (
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center text-sm text-blue-700">
+                        📍 Masukkan alamat dan koordinat home visit untuk melihat estimasi biaya travel
+                      </div>
+                    ) : null}
 
                     {/* Travel Estimate */}
-                    {booking.homeVisitAddress && booking.homeVisitLat && booking.homeVisitLng && businessCoordinates && (
+                    {booking.homeVisitAddress && booking.homeVisitLat && booking.homeVisitLng && (
                       <div className="mt-4">
                         <TravelEstimateCard
                           tenantId={subdomain}
-                          origin={businessCoordinates}
+                          origin={
+                            businessCoordinates || 
+                            (invoiceSettings?.branding?.businessLatitude && invoiceSettings?.branding?.businessLongitude
+                              ? { lat: invoiceSettings.branding.businessLatitude, lng: invoiceSettings.branding.businessLongitude }
+                              : { lat: -6.2088, lng: 106.8456 }) // Jakarta default
+                          }
                           destination={booking.homeVisitAddress}
                           serviceId={booking.serviceId}
                           onCalculationComplete={(calc) => {
