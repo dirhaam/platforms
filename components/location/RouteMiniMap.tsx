@@ -44,6 +44,13 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
       await ensureLeaflet();
       if (!mapRef.current || mapInstance.current) return;
 
+      // Ensure element has dimensions before initializing map
+      if (mapRef.current.offsetHeight === 0) {
+        console.warn('[RouteMiniMap] Container has no height, retrying...');
+        setTimeout(init, 100);
+        return;
+      }
+
       const defaultCenter = destination || origin || { lat: -6.2088, lng: 106.8456 };
       mapInstance.current = window.L.map(mapRef.current).setView([defaultCenter.lat, defaultCenter.lng], 13);
 
@@ -53,6 +60,13 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
       }).addTo(mapInstance.current);
 
       renderOverlays();
+      
+      // Trigger resize after map initialization
+      setTimeout(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize();
+        }
+      }, 300);
     };
 
     const renderOverlays = () => {
@@ -106,7 +120,29 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
 
     init();
 
+    // Use Intersection Observer to detect when map becomes visible
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && mapInstance.current) {
+            // Map is now visible, trigger resize
+            setTimeout(() => {
+              if (mapInstance.current) {
+                mapInstance.current.invalidateSize();
+              }
+            }, 100);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    if (mapRef.current) {
+      observer.observe(mapRef.current);
+    }
+
     return () => {
+      observer.disconnect();
       if (mapInstance.current) {
         mapInstance.current.remove();
         mapInstance.current = null;
@@ -170,8 +206,11 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
   return (
     <div
       ref={mapRef}
-      className={`w-full rounded-md border ${className}`}
-      style={{ height }}
+      className={`w-full rounded-md border bg-gray-100 ${className}`}
+      style={{ 
+        height: typeof height === 'number' ? `${height}px` : height,
+        minHeight: '200px'
+      }}
     />
   );
 }

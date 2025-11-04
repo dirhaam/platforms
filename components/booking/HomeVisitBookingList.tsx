@@ -170,13 +170,19 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
 
                     {/* Mini Map */}
                     {(businessCoordinates || booking.homeVisitCoordinates) && (
-                      <div className="mt-3 rounded-lg overflow-hidden border">
-                        <RouteMiniMap
-                          origin={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
-                          destination={booking.homeVisitCoordinates}
-                          route={booking.travelRoute}
-                          height={250}
-                        />
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                          🗺️ Rute Perjalanan
+                        </p>
+                        <div style={{ minHeight: '250px' }} className="rounded-lg overflow-hidden border bg-gray-50">
+                          <RouteMiniMap
+                            origin={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
+                            destination={booking.homeVisitCoordinates}
+                            route={booking.travelRoute}
+                            height={250}
+                            className="w-full"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
