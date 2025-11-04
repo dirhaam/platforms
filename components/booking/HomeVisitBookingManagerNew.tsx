@@ -6,8 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, AlertTriangle } from 'lucide-react';
 import { Booking, Service } from '@/types/booking';
 import { HomeVisitBookingList } from './HomeVisitBookingList';
-import { LeafletMap } from '@/components/location/LeafletMap';
-import { toast } from 'sonner';
 
 interface HomeVisitBookingManagerProps {
   tenantId: string;
@@ -99,33 +97,17 @@ export function HomeVisitBookingManager({
         </Card>
       )}
 
-      {/* Collapsible List */}
-      <HomeVisitBookingList 
-        bookings={homeVisitBookings} 
-        services={servicesMap}
-        businessCoordinates={businessCoordinates}
-      />
-
-      {/* Map View (if we have coordinates) */}
-      {homeVisitBookings.some(b => b.homeVisitCoordinates) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Peta Lokasi Home Visit</CardTitle>
-            <CardDescription>
-              Visualisasi semua lokasi home visit
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LeafletMap
-              bookings={homeVisitBookings}
-              businessLocation={businessCoordinates}
-              center={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
-              zoom={businessCoordinates ? 14 : 12}
-              className="h-96 rounded-lg"
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* Collapsible List with Mini-Maps */}
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground mb-2">
+          💡 Klik untuk expand dan lihat map perjalanan dari homebase ke masing-masing customer
+        </p>
+        <HomeVisitBookingList 
+          bookings={homeVisitBookings} 
+          services={servicesMap}
+          businessCoordinates={businessCoordinates}
+        />
+      </div>
     </div>
   );
 }
