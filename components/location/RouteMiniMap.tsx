@@ -59,17 +59,19 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
         maxZoom: 19,
       }).addTo(mapInstance.current);
 
-      renderOverlays();
-      
-      // Trigger resize after map initialization
-      setTimeout(() => {
-        if (mapInstance.current) {
-          mapInstance.current.invalidateSize();
-        }
-      }, 300);
+      // Call renderOverlays (async) and trigger resize after
+      renderOverlays().then(() => {
+        setTimeout(() => {
+          if (mapInstance.current) {
+            mapInstance.current.invalidateSize();
+          }
+        }, 300);
+      }).catch((err) => {
+        console.error('[RouteMiniMap] Error rendering overlays:', err);
+      });
     };
 
-    const renderOverlays = () => {
+    const renderOverlays = async () => {
       overlays.current.forEach((o) => o.remove());
       overlays.current = [];
 
@@ -77,7 +79,7 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
 
       if (origin) {
         const marker = window.L.marker([origin.lat, origin.lng]);
-        marker.bindPopup('<b>Homebase</b>');
+        marker.bindPopup('<b>🏢 Homebase</b>');
         marker.addTo(mapInstance.current);
         overlays.current.push(marker);
         points.push(origin);
@@ -85,7 +87,7 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
 
       if (destination) {
         const marker = window.L.marker([destination.lat, destination.lng]);
-        marker.bindPopup('<b>Customer</b>');
+        marker.bindPopup('<b>🏠 Customer</b>');
         marker.addTo(mapInstance.current);
         overlays.current.push(marker);
         points.push(destination);
@@ -98,20 +100,53 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
         poly.addTo(mapInstance.current);
         overlays.current.push(poly);
       } else if (origin && destination) {
-        // Fallback: straight line between origin and destination
-        const poly = window.L.polyline(
-          [
-            [origin.lat, origin.lng],
-            [destination.lat, destination.lng],
-          ],
-          { color: '#64748b', dashArray: '6,6', weight: 3, opacity: 0.8 }
-        );
-        poly.addTo(mapInstance.current);
-        overlays.current.push(poly);
+        // Try to fetch actual route from OSRM instead of straight line
+        try {
+          const response = await fetch(
+            `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=simplified&geometries=geojson`
+          );
+          const data = await response.json();
+          
+          if (data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
+            // Draw actual route from OSRM
+            const latlngs = data.routes[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+            const poly = window.L.polyline(latlngs, { color: '#2563eb', weight: 4, opacity: 0.8 });
+            poly.addTo(mapInstance.current);
+            overlays.current.push(poly);
+          } else {
+            // Fallback: straight line
+            drawFallbackLine();
+          }
+        } catch (error) {
+          console.warn('[RouteMiniMap] Failed to fetch OSRM route, using fallback:', error);
+          drawFallbackLine();
+        }
+      }
+
+      function drawFallbackLine() {
+        if (origin && destination) {
+          const poly = window.L.polyline(
+            [
+              [origin.lat, origin.lng],
+              [destination.lat, destination.lng],
+            ],
+            { color: '#64748b', dashArray: '6,6', weight: 3, opacity: 0.8 }
+          );
+          poly.addTo(mapInstance.current);
+          overlays.current.push(poly);
+        }
       }
 
       // Fit bounds to shown elements
-      const boundsPoints = route && route.length > 1 ? route : points;
+      let boundsPoints: Coordinates[] = points;
+      if (route && route.length > 1) {
+        boundsPoints = route;
+      } else if (origin && destination) {
+        // For OSRM route, we need to fit on all fetched coordinates if available
+        // For now, just use origin and destination
+        boundsPoints = [origin, destination];
+      }
+      
       if (boundsPoints.length > 0) {
         const bounds = window.L.latLngBounds(boundsPoints.map((p) => [p.lat, p.lng]));
         mapInstance.current.fitBounds(bounds, { padding: [20, 20] });
