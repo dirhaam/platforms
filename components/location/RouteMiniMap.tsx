@@ -102,9 +102,15 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
       } else if (origin && destination) {
         // Try to fetch actual route from OSRM instead of straight line
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
           const response = await fetch(
-            `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=simplified&geometries=geojson`
+            `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=simplified&geometries=geojson`,
+            { signal: controller.signal }
           );
+          clearTimeout(timeoutId);
+          
           const data = await response.json();
           
           if (data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
