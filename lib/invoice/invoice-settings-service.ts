@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { TravelSurchargeSettings } from '@/types/location';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -31,6 +32,7 @@ export interface InvoiceSettingsData {
     businessLongitude?: number;
   };
   taxServiceCharge?: TaxServiceChargeSettings;
+  travelSurcharge?: TravelSurchargeSettings;
   additionalFees?: AdditionalFee[];
 }
 
@@ -49,6 +51,13 @@ export class InvoiceSettingsService {
       // Get tax/service charge settings
       const { data: taxChargeData } = await supabase
         .from('invoice_tax_service_charge')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+
+      // Get travel surcharge settings
+      const { data: travelSurchargeData } = await supabase
+        .from('invoice_travel_surcharge_settings')
         .select('*')
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -79,6 +88,19 @@ export class InvoiceSettingsService {
               serviceChargeRequired: taxChargeData.service_charge_required ?? false,
             }
           : undefined,
+        travelSurcharge: travelSurchargeData
+          ? {
+              baseTravelSurcharge: travelSurchargeData.base_travel_surcharge ?? 0,
+              perKmSurcharge: travelSurchargeData.per_km_surcharge ?? 5000,
+              minTravelDistance: travelSurchargeData.min_travel_distance ?? undefined,
+              maxTravelDistance: travelSurchargeData.max_travel_distance ?? undefined,
+              travelSurchargeRequired: travelSurchargeData.travel_surcharge_required ?? true,
+            }
+          : {
+              baseTravelSurcharge: 0,
+              perKmSurcharge: 5000,
+              travelSurchargeRequired: true,
+            },
         additionalFees: (feesData || []).map(fee => ({
           id: fee.id,
           name: fee.name,
@@ -136,6 +158,26 @@ export class InvoiceSettingsService {
         if (taxChargeError) {
           console.error('[InvoiceSettingsService] Error saving tax/charge:', taxChargeError);
           return { success: false, error: 'Failed to save tax and service charge settings' };
+        }
+      }
+
+      // Update travel surcharge settings
+      if (settings.travelSurcharge) {
+        const { error: travelError } = await supabase
+          .from('invoice_travel_surcharge_settings')
+          .upsert({
+            tenant_id: tenantId,
+            base_travel_surcharge: settings.travelSurcharge.baseTravelSurcharge ?? 0,
+            per_km_surcharge: settings.travelSurcharge.perKmSurcharge ?? 5000,
+            min_travel_distance: settings.travelSurcharge.minTravelDistance ?? null,
+            max_travel_distance: settings.travelSurcharge.maxTravelDistance ?? null,
+            travel_surcharge_required: settings.travelSurcharge.travelSurchargeRequired ?? true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'tenant_id' });
+
+        if (travelError) {
+          console.error('[InvoiceSettingsService] Error saving travel surcharge:', travelError);
+          return { success: false, error: 'Failed to save travel surcharge settings' };
         }
       }
 

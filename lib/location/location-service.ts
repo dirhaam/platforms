@@ -9,9 +9,11 @@ import {
   OptimizeRouteRequest,
   LocationServiceConfig,
   LocationError,
-  LocationErrorType
+  LocationErrorType,
+  TravelSurchargeSettings
 } from '@/types/location';
 import { CacheService } from '@/lib/cache/cache-service';
+import { InvoiceSettingsService } from '@/lib/invoice/invoice-settings-service';
 import { createClient } from '@supabase/supabase-js';
 
 export class LocationService {
@@ -85,7 +87,7 @@ export class LocationService {
 
       return result;
     } catch (error) {
-      console.error('Error calculating travel:', error);
+      console.error('[LocationService] Error calculating travel:', error);
       return {
         distance: 0,
         duration: 0,
@@ -127,7 +129,7 @@ export class LocationService {
       }
 
       // Simple nearest neighbor optimization (can be enhanced with more sophisticated algorithms)
-      const optimizedRoute = await this.nearestNeighborOptimization(startCoords, validBookings);
+      const optimizedRoute = await this.nearestNeighborOptimization(startCoords, validBookings, request.tenantId);
       
       return optimizedRoute;
     } catch (error) {
@@ -264,6 +266,7 @@ export class LocationService {
       
       // Get routing information
       const routeInfo = await this.getRouteInfo(origin, destination);
+      const actualDistance = routeInfo?.distance || straightLineDistance;
       
       // Check service area coverage
       const serviceAreaCheck = await this.checkServiceAreaCoverage(
@@ -272,21 +275,34 @@ export class LocationService {
         serviceId
       );
 
+      // Get travel surcharge settings from Invoice Settings
+      let surcharge = serviceAreaCheck.surcharge;
+      if (surcharge === 0) {
+        // Use invoice settings travel surcharge if not in service area or no service area defined
+        const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
+        if (invoiceSettings.travelSurcharge) {
+          surcharge = this.calculateTravelSurcharge(
+            actualDistance,
+            invoiceSettings.travelSurcharge
+          );
+        }
+      }
+
       // Apply buffer to the duration to account for traffic, stops, and real-world conditions
       const bufferedDuration = routeInfo?.duration 
         ? Math.ceil(routeInfo.duration * 1.2) // Add 20% buffer to OSRM time
         : Math.ceil(straightLineDistance * 2); // Fallback: 2 min per km
 
       return {
-        distance: routeInfo?.distance || straightLineDistance,
+        distance: actualDistance,
         duration: bufferedDuration,
         route: routeInfo?.route,
-        surcharge: serviceAreaCheck.surcharge,
+        surcharge,
         isWithinServiceArea: serviceAreaCheck.isWithinArea,
         serviceAreaId: serviceAreaCheck.serviceAreaId
       };
     } catch (error) {
-      console.error('Error calculating route:', error);
+      console.error('[LocationService] Error calculating route:', error);
       // Fallback to straight-line calculation with buffer
       const distance = this.calculateHaversineDistance(origin, destination);
       return {
@@ -296,6 +312,23 @@ export class LocationService {
         isWithinServiceArea: false
       };
     }
+  }
+
+  private static calculateTravelSurcharge(
+    distance: number,
+    settings: TravelSurchargeSettings
+  ): number {
+    // Check if distance is within allowed range
+    if (settings.minTravelDistance && distance < settings.minTravelDistance) {
+      return 0; // No surcharge if under minimum distance
+    }
+    if (settings.maxTravelDistance && distance > settings.maxTravelDistance) {
+      return 0; // Don't allow booking if exceeds max distance
+    }
+
+    // Calculate surcharge: base + (distance × per km rate)
+    const calculatedSurcharge = settings.baseTravelSurcharge + (distance * settings.perKmSurcharge);
+    return Math.ceil(calculatedSurcharge);
   }
 
   private static async getRouteInfo(origin: Coordinates, destination: Coordinates) {
@@ -521,7 +554,8 @@ export class LocationService {
       coordinates: Coordinates | null;
       serviceTime: number;
       scheduledAt: Date;
-    }>
+    }>,
+    tenantId?: string
   ): Promise<RouteOptimization> {
     const route = [];
     const unvisited = [...bookings.filter(b => b.coordinates)];
@@ -530,6 +564,24 @@ export class LocationService {
     let totalDuration = 0;
     let totalSurcharge = 0;
     let currentTime = new Date();
+
+    // Get travel surcharge settings
+    let travelSettings: TravelSurchargeSettings = {
+      baseTravelSurcharge: 0,
+      perKmSurcharge: 5000, // Default fallback
+      travelSurchargeRequired: true
+    };
+
+    if (tenantId) {
+      try {
+        const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
+        if (invoiceSettings.travelSurcharge) {
+          travelSettings = invoiceSettings.travelSurcharge;
+        }
+      } catch (error) {
+        console.warn('[LocationService] Failed to get travel settings, using defaults:', error);
+      }
+    }
 
     while (unvisited.length > 0) {
       // Find nearest unvisited booking
@@ -567,8 +619,10 @@ export class LocationService {
       // Update totals
       totalDistance += nearestDistance;
       totalDuration += travelTime + nearestBooking.serviceTime;
-      // Simple surcharge calculation: 5000 IDR per km
-      totalSurcharge += nearestDistance * 5000;
+      
+      // Calculate surcharge using settings: base + (distance × per km rate)
+      const bookingSurcharge = this.calculateTravelSurcharge(nearestDistance, travelSettings);
+      totalSurcharge += bookingSurcharge;
 
       // Move to next location
       currentLocation = nearestBooking.coordinates;

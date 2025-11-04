@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { ImageIcon, RefreshCw, Upload, X, Plus, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddressInput } from '@/components/location/AddressInput';
+import { TravelSurchargeSettings } from '@/types/location';
 
 interface InvoiceSettingsProps {
   tenantId: string;
@@ -43,6 +44,7 @@ interface AdditionalFee {
 interface InvoiceSettingsForm {
   branding: BrandingSettings;
   taxServiceCharge: TaxServiceChargeSettings;
+  travelSurcharge: TravelSurchargeSettings;
   additionalFees: AdditionalFee[];
 }
 
@@ -60,6 +62,11 @@ const DEFAULT_FORM: InvoiceSettingsForm = {
     serviceChargeType: 'fixed',
     serviceChargeValue: 0,
     serviceChargeRequired: false,
+  },
+  travelSurcharge: {
+    baseTravelSurcharge: 0,
+    perKmSurcharge: 5000,
+    travelSurchargeRequired: true,
   },
   additionalFees: [],
 };
@@ -105,6 +112,13 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
             serviceChargeType: settings?.taxServiceCharge?.serviceChargeType || 'fixed',
             serviceChargeValue: settings?.taxServiceCharge?.serviceChargeValue || 0,
             serviceChargeRequired: settings?.taxServiceCharge?.serviceChargeRequired || false,
+          },
+          travelSurcharge: {
+            baseTravelSurcharge: settings?.travelSurcharge?.baseTravelSurcharge || 0,
+            perKmSurcharge: settings?.travelSurcharge?.perKmSurcharge || 5000,
+            minTravelDistance: settings?.travelSurcharge?.minTravelDistance,
+            maxTravelDistance: settings?.travelSurcharge?.maxTravelDistance,
+            travelSurchargeRequired: settings?.travelSurcharge?.travelSurchargeRequired ?? true,
           },
           additionalFees: settings?.additionalFees || [],
         };
@@ -157,6 +171,14 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
       setForm(prev => ({
         ...prev,
         taxServiceCharge: { ...prev.taxServiceCharge, [field]: value }
+      }));
+    };
+
+  const handleTravelSurchargeChange = (field: keyof TravelSurchargeSettings) =>
+    (value: any) => {
+      setForm(prev => ({
+        ...prev,
+        travelSurcharge: { ...prev.travelSurcharge, [field]: value }
       }));
     };
 
@@ -265,6 +287,13 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
           serviceChargeType: settings?.taxServiceCharge?.serviceChargeType || 'fixed',
           serviceChargeValue: settings?.taxServiceCharge?.serviceChargeValue || 0,
           serviceChargeRequired: settings?.taxServiceCharge?.serviceChargeRequired || false,
+        },
+        travelSurcharge: {
+          baseTravelSurcharge: settings?.travelSurcharge?.baseTravelSurcharge || 0,
+          perKmSurcharge: settings?.travelSurcharge?.perKmSurcharge || 5000,
+          minTravelDistance: settings?.travelSurcharge?.minTravelDistance,
+          maxTravelDistance: settings?.travelSurcharge?.maxTravelDistance,
+          travelSurchargeRequired: settings?.travelSurcharge?.travelSurchargeRequired ?? true,
         },
         additionalFees: settings?.additionalFees || [],
       };
@@ -577,6 +606,106 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                   <p className="text-xs text-gray-500">
                     Jika wajib, otomatis ditambahkan ke setiap invoice.
                   </p>
+                </div>
+
+                {/* Travel Surcharge */}
+                <div className="space-y-2 p-4 border rounded bg-blue-50">
+                  <Label className="font-semibold text-blue-900">Travel Surcharge (Home Visit)</Label>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="base-travel">Base Travel Surcharge (Rp)</Label>
+                      <Input
+                        id="base-travel"
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={form.travelSurcharge.baseTravelSurcharge}
+                        onChange={(e) =>
+                          handleTravelSurchargeChange('baseTravelSurcharge')(parseFloat(e.target.value) || 0)
+                        }
+                        disabled={loading || saving}
+                        placeholder="Contoh: 25000"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">
+                        Base surcharge untuk setiap home visit, ditambahkan sebelum perhitungan per-km.
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="per-km">Per Kilometer (Rp/km)</Label>
+                      <Input
+                        id="per-km"
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={form.travelSurcharge.perKmSurcharge}
+                        onChange={(e) =>
+                          handleTravelSurchargeChange('perKmSurcharge')(parseFloat(e.target.value) || 0)
+                        }
+                        disabled={loading || saving}
+                        placeholder="Contoh: 5000"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">
+                        Surcharge per kilometer jarak perjalanan. (Rp per km)
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="min-distance">Min Distance (km) - Optional</Label>
+                        <Input
+                          id="min-distance"
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={form.travelSurcharge.minTravelDistance || ''}
+                          onChange={(e) =>
+                            handleTravelSurchargeChange('minTravelDistance')(
+                              e.target.value === '' ? undefined : parseFloat(e.target.value)
+                            )
+                          }
+                          disabled={loading || saving}
+                          placeholder="Contoh: 1.5"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="max-distance">Max Distance (km) - Optional</Label>
+                        <Input
+                          id="max-distance"
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={form.travelSurcharge.maxTravelDistance || ''}
+                          onChange={(e) =>
+                            handleTravelSurchargeChange('maxTravelDistance')(
+                              e.target.value === '' ? undefined : parseFloat(e.target.value)
+                            )
+                          }
+                          disabled={loading || saving}
+                          placeholder="Contoh: 50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <Checkbox
+                        id="travel-required"
+                        checked={form.travelSurcharge.travelSurchargeRequired}
+                        onCheckedChange={(checked) => {
+                          const value = typeof checked === 'boolean' ? checked : false;
+                          handleTravelSurchargeChange('travelSurchargeRequired')(value);
+                        }}
+                        disabled={loading || saving}
+                      />
+                      <Label htmlFor="travel-required" className="cursor-pointer text-sm">
+                        Travel Surcharge Wajib
+                      </Label>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      Jika diaktifkan, surcharge otomatis dihitung untuk semua home visit bookings.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Additional Fees */}

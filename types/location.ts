@@ -125,6 +125,15 @@ export interface OptimizeRouteRequest {
   tenantId: string;
 }
 
+// Travel Surcharge Settings
+export interface TravelSurchargeSettings {
+  baseTravelSurcharge: number; // Base surcharge amount (fixed Rp)
+  perKmSurcharge: number; // Per-kilometer surcharge (Rp per km)
+  minTravelDistance?: number; // Min distance before surcharge applies (km)
+  maxTravelDistance?: number; // Max distance allowed (km)
+  travelSurchargeRequired: boolean; // Auto-apply to all home visits
+}
+
 // Configuration types
 export interface LocationServiceConfig {
   geocodingProvider: 'google' | 'mapbox' | 'nominatim';
