@@ -56,6 +56,11 @@ export interface Booking {
   createdAt: Date;
   updatedAt: Date;
   
+  // Travel & Route Details (for home visit)
+  travelDistance?: number; // Distance in km
+  travelDuration?: number; // Duration in minutes
+  travelRoute?: Array<{ lat: number; lng: number }>; // Route coordinates
+  
   // Down Payment (DP) support
   dpAmount?: number; // Down payment amount
   paidAmount?: number; // Total paid so far

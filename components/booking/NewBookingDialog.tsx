@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, MapPin } from 'lucide-react';
+import { Plus, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
+import { TravelCalculation } from '@/types/location';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -43,6 +45,8 @@ interface NewBooking {
   paymentMethod: string;
   dpAmount: number;
   notes: string;
+  // Travel calculation data
+  travelCalculation?: TravelCalculation;
 }
 
 interface NewCustomer {
@@ -90,6 +94,8 @@ export function NewBookingDialog({
   const [addrSuggestions, setAddrSuggestions] = useState<Array<{ label: string; lat: number; lng: number }>>([]);
   const [addrLoading, setAddrLoading] = useState(false);
   const [addrTimer, setAddrTimer] = useState<any>(null);
+  const [showTravelCalculation, setShowTravelCalculation] = useState(false);
+  const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -121,6 +127,13 @@ export function NewBookingDialog({
         const data = await settingsRes.json();
         console.log('[NewBookingDialog] Invoice settings loaded:', data.settings);
         setInvoiceSettings(data.settings || null);
+        // Get business coordinates for travel calculation
+        if (data.settings?.branding?.businessLatitude && data.settings?.branding?.businessLongitude) {
+          setBusinessCoordinates({
+            lat: data.settings.branding.businessLatitude,
+            lng: data.settings.branding.businessLongitude
+          });
+        }
       } else {
         console.warn('[NewBookingDialog] Failed to fetch invoice settings:', settingsRes.status);
       }
@@ -209,6 +222,10 @@ export function NewBookingDialog({
           homeVisitCoordinates: booking.isHomeVisit && isFinite(Number(booking.homeVisitLat)) && isFinite(Number(booking.homeVisitLng))
             ? { lat: Number(booking.homeVisitLat), lng: Number(booking.homeVisitLng) }
             : undefined,
+          travelDistance: booking.travelCalculation?.distance,
+          travelDuration: booking.travelCalculation?.duration,
+          travelRoute: booking.travelCalculation?.route,
+          travelSurchargeAmount: booking.travelCalculation?.surcharge,
           paymentMethod: booking.paymentMethod,
           dpAmount: booking.dpAmount,
           notes: booking.notes
@@ -475,6 +492,25 @@ export function NewBookingDialog({
                     </div>
 
                     <p className="text-xs text-gray-600">Tips: ketik alamat lalu pilih dari daftar agar koordinat terisi otomatis. Anda juga bisa memasukkan lat/lng manual atau gunakan tombol GPS.</p>
+
+                    {/* Travel Estimate */}
+                    {booking.homeVisitAddress && booking.homeVisitLat && booking.homeVisitLng && businessCoordinates && (
+                      <div className="mt-4">
+                        <TravelEstimateCard
+                          tenantId={subdomain}
+                          origin={businessCoordinates}
+                          destination={booking.homeVisitAddress}
+                          serviceId={booking.serviceId}
+                          onCalculationComplete={(calc) => {
+                            setBooking({ ...booking, travelCalculation: calc });
+                          }}
+                          onConfirm={(calc) => {
+                            setBooking({ ...booking, travelCalculation: calc });
+                          }}
+                          autoCalculate={true}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -491,6 +527,12 @@ export function NewBookingDialog({
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Home Visit Surcharge</span>
                       <span>IDR {Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0).toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  {booking.isHomeVisit && booking.travelCalculation && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Travel Surcharge ({booking.travelCalculation.distance.toFixed(1)}km)</span>
+                      <span>IDR {Number(booking.travelCalculation.surcharge).toLocaleString('id-ID')}</span>
                     </div>
                   )}
                   {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
@@ -532,6 +574,9 @@ export function NewBookingDialog({
                         let subtotal = Number(service.price);
                         if (booking.isHomeVisit && service.homeVisitSurcharge) {
                           subtotal += Number(service.homeVisitSurcharge);
+                        }
+                        if (booking.isHomeVisit && booking.travelCalculation) {
+                          subtotal += Number(booking.travelCalculation.surcharge);
                         }
                         let total = subtotal;
                         if (invoiceSettings?.taxServiceCharge?.taxPercentage) {
