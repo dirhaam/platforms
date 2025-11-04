@@ -140,13 +140,15 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                   </div>
                 </div>
 
-                {/* Travel Information */}
-                {booking.travelDistance && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm flex items-center gap-2">
-                      <Navigation className="h-4 w-4 text-orange-600" />
-                      Informasi Perjalanan
-                    </h4>
+                {/* Travel Information & Mini Map */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Navigation className="h-4 w-4 text-orange-600" />
+                    Informasi Perjalanan & Rute
+                  </h4>
+
+                  {/* Travel Stats */}
+                  {booking.travelDistance && (
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-white border rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-600 mb-1">Jarak</p>
@@ -167,26 +169,25 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                         </p>
                       </div>
                     </div>
+                  )}
 
-                    {/* Mini Map */}
-                    {(businessCoordinates || booking.homeVisitCoordinates) && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                          🗺️ Rute Perjalanan
-                        </p>
-                        <div style={{ minHeight: '250px' }} className="rounded-lg overflow-hidden border bg-gray-50">
-                          <RouteMiniMap
-                            origin={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
-                            destination={booking.homeVisitCoordinates}
-                            route={booking.travelRoute}
-                            height={250}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  {/* Mini Map - Always Visible */}
+                  {(businessCoordinates || booking.homeVisitCoordinates) ? (
+                    <div style={{ minHeight: '250px' }} className="rounded-lg overflow-hidden border bg-gray-50">
+                      <RouteMiniMap
+                        origin={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
+                        destination={booking.homeVisitCoordinates}
+                        route={booking.travelRoute}
+                        height={250}
+                        className="w-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border bg-blue-50 p-4 text-center text-sm text-blue-700">
+                      📍 Map tidak dapat ditampilkan - koordinat tidak tersedia
+                    </div>
+                  )}
+                </div>
 
                 {/* Amount Breakdown */}
                 <div className="space-y-2">
@@ -265,9 +266,6 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" size="sm" className="flex-1">
                     Edit Booking
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    View Map
                   </Button>
                 </div>
               </div>
