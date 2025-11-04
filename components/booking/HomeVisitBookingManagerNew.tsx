@@ -117,7 +117,7 @@ export function HomeVisitBookingManager({
               businessLocation={businessCoordinates}
               center={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
               zoom={businessCoordinates ? 14 : 12}
-              height={400}
+              className="h-96 rounded-lg"
             />
           </CardContent>
         </Card>
