@@ -100,7 +100,11 @@ export function HomeVisitBookingManager({
       )}
 
       {/* Collapsible List */}
-      <HomeVisitBookingList bookings={homeVisitBookings} services={servicesMap} />
+      <HomeVisitBookingList 
+        bookings={homeVisitBookings} 
+        services={servicesMap}
+        businessCoordinates={businessCoordinates}
+      />
 
       {/* Map View (if we have coordinates) */}
       {homeVisitBookings.some(b => b.homeVisitCoordinates) && (

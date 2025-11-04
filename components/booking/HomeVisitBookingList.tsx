@@ -6,13 +6,15 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, MapPin, Clock, DollarSign, Navigation } from 'lucide-react';
+import { RouteMiniMap } from '@/components/location/RouteMiniMap';
 
 interface HomeVisitBookingListProps {
   bookings: Booking[];
   services: Map<string, Service>;
+  businessCoordinates?: { lat: number; lng: number };
 }
 
-export function HomeVisitBookingList({ bookings, services }: HomeVisitBookingListProps) {
+export function HomeVisitBookingList({ bookings, services, businessCoordinates }: HomeVisitBookingListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const formatCurrency = (amount: number | undefined) => {
@@ -165,6 +167,18 @@ export function HomeVisitBookingList({ bookings, services }: HomeVisitBookingLis
                         </p>
                       </div>
                     </div>
+
+                    {/* Mini Map */}
+                    {(businessCoordinates || booking.homeVisitCoordinates) && (
+                      <div className="mt-3 rounded-lg overflow-hidden border">
+                        <RouteMiniMap
+                          origin={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
+                          destination={booking.homeVisitCoordinates}
+                          route={booking.travelRoute}
+                          height={250}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
