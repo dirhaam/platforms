@@ -450,9 +450,15 @@ export function NewBookingDialog({
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Service Charge</span>
                       <span>
-                        {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
-                          ? `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`
-                          : `IDR ${((Number(services.find(s => s.id === booking.serviceId)?.price || 0) + (booking.isHomeVisit ? Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0) : 0)) * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
+                        {(() => {
+                          const basePrice = Number(services.find(s => s.id === booking.serviceId)?.price || 0);
+                          const travelSurcharge = booking.travelCalculation?.surcharge || 0;
+                          const subtotal = basePrice + travelSurcharge;
+                          if (invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed') {
+                            return `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`;
+                          }
+                          return `IDR ${(subtotal * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`;
+                        })()}
                       </span>
                     </div>
                   ) : null}
@@ -462,9 +468,15 @@ export function NewBookingDialog({
                         <div key={fee.id} className="flex justify-between text-sm text-gray-600">
                           <span>{fee.name}</span>
                           <span>
-                            {fee.type === 'fixed'
-                              ? `IDR ${fee.value.toLocaleString('id-ID')}`
-                              : `IDR ${((Number(services.find(s => s.id === booking.serviceId)?.price || 0) + (booking.isHomeVisit ? Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0) : 0)) * (fee.value / 100)).toLocaleString('id-ID')}`}
+                            {(() => {
+                              const basePrice = Number(services.find(s => s.id === booking.serviceId)?.price || 0);
+                              const travelSurcharge = booking.travelCalculation?.surcharge || 0;
+                              const subtotal = basePrice + travelSurcharge;
+                              if (fee.type === 'fixed') {
+                                return `IDR ${fee.value.toLocaleString('id-ID')}`;
+                              }
+                              return `IDR ${(subtotal * (fee.value / 100)).toLocaleString('id-ID')}`;
+                            })()}
                           </span>
                         </div>
                       ))}
@@ -476,25 +488,33 @@ export function NewBookingDialog({
                       IDR {(() => {
                         const service = services.find(s => s.id === booking.serviceId);
                         if (!service) return 0;
-                        let subtotal = Number(service.price);
-                        if (booking.isHomeVisit && service.homeVisitSurcharge) {
-                          subtotal += Number(service.homeVisitSurcharge);
-                        }
-                        if (booking.isHomeVisit && booking.travelCalculation) {
-                          subtotal += Number(booking.travelCalculation.surcharge);
-                        }
+                        
+                        // Step 1: Base price
+                        const basePrice = Number(service.price);
+                        
+                        // Step 2: Travel surcharge (distance-based, not from service.homeVisitSurcharge)
+                        const travelSurcharge = (booking.isHomeVisit && booking.travelCalculation) ? Number(booking.travelCalculation.surcharge) : 0;
+                        
+                        // Step 3: Subtotal = base + travel
+                        let subtotal = basePrice + travelSurcharge;
                         let total = subtotal;
+                        
+                        // Step 4: Tax on subtotal
                         if (invoiceSettings?.taxServiceCharge?.taxPercentage) {
                           total += subtotal * (invoiceSettings.taxServiceCharge.taxPercentage / 100);
                         }
-                        if (invoiceSettings?.taxServiceCharge?.serviceChargeRequired) {
+                        
+                        // Step 5: Service charge on subtotal
+                        if (invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue) {
                           if (invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed') {
-                            total += invoiceSettings.taxServiceCharge.serviceChargeValue || 0;
+                            total += invoiceSettings.taxServiceCharge.serviceChargeValue;
                           } else {
                             total += subtotal * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100);
                           }
                         }
-                        if (invoiceSettings?.additionalFees) {
+                        
+                        // Step 6: Additional fees on subtotal
+                        if (invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0) {
                           invoiceSettings.additionalFees.forEach(fee => {
                             if (fee.type === 'fixed') {
                               total += fee.value;
@@ -503,6 +523,7 @@ export function NewBookingDialog({
                             }
                           });
                         }
+                        
                         return Math.round(total).toLocaleString('id-ID');
                       })()}
                     </span>
