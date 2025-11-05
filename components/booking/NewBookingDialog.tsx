@@ -380,14 +380,14 @@ export function NewBookingDialog({
                     />
 
                     {/* Travel Estimate Placeholder or Card */}
-                    {!booking.homeVisitAddress || !booking.homeVisitLat || !booking.homeVisitLng ? (
+                    {!booking.homeVisitAddress || booking.homeVisitLat === undefined || booking.homeVisitLat === null || booking.homeVisitLng === undefined || booking.homeVisitLng === null ? (
                       <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center text-sm text-blue-700">
                         📍 Masukkan alamat dan koordinat home visit untuk melihat estimasi biaya travel
                       </div>
                     ) : null}
 
                     {/* Travel Estimate */}
-                    {booking.homeVisitAddress && booking.homeVisitLat && booking.homeVisitLng && (
+                    {booking.homeVisitAddress && typeof booking.homeVisitLat === 'number' && typeof booking.homeVisitLng === 'number' && (
                       <div className="mt-4">
                         <TravelEstimateCard
                           tenantId={subdomain}
@@ -400,9 +400,11 @@ export function NewBookingDialog({
                           destination={booking.homeVisitAddress}
                           serviceId={booking.serviceId}
                           onCalculationComplete={(calc) => {
+                            console.log('[NewBookingDialog] Travel calculation complete:', calc);
                             setBooking({ ...booking, travelCalculation: calc });
                           }}
                           onConfirm={(calc) => {
+                            console.log('[NewBookingDialog] Travel calculation confirmed:', calc);
                             setBooking({ ...booking, travelCalculation: calc });
                           }}
                           autoCalculate={true}
@@ -417,28 +419,33 @@ export function NewBookingDialog({
               {booking.serviceId && services.find(s => s.id === booking.serviceId) && (
                 <div className="p-4 bg-gray-50 rounded-lg border space-y-2">
                   <h3 className="font-semibold text-sm mb-3">Amount Breakdown</h3>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Base Service Amount</span>
-                    <span>IDR {Number(services.find(s => s.id === booking.serviceId)?.price || 0).toLocaleString('id-ID')}</span>
-                  </div>
-                  {booking.isHomeVisit && services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Home Visit Surcharge</span>
-                      <span>IDR {Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0).toLocaleString('id-ID')}</span>
-                    </div>
-                  )}
-                  {booking.isHomeVisit && booking.travelCalculation && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Travel Surcharge ({booking.travelCalculation.distance.toFixed(1)}km)</span>
-                      <span>IDR {Number(booking.travelCalculation.surcharge).toLocaleString('id-ID')}</span>
-                    </div>
-                  )}
-                  {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
-                      <span>IDR {((Number(services.find(s => s.id === booking.serviceId)?.price || 0) + (booking.isHomeVisit ? Number(services.find(s => s.id === booking.serviceId)?.homeVisitSurcharge || 0) : 0)) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString('id-ID')}</span>
-                    </div>
-                  ) : null}
+                  {(() => {
+                    const basePrice = Number(services.find(s => s.id === booking.serviceId)?.price || 0);
+                    const travelSurcharge = booking.travelCalculation?.surcharge || 0;
+                    const subtotal = basePrice + travelSurcharge;
+                    const tax = subtotal * ((invoiceSettings?.taxServiceCharge?.taxPercentage || 0) / 100);
+                    
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Base Service Amount</span>
+                          <span>IDR {basePrice.toLocaleString('id-ID')}</span>
+                        </div>
+                        {booking.isHomeVisit && booking.travelCalculation && travelSurcharge > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Travel Surcharge ({booking.travelCalculation.distance.toFixed(1)}km)</span>
+                            <span>IDR {Number(travelSurcharge).toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
+                            <span>IDR {tax.toLocaleString('id-ID')}</span>
+                          </div>
+                        ) : null}
+                      </>
+                    );
+                  })()}
                   {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue ? (
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Service Charge</span>
