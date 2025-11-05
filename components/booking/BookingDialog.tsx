@@ -186,9 +186,8 @@ export default function BookingDialog({
     if (!selectedService) return 0;
     
     let subtotal = Number(selectedService.price);
-    if (formData.isHomeVisit && selectedService.homeVisitSurcharge) {
-      subtotal += Number(selectedService.homeVisitSurcharge);
-    }
+    // Travel surcharge is calculated by PricingCalculator based on distance
+    // Not added here - it's included in PricingCalculator
     
     let total = subtotal;
     
@@ -475,9 +474,9 @@ export default function BookingDialog({
                   </div>
                   <div className="text-right">
                     <p className="font-bold">IDR {Number(calculateTotal()).toLocaleString('id-ID')}</p>
-                    {formData.isHomeVisit && selectedService.homeVisitSurcharge && (
+                    {formData.isHomeVisit && invoiceSettings?.travelSurcharge && (
                       <p className="text-xs text-gray-500">
-                        Includes home visit (+IDR {Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID')})
+                        Travel surcharge will be calculated based on distance
                       </p>
                     )}
                   </div>
@@ -592,7 +591,7 @@ export default function BookingDialog({
                   />
                   <Label htmlFor="homeVisit" className="cursor-pointer">
                     <MapPin className="inline w-4 h-4 mr-2" />
-                    Request home visit (+IDR {selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID') : '0'})
+                    Request home visit
                   </Label>
                 </div>
                 
@@ -646,16 +645,11 @@ export default function BookingDialog({
                   <span className="text-gray-600">Base Service Amount</span>
                   <span>IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
                 </div>
-                {formData.isHomeVisit && selectedService.homeVisitSurcharge && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Home Visit Surcharge</span>
-                    <span>IDR {Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID')}</span>
-                  </div>
-                )}
+                {/* Travel Surcharge is calculated by PricingCalculator when address + coordinates are set */}
                 {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
-                    <span>IDR {((Number(selectedService.price) + (formData.isHomeVisit ? Number(selectedService.homeVisitSurcharge || 0) : 0)) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString('id-ID')}</span>
+                    <span>IDR {(Number(selectedService.price) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString('id-ID')}</span>
                   </div>
                 ) : null}
                 {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue ? (
@@ -664,7 +658,7 @@ export default function BookingDialog({
                     <span>
                       {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
                         ? `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`
-                        : `IDR ${((Number(selectedService.price) + (formData.isHomeVisit ? Number(selectedService.homeVisitSurcharge || 0) : 0)) * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
+                        : `IDR ${(Number(selectedService.price) * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
                     </span>
                   </div>
                 ) : null}
@@ -676,7 +670,7 @@ export default function BookingDialog({
                         <span>
                           {fee.type === 'fixed'
                             ? `IDR ${fee.value.toLocaleString('id-ID')}`
-                            : `IDR ${((Number(selectedService.price) + (formData.isHomeVisit ? Number(selectedService.homeVisitSurcharge || 0) : 0)) * (fee.value / 100)).toLocaleString('id-ID')}`}
+                            : `IDR ${(Number(selectedService.price) * (fee.value / 100)).toLocaleString('id-ID')}`}
                         </span>
                       </div>
                     ))}
