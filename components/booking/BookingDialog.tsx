@@ -128,11 +128,40 @@ export default function BookingDialog({
   // Sync selectedService with props when service changes
   React.useEffect(() => {
     if (service && service.id) {
+      // First set the service from props
       setSelectedService(service);
       setCalculatedPrice(Number(service.price));
-      console.log('[BookingDialog] Service updated from props:', { id: service.id, name: service.name });
+      console.log('[BookingDialog] Service updated from props:', { 
+        id: service.id, 
+        name: service.name,
+        homeVisitAvailable: service.homeVisitAvailable,
+        homeVisitSurcharge: service.homeVisitSurcharge
+      });
+
+      // Then fetch latest service details from API to ensure we have current settings
+      const fetchLatestService = async () => {
+        try {
+          const response = await fetch(`/api/services/${service.id}`, {
+            headers: { 'x-tenant-id': tenant.id }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const updatedService = data.service || data;
+            setSelectedService(updatedService);
+            console.log('[BookingDialog] Service refreshed from API:', { 
+              id: updatedService.id, 
+              homeVisitAvailable: updatedService.homeVisitAvailable,
+              homeVisitSurcharge: updatedService.homeVisitSurcharge
+            });
+          }
+        } catch (error) {
+          console.warn('[BookingDialog] Failed to refresh service details:', error);
+        }
+      };
+
+      fetchLatestService();
     }
-  }, [service?.id]);
+  }, [service?.id, tenant.id]);
 
   // Sync step based on whether service is selected and dialog is open
   React.useEffect(() => {
