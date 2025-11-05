@@ -89,6 +89,7 @@ export default function BookingDialog({
     dpAmount: 0,
   });
   const [calculatedPrice, setCalculatedPrice] = useState<number>(selectedService ? Number(selectedService.price) : 0);
+  const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettingsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -618,7 +619,10 @@ export default function BookingDialog({
                 tenantId={tenant.id}
                 businessLocation={tenant.address}
                 businessCoordinates={businessCoordinates || undefined}
-                onPriceCalculated={(totalPrice) => setCalculatedPrice(totalPrice)}
+                onPriceCalculated={(totalPrice, breakdown) => {
+                  setCalculatedPrice(totalPrice);
+                  setPriceBreakdown(breakdown);
+                }}
               />
             )}
 
@@ -645,7 +649,12 @@ export default function BookingDialog({
                   <span className="text-gray-600">Base Service Amount</span>
                   <span>IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
                 </div>
-                {/* Travel Surcharge is calculated by PricingCalculator when address + coordinates are set */}
+                {formData.isHomeVisit && priceBreakdown?.travelSurcharge > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Travel Surcharge {priceBreakdown?.travelInfo?.distance ? `(${priceBreakdown.travelInfo.distance.toFixed(1)}km)` : ''}</span>
+                    <span>IDR {Number(priceBreakdown.travelSurcharge).toLocaleString('id-ID')}</span>
+                  </div>
+                )}
                 {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
