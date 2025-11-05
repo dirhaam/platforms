@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { PendingBookingsBadge } from '@/components/booking/PendingBookingsBadge';
 import {
   BarChart3,
   BookOpen,
@@ -160,6 +161,7 @@ function TenantAdminLayoutContent({
       <nav className={`space-y-2 ${isCollapsed ? 'px-3 py-3' : 'px-4 py-4'} flex-1 transition-all duration-300`}>
         {navigationItems.map((item) => {
           const Icon = item.icon;
+          const isBookingsMenu = item.label === 'Bookings';
           return (
             <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}>
               <Button
@@ -169,7 +171,14 @@ function TenantAdminLayoutContent({
                 title={isCollapsed ? item.label : undefined}
               >
                 <Icon className="w-5 h-5" />
-                {!isCollapsed && <span className="ml-2">{item.label}</span>}
+                {!isCollapsed && (
+                  <span className="ml-2 flex items-center">
+                    {item.label}
+                    {isBookingsMenu && tenantId && (
+                      <PendingBookingsBadge tenantId={tenantId} subdomain={subdomain} />
+                    )}
+                  </span>
+                )}
               </Button>
             </Link>
           );
@@ -260,6 +269,7 @@ function TenantAdminLayoutContent({
             <nav className="py-2 space-y-1">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
+                const isBookingsMenu = item.label === 'Bookings';
                 return (
                   <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}>
                     <Button
@@ -272,7 +282,14 @@ function TenantAdminLayoutContent({
                       title={sidebarCollapsed ? item.label : undefined}
                     >
                       <Icon className="w-6 h-6 flex-shrink-0" />
-                      {!sidebarCollapsed && <span className="ml-4 text-sm font-medium">{item.label}</span>}
+                      {!sidebarCollapsed && (
+                        <span className="ml-4 text-sm font-medium flex items-center">
+                          {item.label}
+                          {isBookingsMenu && tenantId && (
+                            <PendingBookingsBadge tenantId={tenantId} subdomain={subdomain} />
+                          )}
+                        </span>
+                      )}
                     </Button>
                   </Link>
                 );
