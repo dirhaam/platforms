@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, MapPin } from 'lucide-react';
+import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
 import { TravelCalculation } from '@/types/location';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -91,10 +92,6 @@ export function NewBookingDialog({
   const [error, setError] = useState<string | null>(null);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [addrSuggestions, setAddrSuggestions] = useState<Array<{ label: string; lat: number; lng: number }>>([]);
-  const [addrLoading, setAddrLoading] = useState(false);
-  const [addrTimer, setAddrTimer] = useState<any>(null);
-  const [showTravelCalculation, setShowTravelCalculation] = useState(false);
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
@@ -372,126 +369,15 @@ export function NewBookingDialog({
                   </Label>
                 </div>
                 {booking.isHomeVisit && (
-                  <div className="space-y-3">
-                    <div className="space-y-2 relative">
-                      <Label htmlFor="homeAddress">Home Visit Address (with search)</Label>
-                      <Input
-                        id="homeAddress"
-                        placeholder="Cari alamat (jalan/kecamatan/kota)"
-                        value={booking.homeVisitAddress}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setBooking({ ...booking, homeVisitAddress: val });
-                          if (addrTimer) clearTimeout(addrTimer);
-                          const t = setTimeout(async () => {
-                            if (!val || val.trim().length < 4) {
-                              setAddrSuggestions([]);
-                              return;
-                            }
-                            setAddrLoading(true);
-                            try {
-                              const res = await fetch('/api/location/validate-address', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ address: val.trim(), tenantId: subdomain })
-                              });
-                              const data = await res.json();
-                              const list: Array<{ label: string; lat: number; lng: number }> = [];
-                              if (data?.address?.fullAddress && data?.address?.coordinates) {
-                                list.push({ label: data.address.fullAddress, lat: data.address.coordinates.lat, lng: data.address.coordinates.lng });
-                              }
-                              (data?.suggestions || []).forEach((s: any) => {
-                                if (s?.fullAddress && s?.coordinates) {
-                                  list.push({ label: s.fullAddress, lat: s.coordinates.lat, lng: s.coordinates.lng });
-                                }
-                              });
-                              setAddrSuggestions(list.slice(0, 5));
-                              // Auto-fill coords if empty and we have a primary hit
-                              if (list.length > 0 && (!booking.homeVisitLat || !booking.homeVisitLng)) {
-                                setBooking((b) => ({ ...b, homeVisitLat: list[0].lat, homeVisitLng: list[0].lng }));
-                              }
-                            } catch (e) {
-                              setAddrSuggestions([]);
-                            } finally {
-                              setAddrLoading(false);
-                            }
-                          }, 450);
-                          setAddrTimer(t);
-                        }}
-                      />
-                      {addrLoading && (
-                        <div className="absolute right-2 top-9 text-xs text-gray-500">Searching…</div>
-                      )}
-                      {addrSuggestions.length > 0 && (
-                        <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow">
-                          {addrSuggestions.map((s, idx) => (
-                            <button
-                              type="button"
-                              key={`${s.label}-${idx}`}
-                              className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
-                              onClick={() => {
-                                setBooking({ ...booking, homeVisitAddress: s.label, homeVisitLat: s.lat, homeVisitLng: s.lng });
-                                setAddrSuggestions([]);
-                              }}
-                            >
-                              {s.label}
-                              <span className="block text-xs text-gray-500">{s.lat.toFixed(6)}, {s.lng.toFixed(6)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="lat">Latitude</Label>
-                        <Input
-                          id="lat"
-                          type="number"
-                          step="0.000001"
-                          placeholder="-6.2"
-                          value={booking.homeVisitLat ?? ''}
-                          onChange={(e) => setBooking({ ...booking, homeVisitLat: e.target.value === '' ? undefined : Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="lng">Longitude</Label>
-                        <Input
-                          id="lng"
-                          type="number"
-                          step="0.000001"
-                          placeholder="106.8"
-                          value={booking.homeVisitLng ?? ''}
-                          onChange={(e) => setBooking({ ...booking, homeVisitLng: e.target.value === '' ? undefined : Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => {
-                            if (navigator.geolocation) {
-                              navigator.geolocation.getCurrentPosition(
-                                (pos) => {
-                                  setBooking({ ...booking, homeVisitLat: pos.coords.latitude, homeVisitLng: pos.coords.longitude });
-                                },
-                                () => {
-                                  setError('Tidak dapat mengakses GPS. Izinkan lokasi di browser.');
-                                },
-                                { enableHighAccuracy: true, timeout: 8000 }
-                              );
-                            } else {
-                              setError('Browser tidak mendukung geolocation');
-                            }
-                          }}
-                        >
-                          Use Current GPS
-                        </Button>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-gray-600">💡 Tips: ketik alamat lalu pilih dari daftar. Koordinat akan terisi otomatis, dan biaya travel akan dihitung.</p>
+                  <>
+                    <HomeVisitAddressSelector
+                      address={booking.homeVisitAddress}
+                      latitude={booking.homeVisitLat}
+                      longitude={booking.homeVisitLng}
+                      tenantId={subdomain}
+                      onAddressChange={(addr) => setBooking({ ...booking, homeVisitAddress: addr })}
+                      onCoordinatesChange={(lat, lng) => setBooking({ ...booking, homeVisitLat: lat, homeVisitLng: lng })}
+                    />
 
                     {/* Travel Estimate Placeholder or Card */}
                     {!booking.homeVisitAddress || !booking.homeVisitLat || !booking.homeVisitLng ? (
@@ -523,7 +409,7 @@ export function NewBookingDialog({
                         />
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
 
