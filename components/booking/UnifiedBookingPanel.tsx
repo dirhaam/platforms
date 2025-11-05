@@ -582,16 +582,16 @@ export function UnifiedBookingPanel({
                   <span className="text-gray-600">Base Service Amount</span>
                   <span>Rp {(booking.service?.price ?? 0).toLocaleString('id-ID')}</span>
                 </div>
-                {booking.isHomeVisit && booking.service?.homeVisitSurcharge && (
+                {booking.isHomeVisit && Number(booking.travelSurchargeAmount ?? 0) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Home Visit Surcharge</span>
-                    <span>Rp {(booking.service.homeVisitSurcharge).toLocaleString('id-ID')}</span>
+                    <span className="text-gray-600">Travel Surcharge {booking.travelDistance ? `(${booking.travelDistance.toFixed(1)}km)` : ''}</span>
+                    <span>Rp {(Number(booking.travelSurchargeAmount ?? 0)).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {Number(booking.taxPercentage ?? 0) > 0 && (
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Tax {Number(booking.taxPercentage).toFixed(2)}%</span>
-                    <span>Rp {((Number(booking.service?.price ?? 0) + (booking.isHomeVisit ? booking.service?.homeVisitSurcharge ?? 0 : 0)) * Number(booking.taxPercentage ?? 0) / 100).toLocaleString('id-ID')}</span>
+                    <span>Rp {((Number(booking.service?.price ?? 0) + (booking.isHomeVisit ? booking.travelSurchargeAmount ?? 0 : 0)) * Number(booking.taxPercentage ?? 0) / 100).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {Number(booking.serviceChargeAmount ?? 0) > 0 && (

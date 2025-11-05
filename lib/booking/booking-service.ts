@@ -67,6 +67,8 @@ const mapToBooking = (dbData: any): Booking => {
     serviceChargeAmount: dbData.service_charge_amount,
     additionalFeesAmount: dbData.additional_fees_amount,
     travelSurchargeAmount: dbData.travel_surcharge_amount,
+    travelDistance: dbData.travel_distance,
+    travelDuration: dbData.travel_duration,
     paymentStatus: dbData.payment_status,
     remindersSent: dbData.reminders_sent,
     createdAt: new Date(dbData.created_at),
@@ -176,6 +178,8 @@ export class BookingService {
 
       // Calculate travel surcharge for home visits if address is provided
       let travelSurcharge = 0;
+      let travelDistance = 0;
+      let travelDuration = 0;
       if (data.isHomeVisit && data.homeVisitAddress) {
         try {
           // Get tenant's business location for travel calculation
@@ -199,6 +203,8 @@ export class BookingService {
               
               if (travelCalc) {
                 travelSurcharge = travelCalc.surcharge || 0;
+                travelDistance = travelCalc.distance || 0;
+                travelDuration = travelCalc.duration || 0;
               }
             }
           }
@@ -247,6 +253,8 @@ export class BookingService {
           service_charge_amount: serviceChargeAmount,
           additional_fees_amount: additionalFeesAmount,
           travel_surcharge_amount: travelSurcharge,
+          travel_distance: travelDistance,
+          travel_duration: travelDuration,
           status: BookingStatus.PENDING,
           payment_status: paymentStatus,
           reminders_sent: [],
