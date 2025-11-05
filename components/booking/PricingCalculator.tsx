@@ -40,7 +40,7 @@ export function PricingCalculator({
   const [calculating, setCalculating] = useState(false);
   const [breakdown, setBreakdown] = useState<PriceBreakdown>({
     basePrice: Number(service.price),
-    homeVisitSurcharge: 0,
+    homeVisitSurcharge: 0, // DEPRECATED - kept for compatibility only
     travelSurcharge: 0,
     totalPrice: Number(service.price)
   });
@@ -51,16 +51,11 @@ export function PricingCalculator({
 
   const calculatePricing = async () => {
     const basePrice = Number(service.price);
-    let homeVisitSurcharge = 0;
     let travelSurcharge = 0;
     let travelInfo: TravelCalculation | undefined;
 
-    // Add home visit surcharge if applicable
-    if (isHomeVisit && service.homeVisitSurcharge) {
-      homeVisitSurcharge = Number(service.homeVisitSurcharge);
-    }
-
     // Calculate travel surcharge if address is provided
+    // Travel surcharge is ONLY from distance-based calculation, NOT from service.homeVisitSurcharge
     if (isHomeVisit && homeVisitAddress && (businessLocation || businessCoordinates)) {
       setCalculating(true);
       try {
@@ -87,23 +82,28 @@ export function PricingCalculator({
         if (response.ok) {
           travelInfo = await response.json();
           travelSurcharge = travelInfo?.surcharge || 0;
+        } else {
+          console.warn('[PricingCalculator] Travel calculation failed:', response.status);
         }
       } catch (error) {
-        console.error('Error calculating travel surcharge:', error);
+        console.error('[PricingCalculator] Error calculating travel surcharge:', error);
       } finally {
         setCalculating(false);
       }
     }
 
-    const totalPrice = basePrice + homeVisitSurcharge + travelSurcharge;
+    // Note: totalPrice here is just for DISPLAY in PricingCalculator
+    // Backend will calculate the actual total including tax/fees/etc
+    const totalPrice = basePrice + travelSurcharge;
     const newBreakdown: PriceBreakdown = {
       basePrice,
-      homeVisitSurcharge,
+      homeVisitSurcharge: 0, // DEPRECATED
       travelSurcharge,
       totalPrice,
       travelInfo
     };
 
+    console.log('[PricingCalculator] Calculated breakdown:', newBreakdown);
     setBreakdown(newBreakdown);
     onPriceCalculated?.(totalPrice, newBreakdown);
   };

@@ -188,7 +188,7 @@ export default function BookingDialog({
     
     let subtotal = Number(selectedService.price);
     
-    // Add travel surcharge if home visit
+    // Add travel surcharge if home visit (for display purposes only)
     if (formData.isHomeVisit && travelSurcharge > 0) {
       subtotal += travelSurcharge;
     }
@@ -220,6 +220,8 @@ export default function BookingDialog({
       });
     }
     
+    // This is ESTIMATE only - actual total will be calculated by backend
+    // to ensure consistency (backend may have different invoice settings)
     return Math.round(total);
   };
 
@@ -317,10 +319,7 @@ export default function BookingDialog({
       }
 
       // Step 2: Create booking
-      const totalAmount = formData.isHomeVisit 
-        ? Number(selectedService.price) + Number(selectedService.homeVisitSurcharge || 0)
-        : Number(selectedService.price);
-
+      // Don't calculate total here - let backend handle it to ensure consistency
       const bookingPayload = {
         customerId,
         serviceId: selectedService.id,

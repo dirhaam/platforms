@@ -142,41 +142,10 @@ export class BookingService {
         return { error: hoursValidation.message };
       }
       
-      // Calculate subtotal including location-based surcharges
-      let subtotal = Number(service.price);
+      // Step 1: Start with base service price
+      const basePrice = Number(service.price);
       
-      if (data.isHomeVisit && service.homeVisitSurcharge) {
-        subtotal = subtotal + Number(service.homeVisitSurcharge);
-      }
-
-      // Fetch invoice settings (tax, service charge, additional fees)
-      const settings = await InvoiceSettingsService.getSettings(tenantId);
-      
-      // Calculate tax
-      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
-      const taxAmount = subtotal * (taxPercentage / 100);
-      
-      // Calculate service charge
-      let serviceChargeAmount = 0;
-      if (settings?.taxServiceCharge?.serviceChargeRequired) {
-        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
-          serviceChargeAmount = settings.taxServiceCharge.serviceChargeValue || 0;
-        } else {
-          serviceChargeAmount = subtotal * ((settings.taxServiceCharge.serviceChargeValue || 0) / 100);
-        }
-      }
-      
-      // Calculate additional fees
-      let additionalFeesAmount = 0;
-      (settings?.additionalFees || []).forEach(fee => {
-        if (fee.type === 'fixed') {
-          additionalFeesAmount += fee.value;
-        } else {
-          additionalFeesAmount += subtotal * (fee.value / 100);
-        }
-      });
-
-      // Calculate travel surcharge for home visits if address is provided
+      // Step 2: Calculate travel surcharge for home visits if address is provided
       let travelSurcharge = 0;
       let travelDistance = 0;
       let travelDuration = 0;
@@ -194,6 +163,7 @@ export class BookingService {
             const businessLocation = tenantData.business_location || tenantData.address;
             
             if (businessLocation) {
+              console.log('[BookingService] Calculating travel from:', { businessLocation, destination: data.homeVisitAddress });
               const travelCalc = await LocationService.calculateTravel({
                 origin: businessLocation,
                 destination: data.homeVisitAddress,
@@ -205,17 +175,48 @@ export class BookingService {
                 travelSurcharge = travelCalc.surcharge || 0;
                 travelDistance = travelCalc.distance || 0;
                 travelDuration = travelCalc.duration || 0;
+                console.log('[BookingService] Travel calculated:', { travelSurcharge, travelDistance, travelDuration });
               }
             }
           }
         } catch (error) {
-          console.warn('Could not calculate travel surcharge:', error);
+          console.warn('[BookingService] Could not calculate travel surcharge:', error);
           // Continue with booking creation even if travel calculation fails
         }
       }
+      
+      // Step 3: Calculate subtotal = base price + travel surcharge
+      const subtotal = basePrice + travelSurcharge;
 
-      // Total = subtotal + tax + service charge + additional fees + travel surcharge
-      const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount + travelSurcharge;
+      // Step 4: Fetch invoice settings (tax, service charge, additional fees)
+      const settings = await InvoiceSettingsService.getSettings(tenantId);
+      
+      // Step 5: Calculate tax on subtotal
+      const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
+      const taxAmount = subtotal * (taxPercentage / 100);
+      
+      // Step 6: Calculate service charge on subtotal
+      let serviceChargeAmount = 0;
+      if (settings?.taxServiceCharge?.serviceChargeRequired) {
+        if (settings.taxServiceCharge.serviceChargeType === 'fixed') {
+          serviceChargeAmount = settings.taxServiceCharge.serviceChargeValue || 0;
+        } else {
+          serviceChargeAmount = subtotal * ((settings.taxServiceCharge.serviceChargeValue || 0) / 100);
+        }
+      }
+      
+      // Step 7: Calculate additional fees on subtotal
+      let additionalFeesAmount = 0;
+      (settings?.additionalFees || []).forEach(fee => {
+        if (fee.type === 'fixed') {
+          additionalFeesAmount += fee.value;
+        } else {
+          additionalFeesAmount += subtotal * (fee.value / 100);
+        }
+      });
+
+      // Step 8: Calculate total = subtotal + all taxes/fees
+      const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount;
       
       // Prepare DP payment data
       const dpAmount = data.dpAmount || 0;
