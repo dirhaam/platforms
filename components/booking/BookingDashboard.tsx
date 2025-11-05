@@ -173,14 +173,20 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         );
 
         // Enrich bookings with customer and service data
+        // IMPORTANT: Preserve ALL fields from API response (including travel_surcharge_amount, travel_distance, travel_duration)
         const enrichedBookings = (bookingsData.bookings || []).map((booking: any) => ({
           ...booking,
           // Convert string dates to Date objects
           scheduledAt: new Date(booking.scheduledAt),
           createdAt: new Date(booking.createdAt),
           updatedAt: new Date(booking.updatedAt),
+          // Add enriched relations
           customer: customerMap.get(booking.customerId),
-          service: serviceMap.get(booking.serviceId)
+          service: serviceMap.get(booking.serviceId),
+          // Explicitly preserve travel fields (for clarity)
+          travelSurchargeAmount: booking.travelSurchargeAmount,
+          travelDistance: booking.travelDistance,
+          travelDuration: booking.travelDuration
         }));
 
         setBookings(enrichedBookings);
