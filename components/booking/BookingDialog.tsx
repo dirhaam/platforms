@@ -89,7 +89,7 @@ export default function BookingDialog({
     dpAmount: 0,
   });
   const [calculatedPrice, setCalculatedPrice] = useState<number>(selectedService ? Number(selectedService.price) : 0);
-  const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
+  const [travelSurcharge, setTravelSurcharge] = useState<number>(0);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettingsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -621,7 +621,7 @@ export default function BookingDialog({
                 businessCoordinates={businessCoordinates || undefined}
                 onPriceCalculated={(totalPrice, breakdown) => {
                   setCalculatedPrice(totalPrice);
-                  setPriceBreakdown(breakdown);
+                  setTravelSurcharge(breakdown?.travelSurcharge || 0);
                 }}
               />
             )}
@@ -649,10 +649,10 @@ export default function BookingDialog({
                   <span className="text-gray-600">Base Service Amount</span>
                   <span>IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
                 </div>
-                {formData.isHomeVisit && priceBreakdown && priceBreakdown.travelSurcharge && Number(priceBreakdown.travelSurcharge) > 0 && (
+                {formData.isHomeVisit && travelSurcharge > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Travel Surcharge {priceBreakdown.travelInfo?.distance ? `(${priceBreakdown.travelInfo.distance.toFixed(1)}km)` : ''}</span>
-                    <span>IDR {Number(priceBreakdown.travelSurcharge).toLocaleString('id-ID')}</span>
+                    <span className="text-gray-600">Travel Surcharge</span>
+                    <span>IDR {Number(travelSurcharge).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
