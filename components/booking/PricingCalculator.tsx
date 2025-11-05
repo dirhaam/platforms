@@ -11,9 +11,11 @@ import { Address, TravelCalculation } from '@/types/location';
 interface PricingCalculatorProps {
   service: Service;
   isHomeVisit: boolean;
-  homeVisitAddress?: Address;
+  homeVisitAddress?: Address | string;
+  homeVisitCoordinates?: { lat: number; lng: number };
   tenantId: string;
   businessLocation?: string;
+  businessCoordinates?: { lat: number; lng: number };
   onPriceCalculated?: (totalPrice: number, breakdown: PriceBreakdown) => void;
 }
 
@@ -29,8 +31,10 @@ export function PricingCalculator({
   service,
   isHomeVisit,
   homeVisitAddress,
+  homeVisitCoordinates,
   tenantId,
   businessLocation,
+  businessCoordinates,
   onPriceCalculated
 }: PricingCalculatorProps) {
   const [calculating, setCalculating] = useState(false);
@@ -43,7 +47,7 @@ export function PricingCalculator({
 
   useEffect(() => {
     calculatePricing();
-  }, [service, isHomeVisit, homeVisitAddress, businessLocation]);
+  }, [service, isHomeVisit, homeVisitAddress, homeVisitCoordinates, businessLocation, businessCoordinates]);
 
   const calculatePricing = async () => {
     const basePrice = Number(service.price);
@@ -57,17 +61,24 @@ export function PricingCalculator({
     }
 
     // Calculate travel surcharge if address is provided
-    if (isHomeVisit && homeVisitAddress && businessLocation) {
+    if (isHomeVisit && homeVisitAddress && (businessLocation || businessCoordinates)) {
       setCalculating(true);
       try {
+        let destination: any = homeVisitAddress;
+        if (homeVisitCoordinates) {
+          destination = homeVisitCoordinates;
+        } else if (typeof homeVisitAddress === 'object' && 'coordinates' in homeVisitAddress) {
+          destination = homeVisitAddress.coordinates || homeVisitAddress.fullAddress;
+        }
+
         const response = await fetch('/api/location/calculate-travel', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            origin: businessLocation,
-            destination: homeVisitAddress.coordinates || homeVisitAddress.fullAddress,
+            origin: businessCoordinates || businessLocation,
+            destination,
             tenantId,
             serviceId: service.id
           })
@@ -196,7 +207,7 @@ export function PricingCalculator({
                   </div>
                 )}
 
-                {isHomeVisit && !homeVisitAddress && (
+                {isHomeVisit && !homeVisitAddress && !homeVisitCoordinates && (
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <Info className="h-3 w-3" />
                     <span>Enter address to calculate travel surcharge</span>

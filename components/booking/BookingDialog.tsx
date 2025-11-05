@@ -49,6 +49,8 @@ interface BookingFormData {
   isHomeVisit: boolean;
   homeVisitAddress: string;
   homeVisitCoordinates?: { lat: number; lng: number };
+  homeVisitLat?: number;
+  homeVisitLng?: number;
   notes: string;
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
   dpAmount?: number;
@@ -92,6 +94,10 @@ export default function BookingDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [addrSuggestions, setAddrSuggestions] = useState<Array<{ label: string; lat: number; lng: number }>>([]);
+  const [addrLoading, setAddrLoading] = useState(false);
+  const [addrTimer, setAddrTimer] = useState<any>(null);
+  const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   // Fetch invoice settings on mount
   React.useEffect(() => {
@@ -105,6 +111,13 @@ export default function BookingDialog({
         const data = await response.json();
         console.log('[BookingDialog] Invoice settings loaded:', data.settings);
         setInvoiceSettings(data.settings || null);
+        // Get business coordinates for travel calculation
+        if (data.settings?.branding?.businessLatitude && data.settings?.branding?.businessLongitude) {
+          setBusinessCoordinates({
+            lat: data.settings.branding.businessLatitude,
+            lng: data.settings.branding.businessLongitude
+          });
+        }
       } catch (error) {
         console.warn('[BookingDialog] Error fetching invoice settings:', error);
       }
@@ -288,7 +301,9 @@ export default function BookingDialog({
         paymentMethod: formData.paymentMethod || 'cash',
         dpAmount: formData.dpAmount || 0,
         ...(formData.isHomeVisit && formData.homeVisitAddress ? { homeVisitAddress: formData.homeVisitAddress.trim() } : {}),
-        ...(formData.isHomeVisit && formData.homeVisitCoordinates ? { homeVisitCoordinates: formData.homeVisitCoordinates } : {}),
+        ...(formData.isHomeVisit && isFinite(Number(formData.homeVisitLat)) && isFinite(Number(formData.homeVisitLng))
+          ? { homeVisitCoordinates: { lat: Number(formData.homeVisitLat), lng: Number(formData.homeVisitLng) } }
+          : {}),
         ...(formData.notes ? { notes: formData.notes.trim() } : {}),
       };
 
@@ -342,6 +357,8 @@ export default function BookingDialog({
       preferredTime: '',
       isHomeVisit: false,
       homeVisitAddress: '',
+      homeVisitLat: undefined,
+      homeVisitLng: undefined,
       homeVisitCoordinates: undefined,
       notes: '',
       paymentMethod: 'cash',
@@ -542,44 +559,140 @@ export default function BookingDialog({
 
             {/* Home Visit Option */}
             {selectedService.homeVisitAvailable && (
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
+              <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
+                <div className="flex items-center gap-3">
                   <Checkbox
                     id="homeVisit"
                     checked={formData.isHomeVisit}
                     onCheckedChange={(checked: boolean) => handleInputChange('isHomeVisit', checked)}
                   />
-                  <Label htmlFor="homeVisit" className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1" />
+                  <Label htmlFor="homeVisit" className="cursor-pointer">
+                    <MapPin className="inline w-4 h-4 mr-2" />
                     Request home visit (+IDR {selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID') : '0'})
                   </Label>
                 </div>
                 
                 {formData.isHomeVisit && (
-                  <div>
-                    <AddressInput
-                      label="Home Address"
-                      placeholder="Enter your complete address"
-                      value={formData.homeVisitAddress}
-                      onAddressSelect={(address: Address) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          homeVisitAddress: address.fullAddress,
-                          homeVisitCoordinates: address.coordinates
-                        }));
-                        setSelectedAddress(address);
-                      }}
-                      onAddressChange={(address: string) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          homeVisitAddress: address,
-                          homeVisitCoordinates: undefined
-                        }));
-                        setSelectedAddress(null);
-                      }}
-                      tenantId={tenant.id}
-                      required={formData.isHomeVisit}
-                    />
+                  <div className="space-y-3">
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="homeAddress">Home Address (with search) *</Label>
+                      <Input
+                        id="homeAddress"
+                        placeholder="Cari alamat (jalan/kecamatan/kota)"
+                        value={formData.homeVisitAddress}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData(prev => ({ ...prev, homeVisitAddress: val }));
+                          if (addrTimer) clearTimeout(addrTimer);
+                          const t = setTimeout(async () => {
+                            if (!val || val.trim().length < 4) {
+                              setAddrSuggestions([]);
+                              return;
+                            }
+                            setAddrLoading(true);
+                            try {
+                              const res = await fetch('/api/location/validate-address', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ address: val.trim(), tenantId: tenant.id })
+                              });
+                              const data = await res.json();
+                              const list: Array<{ label: string; lat: number; lng: number }> = [];
+                              if (data?.address?.fullAddress && data?.address?.coordinates) {
+                                list.push({ label: data.address.fullAddress, lat: data.address.coordinates.lat, lng: data.address.coordinates.lng });
+                              }
+                              (data?.suggestions || []).forEach((s: any) => {
+                                if (s?.fullAddress && s?.coordinates) {
+                                  list.push({ label: s.fullAddress, lat: s.coordinates.lat, lng: s.coordinates.lng });
+                                }
+                              });
+                              setAddrSuggestions(list.slice(0, 5));
+                              // Auto-fill coords if empty and we have a primary hit
+                              if (list.length > 0 && (!formData.homeVisitLat || !formData.homeVisitLng)) {
+                                setFormData(prev => ({ ...prev, homeVisitLat: list[0].lat, homeVisitLng: list[0].lng }));
+                              }
+                            } catch (e) {
+                              setAddrSuggestions([]);
+                            } finally {
+                              setAddrLoading(false);
+                            }
+                          }, 450);
+                          setAddrTimer(t);
+                        }}
+                      />
+                      {addrLoading && (
+                        <div className="absolute right-2 top-9 text-xs text-gray-500">Searching…</div>
+                      )}
+                      {addrSuggestions.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow">
+                          {addrSuggestions.map((s, idx) => (
+                            <button
+                              type="button"
+                              key={`${s.label}-${idx}`}
+                              className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, homeVisitAddress: s.label, homeVisitLat: s.lat, homeVisitLng: s.lng }));
+                                setAddrSuggestions([]);
+                              }}
+                            >
+                              {s.label}
+                              <span className="block text-xs text-gray-500">{s.lat.toFixed(6)}, {s.lng.toFixed(6)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="lat">Latitude</Label>
+                        <Input
+                          id="lat"
+                          type="number"
+                          step="0.000001"
+                          placeholder="-6.2"
+                          value={formData.homeVisitLat ?? ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, homeVisitLat: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="lng">Longitude</Label>
+                        <Input
+                          id="lng"
+                          type="number"
+                          step="0.000001"
+                          placeholder="106.8"
+                          value={formData.homeVisitLng ?? ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, homeVisitLng: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            if (navigator.geolocation) {
+                              navigator.geolocation.getCurrentPosition(
+                                (pos) => {
+                                  setFormData(prev => ({ ...prev, homeVisitLat: pos.coords.latitude, homeVisitLng: pos.coords.longitude }));
+                                },
+                                () => {
+                                  setError('Tidak dapat mengakses GPS. Izinkan lokasi di browser.');
+                                },
+                                { enableHighAccuracy: true, timeout: 8000 }
+                              );
+                            } else {
+                              setError('Browser tidak mendukung geolocation');
+                            }
+                          }}
+                        >
+                          Use GPS
+                        </Button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-600">💡 Tips: ketik alamat lalu pilih dari daftar. Koordinat akan terisi otomatis, dan biaya travel akan dihitung.</p>
                   </div>
                 )}
               </div>
@@ -590,9 +703,11 @@ export default function BookingDialog({
               <PricingCalculator
                 service={selectedService}
                 isHomeVisit={formData.isHomeVisit}
-                homeVisitAddress={selectedAddress || undefined}
+                homeVisitAddress={formData.homeVisitAddress}
+                homeVisitCoordinates={formData.homeVisitLat && formData.homeVisitLng ? { lat: formData.homeVisitLat, lng: formData.homeVisitLng } : undefined}
                 tenantId={tenant.id}
                 businessLocation={tenant.address}
+                businessCoordinates={businessCoordinates || undefined}
                 onPriceCalculated={(totalPrice) => setCalculatedPrice(totalPrice)}
               />
             )}
