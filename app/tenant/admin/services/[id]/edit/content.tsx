@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, AlertCircle, Check } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SurchargeInput } from '@/components/settings/SurchargeInput';
 import { Service } from '@/types/booking';
 
 interface ServiceEditContentProps {
@@ -316,26 +317,22 @@ export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
               </div>
 
               {service.homeVisitAvailable && (
-                <div>
-                  <Label htmlFor="homeVisitSurcharge">
-                    Home Visit Surcharge (IDR)
-                  </Label>
-                  <Input
-                    id="homeVisitSurcharge"
-                    type="number"
-                    value={service.homeVisitSurcharge || 0}
-                    onChange={(e) =>
-                      setService({
-                        ...service,
-                        homeVisitSurcharge: parseInt(e.target.value) || 0
-                      })
-                    }
-                    disabled={submitting}
-                    className="mt-1"
-                    min="0"
-                    step="100"
-                  />
-                </div>
+                <SurchargeInput
+                  id="homeVisitSurcharge"
+                  label="Home Visit Surcharge (IDR)"
+                  placeholder="Contoh: 50000"
+                  value={service.homeVisitSurcharge}
+                  onChange={(value) =>
+                    setService({
+                      ...service,
+                      homeVisitSurcharge: value
+                    })
+                  }
+                  disabled={submitting}
+                  min={0}
+                  step={1000}
+                  helperText="Biaya tambahan untuk layanan home visit di service ini"
+                />
               )}
             </div>
 

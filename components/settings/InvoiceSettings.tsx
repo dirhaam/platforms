@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { ImageIcon, RefreshCw, Upload, X, Plus, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddressInput } from '@/components/location/AddressInput';
+import { SurchargeInput } from '@/components/settings/SurchargeInput';
 import { TravelSurchargeSettings } from '@/types/location';
 
 interface InvoiceSettingsProps {
@@ -613,43 +614,29 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                   <Label className="font-semibold text-blue-900">Travel Surcharge (Home Visit)</Label>
                   
                   <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="base-travel">Base Travel Surcharge (Rp)</Label>
-                      <Input
-                        id="base-travel"
-                        type="number"
-                        min="0"
-                        step="1000"
-                        value={form.travelSurcharge.baseTravelSurcharge}
-                        onChange={(e) =>
-                          handleTravelSurchargeChange('baseTravelSurcharge')(parseFloat(e.target.value) || 0)
-                        }
-                        disabled={loading || saving}
-                        placeholder="Contoh: 25000"
-                      />
-                      <p className="text-xs text-gray-600 mt-1">
-                        Base surcharge untuk setiap home visit, ditambahkan sebelum perhitungan per-km.
-                      </p>
-                    </div>
+                    <SurchargeInput
+                      id="base-travel"
+                      label="Base Travel Surcharge (Rp)"
+                      placeholder="Contoh: 25000"
+                      value={form.travelSurcharge.baseTravelSurcharge}
+                      onChange={(value) => handleTravelSurchargeChange('baseTravelSurcharge')(value)}
+                      disabled={loading || saving}
+                      min={0}
+                      step={1000}
+                      helperText="Base surcharge untuk setiap home visit, ditambahkan sebelum perhitungan per-km."
+                    />
 
-                    <div>
-                      <Label htmlFor="per-km">Per Kilometer (Rp/km)</Label>
-                      <Input
-                        id="per-km"
-                        type="number"
-                        min="0"
-                        step="100"
-                        value={form.travelSurcharge.perKmSurcharge}
-                        onChange={(e) =>
-                          handleTravelSurchargeChange('perKmSurcharge')(parseFloat(e.target.value) || 0)
-                        }
-                        disabled={loading || saving}
-                        placeholder="Contoh: 5000"
-                      />
-                      <p className="text-xs text-gray-600 mt-1">
-                        Surcharge per kilometer jarak perjalanan. (Rp per km)
-                      </p>
-                    </div>
+                    <SurchargeInput
+                      id="per-km"
+                      label="Per Kilometer (Rp/km)"
+                      placeholder="Contoh: 5000"
+                      value={form.travelSurcharge.perKmSurcharge}
+                      onChange={(value) => handleTravelSurchargeChange('perKmSurcharge')(value)}
+                      disabled={loading || saving}
+                      min={0}
+                      step={100}
+                      helperText="Surcharge per kilometer jarak perjalanan. (Rp per km)"
+                    />
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
