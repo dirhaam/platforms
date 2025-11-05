@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, AlertCircle, Check } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { SurchargeInput } from '@/components/settings/SurchargeInput';
 import { Service } from '@/types/booking';
 
 interface ServiceEditContentProps {
@@ -294,8 +293,8 @@ export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
               </Label>
             </div>
 
-            {/* Home Visit Options */}
-            <div className="space-y-4 border-t pt-4">
+            {/* Home Visit Option */}
+            <div className="space-y-2 border-t pt-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="homeVisitAvailable"
@@ -315,25 +314,9 @@ export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
                   Available for home visits
                 </Label>
               </div>
-
-              {service.homeVisitAvailable && (
-                <SurchargeInput
-                  id="homeVisitSurcharge"
-                  label="Home Visit Surcharge (IDR)"
-                  placeholder="Contoh: 50000"
-                  value={service.homeVisitSurcharge}
-                  onChange={(value) =>
-                    setService({
-                      ...service,
-                      homeVisitSurcharge: value
-                    })
-                  }
-                  disabled={submitting}
-                  min={0}
-                  step={1000}
-                  helperText="Biaya tambahan untuk layanan home visit di service ini"
-                />
-              )}
+              <p className="text-xs text-gray-500">
+                Surcharge untuk home visit diatur di Settings → Invoice Settings → Travel Surcharge
+              </p>
             </div>
 
             {/* Actions */}
