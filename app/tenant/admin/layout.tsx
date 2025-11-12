@@ -32,6 +32,7 @@ function TenantAdminLayoutContent({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
+  const [tenantName, setTenantName] = useState<string>('');
 
   // Fetch tenant ID and logo from invoice settings
   useEffect(() => {
@@ -39,11 +40,12 @@ function TenantAdminLayoutContent({
 
     const fetchLogo = async () => {
       try {
-        // First resolve tenant ID
+        // First resolve tenant ID and name
         const tenantRes = await fetch(`/api/tenants/${subdomain}`);
         if (!tenantRes.ok) return;
         const tenantData = await tenantRes.json();
         setTenantId(tenantData.id);
+        setTenantName(tenantData.name || '');
 
         // Then fetch logo from invoice settings
         const logoUrl = new URL('/api/settings/invoice-config', window.location.origin);
@@ -131,8 +133,8 @@ function TenantAdminLayoutContent({
                   className="h-6 w-6 object-contain rounded"
                 />
               ) : (
-                <div className="w-6 h-6 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-                  A
+                <div className="w-6 h-6 bg-gradient-to-br from-purple-600 to-blue-600 rounded flex items-center justify-center text-white font-bold text-xs">
+                  {tenantName?.charAt(0).toUpperCase() || 'B'}
                 </div>
               )}
             </div>
@@ -149,8 +151,8 @@ function TenantAdminLayoutContent({
                 className="w-8 h-8 object-contain rounded-lg"
               />
             ) : (
-              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                A
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                {tenantName?.charAt(0).toUpperCase() || 'B'}
               </div>
             )}
           </Link>
@@ -251,8 +253,8 @@ function TenantAdminLayoutContent({
                   className="h-8 w-8 object-contain rounded-lg"
                 />
               ) : (
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                  A
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                  {tenantName?.charAt(0).toUpperCase() || 'B'}
                 </div>
               )}
               <span className="font-semibold text-gray-900 hidden lg:inline">Admin</span>
