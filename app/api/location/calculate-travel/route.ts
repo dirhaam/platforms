@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
       origin: body.origin,
       destination: body.destination,
       tenantId: body.tenantId,
-      serviceId: body.serviceId
+      serviceId: body.serviceId,
+      originLat: typeof body.origin === 'object' ? body.origin.lat : 'N/A',
+      originLng: typeof body.origin === 'object' ? body.origin.lng : 'N/A'
     });
     
     if (!body.origin || !body.destination || !body.tenantId) {

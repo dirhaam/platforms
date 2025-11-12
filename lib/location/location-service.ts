@@ -73,8 +73,10 @@ export class LocationService {
       const destination = await this.resolveLocation(request.destination);
 
       console.log('[LocationService.calculateTravel] Resolved coordinates:', {
-        origin,
-        destination
+        origin: origin ? `{lat: ${origin.lat}, lng: ${origin.lng}}` : 'null',
+        destination: destination ? `{lat: ${destination.lat}, lng: ${destination.lng}}` : 'null',
+        originValid: !!origin,
+        destinationValid: !!destination
       });
 
       if (!origin || !destination) {
