@@ -90,6 +90,19 @@ export const bookings = pgTable('bookings', {
   totalAmount: real('total_amount').notNull(),
   paymentStatus: text('payment_status').notNull().default('pending'),
   remindersSent: jsonb('reminders_sent').$type<string[] | null>(),
+  // Travel-related fields
+  travelDistance: real('travel_distance').default(0),
+  travelDuration: integer('travel_duration').default(0),
+  travelSurchargeAmount: real('travel_surcharge_amount').default(0),
+  // Additional pricing fields
+  taxPercentage: real('tax_percentage'),
+  serviceChargeAmount: real('service_charge_amount'),
+  additionalFeesAmount: real('additional_fees_amount'),
+  // Payment fields
+  paymentMethod: text('payment_method'),
+  paymentReference: text('payment_reference'),
+  dpAmount: real('dp_amount').default(0),
+  paidAmount: real('paid_amount').default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

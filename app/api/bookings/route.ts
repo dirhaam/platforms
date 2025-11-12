@@ -63,6 +63,17 @@ export async function GET(request: NextRequest) {
       offset
     });
     
+    // Log travel data for debugging
+    const firstBooking = bookings[0];
+    if (firstBooking?.isHomeVisit) {
+      console.log('[API/bookings GET] First home visit booking travel data:', {
+        bookingId: firstBooking.id,
+        travelSurchargeAmount: firstBooking.travelSurchargeAmount,
+        travelDistance: firstBooking.travelDistance,
+        travelDuration: firstBooking.travelDuration
+      });
+    }
+    
     return NextResponse.json({ bookings });
   } catch (error) {
     console.error('Error fetching bookings:', error);
@@ -156,6 +167,17 @@ export async function POST(request: NextRequest) {
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    
+    // Log travel data for debugging
+    if (result.booking?.isHomeVisit) {
+      console.log('[API/bookings POST] Created home visit booking travel data:', {
+        bookingId: result.booking.id,
+        travelSurchargeAmount: result.booking.travelSurchargeAmount,
+        travelDistance: result.booking.travelDistance,
+        travelDuration: result.booking.travelDuration,
+        totalAmount: result.booking.totalAmount
+      });
     }
     
     return NextResponse.json({ booking: result.booking }, { status: 201 });
