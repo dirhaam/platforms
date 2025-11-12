@@ -240,6 +240,12 @@ export function NewBookingDialog({
       };
 
       console.log('[NewBookingDialog] Request body being sent:', requestBody);
+      console.log('[NewBookingDialog] Travel fields in request:', {
+        travelDistance: requestBody.travelDistance,
+        travelDuration: requestBody.travelDuration,
+        travelSurchargeAmount: requestBody.travelSurchargeAmount,
+        travelRoute: requestBody.travelRoute ? `${requestBody.travelRoute.length} points` : undefined
+      });
 
       const response = await fetch('/api/bookings', {
         method: 'POST',
