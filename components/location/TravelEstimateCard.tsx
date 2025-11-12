@@ -42,10 +42,13 @@ export function TravelEstimateCard({
 
   const handleCalculate = async () => {
     if (!destination || !origin) {
-      setError('Origin dan destination diperlukan');
+      const msg = 'Origin dan destination diperlukan';
+      setError(msg);
+      console.error('[TravelEstimateCard]', msg, { origin, destination });
       return;
     }
 
+    console.log('[TravelEstimateCard] Calculating travel:', { origin, destination, tenantId, serviceId });
     setCalculating(true);
     setError(null);
 
@@ -62,14 +65,18 @@ export function TravelEstimateCard({
       });
 
       if (!response.ok) {
-        throw new Error('Gagal menghitung travel');
+        const errorData = await response.json().catch(() => null);
+        const errorMsg = errorData?.error || `HTTP ${response.status}`;
+        throw new Error(`Travel calculation failed: ${errorMsg}`);
       }
 
       const result: TravelCalculation = await response.json();
+      console.log('[TravelEstimateCard] Calculation result:', result);
       setCalculation(result);
       onCalculationComplete?.(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Travel calculation failed';
+      console.error('[TravelEstimateCard] Error:', message);
       setError(message);
       toast.error(message);
     } finally {
