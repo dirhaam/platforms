@@ -175,7 +175,7 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                   {(businessCoordinates || booking.homeVisitCoordinates) ? (
                     <div style={{ minHeight: '250px' }} className="rounded-lg overflow-hidden border bg-gray-50">
                       <RouteMiniMap
-                        origin={businessCoordinates || { lat: -6.2088, lng: 106.8456 }}
+                        origin={businessCoordinates}
                         destination={booking.homeVisitCoordinates}
                         route={booking.travelRoute}
                         height={250}

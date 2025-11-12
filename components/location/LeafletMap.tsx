@@ -23,7 +23,7 @@ declare global {
 export function LeafletMap({
   bookings,
   businessLocation,
-  center = { lat: -6.2088, lng: 106.8456 }, // Default to Jakarta
+  center,
   zoom = 12,
   className = '',
 }: LeafletMapProps) {
@@ -57,7 +57,7 @@ export function LeafletMap({
       if (!mapRef.current || !window.L || mapInstance.current) return;
 
       // Initialize map
-      const mapCenter = businessLocation || center;
+      const mapCenter = businessLocation || center || { lat: 0, lng: 0 };
       mapInstance.current = window.L.map(mapRef.current).setView(
         [mapCenter.lat, mapCenter.lng],
         zoom || 12
