@@ -387,11 +387,11 @@ export function NewBookingDialog({
                     ) : null}
 
                     {/* Travel Estimate */}
-                    {booking.homeVisitAddress && typeof booking.homeVisitLat === 'number' && typeof booking.homeVisitLng === 'number' && (
+                    {booking.homeVisitAddress && typeof booking.homeVisitLat === 'number' && typeof booking.homeVisitLng === 'number' && businessCoordinates && (
                       <div className="mt-4">
                         <TravelEstimateCard
                           tenantId={subdomain}
-                          origin={businessCoordinates || undefined}
+                          origin={businessCoordinates}
                           destination={booking.homeVisitAddress}
                           serviceId={booking.serviceId}
                           onCalculationComplete={(calc) => {
