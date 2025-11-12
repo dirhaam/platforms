@@ -569,6 +569,23 @@ export class BookingService {
         return { error: 'Failed to update booking' };
       }
       
+      // Log status change if status was updated
+      if (data.status !== undefined && booking.status !== data.status) {
+        await BookingHistoryService.logStatusChanged(tenantId, bookingId, booking.status, data.status);
+      }
+      
+      // Log payment status change if updated
+      if (data.paymentStatus !== undefined && booking.paymentStatus !== data.paymentStatus) {
+        await BookingHistoryService.logEvent({
+          bookingId,
+          tenantId,
+          action: 'PAYMENT_STATUS_CHANGED',
+          description: `Payment status changed from ${booking.paymentStatus} to ${data.paymentStatus}`,
+          oldValues: { paymentStatus: booking.paymentStatus },
+          newValues: { paymentStatus: data.paymentStatus }
+        });
+      }
+      
       return { booking: mapToBooking(updatedBooking) };
     } catch (error) {
       console.error('Error in updateBooking:', error);
