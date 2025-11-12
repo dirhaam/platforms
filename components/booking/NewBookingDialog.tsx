@@ -104,9 +104,10 @@ export function NewBookingDialog({
     if (!subdomain) return;
 
     try {
+      // Load with reasonable defaults: 50 customers/services per page (usually enough)
       const [customersRes, servicesRes, settingsRes] = await Promise.all([
-        fetch('/api/customers', { headers: { 'x-tenant-id': subdomain } }),
-        fetch('/api/services', { headers: { 'x-tenant-id': subdomain } }),
+        fetch('/api/customers?limit=50', { headers: { 'x-tenant-id': subdomain } }),
+        fetch('/api/services?limit=50', { headers: { 'x-tenant-id': subdomain } }),
         fetch(`/api/settings/invoice-config?tenantId=${subdomain}`, { headers: { 'x-tenant-id': subdomain } })
       ]);
 

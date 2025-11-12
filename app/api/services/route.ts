@@ -63,7 +63,10 @@ export async function GET(request: NextRequest) {
       offset
     });
 
-    return NextResponse.json({ services });
+    // Cache for 1 minute (60 seconds)
+    const response = NextResponse.json({ services });
+    response.headers.set('Cache-Control', 'private, max-age=60');
+    return response;
   } catch (error) {
     console.error('Error fetching services:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -12,7 +12,11 @@ export async function GET(request: NextRequest) {
     }
 
     const settings = await InvoiceSettingsService.getSettings(tenant.id);
-    return NextResponse.json({ settings });
+    
+    // Cache for 5 minutes (300 seconds) - settings change less frequently
+    const response = NextResponse.json({ settings });
+    response.headers.set('Cache-Control', 'private, max-age=300');
+    return response;
   } catch (error) {
     console.error('[InvoiceSettings] GET failed:', error);
     return NextResponse.json({ error: 'Failed to load invoice settings' }, { status: 500 });
