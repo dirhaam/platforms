@@ -187,13 +187,18 @@ export function HomeVisitBookingManager({
   // Prefer coordinates from props; else geocode business address
   useEffect(() => {
     if (businessCoordinates && typeof businessCoordinates.lat === 'number' && typeof businessCoordinates.lng === 'number') {
+      console.log('[HomeVisitBookingManager] Using provided businessCoordinates:', businessCoordinates);
       setBusinessCoords(businessCoordinates);
       return;
     }
-    if (!businessLocation || typeof businessLocation !== 'string' || !tenantId) return;
+    if (!businessLocation || typeof businessLocation !== 'string' || !tenantId) {
+      console.log('[HomeVisitBookingManager] No business location to geocode:', { businessLocation, tenantId });
+      return;
+    }
 
     const geocodeBusinessLocation = async () => {
       setGeocodingBusiness(true);
+      console.log('[HomeVisitBookingManager] Geocoding business location:', businessLocation);
       try {
         const response = await fetch('/api/location/geocode', {
           method: 'POST',
@@ -207,16 +212,17 @@ export function HomeVisitBookingManager({
         const data = await response.json().catch(() => null);
 
         if (response.ok && data?.isValid && data?.coordinates) {
+          console.log('[HomeVisitBookingManager] Geocoding successful:', data.coordinates);
           setBusinessCoords(data.coordinates);
         } else {
           // Graceful fallback: log warning but continue
           const errMsg = data?.error || response.statusText || 'Unknown error';
-          console.warn('Could not geocode homebase address, using default location:', errMsg);
-          // Don't set businessCoords - will use default Jakarta
+          console.warn('[HomeVisitBookingManager] Could not geocode homebase address:', errMsg);
+          // Don't set businessCoords - will show map without marker if no coords available
         }
       } catch (error) {
-        console.warn('Error geocoding business location, using default:', error);
-        // Graceful fallback - continue with default coordinates
+        console.warn('[HomeVisitBookingManager] Error geocoding business location:', error);
+        // Graceful fallback - continue without coordinates
       } finally {
         setGeocodingBusiness(false);
       }

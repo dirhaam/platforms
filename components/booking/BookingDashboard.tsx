@@ -205,9 +205,12 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
             setBusinessLocation(addr);
             const lat = settingsData.settings?.branding?.businessLatitude;
             const lng = settingsData.settings?.branding?.businessLongitude;
+            console.log('[BookingDashboard] Business location loaded:', { addr, lat, lng });
             if (typeof lat === 'number' && typeof lng === 'number') {
+              console.log('[BookingDashboard] Setting business location coordinates:', { lat, lng });
               setBusinessLocationCoords({ lat, lng });
             } else {
+              console.log('[BookingDashboard] No valid coordinates in invoice settings, will geocode address');
               setBusinessLocationCoords(null);
             }
 
