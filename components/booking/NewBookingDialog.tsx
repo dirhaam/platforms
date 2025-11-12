@@ -395,7 +395,7 @@ export function NewBookingDialog({
                             businessCoordinates || 
                             (invoiceSettings?.branding?.businessLatitude && invoiceSettings?.branding?.businessLongitude
                               ? { lat: invoiceSettings.branding.businessLatitude, lng: invoiceSettings.branding.businessLongitude }
-                              : { lat: -6.2088, lng: 106.8456 }) // Jakarta default
+                              : businessLocation) || undefined
                           }
                           destination={booking.homeVisitAddress}
                           serviceId={booking.serviceId}
