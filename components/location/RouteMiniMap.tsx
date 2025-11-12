@@ -99,31 +99,37 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
 
       // Draw route polyline if provided
       if (route && route.length > 1) {
+        console.log('[RouteMiniMap] Drawing provided route polyline with', route.length, 'points');
         const latlngs = route.map((p) => [p.lat, p.lng]);
         const poly = window.L.polyline(latlngs, { color: '#2563eb', weight: 4, opacity: 0.8 });
         poly.addTo(mapInstance.current);
         overlays.current.push(poly);
       } else if (origin && destination) {
         // Try to fetch actual route from OSRM instead of straight line
+        console.log('[RouteMiniMap] No route provided, fetching from OSRM');
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
+          const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+          console.log('[RouteMiniMap] OSRM URL:', osrmUrl);
 
-          const response = await fetch(
-            `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=simplified&geometries=geojson`,
-            { signal: controller.signal }
-          );
+          const response = await fetch(osrmUrl, { signal: controller.signal });
           clearTimeout(timeoutId);
           
           const data = await response.json();
+          console.log('[RouteMiniMap] OSRM response:', data);
           
           if (data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
             // Draw actual route from OSRM
-            const latlngs = data.routes[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+            const coordinates = data.routes[0].geometry.coordinates;
+            console.log('[RouteMiniMap] Drawing OSRM route with', coordinates.length, 'points');
+            const latlngs = coordinates.map((coord: number[]) => [coord[1], coord[0]]);
             const poly = window.L.polyline(latlngs, { color: '#2563eb', weight: 4, opacity: 0.8 });
             poly.addTo(mapInstance.current);
             overlays.current.push(poly);
           } else {
+            console.warn('[RouteMiniMap] No valid OSRM route, using fallback');
             // Fallback: straight line
             drawFallbackLine();
           }

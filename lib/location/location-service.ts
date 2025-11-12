@@ -345,7 +345,9 @@ export class LocationService {
 
   private static async getRouteWithOSRM(origin: Coordinates, destination: Coordinates) {
     try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=simplified&geometries=geojson`;
+      const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+      
+      console.log('[LocationService] Calling OSRM route:', { origin, destination, url });
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -359,17 +361,24 @@ export class LocationService {
       }
 
       const route = data.routes[0];
+      const polylineCoordinates = route.geometry?.coordinates?.map((coord: number[]) => ({
+        lat: coord[1],
+        lng: coord[0]
+      })) || [];
+      
+      console.log('[LocationService] OSRM route success:', {
+        distance: route.distance / 1000,
+        duration: Math.ceil(route.duration / 60),
+        polylinePoints: polylineCoordinates.length
+      });
       
       return {
         distance: route.distance / 1000, // Convert to kilometers
         duration: Math.ceil(route.duration / 60), // Convert to minutes
-        route: route.geometry?.coordinates?.map((coord: number[]) => ({
-          lat: coord[1],
-          lng: coord[0]
-        }))
+        route: polylineCoordinates
       };
     } catch (error) {
-      console.error('OSRM routing error:', error);
+      console.error('[LocationService] OSRM routing error:', error);
       return null;
     }
   }
