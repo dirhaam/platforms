@@ -173,6 +173,8 @@ export class LocationService {
       const encodedAddress = encodeURIComponent(address);
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&countrycodes=${this.config.defaultCountry}&limit=5&addressdetails=1`;
       
+      console.log('[LocationService.geocodeWithNominatim] Geocoding:', { address, url });
+      
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Booqing-Platform/1.0'
@@ -184,8 +186,10 @@ export class LocationService {
       }
 
       const data = await response.json();
+      console.log('[LocationService.geocodeWithNominatim] Response data:', { count: data?.length, data });
 
       if (!data || data.length === 0) {
+        console.warn('[LocationService.geocodeWithNominatim] No results for address:', address);
         return {
           isValid: false,
           error: 'Address not found'
@@ -562,14 +566,22 @@ export class LocationService {
 
   private static async resolveLocation(location: Coordinates | string): Promise<Coordinates | null> {
     if (typeof location === 'object' && location.lat && location.lng) {
+      console.log('[LocationService.resolveLocation] Already coordinates:', location);
       return location;
     }
     
     if (typeof location === 'string') {
+      console.log('[LocationService.resolveLocation] Geocoding address:', location);
       const validation = await this.geocodeAddress(location);
-      return validation.address?.coordinates || null;
+      console.log('[LocationService.resolveLocation] Geocoding result:', validation);
+      const coords = validation.address?.coordinates || null;
+      if (!coords) {
+        console.warn('[LocationService.resolveLocation] Failed to geocode address:', location, 'Result:', validation);
+      }
+      return coords;
     }
     
+    console.warn('[LocationService.resolveLocation] Invalid location type:', typeof location, location);
     return null;
   }
 
