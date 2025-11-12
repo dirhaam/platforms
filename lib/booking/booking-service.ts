@@ -146,11 +146,15 @@ export class BookingService {
       const basePrice = Number(service.price);
       
       // Step 2: Calculate travel surcharge for home visits if address is provided
-      let travelSurcharge = 0;
-      let travelDistance = 0;
-      let travelDuration = 0;
-      if (data.isHomeVisit && data.homeVisitAddress) {
+      // Step 2: Use pre-calculated travel data from frontend, or recalculate if not provided
+      let travelSurcharge = data.travelSurchargeAmount || 0;
+      let travelDistance = data.travelDistance || 0;
+      let travelDuration = data.travelDuration || 0;
+      
+      // Only recalculate if frontend didn't provide travel data
+      if (data.isHomeVisit && data.homeVisitAddress && travelSurcharge === 0 && travelDistance === 0) {
         try {
+          console.log('[BookingService] No travel data provided, recalculating...');
           // Get tenant's business location for travel calculation
           const { data: tenantData, error: tenantError } = await supabase
             .from('tenants')
@@ -175,7 +179,7 @@ export class BookingService {
                 travelSurcharge = travelCalc.surcharge || 0;
                 travelDistance = travelCalc.distance || 0;
                 travelDuration = travelCalc.duration || 0;
-                console.log('[BookingService] Travel calculated:', { travelSurcharge, travelDistance, travelDuration });
+                console.log('[BookingService] Travel recalculated:', { travelSurcharge, travelDistance, travelDuration });
               }
             }
           }
@@ -183,6 +187,8 @@ export class BookingService {
           console.warn('[BookingService] Could not calculate travel surcharge:', error);
           // Continue with booking creation even if travel calculation fails
         }
+      } else if (data.isHomeVisit) {
+        console.log('[BookingService] Using frontend-provided travel data:', { travelSurcharge, travelDistance, travelDuration });
       }
       
       // Step 3: Calculate subtotal = base price + travel surcharge
