@@ -221,29 +221,33 @@ export function NewBookingDialog({
         homeVisitLng: booking.homeVisitLng
       });
 
+      const requestBody = {
+        customerId: booking.customerId,
+        serviceId: booking.serviceId,
+        scheduledAt,
+        isHomeVisit: booking.isHomeVisit,
+        homeVisitAddress: booking.homeVisitAddress,
+        homeVisitCoordinates: booking.isHomeVisit && isFinite(Number(booking.homeVisitLat)) && isFinite(Number(booking.homeVisitLng))
+          ? { lat: Number(booking.homeVisitLat), lng: Number(booking.homeVisitLng) }
+          : undefined,
+        travelDistance: booking.travelCalculation?.distance,
+        travelDuration: booking.travelCalculation?.duration,
+        travelRoute: booking.travelCalculation?.route,
+        travelSurchargeAmount: booking.travelCalculation?.surcharge,
+        paymentMethod: booking.paymentMethod,
+        dpAmount: booking.dpAmount,
+        notes: booking.notes
+      };
+
+      console.log('[NewBookingDialog] Request body being sent:', requestBody);
+
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-tenant-id': subdomain
         },
-        body: JSON.stringify({
-          customerId: booking.customerId,
-          serviceId: booking.serviceId,
-          scheduledAt,
-          isHomeVisit: booking.isHomeVisit,
-          homeVisitAddress: booking.homeVisitAddress,
-          homeVisitCoordinates: booking.isHomeVisit && isFinite(Number(booking.homeVisitLat)) && isFinite(Number(booking.homeVisitLng))
-            ? { lat: Number(booking.homeVisitLat), lng: Number(booking.homeVisitLng) }
-            : undefined,
-          travelDistance: booking.travelCalculation?.distance,
-          travelDuration: booking.travelCalculation?.duration,
-          travelRoute: booking.travelCalculation?.route,
-          travelSurchargeAmount: booking.travelCalculation?.surcharge,
-          paymentMethod: booking.paymentMethod,
-          dpAmount: booking.dpAmount,
-          notes: booking.notes
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
