@@ -167,7 +167,7 @@ export function LocationMap({
         });
 
       // If we have business location and bookings, fit the map to show all
-      if (businessLocation && businessCoords && markersRef.current.length > 0) {
+      if (businessLocation && businessCoords && typeof businessCoords === 'object' && 'lat' in businessCoords && markersRef.current.length > 0) {
         const bounds = new window.google.maps.LatLngBounds();
         
         // Extend bounds to include business location
