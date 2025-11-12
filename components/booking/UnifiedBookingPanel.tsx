@@ -230,8 +230,29 @@ export function UnifiedBookingPanel({
     }
     try {
       setLoading(true);
+      const oldStatus = booking.status;
       await onBookingUpdate(booking.id, { status });
       toast.success(`Booking ${status.toLowerCase()}`);
+      
+      // Log status change to history
+      try {
+        await fetch(`/api/bookings/${booking.id}/history-log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': tenantId
+          },
+          body: JSON.stringify({
+            action: 'STATUS_CHANGED',
+            description: `Booking status changed from ${oldStatus} to ${status}`,
+            oldValues: { status: oldStatus },
+            newValues: { status: status }
+          })
+        });
+      } catch (historyError) {
+        console.error('Error logging status change:', historyError);
+      }
+      
       setShowStatusDialog(false);
       await fetchRelatedData();
     } catch (error) {
@@ -268,6 +289,28 @@ export function UnifiedBookingPanel({
       }
 
       toast.success('Payment recorded');
+      
+      // Log payment recorded to history
+      try {
+        await fetch(`/api/bookings/${booking.id}/history-log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': tenantId
+          },
+          body: JSON.stringify({
+            action: 'PAYMENT_RECORDED',
+            description: `Payment recorded - ${paymentMethod} (Rp ${(booking.totalAmount - (booking.paidAmount || 0)).toLocaleString('id-ID')})`,
+            metadata: {
+              paymentAmount: booking.totalAmount - (booking.paidAmount || 0),
+              paymentMethod: paymentMethod
+            }
+          })
+        });
+      } catch (historyError) {
+        console.error('Error logging payment:', historyError);
+      }
+      
       setShowPaymentDialog(false);
       await fetchRelatedData();
     } catch (error) {
@@ -359,7 +402,31 @@ export function UnifiedBookingPanel({
       });
 
       if (response.ok) {
+        const invoiceData = await response.json();
         toast.success('Invoice generated successfully');
+        
+        // Log invoice generation to history
+        try {
+          await fetch(`/api/bookings/${booking.id}/history-log`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': tenantId
+            },
+            body: JSON.stringify({
+              action: 'INVOICE_GENERATED',
+              description: `Invoice generated - ${invoiceData.invoice?.invoiceNumber || 'New Invoice'}`,
+              metadata: {
+                invoiceId: invoiceData.invoice?.id,
+                invoiceNumber: invoiceData.invoice?.invoiceNumber,
+                totalAmount: booking.totalAmount
+              }
+            })
+          });
+        } catch (historyError) {
+          console.error('Error logging invoice generation:', historyError);
+        }
+        
         await fetchRelatedData();
       } else {
         let errorMsg = `Failed to generate invoice (${response.status})`;
@@ -398,6 +465,28 @@ export function UnifiedBookingPanel({
 
       if (response.ok) {
         toast.success('Invoice sent via WhatsApp');
+        
+        // Log invoice sent to history
+        try {
+          await fetch(`/api/bookings/${booking.id}/history-log`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': tenantId
+            },
+            body: JSON.stringify({
+              action: 'INVOICE_SENT',
+              description: 'Invoice sent via WhatsApp',
+              metadata: {
+                invoiceId,
+                method: 'whatsapp'
+              }
+            })
+          });
+        } catch (historyError) {
+          console.error('Error logging invoice send:', historyError);
+        }
+        
         await fetchRelatedData();
       } else {
         const errorData = await response.json();
@@ -434,6 +523,27 @@ export function UnifiedBookingPanel({
       }
 
       toast.success('Invoice marked as paid');
+      
+      // Log invoice marked as paid to history
+      try {
+        await fetch(`/api/bookings/${booking.id}/history-log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': tenantId
+          },
+          body: JSON.stringify({
+            action: 'INVOICE_MARKED_PAID',
+            description: 'Invoice marked as paid',
+            metadata: {
+              invoiceId
+            }
+          })
+        });
+      } catch (historyError) {
+        console.error('Error logging invoice paid:', historyError);
+      }
+      
       await fetchRelatedData();
     } catch (error) {
       console.error('Error marking invoice as paid:', error);
