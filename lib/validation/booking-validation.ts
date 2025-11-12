@@ -14,7 +14,16 @@ export const createBookingSchema = z.object({
   }).optional(),
   notes: z.string().optional(),
   paymentMethod: z.enum(['cash', 'card', 'transfer', 'qris']).optional().default('cash'),
-  dpAmount: z.number().min(0).optional().default(0)
+  dpAmount: z.number().min(0).optional().default(0),
+  // Travel-related fields (from frontend calculation)
+  travelDistance: z.number().optional(),
+  travelDuration: z.number().optional(),
+  travelSurchargeAmount: z.number().optional(),
+  travelRoute: z.array(z.object({
+    lat: z.number(),
+    lng: z.number()
+  })).optional(),
+  paymentReference: z.string().optional()
 }).refine((data: any) => {
   // If it's a home visit, address is required
   if (data.isHomeVisit && !data.homeVisitAddress) {

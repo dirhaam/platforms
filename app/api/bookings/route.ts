@@ -123,6 +123,11 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json();
     console.log('[bookings POST] Request body:', body);
+    console.log('[bookings POST] Travel fields in request:', {
+      travelDistance: body.travelDistance,
+      travelDuration: body.travelDuration,
+      travelSurchargeAmount: body.travelSurchargeAmount
+    });
     
     // Validate request body
     const validation = createBookingSchema.safeParse(body);
