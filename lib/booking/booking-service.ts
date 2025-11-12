@@ -147,12 +147,15 @@ export class BookingService {
       
       // Step 2: Calculate travel surcharge for home visits if address is provided
       // Step 2: Use pre-calculated travel data from frontend, or recalculate if not provided
-      let travelSurcharge = data.travelSurchargeAmount || 0;
-      let travelDistance = data.travelDistance || 0;
-      let travelDuration = data.travelDuration || 0;
+      const hasFrontendTravelData = 'travelSurchargeAmount' in data || 'travelDistance' in data || 'travelDuration' in data;
+      let travelSurcharge = data.travelSurchargeAmount ?? 0;
+      let travelDistance = data.travelDistance ?? 0;
+      let travelDuration = data.travelDuration ?? 0;
+      
+      console.log('[BookingService] Travel data check:', { hasFrontendTravelData, travelSurcharge, travelDistance, travelDuration });
       
       // Only recalculate if frontend didn't provide travel data
-      if (data.isHomeVisit && data.homeVisitAddress && travelSurcharge === 0 && travelDistance === 0) {
+      if (data.isHomeVisit && data.homeVisitAddress && !hasFrontendTravelData) {
         try {
           console.log('[BookingService] No travel data provided, recalculating...');
           // Get tenant's business location for travel calculation
