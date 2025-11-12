@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Calendar, Clock, MapPin, Phone, Mail, AlertCircle, CheckCircle, 
-  ChevronDown, Download, Send, MoreVertical, Edit, RefreshCw 
+  ChevronDown, Download, Send, MoreVertical, Edit, RefreshCw,
+  FileText, CreditCard, MessageCircle, CheckSquare, XSquare, Clock3
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -978,28 +979,49 @@ export function UnifiedBookingPanel({
 
             {/* History Tab */}
             <TabsContent value="history" className="space-y-4 mt-4">
-              <div className="space-y-3">
-                {history.map((item, index) => (
-                  <div key={index} className="flex gap-4 pb-4 border-b last:border-b-0">
-                    <div className="flex flex-col items-center">
-                      <div className="h-3 w-3 rounded-full bg-blue-600"></div>
-                      {index < history.length - 1 && (
-                        <div className="h-12 w-0.5 bg-gray-300 my-2"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className="font-medium text-sm text-gray-900">{item.action}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(item.timestamp).toLocaleString('id-ID')} by {item.actor}
-                      </p>
-                      {item.details && (
-                        <p className="text-xs text-gray-700 mt-2 p-2 bg-gray-50 rounded border-l-2 border-blue-400">
-                          {item.details}
-                        </p>
-                      )}
-                    </div>
+              <div className="space-y-0">
+                {history && history.length > 0 ? (
+                  history.map((item, index) => {
+                    // Get icon based on action
+                    const getActionIcon = () => {
+                      const actionStr = item.action?.toUpperCase() || '';
+                      if (actionStr.includes('CREATED')) return <CheckSquare className="h-5 w-5 text-green-600" />;
+                      if (actionStr.includes('STATUS') || actionStr.includes('CONFIRMED') || actionStr.includes('COMPLETED')) return <CheckCircle className="h-5 w-5 text-blue-600" />;
+                      if (actionStr.includes('PAYMENT') || actionStr.includes('PAID')) return <CreditCard className="h-5 w-5 text-emerald-600" />;
+                      if (actionStr.includes('INVOICE')) return <FileText className="h-5 w-5 text-orange-600" />;
+                      if (actionStr.includes('RESCHEDULE') || actionStr.includes('RESCHEDULED')) return <Clock3 className="h-5 w-5 text-purple-600" />;
+                      if (actionStr.includes('CANCEL')) return <XSquare className="h-5 w-5 text-red-600" />;
+                      if (actionStr.includes('SENT') || actionStr.includes('WHATSAPP')) return <MessageCircle className="h-5 w-5 text-green-600" />;
+                      return <Clock className="h-5 w-5 text-gray-400" />;
+                    };
+
+                    return (
+                      <div key={index} className="flex gap-4 py-4 px-3 border-l-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all">
+                        <div className="flex-shrink-0 mt-1">
+                          {getActionIcon()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm text-gray-900">{item.action}</p>
+                          <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                            <Clock className="h-3 w-3" />
+                            {new Date(item.timestamp).toLocaleString('id-ID')}
+                            <span className="text-gray-400">•</span>
+                            <span>{item.actor}</span>
+                          </p>
+                          {item.details && (
+                            <p className="text-xs text-gray-700 mt-3 p-3 bg-gray-50 rounded-md border border-gray-200">
+                              {item.details}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">Belum ada riwayat booking</p>
                   </div>
-                ))}
+                )}
               </div>
             </TabsContent>
           </Tabs>
