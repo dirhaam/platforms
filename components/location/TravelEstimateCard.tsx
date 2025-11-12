@@ -12,6 +12,7 @@ interface TravelEstimateCardProps {
   tenantId: string;
   origin: string | { lat: number; lng: number };
   destination: string;
+  destinationCoordinates?: { lat: number; lng: number }; // Optional pre-resolved coordinates
   serviceId?: string;
   onCalculationComplete?: (calc: TravelCalculation) => void;
   onConfirm?: (calc: TravelCalculation) => void;
@@ -23,6 +24,7 @@ export function TravelEstimateCard({
   tenantId,
   origin,
   destination,
+  destinationCoordinates,
   serviceId,
   onCalculationComplete,
   onConfirm,
@@ -53,12 +55,20 @@ export function TravelEstimateCard({
     setError(null);
 
     try {
+      // If destination coordinates provided, use them instead of address
+      const destinationForCalculation = destinationCoordinates || destination;
+      
+      console.log('[TravelEstimateCard] Using destination:', {
+        hasCoordinates: !!destinationCoordinates,
+        destination: destinationForCalculation
+      });
+      
       const response = await fetch('/api/location/calculate-travel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           origin,
-          destination,
+          destination: destinationForCalculation,
           tenantId,
           serviceId
         })

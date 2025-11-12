@@ -400,6 +400,11 @@ export function NewBookingDialog({
                           tenantId={subdomain}
                           origin={businessCoordinates}
                           destination={booking.homeVisitAddress}
+                          // Also pass coordinates for calculation if address geocoding fails
+                          destinationCoordinates={{
+                            lat: booking.homeVisitLat,
+                            lng: booking.homeVisitLng
+                          }}
                           serviceId={booking.serviceId}
                           onCalculationComplete={(calc) => {
                             console.log('[NewBookingDialog] Travel calculation complete:', calc);
