@@ -235,21 +235,7 @@ export function TravelEstimateCard({
           </div>
         )}
 
-        {/* Confirm Button */}
-        <Button
-          onClick={handleConfirm}
-          className="w-full bg-blue-600 hover:bg-blue-700"
-          size="lg"
-          disabled={confirming || isLoading}
-        >
-          {confirming ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <CheckCircle className="h-4 w-4 mr-2" />
-          )}
-          Setuju & Lanjutkan
-        </Button>
-
+        {/* Recalculate Button Only */}
         <Button
           onClick={handleCalculate}
           variant="outline"
