@@ -126,9 +126,16 @@ export function NewBookingDialog({
         setInvoiceSettings(data.settings || null);
         // Get business coordinates for travel calculation
         if (data.settings?.branding?.businessLatitude && data.settings?.branding?.businessLongitude) {
-          setBusinessCoordinates({
+          const coords = {
             lat: data.settings.branding.businessLatitude,
             lng: data.settings.branding.businessLongitude
+          };
+          console.log('[NewBookingDialog] Setting business coordinates for travel:', coords);
+          setBusinessCoordinates(coords);
+        } else {
+          console.warn('[NewBookingDialog] No business coordinates in invoice settings:', {
+            businessLatitude: data.settings?.branding?.businessLatitude,
+            businessLongitude: data.settings?.branding?.businessLongitude
           });
         }
       } else {

@@ -63,8 +63,19 @@ export class LocationService {
   // Calculate travel time and distance
   static async calculateTravel(request: CalculateTravelRequest): Promise<TravelCalculation> {
     try {
+      console.log('[LocationService.calculateTravel] Request:', {
+        origin: request.origin,
+        destination: request.destination,
+        tenantId: request.tenantId
+      });
+      
       const origin = await this.resolveLocation(request.origin);
       const destination = await this.resolveLocation(request.destination);
+
+      console.log('[LocationService.calculateTravel] Resolved coordinates:', {
+        origin,
+        destination
+      });
 
       if (!origin || !destination) {
         throw new Error('Invalid origin or destination coordinates');
@@ -274,17 +285,24 @@ export class LocationService {
         tenantId, 
         serviceId
       );
+      
+      console.log('[LocationService.calculateTravel] Service area check:', serviceAreaCheck);
 
       // Get travel surcharge settings from Invoice Settings
       let surcharge = serviceAreaCheck.surcharge;
+      console.log('[LocationService.calculateTravel] Initial surcharge from service area:', surcharge);
+      
       if (surcharge === 0) {
         // Use invoice settings travel surcharge if not in service area or no service area defined
         const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
+        console.log('[LocationService.calculateTravel] Invoice settings travel config:', invoiceSettings.travelSurcharge);
+        
         if (invoiceSettings.travelSurcharge) {
           surcharge = this.calculateTravelSurcharge(
             actualDistance,
             invoiceSettings.travelSurcharge
           );
+          console.log('[LocationService.calculateTravel] Calculated surcharge from invoice settings:', surcharge);
         }
       }
 
