@@ -391,12 +391,7 @@ export function NewBookingDialog({
                       <div className="mt-4">
                         <TravelEstimateCard
                           tenantId={subdomain}
-                          origin={
-                            businessCoordinates || 
-                            (invoiceSettings?.branding?.businessLatitude && invoiceSettings?.branding?.businessLongitude
-                              ? { lat: invoiceSettings.branding.businessLatitude, lng: invoiceSettings.branding.businessLongitude }
-                              : { lat: -6.2088, lng: 106.8456 }) // Jakarta default
-                          }
+                          origin={businessCoordinates || undefined}
                           destination={booking.homeVisitAddress}
                           serviceId={booking.serviceId}
                           onCalculationComplete={(calc) => {

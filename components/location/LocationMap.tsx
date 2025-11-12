@@ -23,7 +23,7 @@ declare global {
 export function LocationMap({ 
   bookings, 
   businessLocation, 
-  center = { lat: -6.2088, lng: 106.8456 }, // Default to Jakarta
+  center,
   zoom = 12,
   className = '' 
 }: LocationMapProps) {
@@ -51,8 +51,8 @@ export function LocationMap({
       if (!mapRef.current) return;
 
       // Handle business location which could be coordinates or address string
-      let businessCoords = center;
-      if (businessLocation) {
+      let businessCoords = center || businessLocation;
+      if (businessLocation && typeof businessLocation !== 'object') {
         if (typeof businessLocation === 'string') {
           // Geocode the address to get coordinates
           try {

@@ -34,7 +34,6 @@ export function HomeVisitBookingManager({
   const [calculating, setCalculating] = useState<Record<string, boolean>>({});
   const [businessCoords, setBusinessCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geocodingBusiness, setGeocodingBusiness] = useState(false);
-  const DEFAULT_ORIGIN = { lat: -6.2088, lng: 106.8456 }; // Jakarta fallback
 
   // Get all home visit bookings (no date filter) - sorted by scheduled date
   const homeVisitBookings = bookings
@@ -123,8 +122,8 @@ export function HomeVisitBookingManager({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          // Prefer precise coords if available; else use address; else default Jakarta
-          origin: businessCoords || (businessLocation ? businessLocation : DEFAULT_ORIGIN),
+          // Use homebase coordinates if available, otherwise use homebase address
+          origin: businessCoords || businessLocation,
           destination: booking.homeVisitAddress,
           tenantId,
           serviceId: booking.serviceId
@@ -277,7 +276,7 @@ export function HomeVisitBookingManager({
           <LeafletMap 
             bookings={homeVisitBookings}
             businessLocation={businessCoords || undefined}
-            center={businessCoords || { lat: -6.2088, lng: 106.8456 }}
+            center={businessCoords || undefined}
             zoom={businessCoords ? 14 : 12}
             className="mt-4"
           />
@@ -368,7 +367,7 @@ export function HomeVisitBookingManager({
 
                             {/* Mini Map showing route from homebase to customer */}
                             {(() => {
-                              const origin = businessCoords || (travelCalc?.route && travelCalc.route[0]) || DEFAULT_ORIGIN;
+                              const origin = businessCoords || (travelCalc?.route && travelCalc.route[0]);
                               const destination = booking.homeVisitCoordinates || (travelCalc?.route && travelCalc.route[travelCalc.route.length - 1]);
                               const hasAny = !!origin || !!destination || (travelCalc?.route && travelCalc.route.length > 1);
                               if (!hasAny) return null;

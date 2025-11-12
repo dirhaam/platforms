@@ -51,7 +51,11 @@ export function RouteMiniMap({ origin, destination, route, className = '', heigh
         return;
       }
 
-      const defaultCenter = destination || origin || { lat: -6.2088, lng: 106.8456 };
+      const defaultCenter = destination || origin;
+      if (!defaultCenter) {
+        console.warn('[RouteMiniMap] No origin or destination provided');
+        return;
+      }
       mapInstance.current = window.L.map(mapRef.current).setView([defaultCenter.lat, defaultCenter.lng], 13);
 
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
