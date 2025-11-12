@@ -128,6 +128,11 @@ export interface CreateBookingRequest {
   dpAmount?: number; // Down payment amount
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
   paymentReference?: string;
+  // Travel-related fields (from frontend calculation)
+  travelDistance?: number;
+  travelDuration?: number;
+  travelSurchargeAmount?: number;
+  travelRoute?: Array<{ lat: number; lng: number }>;
 }
 
 // Update booking request
