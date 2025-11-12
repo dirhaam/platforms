@@ -210,6 +210,16 @@ export function NewBookingDialog({
 
     try {
       const scheduledAt = new Date(`${booking.scheduledAt}T${booking.scheduledTime}`).toISOString();
+      
+      // Log booking data before submit
+      console.log('[NewBookingDialog] Submitting booking:', {
+        isHomeVisit: booking.isHomeVisit,
+        hasTravelCalculation: !!booking.travelCalculation,
+        travelCalculation: booking.travelCalculation,
+        homeVisitAddress: booking.homeVisitAddress,
+        homeVisitLat: booking.homeVisitLat,
+        homeVisitLng: booking.homeVisitLng
+      });
 
       const response = await fetch('/api/bookings', {
         method: 'POST',
