@@ -152,22 +152,14 @@ CREATE INDEX IF NOT EXISTS booking_history_action_idx ON booking_history(action)
 ALTER TABLE booking_history ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for booking_history
-CREATE POLICY IF NOT EXISTS "Tenants can view their own booking history"
-  ON booking_history
-  FOR SELECT
-  USING (tenant_id = auth.uid());
-
-CREATE POLICY IF NOT EXISTS "System can insert booking history"
-  ON booking_history
-  FOR INSERT
-  WITH CHECK (tenant_id = auth.uid());
-
-CREATE POLICY IF NOT EXISTS "Tenants can view booking history via service role"
+DROP POLICY IF EXISTS "Tenants can view their own booking history" ON booking_history;
+CREATE POLICY "Tenants can view their own booking history"
   ON booking_history
   FOR SELECT
   USING (tenant_id = auth.uid() OR auth.role() = 'service_role');
 
-CREATE POLICY IF NOT EXISTS "System can insert booking history via service role"
+DROP POLICY IF EXISTS "System can insert booking history" ON booking_history;
+CREATE POLICY "System can insert booking history"
   ON booking_history
   FOR INSERT
   WITH CHECK (auth.role() = 'service_role');
