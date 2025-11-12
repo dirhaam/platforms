@@ -67,6 +67,16 @@ export function UnifiedBookingPanel({
   const fetchRelatedData = useCallback(async () => {
     try {
       setLoading(true);
+      
+      // Log travel data to verify it's present
+      if (booking.isHomeVisit) {
+        console.log('[UnifiedBookingPanel] Home visit booking travel data:', {
+          travelSurchargeAmount: booking.travelSurchargeAmount,
+          travelDistance: booking.travelDistance,
+          travelDuration: booking.travelDuration,
+          totalAmount: booking.totalAmount
+        });
+      }
 
       // Fetch customer & service details if not already present
       if (!booking.customer || !booking.service) {
