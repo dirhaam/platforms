@@ -39,7 +39,15 @@ function parseDecimal(value: string | number | null | undefined): number {
 }
 
 export class InvoiceService {
-  private static async generateInvoiceNumber(tenantId: string): Promise<string> {
+  private static async generateInvoiceNumber(tenantId: string, sourceNumber?: string): Promise<string> {
+    // If source number provided (from transaction or booking), use it as invoice number
+    if (sourceNumber) {
+      // Convert SALE-* to INV-* or BK-* to INV-*
+      const invoiceNumber = sourceNumber.replace(/^(SALE|BK)-/, 'INV-');
+      return invoiceNumber;
+    }
+    
+    // Fallback to random generation if no source number
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -47,10 +55,10 @@ export class InvoiceService {
     return `INV-${year}${month}-${sequence}`;
   }
 
-  static async createInvoice(tenantId: string, data: CreateInvoiceRequest, initialStatus?: string, paidAmount?: number): Promise<Invoice> {
+  static async createInvoice(tenantId: string, data: CreateInvoiceRequest, initialStatus?: string, paidAmount?: number, sourceNumber?: string): Promise<Invoice> {
     try {
       const supabase = getSupabaseClient();
-      const invoiceNumber = await this.generateInvoiceNumber(tenantId);
+      const invoiceNumber = await this.generateInvoiceNumber(tenantId, sourceNumber);
       const invoiceId = randomUUID();
 
       let subtotal = new Decimal(0);
@@ -851,11 +859,13 @@ export class InvoiceService {
         paymentHistoryCount: paymentHistory?.length || 0
       });
 
-      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount > 0 ? invoicePaidAmount : undefined);
+      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount > 0 ? invoicePaidAmount : undefined, booking.booking_number);
 
       console.log('[InvoiceService.createInvoiceFromBooking] ✅ Invoice created successfully:', {
         bookingId,
+        bookingNumber: booking.booking_number,
         invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
         invoiceStatus
       });
 
@@ -966,7 +976,15 @@ export class InvoiceService {
         invoicePaidAmount = parseDecimal(transaction.paid_amount ?? 0);
       }
 
-      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount);
+      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount, transaction.transaction_number);
+
+      console.log('[InvoiceService.createInvoiceFromSalesTransaction] ✅ Invoice created successfully:', {
+        transactionId,
+        transactionNumber: transaction.transaction_number,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceStatus
+      });
 
       await supabase
         .from('sales_transactions')
