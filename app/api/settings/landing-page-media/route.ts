@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
+import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -12,16 +12,9 @@ const getSupabaseClient = () => {
 // GET - Fetch landing page media
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
+    const tenant = await getTenantFromRequest(req);
+    if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get('tenantId');
-
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
     const supabase = getSupabaseClient();
@@ -30,14 +23,14 @@ export async function GET(req: NextRequest) {
     const { data: videos } = await supabase
       .from('tenant_videos')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenant.id)
       .order('display_order', { ascending: true });
 
     // Fetch social media
     const { data: socialMedia } = await supabase
       .from('tenant_social_media')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenant.id)
       .order('display_order', { ascending: true });
 
     // Fetch galleries with photos
@@ -47,7 +40,7 @@ export async function GET(req: NextRequest) {
         *,
         photos:tenant_gallery_photos(*)
       `)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenant.id)
       .order('created_at', { ascending: false });
 
     return NextResponse.json({
@@ -70,24 +63,20 @@ export async function GET(req: NextRequest) {
 // PUT - Update landing page media
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
+    const tenant = await getTenantFromRequest(req);
+    if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
-    const { tenantId, videos, socialMedia, galleries } = body;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
-    }
+    const { videos, socialMedia, galleries } = body;
 
     const supabase = getSupabaseClient();
 
     // Update videos
     if (videos && Array.isArray(videos)) {
       for (const video of videos) {
-        if (video.id) {
+        if (video.id && video.id.length > 5) {
           // Update existing
           await supabase
             .from('tenant_videos')
@@ -101,13 +90,13 @@ export async function PUT(req: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq('id', video.id)
-            .eq('tenant_id', tenantId);
-        } else {
+            .eq('tenant_id', tenant.id);
+        } else if (!video.id || video.id.length <= 5) {
           // Insert new
           await supabase
             .from('tenant_videos')
             .insert({
-              tenant_id: tenantId,
+              tenant_id: tenant.id,
               title: video.title,
               youtube_url: video.youtubeUrl,
               thumbnail: video.thumbnail,
@@ -122,7 +111,7 @@ export async function PUT(req: NextRequest) {
     // Update social media
     if (socialMedia && Array.isArray(socialMedia)) {
       for (const social of socialMedia) {
-        if (social.id) {
+        if (social.id && social.id.length > 5) {
           // Update existing
           await supabase
             .from('tenant_social_media')
@@ -134,13 +123,13 @@ export async function PUT(req: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq('id', social.id)
-            .eq('tenant_id', tenantId);
-        } else {
+            .eq('tenant_id', tenant.id);
+        } else if (!social.id || social.id.length <= 5) {
           // Insert new
           await supabase
             .from('tenant_social_media')
             .insert({
-              tenant_id: tenantId,
+              tenant_id: tenant.id,
               platform: social.platform,
               url: social.url,
               display_order: social.displayOrder,

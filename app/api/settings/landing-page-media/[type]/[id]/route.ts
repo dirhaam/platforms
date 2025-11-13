@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
+import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -15,8 +15,8 @@ export async function DELETE(
   { params }: { params: { type: string; id: string } }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
+    const tenant = await getTenantFromRequest(req);
+    if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -67,8 +67,8 @@ export async function PATCH(
   { params }: { params: { type: string; id: string } }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
+    const tenant = await getTenantFromRequest(req);
+    if (!tenant) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
