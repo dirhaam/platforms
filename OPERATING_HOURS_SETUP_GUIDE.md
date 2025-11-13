@@ -44,26 +44,53 @@ psql -h your-db-host -U your-user -d your-database -f drizzle/0014_add_operating
 
 ## Step 2: Configure Service Operating Hours
 
-### Via Tenant Admin UI
-1. Go to Admin Dashboard → Services
-2. Click "Add Service" or edit existing service
-3. Find **"Booking Availability"** section
+Choose ONE of these methods (both sync to the same database):
+
+### Option A: Via Service Creation UI (When Adding New Service)
+1. Go to Admin Dashboard → Services → **Add Service**
+2. Fill in basic info (Name, Price, Duration)
+3. Scroll to **"Booking Availability"** section
 4. Set:
    - **Start Time**: e.g., 08:00
    - **End Time**: e.g., 17:00
    - **Time Slot Duration**: 15, 30, or 60 minutes
    - **Hourly Quota**: Max bookings per hour (default: 10)
-5. Click Save
+5. Click "Create Service"
 
-### Database Direct Update (If Needed)
+### Option B: Via Calendar Settings (Recommended for Bulk Changes)
+1. Go to Admin Dashboard → **Settings** → **Calendar** tab
+2. Scroll to **"Operating Hours & Booking Slots"** section
+3. See list of ALL services with current settings
+4. Edit settings for each service:
+   - **Start Time**: When business opens
+   - **End Time**: When business closes
+   - **Time Slot Duration**: 15/30/60 minute increments
+   - **Hourly Quota**: Max bookings per hour
+5. Click **"Save Changes"** for each service
+
+### Option C: Database Direct Update (For Bulk SQL Changes)
 ```sql
 UPDATE services
 SET 
   operating_hours = '{"startTime":"09:00","endTime":"18:00"}',
   slot_duration_minutes = 30,
   hourly_quota = 8
-WHERE id = 'your-service-uuid';
+WHERE tenant_id = 'your-tenant-uuid';
 ```
+
+## Setup Method Comparison
+
+| Method | Best For | Pros | Cons |
+|--------|----------|------|------|
+| **Option A: Service Creation** | New services | Part of creation flow | One-time only |
+| **Option B: Calendar Settings** | Bulk changes | See all services, edit any time | Requires navigation to settings |
+| **Option C: SQL Update** | Advanced users | Instant, bulk operations | Requires database access, manual |
+
+**Recommendation**: Use **Option B (Calendar Settings)** for most use cases:
+- See all services at once
+- Easy to compare settings across services
+- Can update anytime, not just at creation
+- Visual feedback with unsaved changes indicator
 
 ## Step 3: Verify Setup
 
