@@ -12,11 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, MapPin } from 'lucide-react';
+import { Plus, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
 import { TravelCalculation } from '@/types/location';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -93,6 +95,7 @@ export function NewBookingDialog({
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
@@ -105,10 +108,11 @@ export function NewBookingDialog({
 
     try {
       // Load with reasonable defaults: 50 customers/services per page (usually enough)
-      const [customersRes, servicesRes, settingsRes] = await Promise.all([
+      const [customersRes, servicesRes, settingsRes, blockedDatesRes] = await Promise.all([
         fetch('/api/customers?limit=50', { headers: { 'x-tenant-id': subdomain } }),
         fetch('/api/services?limit=50', { headers: { 'x-tenant-id': subdomain } }),
-        fetch(`/api/settings/invoice-config?tenantId=${subdomain}`, { headers: { 'x-tenant-id': subdomain } })
+        fetch(`/api/settings/invoice-config?tenantId=${subdomain}`, { headers: { 'x-tenant-id': subdomain } }),
+        fetch(`/api/bookings/blocked-dates?tenantId=${subdomain}`)
       ]);
 
       if (customersRes.ok) {
@@ -141,6 +145,21 @@ export function NewBookingDialog({
         }
       } else {
         console.warn('[NewBookingDialog] Failed to fetch invoice settings:', settingsRes.status);
+      }
+
+      // Fetch blocked dates
+      if (blockedDatesRes.ok) {
+        const data = await blockedDatesRes.json();
+        console.log('[NewBookingDialog] Blocked dates loaded:', data.blockedDates?.length || 0);
+        // Convert to Set of date strings (YYYY-MM-DD) for efficient lookup
+        const dateSet = new Set(
+          (data.blockedDates || []).map((bd: any) => 
+            new Date(bd.date).toISOString().split('T')[0]
+          )
+        );
+        setBlockedDates(dateSet);
+      } else {
+        console.warn('[NewBookingDialog] Failed to fetch blocked dates:', blockedDatesRes.status);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -362,14 +381,36 @@ export function NewBookingDialog({
               {/* Date & Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={booking.scheduledAt}
-                    onChange={(e) => setBooking({ ...booking, scheduledAt: e.target.value })}
-                    required
-                  />
+                  <Label>Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00').toLocaleDateString() : 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00') : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const dateStr = date.toISOString().split('T')[0];
+                            setBooking({ ...booking, scheduledAt: dateStr });
+                          }
+                        }}
+                        disabled={(date) => {
+                          // Disable past dates
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          if (date < today) return true;
+                          // Disable blocked dates
+                          const dateStr = date.toISOString().split('T')[0];
+                          return blockedDates.has(dateStr);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="time">Time *</Label>

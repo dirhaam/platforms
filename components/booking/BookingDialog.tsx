@@ -16,10 +16,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, User, Phone, Mail, MessageSquare } from 'lucide-react';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { PricingCalculator } from '@/components/booking/PricingCalculator';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Address, TravelCalculation } from '@/types/location';
 import { Service } from '@/types/booking';
 import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
@@ -98,6 +100,7 @@ export default function BookingDialog({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [travelCalculation, setTravelCalculation] = useState<TravelCalculation | undefined>(undefined);
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
 
   // Fetch invoice settings on mount
   React.useEffect(() => {
@@ -126,6 +129,35 @@ export default function BookingDialog({
     if (tenant?.id) {
       console.log('[BookingDialog] Fetching invoice settings for tenant:', tenant.id);
       fetchSettings();
+    }
+  }, [tenant?.id]);
+
+  // Fetch blocked dates on mount
+  React.useEffect(() => {
+    const fetchBlockedDates = async () => {
+      try {
+        const response = await fetch(`/api/bookings/blocked-dates?tenantId=${tenant.id}`);
+        if (!response.ok) {
+          console.warn('[BookingDialog] Failed to fetch blocked dates:', response.status);
+          return;
+        }
+        const data = await response.json();
+        console.log('[BookingDialog] Blocked dates loaded:', data.blockedDates?.length || 0);
+        // Convert to Set of date strings (YYYY-MM-DD) for efficient lookup
+        const dateSet = new Set(
+          (data.blockedDates || []).map((bd: any) => 
+            new Date(bd.date).toISOString().split('T')[0]
+          )
+        );
+        setBlockedDates(dateSet);
+      } catch (error) {
+        console.warn('[BookingDialog] Error fetching blocked dates:', error);
+      }
+    };
+    
+    if (tenant?.id) {
+      console.log('[BookingDialog] Fetching blocked dates for tenant:', tenant.id);
+      fetchBlockedDates();
     }
   }, [tenant?.id]);
 
@@ -571,19 +603,43 @@ export default function BookingDialog({
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="preferredDate">Preferred Date *</Label>
-                  <Input
-                    id="preferredDate"
-                    type="date"
-                    value={formData.preferredDate}
-                    onChange={(e) => handleInputChange('preferredDate', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    required
-                  />
+                <div className="space-y-2">
+                  <Label>Preferred Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.preferredDate ? new Date(formData.preferredDate + 'T00:00').toLocaleDateString() : 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.preferredDate ? new Date(formData.preferredDate + 'T00:00') : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const dateStr = date.toISOString().split('T')[0];
+                            handleInputChange('preferredDate', dateStr);
+                          }
+                        }}
+                        disabled={(date) => {
+                          // Disable past dates
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          if (date < today) return true;
+                          // Disable blocked dates
+                          const dateStr = date.toISOString().split('T')[0];
+                          return blockedDates.has(dateStr);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {validationErrors.preferredDate && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.preferredDate}</p>
+                  )}
                 </div>
                 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="preferredTime">Preferred Time *</Label>
                   <Input
                     id="preferredTime"
@@ -592,6 +648,9 @@ export default function BookingDialog({
                     onChange={(e) => handleInputChange('preferredTime', e.target.value)}
                     required
                   />
+                  {validationErrors.preferredTime && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.preferredTime}</p>
+                  )}
                 </div>
               </div>
             </div>
