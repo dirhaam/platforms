@@ -29,6 +29,19 @@ export function BlockingDateCalendar({
 
   return (
     <div className="space-y-3 p-4">
+      <style>{`
+        .blocking-date-calendar button[aria-disabled="true"] {
+          background-color: #fee2e2 !important;
+          color: #b91c1c !important;
+          font-weight: 600 !important;
+          border: 2px solid #dc2626 !important;
+        }
+        .blocking-date-calendar button[aria-disabled="false"]:not([aria-selected="true"]) {
+          background-color: #f0fdf4 !important;
+          color: #166534 !important;
+        }
+      `}</style>
+
       {/* Legend */}
       <div className="grid grid-cols-2 gap-3 pb-3 border-b">
         <div className="flex items-center gap-2">
@@ -42,25 +55,26 @@ export function BlockingDateCalendar({
       </div>
 
       {/* Calendar */}
-      <Calendar
-        mode="single"
-        selected={selected}
-        onSelect={onSelect}
-        disabled={isDisabledOrBlocked}
-        month={month}
-        onMonthChange={onMonthChange}
-        className="w-full"
-        classNames={{
-          cell: 'h-9 w-9 text-center text-sm p-0 relative',
-          day: 'h-9 w-9 p-0 font-normal text-sm aria-selected:opacity-100',
-          day_selected: 'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
-          day_today: 'bg-blue-100 text-blue-900 font-bold',
-          day_outside: 'text-gray-400 opacity-50',
-          day_disabled: 'bg-red-100 text-red-700 font-semibold border-2 border-red-500 cursor-not-allowed',
-          head_cell: 'text-gray-600 font-semibold w-9 h-9 text-xs',
-          caption_label: 'text-sm font-semibold text-gray-900'
-        }}
-      />
+      <div className="blocking-date-calendar">
+        <Calendar
+          mode="single"
+          selected={selected}
+          onSelect={onSelect}
+          disabled={isDisabledOrBlocked}
+          month={month}
+          onMonthChange={onMonthChange}
+          className="w-full"
+          classNames={{
+            cell: 'h-9 w-9 text-center text-sm p-0 relative',
+            day: 'h-9 w-9 p-0 font-normal text-sm rounded',
+            day_selected: 'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
+            day_today: 'bg-blue-100 text-blue-900 font-bold',
+            day_outside: 'text-gray-400 opacity-50',
+            head_cell: 'text-gray-600 font-semibold w-9 h-9 text-xs',
+            caption_label: 'text-sm font-semibold text-gray-900'
+          }}
+        />
+      </div>
 
       {/* Info Box */}
       {blockedDates.size > 0 && (
