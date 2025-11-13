@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Loader } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Settings, Calendar, FileText, Palette } from 'lucide-react';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
@@ -19,6 +19,7 @@ export default function SettingsPageContent() {
   const subdomain = searchParams?.get('subdomain');
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('appearance');
 
   useEffect(() => {
     if (!subdomain) {
@@ -49,22 +50,57 @@ export default function SettingsPageContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">Manage business configuration and preferences</p>
+    <div className="min-h-screen flex flex-col bg-gray-50 p-4">
+      {/* Header */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2">
+          <Settings className="w-6 h-6 text-gray-900" />
+          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        </div>
+        <p className="text-sm text-gray-600 mt-1">Manage business configuration and preferences</p>
       </div>
 
-      {/* Blocked Dates Section */}
-      {tenantId && <BlockedDatesManager tenantId={tenantId} />}
+      {/* Tabs Navigation */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="appearance" className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            <span className="hidden sm:inline">Appearance</span>
+          </TabsTrigger>
+          <TabsTrigger value="invoice" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Invoice</span>
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            <span className="hidden sm:inline">Calendar</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Invoice Settings Section */}
-      {tenantId && <InvoiceSettings tenantId={tenantId} />}
+        {/* Tab Contents */}
+        <div className="flex-1 overflow-auto">
+          {/* Appearance Tab */}
+          <TabsContent value="appearance" className="mt-0">
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+              <LandingPageStyleSettings subdomain={subdomain} currentTemplate="modern" />
+            </div>
+          </TabsContent>
 
-      {/* Landing Page Style Section */}
-      <LandingPageStyleSettings subdomain={subdomain} currentTemplate="modern" />
+          {/* Invoice Tab */}
+          <TabsContent value="invoice" className="mt-0">
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+              {tenantId && <InvoiceSettings tenantId={tenantId} />}
+            </div>
+          </TabsContent>
 
-      {/* More Settings Sections Can Be Added Here */}
+          {/* Calendar Tab */}
+          <TabsContent value="calendar" className="mt-0">
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+              {tenantId && <BlockedDatesManager tenantId={tenantId} />}
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
