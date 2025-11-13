@@ -96,10 +96,14 @@ export function BlockingDateCalendar({
     return dateToCheck < today;
   };
 
-  const isDisabledOrBlocked = (year: number, month: number, day: number) => {
+  const isActuallyBlocked = (year: number, month: number, day: number) => {
     const dateStr = getDateString(year, month, day);
+    return blockedDates.has(dateStr);
+  };
+
+  const isDisabledOrBlocked = (year: number, month: number, day: number) => {
     const localDate = createLocalDate(year, month, day);
-    return disabled?.(localDate) || blockedDates.has(dateStr);
+    return disabled?.(localDate) || isActuallyBlocked(year, month, day);
   };
 
   const isSelected = (year: number, month: number, day: number) => {
@@ -175,6 +179,7 @@ export function BlockingDateCalendar({
           const month = currentMonth.getMonth();
           const dateStr = getDateString(year, month, day);
           const isBlockedOrDisabled = isDisabledOrBlocked(year, month, day);
+          const isBlocked = isActuallyBlocked(year, month, day);
           const isPast = isPastDate(year, month, day);
           const isSelectedDay = isSelected(year, month, day);
           const isSundayDate = isSunday(year, month, day);
@@ -190,14 +195,14 @@ export function BlockingDateCalendar({
                 }
               }}
               disabled={isBlockedOrDisabled || isPast}
-              title={isBlockedOrDisabled && blockedReason ? `Blocked: ${blockedReason}` : ''}
+              title={isBlocked && blockedReason ? `Blocked: ${blockedReason}` : ''}
               className={`
                 h-10 w-10 rounded-xl font-semibold text-sm transition-all
                 flex items-center justify-center
                 ${
                   isSelectedDay
                     ? 'bg-black text-white shadow-md'
-                    : isBlockedOrDisabled
+                    : isBlocked
                     ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
                     : isSundayDate
                     ? isPast
