@@ -73,10 +73,10 @@ export function BlockingDateCalendar({
     onMonthChange?.(newMonth);
   };
 
-  const getUTCDateString = (date: Date) => {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
 
@@ -84,8 +84,8 @@ export function BlockingDateCalendar({
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
-  const createUTCDate = (year: number, month: number, day: number) => {
-    return new Date(Date.UTC(year, month, day, 12, 0, 0));
+  const createLocalDate = (year: number, month: number, day: number) => {
+    return new Date(year, month, day, 12, 0, 0);
   };
 
   const isPastDate = (year: number, month: number, day: number) => {
@@ -98,13 +98,13 @@ export function BlockingDateCalendar({
 
   const isDisabledOrBlocked = (year: number, month: number, day: number) => {
     const dateStr = getDateString(year, month, day);
-    const utcDate = createUTCDate(year, month, day);
-    return disabled?.(utcDate) || blockedDates.has(dateStr);
+    const localDate = createLocalDate(year, month, day);
+    return disabled?.(localDate) || blockedDates.has(dateStr);
   };
 
   const isSelected = (year: number, month: number, day: number) => {
     if (!selected) return false;
-    const selectedDateStr = getUTCDateString(selected);
+    const selectedDateStr = getLocalDateString(selected);
     const currentDateStr = getDateString(year, month, day);
     return selectedDateStr === currentDateStr;
   };
@@ -175,8 +175,8 @@ export function BlockingDateCalendar({
               key={`${year}-${month}-${day}`}
               onClick={() => {
                 if (!isBlockedOrDisabled && !isPast) {
-                  const utcDate = createUTCDate(year, month, day);
-                  onSelect(utcDate);
+                  const localDate = createLocalDate(year, month, day);
+                  onSelect(localDate);
                 }
               }}
               disabled={isBlockedOrDisabled || isPast}
