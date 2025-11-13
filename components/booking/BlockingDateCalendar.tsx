@@ -40,6 +40,37 @@ export function BlockingDateCalendar({
           background-color: #f0fdf4 !important;
           color: #166534 !important;
         }
+        /* Move prev/next buttons next to month name */
+        .blocking-date-calendar .rdp-caption {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 0.5rem !important;
+          position: relative !important;
+          width: 100% !important;
+        }
+        .blocking-date-calendar .rdp-caption_label {
+          order: 2 !important;
+          flex: 0 !important;
+          text-align: center !important;
+        }
+        .blocking-date-calendar .rdp-nav {
+          position: static !important;
+          width: auto !important;
+          display: flex !important;
+          gap: 0.5rem !important;
+          order: 1 !important;
+        }
+        .blocking-date-calendar .rdp-nav_button_previous {
+          position: static !important;
+          order: 1 !important;
+        }
+        .blocking-date-calendar .rdp-nav_button_next {
+          position: static !important;
+          order: 3 !important;
+          margin-left: 0.5rem !important;
+        }
+
       `}</style>
 
       {/* Legend */}
@@ -70,8 +101,11 @@ export function BlockingDateCalendar({
             day_selected: 'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
             day_today: 'bg-blue-100 text-blue-900 font-bold',
             day_outside: 'text-gray-400 opacity-50',
-            head_cell: 'text-gray-600 font-semibold w-9 h-9 text-xs',
+            head_cell: 'text-gray-600 font-semibold text-xs',
             caption_label: 'text-sm font-semibold text-gray-900'
+          }}
+          formatters={{
+            formatWeekdayName: (date) => date.toLocaleDateString('en-US', { weekday: 'short' })
           }}
         />
       </div>
