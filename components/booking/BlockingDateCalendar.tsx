@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface BlockingDateCalendarProps {
   selected?: Date;
@@ -62,7 +61,6 @@ export function BlockingDateCalendar({
   const [internalMonth, setInternalMonth] = useState<Date>(
     month ?? new Date()
   );
-  const [tooltipDate, setTooltipDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (month) setInternalMonth(month);
@@ -162,77 +160,59 @@ export function BlockingDateCalendar({
       </div>
 
       {/* Calendar grid */}
-      <TooltipProvider>
-        <div className="grid grid-cols-7 gap-2">
-          {calendarDays.map((day, idx) => {
-            if (day === null) {
-              return (
-                <div
-                  key={`empty-${idx}`}
-                  className="h-10 w-10 rounded-xl"
-                />
-              );
-            }
-
-            const year = currentMonth.getFullYear();
-            const month = currentMonth.getMonth();
-            const dateStr = getDateString(year, month, day);
-            const isBlockedOrDisabled = isDisabledOrBlocked(year, month, day);
-            const isPast = isPastDate(year, month, day);
-            const isSelectedDay = isSelected(year, month, day);
-            const isSundayDate = isSunday(year, month, day);
-            const blockedReason = blockedDates.get(dateStr);
-
-            const button = (
-              <button
-                key={`${year}-${month}-${day}`}
-                onClick={() => {
-                  if (!isBlockedOrDisabled && !isPast) {
-                    const localDate = createLocalDate(year, month, day);
-                    onSelect(localDate);
-                  }
-                }}
-                disabled={isBlockedOrDisabled || isPast}
-                className={`
-                  h-10 w-10 rounded-xl font-semibold text-sm transition-all
-                  flex items-center justify-center
-                  ${
-                    isSelectedDay
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : isPast
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : isBlockedOrDisabled
-                      ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
-                      : isSundayDate
-                      ? 'bg-gray-50 text-red-600 hover:bg-blue-50'
-                      : 'bg-gray-50 text-gray-900 hover:bg-blue-50'
-                  }
-                `}
-                type="button"
-              >
-                {day}
-              </button>
+      <div className="grid grid-cols-7 gap-2">
+        {calendarDays.map((day, idx) => {
+          if (day === null) {
+            return (
+              <div
+                key={`empty-${idx}`}
+                className="h-10 w-10 rounded-xl"
+              />
             );
+          }
 
-            // Show tooltip for blocked dates with reason
-            if (isBlockedOrDisabled && blockedReason) {
-              return (
-                <Tooltip key={`${year}-${month}-${day}`}>
-                  <TooltipTrigger asChild>
-                    {button}
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-gray-900 text-white px-2 py-1 text-xs rounded">
-                    <p className="font-semibold">Blocked</p>
-                    <p>{blockedReason}</p>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            }
+          const year = currentMonth.getFullYear();
+          const month = currentMonth.getMonth();
+          const dateStr = getDateString(year, month, day);
+          const isBlockedOrDisabled = isDisabledOrBlocked(year, month, day);
+          const isPast = isPastDate(year, month, day);
+          const isSelectedDay = isSelected(year, month, day);
+          const isSundayDate = isSunday(year, month, day);
+          const blockedReason = blockedDates.get(dateStr);
 
-            return button;
-          })}
-        </div>
-      </TooltipProvider>
+          return (
+            <button
+              key={`${year}-${month}-${day}`}
+              onClick={() => {
+                if (!isBlockedOrDisabled && !isPast) {
+                  const localDate = createLocalDate(year, month, day);
+                  onSelect(localDate);
+                }
+              }}
+              disabled={isBlockedOrDisabled || isPast}
+              title={isBlockedOrDisabled && blockedReason ? `Blocked: ${blockedReason}` : ''}
+              className={`
+                h-10 w-10 rounded-xl font-semibold text-sm transition-all
+                flex items-center justify-center
+                ${
+                  isSelectedDay
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : isPast
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : isBlockedOrDisabled
+                    ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
+                    : isSundayDate
+                    ? 'bg-gray-50 text-red-600 hover:bg-blue-50'
+                    : 'bg-gray-50 text-gray-900 hover:bg-blue-50'
+                }
+              `}
+              type="button"
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
