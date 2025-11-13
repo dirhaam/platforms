@@ -636,12 +636,27 @@ export class BookingService {
         return null;
       }
       
+      // Get operating hours from service, default to 8AM-5PM
+      const operatingHours = service.operatingHours;
+      if (!operatingHours) {
+        console.warn('[getAvailability] No operating hours configured for service:', request.serviceId);
+        return {
+          date: request.date,
+          slots: [],
+          businessHours: { isOpen: false }
+        };
+      }
+      
+      const [startHourStr, startMinStr] = operatingHours.startTime.split(':').map(Number);
+      const [endHourStr, endMinStr] = operatingHours.endTime.split(':').map(Number);
+      
       const bookingDate = new Date(request.date);
       const startOfDay = new Date(bookingDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(bookingDate);
       endOfDay.setHours(23, 59, 59, 999);
       
+      // Fetch all confirmed bookings for this service on this date
       const { data: bookings, error } = await supabase
         .from('bookings')
         .select('*')
@@ -660,45 +675,83 @@ export class BookingService {
         };
       }
       
-      const bookedSlots = (bookings || []).map(b => ({
-        start: new Date(b.scheduled_at),
-        end: new Date(new Date(b.scheduled_at).getTime() + b.duration * 60000),
-        available: false
-      }));
+      // Get slot duration and quota from service
+      const slotDurationMinutes = service.slotDurationMinutes || 30;
+      const hourlyQuota = service.hourlyQuota || 10;
+      const serviceDuration = request.duration || service.duration;
       
       const slots: TimeSlot[] = [];
-      const slotDuration = request.duration || service.duration;
-      const startHour = 8;
-      const endHour = 17;
       
-      for (let hour = startHour; hour < endHour; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-          const slotStart = new Date(bookingDate);
-          slotStart.setHours(hour, minute, 0, 0);
-          const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
+      // Generate slots based on operating hours
+      const startDate = new Date(bookingDate);
+      startDate.setHours(startHourStr, startMinStr, 0, 0);
+      const endDate = new Date(bookingDate);
+      endDate.setHours(endHourStr, endMinStr, 0, 0);
+      
+      // Count bookings per hour slot to enforce hourly quota
+      const bookingsPerHour = new Map<string, number>();
+      
+      (bookings || []).forEach(booking => {
+        const bookingTime = new Date(booking.scheduled_at);
+        // Get the hour slot (round down to nearest hour)
+        const hourKey = `${bookingTime.getHours()}:00`;
+        bookingsPerHour.set(hourKey, (bookingsPerHour.get(hourKey) || 0) + 1);
+      });
+      
+      // Generate all available time slots
+      let currentTime = new Date(startDate);
+      
+      while (currentTime < endDate) {
+        const slotStart = new Date(currentTime);
+        const slotEnd = new Date(slotStart.getTime() + serviceDuration * 60000);
+        
+        // Check if slot would go past business hours
+        if (slotEnd > endDate) {
+          break;
+        }
+        
+        // Get hour slot key for quota check
+        const hourKey = `${slotStart.getHours()}:00`;
+        const bookingsInThisHour = bookingsPerHour.get(hourKey) || 0;
+        
+        // Check if slot is available (not fully booked by hourly quota)
+        let isAvailable = false;
+        
+        // For each slot duration, we can have multiple bookings up to the hourly quota
+        if (bookingsInThisHour < hourlyQuota) {
+          isAvailable = true;
           
-          let isAvailable = true;
-          for (const booked of bookedSlots) {
-            if (slotStart < booked.end && slotEnd > booked.start) {
-              isAvailable = false;
-              break;
-            }
-          }
+          // Also check if this specific time slot overlaps with any existing bookings
+          const conflictingBooking = (bookings || []).find(b => {
+            const bookingStart = new Date(b.scheduled_at);
+            const bookingEnd = new Date(bookingStart.getTime() + b.duration * 60000);
+            // Check for overlap
+            return slotStart < bookingEnd && slotEnd > bookingStart;
+          });
           
-          if (isAvailable && slotEnd <= new Date(bookingDate.getTime() + 24 * 3600000)) {
-            slots.push({
-              start: slotStart,
-              end: slotEnd,
-              available: true
-            });
+          if (conflictingBooking) {
+            isAvailable = false;
           }
         }
+        
+        slots.push({
+          start: slotStart,
+          end: slotEnd,
+          available: isAvailable
+        });
+        
+        // Move to next slot
+        currentTime = new Date(currentTime.getTime() + slotDurationMinutes * 60000);
       }
       
       return {
         date: request.date,
         slots,
-        businessHours: { isOpen: true, openTime: '08:00', closeTime: '17:00' }
+        businessHours: { 
+          isOpen: true, 
+          openTime: operatingHours.startTime, 
+          closeTime: operatingHours.endTime 
+        }
       };
     } catch (error) {
       console.error('Error in getAvailability:', error);

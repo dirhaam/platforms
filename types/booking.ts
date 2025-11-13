@@ -85,6 +85,15 @@ export interface Service {
   isActive: boolean;
   homeVisitAvailable: boolean;
   homeVisitSurcharge?: number;
+  
+  // Operating hours and quota
+  operatingHours?: {
+    startTime: string; // HH:MM format
+    endTime: string;   // HH:MM format
+  } | null;
+  slotDurationMinutes?: number; // Duration of each time slot (default 30)
+  hourlyQuota?: number; // Max bookings per hour (default 10)
+  
   images: string[];
   requirements: string[];
   createdAt: Date;

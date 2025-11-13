@@ -20,10 +20,11 @@ import { Calendar as CalendarIcon, Clock, MapPin, User, Phone, Mail, MessageSqua
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { PricingCalculator } from '@/components/booking/PricingCalculator';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
+import { TimeSlotPicker } from '@/components/booking/TimeSlotPicker';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Address, TravelCalculation } from '@/types/location';
-import { Service } from '@/types/booking';
+import { Service, TimeSlot } from '@/types/booking';
 import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
 
 interface TenantData {
@@ -48,7 +49,8 @@ interface BookingFormData {
   customerPhone: string;
   customerEmail: string;
   preferredDate: string;
-  preferredTime: string;
+  preferredTime?: string; // For backward compatibility, can be in time slot format
+  selectedTimeSlot?: TimeSlot; // New: selected time slot from TimeSlotPicker
   isHomeVisit: boolean;
   homeVisitAddress: string;
   homeVisitCoordinates?: { lat: number; lng: number };
@@ -270,7 +272,7 @@ export default function BookingDialog({
       errors.customerEmail = 'Invalid email format';
     }
     if (!formData.preferredDate) errors.preferredDate = 'Date is required';
-    if (!formData.preferredTime) errors.preferredTime = 'Time is required';
+    if (!formData.selectedTimeSlot) errors.preferredTime = 'Time slot is required';
     if (formData.isHomeVisit && !formData.homeVisitAddress.trim()) {
       errors.homeVisitAddress = 'Address is required for home visit';
     }
@@ -300,16 +302,14 @@ export default function BookingDialog({
 
       setIsLoading(true);
 
-      // Combine date and time to create ISO datetime
-      const [year, month, day] = formData.preferredDate.split('-');
-      const [hour, minute] = formData.preferredTime.split(':');
-      const scheduledAt = new Date(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hour),
-        parseInt(minute)
-      );
+      // Use the selected time slot's start time
+      if (!formData.selectedTimeSlot) {
+        setError('Please select a time slot');
+        setIsLoading(false);
+        return;
+      }
+
+      const scheduledAt = formData.selectedTimeSlot.start;
 
       // Step 1: Find or create customer
       let customerId: string;
@@ -425,6 +425,7 @@ export default function BookingDialog({
       customerEmail: '',
       preferredDate: '',
       preferredTime: '',
+      selectedTimeSlot: undefined,
       isHomeVisit: false,
       homeVisitAddress: '',
       homeVisitLat: undefined,
@@ -602,7 +603,7 @@ export default function BookingDialog({
                 Appointment Preferences
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Preferred Date *</Label>
                   <Popover>
@@ -620,6 +621,8 @@ export default function BookingDialog({
                           if (date) {
                             const dateStr = date.toISOString().split('T')[0];
                             handleInputChange('preferredDate', dateStr);
+                            // Reset time slot when date changes
+                            setFormData(prev => ({ ...prev, selectedTimeSlot: undefined }));
                           }
                         }}
                         disabled={(date) => {
@@ -638,20 +641,20 @@ export default function BookingDialog({
                     <p className="text-red-500 text-sm mt-1">{validationErrors.preferredDate}</p>
                   )}
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="preferredTime">Preferred Time *</Label>
-                  <Input
-                    id="preferredTime"
-                    type="time"
-                    value={formData.preferredTime}
-                    onChange={(e) => handleInputChange('preferredTime', e.target.value)}
-                    required
+
+                {/* Time Slot Picker */}
+                {formData.preferredDate && selectedService && (
+                  <TimeSlotPicker
+                    serviceId={selectedService.id}
+                    selectedDate={new Date(formData.preferredDate + 'T00:00')}
+                    onSlotSelect={(slot) => setFormData(prev => ({ ...prev, selectedTimeSlot: slot }))}
+                    selectedSlot={formData.selectedTimeSlot}
+                    tenantId={tenant.id}
                   />
-                  {validationErrors.preferredTime && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.preferredTime}</p>
-                  )}
-                </div>
+                )}
+                {validationErrors.preferredTime && (
+                  <p className="text-red-500 text-sm">{validationErrors.preferredTime}</p>
+                )}
               </div>
             </div>
 
@@ -871,7 +874,7 @@ export default function BookingDialog({
               <Button 
                 onClick={handleSubmit}
                 className="flex-1"
-                disabled={!formData.customerName || !formData.customerPhone || !formData.preferredDate || !formData.preferredTime || isLoading}
+                disabled={!formData.customerName || !formData.customerPhone || !formData.preferredDate || !formData.selectedTimeSlot || isLoading}
               >
                 {isLoading ? 'Creating Booking...' : 'Submit Booking Request'}
               </Button>
@@ -907,7 +910,16 @@ export default function BookingDialog({
                 <div className="flex justify-between">
                   <span>Date & Time:</span>
                   <span className="font-semibold">
-                    {formData.preferredDate} at {formData.preferredTime}
+                    {formData.selectedTimeSlot && (
+                      <>
+                        {formData.selectedTimeSlot.start.toLocaleDateString()} at{' '}
+                        {formData.selectedTimeSlot.start.toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">

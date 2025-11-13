@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
+import { TimeSlotPicker } from '@/components/booking/TimeSlotPicker';
 import { TravelCalculation } from '@/types/location';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
@@ -26,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Customer, Service } from '@/types/booking';
+import { Customer, Service, TimeSlot } from '@/types/booking';
 import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
 
 interface NewBookingDialogProps {
@@ -40,7 +41,8 @@ interface NewBooking {
   customerId: string;
   serviceId: string;
   scheduledAt: string;
-  scheduledTime: string;
+  scheduledTime: string; // Kept for backward compatibility
+  selectedTimeSlot?: TimeSlot; // New: selected time slot from TimeSlotPicker
   isHomeVisit: boolean;
   homeVisitAddress: string;
   homeVisitLat?: number;
@@ -220,7 +222,7 @@ export function NewBookingDialog({
     e.preventDefault();
     if (!subdomain) return;
 
-    if (!booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.scheduledTime) {
+    if (!booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.selectedTimeSlot) {
       setError('Please fill in all required fields');
       return;
     }
@@ -229,7 +231,7 @@ export function NewBookingDialog({
     setError(null);
 
     try {
-      const scheduledAt = new Date(`${booking.scheduledAt}T${booking.scheduledTime}`).toISOString();
+      const scheduledAt = booking.selectedTimeSlot.start.toISOString();
       
       // Log booking data before submit
       console.log('[NewBookingDialog] Submitting booking:', {
@@ -379,7 +381,7 @@ export function NewBookingDialog({
               </div>
 
               {/* Date & Time */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Date *</Label>
                   <Popover>
@@ -396,7 +398,7 @@ export function NewBookingDialog({
                         onSelect={(date) => {
                           if (date) {
                             const dateStr = date.toISOString().split('T')[0];
-                            setBooking({ ...booking, scheduledAt: dateStr });
+                            setBooking({ ...booking, scheduledAt: dateStr, selectedTimeSlot: undefined });
                           }
                         }}
                         disabled={(date) => {
@@ -412,16 +414,17 @@ export function NewBookingDialog({
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="time">Time *</Label>
-                  <Input
-                    id="time"
-                    type="time"
-                    value={booking.scheduledTime}
-                    onChange={(e) => setBooking({ ...booking, scheduledTime: e.target.value })}
-                    required
+
+                {/* Time Slot Picker */}
+                {booking.scheduledAt && booking.serviceId && (
+                  <TimeSlotPicker
+                    serviceId={booking.serviceId}
+                    selectedDate={new Date(booking.scheduledAt + 'T00:00')}
+                    onSlotSelect={(slot) => setBooking({ ...booking, selectedTimeSlot: slot })}
+                    selectedSlot={booking.selectedTimeSlot}
+                    tenantId={subdomain}
                   />
-                </div>
+                )}
               </div>
 
               {/* Home Visit */}
