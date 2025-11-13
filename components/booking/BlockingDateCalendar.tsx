@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 import { AlertCircle } from 'lucide-react';
 
 interface BlockingDateCalendarProps {
@@ -26,11 +25,6 @@ export function BlockingDateCalendar({
   const isDisabledOrBlocked = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     return disabled?.(date) || blockedDates.has(dateStr);
-  };
-
-  const isBlockedDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return blockedDates.has(dateStr) && !disabled?.(date);
   };
 
   return (
@@ -57,23 +51,12 @@ export function BlockingDateCalendar({
         onMonthChange={onMonthChange}
         className="w-full"
         classNames={{
-          cell: cn(
-            'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent',
-            'focus-within:relative focus-within:z-20'
-          ),
-          day: cn(
-            'h-9 w-9 p-0 font-normal text-sm aria-selected:opacity-100'
-          ),
+          cell: 'h-9 w-9 text-center text-sm p-0 relative',
+          day: 'h-9 w-9 p-0 font-normal text-sm aria-selected:opacity-100',
           day_selected: 'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
           day_today: 'bg-blue-100 text-blue-900 font-bold',
           day_outside: 'text-gray-400 opacity-50',
-          day_disabled: (date: any) => {
-            const dateStr = date?.toISOString?.()?.split('T')[0];
-            const isBlocked = dateStr && blockedDates.has(dateStr);
-            return isBlocked
-              ? 'bg-red-100 text-red-700 font-semibold border-2 border-red-500 cursor-not-allowed'
-              : 'text-gray-400 cursor-not-allowed';
-          },
+          day_disabled: 'bg-red-100 text-red-700 font-semibold border-2 border-red-500 cursor-not-allowed',
           head_cell: 'text-gray-600 font-semibold w-9 h-9 text-xs',
           caption_label: 'text-sm font-semibold text-gray-900'
         }}
