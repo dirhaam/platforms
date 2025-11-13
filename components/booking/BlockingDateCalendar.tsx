@@ -197,12 +197,14 @@ export function BlockingDateCalendar({
                 ${
                   isSelectedDay
                     ? 'bg-blue-600 text-white shadow-md'
-                    : isPast
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : isBlockedOrDisabled
                     ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
                     : isSundayDate
-                    ? 'bg-gray-50 text-red-600 hover:bg-blue-50'
+                    ? isPast
+                      ? 'bg-gray-100 text-red-600 cursor-not-allowed'
+                      : 'bg-gray-50 text-red-600 hover:bg-blue-50'
+                    : isPast
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-gray-50 text-gray-900 hover:bg-blue-50'
                 }
               `}
