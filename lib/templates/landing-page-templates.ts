@@ -12,6 +12,9 @@ export interface LandingPageTemplate {
     contact: boolean;
     gallery: boolean;
     businessHours: boolean;
+    videos: boolean;
+    socialMedia: boolean;
+    photoGallery: boolean;
   };
   customization: {
     colors: boolean;
@@ -36,6 +39,9 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
       contact: true,
       gallery: false,
       businessHours: true,
+      videos: true,
+      socialMedia: true,
+      photoGallery: true,
     },
     customization: {
       colors: true,
@@ -58,6 +64,9 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
       contact: true,
       gallery: true,
       businessHours: true,
+      videos: true,
+      socialMedia: true,
+      photoGallery: true,
     },
     customization: {
       colors: true,
@@ -80,6 +89,9 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
       contact: true,
       gallery: false,
       businessHours: true,
+      videos: true,
+      socialMedia: true,
+      photoGallery: true,
     },
     customization: {
       colors: true,
@@ -102,6 +114,9 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
       contact: true,
       gallery: true,
       businessHours: true,
+      videos: true,
+      socialMedia: true,
+      photoGallery: true,
     },
     customization: {
       colors: true,
@@ -124,6 +139,9 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
       contact: true,
       gallery: false,
       businessHours: true,
+      videos: true,
+      socialMedia: true,
+      photoGallery: true,
     },
     customization: {
       colors: false,
@@ -146,6 +164,9 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
       contact: true,
       gallery: true,
       businessHours: true,
+      videos: true,
+      socialMedia: true,
+      photoGallery: true,
     },
     customization: {
       colors: true,

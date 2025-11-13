@@ -9,7 +9,10 @@ import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
-import { Service } from '@/types/booking';
+import VideoSection from '@/components/subdomain/sections/VideoSection';
+import SocialMediaSection from '@/components/subdomain/sections/SocialMediaSection';
+import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySection';
+import { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
 
 interface BusinessHours {
   [key: string]: {
@@ -43,13 +46,19 @@ interface TenantLandingPageProps {
   services?: Service[];
   businessHours?: BusinessHours;
   template?: 'modern' | 'classic' | 'minimal';
+  videos?: VideoItem[];
+  socialMedia?: SocialMediaLink[];
+  galleries?: PhotoGallery[];
 }
 
 export default function TenantLandingPage({ 
   tenant, 
   services = [], 
   businessHours,
-  template = 'modern' 
+  template = 'modern',
+  videos = [],
+  socialMedia = [],
+  galleries = []
 }: TenantLandingPageProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);

@@ -9,7 +9,10 @@ import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
-import { Service } from '@/types/booking';
+import VideoSection from '@/components/subdomain/sections/VideoSection';
+import SocialMediaSection from '@/components/subdomain/sections/SocialMediaSection';
+import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySection';
+import { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
 
 interface BusinessHours {
   [key: string]: {
@@ -42,12 +45,18 @@ interface HealthcareTemplateProps {
   tenant: TenantData;
   services?: Service[];
   businessHours?: BusinessHours;
+  videos?: VideoItem[];
+  socialMedia?: SocialMediaLink[];
+  galleries?: PhotoGallery[];
 }
 
 export default function HealthcareTemplate({ 
   tenant, 
   services = [], 
-  businessHours
+  businessHours,
+  videos = [],
+  socialMedia = [],
+  galleries = []
 }: HealthcareTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -266,6 +275,36 @@ export default function HealthcareTemplate({
           </div>
         </div>
       </section>
+
+      {/* Videos Section */}
+      {videos && videos.length > 0 && (
+        <VideoSection 
+          videos={videos} 
+          displayType="grid"
+          title="Our Videos"
+          primaryColor={primaryColor}
+        />
+      )}
+
+      {/* Social Media Section */}
+      {socialMedia && socialMedia.length > 0 && (
+        <SocialMediaSection 
+          socialMedia={socialMedia}
+          displayType="icons"
+          title="Follow Us"
+          primaryColor={primaryColor}
+          orientation="horizontal"
+        />
+      )}
+
+      {/* Photo Gallery Section */}
+      {galleries && galleries.map((gallery) => (
+        <PhotoGallerySection 
+          key={gallery.id}
+          gallery={gallery}
+          primaryColor={primaryColor}
+        />
+      ))}
 
       {/* Footer */}
       <footer className="py-12 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: primaryColor, color: 'white' }}>

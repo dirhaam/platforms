@@ -256,3 +256,58 @@ export interface AvailabilityResponse {
     closeTime?: string;
   };
 }
+
+// Video interface
+export interface VideoItem {
+  id: string;
+  title: string;
+  youtubeUrl: string; // Full URL or Video ID
+  thumbnail?: string;
+  description?: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Social Media Link interface
+export interface SocialMediaLink {
+  id: string;
+  platform: 'facebook' | 'instagram' | 'tiktok' | 'youtube' | 'linkedin' | 'twitter';
+  url: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Photo Gallery interface
+export interface PhotoGalleryItem {
+  id: string;
+  url: string;
+  caption?: string;
+  alt: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PhotoGallery {
+  id: string;
+  tenantId: string;
+  title: string;
+  description?: string;
+  displayType: 'grid' | 'carousel' | 'masonry';
+  photos: PhotoGalleryItem[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Landing Page Media Data
+export interface LandingPageMediaData {
+  videos?: VideoItem[];
+  socialMedia?: SocialMediaLink[];
+  galleries?: PhotoGallery[];
+}

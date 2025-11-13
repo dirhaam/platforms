@@ -382,6 +382,9 @@ export const tenantRelations = relations(tenants, ({ many, one }) => ({
   invoices: many(invoices),
   serviceAreas: many(serviceAreas),
   salesTransactions: many(salesTransactions),
+  videos: many(tenantVideos),
+  socialMedia: many(tenantSocialMedia),
+  photoGalleries: many(tenantPhotoGalleries),
 }));
 
 export const serviceRelations = relations(services, ({ one, many }) => ({
@@ -450,6 +453,23 @@ export const superAdminRelations = relations(superAdmins, () => ({}));
 
 export const securityAuditLogRelations = relations(securityAuditLogs, () => ({}));
 
+export const tenantVideosRelations = relations(tenantVideos, ({ one }) => ({
+  tenant: one(tenants, { fields: [tenantVideos.tenantId], references: [tenants.id] }),
+}));
+
+export const tenantSocialMediaRelations = relations(tenantSocialMedia, ({ one }) => ({
+  tenant: one(tenants, { fields: [tenantSocialMedia.tenantId], references: [tenants.id] }),
+}));
+
+export const tenantPhotoGalleriesRelations = relations(tenantPhotoGalleries, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [tenantPhotoGalleries.tenantId], references: [tenants.id] }),
+  photos: many(tenantGalleryPhotos),
+}));
+
+export const tenantGalleryPhotosRelations = relations(tenantGalleryPhotos, ({ one }) => ({
+  gallery: one(tenantPhotoGalleries, { fields: [tenantGalleryPhotos.galleryId], references: [tenantPhotoGalleries.id] }),
+}));
+
 // Blocked Dates table
 export const blockedDates = pgTable('blocked_dates', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -459,6 +479,57 @@ export const blockedDates = pgTable('blocked_dates', {
   isRecurring: boolean('is_recurring').default(false),
   recurringPattern: text('recurring_pattern'), // 'daily', 'weekly', 'monthly', 'yearly'
   recurringEndDate: timestamp('recurring_end_date', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tenant Videos table
+export const tenantVideos = pgTable('tenant_videos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  youtubeUrl: text('youtube_url').notNull(),
+  thumbnail: text('thumbnail'),
+  description: text('description'),
+  displayOrder: integer('display_order').default(0),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tenant Social Media table
+export const tenantSocialMedia = pgTable('tenant_social_media', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  platform: text('platform').notNull(), // 'facebook', 'instagram', 'tiktok', 'youtube', 'linkedin', 'twitter'
+  url: text('url').notNull(),
+  displayOrder: integer('display_order').default(0),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tenant Photo Galleries table
+export const tenantPhotoGalleries = pgTable('tenant_photo_galleries', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  displayType: text('display_type').notNull().default('grid'), // 'grid', 'carousel', 'masonry'
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tenant Gallery Photos table
+export const tenantGalleryPhotos = pgTable('tenant_gallery_photos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  galleryId: uuid('gallery_id').notNull().references(() => tenantPhotoGalleries.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  caption: text('caption'),
+  alt: text('alt').notNull(),
+  displayOrder: integer('display_order').default(0),
+  isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

@@ -62,10 +62,13 @@ export default async function SubdomainPage({
     console.log('[SubdomainPage] Tenant ID:', tenantData.id);
     console.log('[SubdomainPage] Tenant Name:', tenantData.businessName);
 
-    // Get services and business hours
-    const [services, businessHours] = await Promise.all([
+    // Get services, business hours, and media data
+    const [services, businessHours, videos, socialMedia, galleries] = await Promise.all([
       TenantService.getTenantServices(tenantData.id),
       TenantService.getTenantBusinessHours(tenantData.id),
+      TenantService.getTenantVideos(tenantData.id),
+      TenantService.getTenantSocialMedia(tenantData.id),
+      TenantService.getTenantGalleries(tenantData.id),
     ]);
     
     console.log('[SubdomainPage] Services received - count:', services.length);
@@ -88,6 +91,9 @@ export default async function SubdomainPage({
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
+            videos={videos}
+            socialMedia={socialMedia}
+            galleries={galleries}
           />
         );
       
@@ -97,6 +103,9 @@ export default async function SubdomainPage({
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
+            videos={videos}
+            socialMedia={socialMedia}
+            galleries={galleries}
           />
         );
       
@@ -106,6 +115,9 @@ export default async function SubdomainPage({
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
+            videos={videos}
+            socialMedia={socialMedia}
+            galleries={galleries}
           />
         );
       
@@ -115,6 +127,9 @@ export default async function SubdomainPage({
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
+            videos={videos}
+            socialMedia={socialMedia}
+            galleries={galleries}
           />
         );
       
@@ -124,6 +139,9 @@ export default async function SubdomainPage({
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
+            videos={videos}
+            socialMedia={socialMedia}
+            galleries={galleries}
           />
         );
       
@@ -133,6 +151,9 @@ export default async function SubdomainPage({
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
+            videos={videos}
+            socialMedia={socialMedia}
+            galleries={galleries}
           />
         );
       
@@ -143,6 +164,9 @@ export default async function SubdomainPage({
             tenant={tenantData}
             services={services}
             businessHours={businessHours || undefined}
+            videos={videos}
+            socialMedia={socialMedia}
+            galleries={galleries}
           />
         );
     }

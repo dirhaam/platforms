@@ -17,7 +17,10 @@ import {
 // Instead, we use safe local helpers that tolerate missing/invalid env and SSR.
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
-import type { Service } from '@/types/booking';
+import VideoSection from '@/components/subdomain/sections/VideoSection';
+import SocialMediaSection from '@/components/subdomain/sections/SocialMediaSection';
+import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySection';
+import type { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
 
 interface BusinessHours {
   [key: string]: {
@@ -51,6 +54,9 @@ interface HealthcareTemplateProps {
   tenant: TenantData;
   services?: Service[];
   businessHours?: BusinessHours;
+  videos?: VideoItem[];
+  socialMedia?: SocialMediaLink[];
+  galleries?: PhotoGallery[];
 }
 
 /**
@@ -94,7 +100,7 @@ const buildPoweredByUrl = (): string => `${getProtocol()}://${getRootDomain()}`;
 /**
  * Redesigned healthcare template
  */
-export default function HealthcareTemplateV2({ tenant, services = [], businessHours }: HealthcareTemplateProps) {
+export default function HealthcareTemplateV2({ tenant, services = [], businessHours, videos = [], socialMedia = [], galleries = [] }: HealthcareTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -444,6 +450,36 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
           </div>
         </div>
       </section>
+
+      {/* Videos Section */}
+      {videos && videos.length > 0 && (
+        <VideoSection 
+          videos={videos} 
+          displayType="grid"
+          title="Our Videos"
+          primaryColor={primaryColor}
+        />
+      )}
+
+      {/* Social Media Section */}
+      {socialMedia && socialMedia.length > 0 && (
+        <SocialMediaSection 
+          socialMedia={socialMedia}
+          displayType="icons"
+          title="Follow Us"
+          primaryColor={primaryColor}
+          orientation="horizontal"
+        />
+      )}
+
+      {/* Photo Gallery Section */}
+      {galleries && galleries.map((gallery) => (
+        <PhotoGallerySection 
+          key={gallery.id}
+          gallery={gallery}
+          primaryColor={primaryColor}
+        />
+      ))}
 
       {/* CTA band */}
       <section className="py-10" style={{ background: bgGradient }}>

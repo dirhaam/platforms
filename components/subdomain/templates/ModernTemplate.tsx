@@ -7,7 +7,10 @@ import { Phone, Mail, MapPin, Star, ArrowRight, Calendar, Users, Zap } from 'luc
 import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
-import { Service } from '@/types/booking';
+import VideoSection from '@/components/subdomain/sections/VideoSection';
+import SocialMediaSection from '@/components/subdomain/sections/SocialMediaSection';
+import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySection';
+import { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
 
 interface BusinessHours {
   [key: string]: {
@@ -40,12 +43,18 @@ interface ModernTemplateProps {
   tenant: TenantData;
   services?: Service[];
   businessHours?: BusinessHours;
+  videos?: VideoItem[];
+  socialMedia?: SocialMediaLink[];
+  galleries?: PhotoGallery[];
 }
 
 export default function ModernTemplate({ 
   tenant, 
   services = [], 
-  businessHours
+  businessHours,
+  videos = [],
+  socialMedia = [],
+  galleries = []
 }: ModernTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -369,6 +378,41 @@ export default function ModernTemplate({
           </div>
         </div>
       </section>
+
+      {/* Videos Section */}
+      {videos && videos.length > 0 && (
+        <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-gray-950">
+          <VideoSection 
+            videos={videos} 
+            displayType="grid"
+            title="Our Videos"
+            primaryColor={primaryColor}
+          />
+        </section>
+      )}
+
+      {/* Social Media Section */}
+      {socialMedia && socialMedia.length > 0 && (
+        <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+          <SocialMediaSection 
+            socialMedia={socialMedia}
+            displayType="icons"
+            title="Follow Us"
+            primaryColor={primaryColor}
+            orientation="horizontal"
+          />
+        </section>
+      )}
+
+      {/* Photo Gallery Section */}
+      {galleries && galleries.map((gallery) => (
+        <section key={gallery.id} className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-gray-950">
+          <PhotoGallerySection 
+            gallery={gallery}
+            primaryColor={primaryColor}
+          />
+        </section>
+      ))}
 
       {/* Hours Section */}
       {businessHours && (

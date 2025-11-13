@@ -310,6 +310,145 @@ export class TenantService {
     ];
   }
 
+  static async getTenantVideos(tenantId: string): Promise<any[]> {
+    return await PerformanceMonitor.monitorDatabaseQuery(
+      'getTenantVideos',
+      async () => {
+        console.log('[getTenantVideos] Starting for tenantId:', tenantId);
+        
+        try {
+          const supabase = getSupabaseClient();
+          
+          const { data: videos, error } = await supabase
+            .from('tenant_videos')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+
+          if (error) {
+            console.error('[getTenantVideos] Database error:', error);
+            throw error;
+          }
+
+          const formattedVideos = (videos || []).map(video => ({
+            id: video.id,
+            title: video.title,
+            youtubeUrl: video.youtube_url,
+            thumbnail: video.thumbnail,
+            description: video.description,
+            displayOrder: video.display_order,
+            isActive: video.is_active,
+            createdAt: new Date(video.created_at),
+            updatedAt: new Date(video.updated_at),
+          }));
+
+          return formattedVideos;
+        } catch (error) {
+          console.error('[getTenantVideos] Exception:', error);
+          return [];
+        }
+      },
+      tenantId
+    );
+  }
+
+  static async getTenantSocialMedia(tenantId: string): Promise<any[]> {
+    return await PerformanceMonitor.monitorDatabaseQuery(
+      'getTenantSocialMedia',
+      async () => {
+        console.log('[getTenantSocialMedia] Starting for tenantId:', tenantId);
+        
+        try {
+          const supabase = getSupabaseClient();
+          
+          const { data: socialMedia, error } = await supabase
+            .from('tenant_social_media')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+
+          if (error) {
+            console.error('[getTenantSocialMedia] Database error:', error);
+            throw error;
+          }
+
+          const formattedSocial = (socialMedia || []).map(social => ({
+            id: social.id,
+            platform: social.platform,
+            url: social.url,
+            displayOrder: social.display_order,
+            isActive: social.is_active,
+            createdAt: new Date(social.created_at),
+            updatedAt: new Date(social.updated_at),
+          }));
+
+          return formattedSocial;
+        } catch (error) {
+          console.error('[getTenantSocialMedia] Exception:', error);
+          return [];
+        }
+      },
+      tenantId
+    );
+  }
+
+  static async getTenantGalleries(tenantId: string): Promise<any[]> {
+    return await PerformanceMonitor.monitorDatabaseQuery(
+      'getTenantGalleries',
+      async () => {
+        console.log('[getTenantGalleries] Starting for tenantId:', tenantId);
+        
+        try {
+          const supabase = getSupabaseClient();
+          
+          const { data: galleries, error } = await supabase
+            .from('tenant_photo_galleries')
+            .select(`
+              *,
+              photos:tenant_gallery_photos(*)
+            `)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('[getTenantGalleries] Database error:', error);
+            throw error;
+          }
+
+          const formattedGalleries = (galleries || []).map(gallery => ({
+            id: gallery.id,
+            tenantId: gallery.tenant_id,
+            title: gallery.title,
+            description: gallery.description,
+            displayType: gallery.display_type,
+            isActive: gallery.is_active,
+            createdAt: new Date(gallery.created_at),
+            updatedAt: new Date(gallery.updated_at),
+            photos: (gallery.photos || []).map((photo: any) => ({
+              id: photo.id,
+              url: photo.url,
+              caption: photo.caption,
+              alt: photo.alt,
+              displayOrder: photo.display_order,
+              isActive: photo.is_active,
+              createdAt: new Date(photo.created_at),
+              updatedAt: new Date(photo.updated_at),
+            })).sort((a: any, b: any) => a.displayOrder - b.displayOrder),
+          }));
+
+          return formattedGalleries;
+        } catch (error) {
+          console.error('[getTenantGalleries] Exception:', error);
+          return [];
+        }
+      },
+      tenantId
+    );
+  }
+
   private static getDefaultBusinessHours(): BusinessHours {
     return {
       monday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
