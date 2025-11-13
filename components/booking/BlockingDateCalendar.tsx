@@ -51,16 +51,6 @@ export function BlockingDateCalendar({
   return (
     <div className="space-y-3 p-4">
       <style>{`
-        .blocking-date-calendar .rdp-day_disabled {
-          background-color: #fee2e2 !important;
-          color: #b91c1c !important;
-          font-weight: 600 !important;
-          border: 2px solid #dc2626 !important;
-        }
-        .blocking-date-calendar .rdp-day:not(.rdp-day_disabled):not(.rdp-day_selected) {
-          background-color: #f0fdf4 !important;
-          color: #166534 !important;
-        }
         /* Sembunyikan nav & caption bawaan DayPicker */
         .blocking-date-calendar .rdp-nav {
           display: none !important;
@@ -119,11 +109,12 @@ export function BlockingDateCalendar({
           className="w-full"
           classNames={{
             cell: 'h-9 w-9 text-center text-sm p-0 relative',
-            day: 'h-9 w-9 p-0 font-normal text-sm rounded',
+            day: 'h-9 w-9 p-0 font-normal text-sm rounded bg-green-100 text-green-700',
             day_selected:
               'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
             day_today: 'bg-blue-100 text-blue-900 font-bold',
             day_outside: 'text-gray-400 opacity-50',
+            day_disabled: 'bg-red-100 text-red-700 font-semibold border-2 border-red-600 cursor-not-allowed',
             head_cell: 'text-gray-600 font-semibold text-xs',
             caption_label: 'text-sm font-semibold text-gray-900',
           }}
