@@ -146,7 +146,7 @@ export default function BookingDialog({
         const data = await response.json();
         console.log('[BookingDialog] Blocked dates loaded:', data.blockedDates?.length || 0);
         // Convert to Set of date strings (YYYY-MM-DD) for efficient lookup
-        const dateSet = new Set(
+        const dateSet = new Set<string>(
           (data.blockedDates || []).map((bd: any) => 
             new Date(bd.date).toISOString().split('T')[0]
           )
