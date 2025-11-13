@@ -12,7 +12,7 @@ const getSupabaseClient = () => {
 // DELETE - Remove media item
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { type: string; id: string } }
+  { params }: { params: Promise<{ type: string; id: string }> }
 ) {
   try {
     const tenant = await getTenantFromRequest(req);
@@ -20,7 +20,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { type, id } = params;
+    const { type, id } = await params;
 
     if (!type || !id) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
@@ -64,7 +64,7 @@ export async function DELETE(
 // PATCH - Update single item
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { type: string; id: string } }
+  { params }: { params: Promise<{ type: string; id: string }> }
 ) {
   try {
     const tenant = await getTenantFromRequest(req);
@@ -72,7 +72,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { type, id } = params;
+    const { type, id } = await params;
     const body = await req.json();
 
     if (!type || !id) {
