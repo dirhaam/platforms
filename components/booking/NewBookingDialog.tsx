@@ -380,43 +380,41 @@ export function NewBookingDialog({
                 </Select>
               </div>
 
-              {/* Date & Time */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00').toLocaleDateString() : 'Pick a date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00') : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            const dateStr = date.toISOString().split('T')[0];
-                            setBooking({ ...booking, scheduledAt: dateStr, selectedTimeSlot: undefined });
-                          }
-                        }}
-                        disabled={(date) => {
-                          // Disable past dates
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          if (date < today) return true;
-                          // Disable blocked dates
+              {/* Date Picker */}
+              <div className="space-y-2">
+                <Label>Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00').toLocaleDateString() : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00') : undefined}
+                      onSelect={(date) => {
+                        if (date) {
                           const dateStr = date.toISOString().split('T')[0];
-                          return blockedDates.has(dateStr);
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                          setBooking({ ...booking, scheduledAt: dateStr, selectedTimeSlot: undefined });
+                        }
+                      }}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        if (date < today) return true;
+                        const dateStr = date.toISOString().split('T')[0];
+                        return blockedDates.has(dateStr);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-                {/* Time Slot Picker */}
-                {booking.scheduledAt && booking.serviceId && (
+              {/* Time Slot Picker */}
+              {booking.scheduledAt && booking.serviceId && (
+                <div className="space-y-2">
                   <TimeSlotPicker
                     serviceId={booking.serviceId}
                     selectedDate={new Date(booking.scheduledAt + 'T00:00')}
@@ -424,8 +422,8 @@ export function NewBookingDialog({
                     selectedSlot={booking.selectedTimeSlot}
                     tenantId={subdomain}
                   />
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Home Visit */}
               <div className="space-y-3 border rounded-lg p-4 bg-blue-50">

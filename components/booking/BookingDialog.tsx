@@ -597,53 +597,51 @@ export default function BookingDialog({
             </div>
 
             {/* Appointment Preferences */}
-            <div className="space-y-4">
+            <div className="space-y-4 border-t pt-4">
               <h3 className="text-lg font-semibold flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
+                <CalendarIcon className="h-5 w-5 mr-2" />
                 Appointment Preferences
               </h3>
               
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Preferred Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.preferredDate ? new Date(formData.preferredDate + 'T00:00').toLocaleDateString() : 'Pick a date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.preferredDate ? new Date(formData.preferredDate + 'T00:00') : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            const dateStr = date.toISOString().split('T')[0];
-                            handleInputChange('preferredDate', dateStr);
-                            // Reset time slot when date changes
-                            setFormData(prev => ({ ...prev, selectedTimeSlot: undefined }));
-                          }
-                        }}
-                        disabled={(date) => {
-                          // Disable past dates
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          if (date < today) return true;
-                          // Disable blocked dates
+              {/* Date Picker */}
+              <div className="space-y-2">
+                <Label>Preferred Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.preferredDate ? new Date(formData.preferredDate + 'T00:00').toLocaleDateString() : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.preferredDate ? new Date(formData.preferredDate + 'T00:00') : undefined}
+                      onSelect={(date) => {
+                        if (date) {
                           const dateStr = date.toISOString().split('T')[0];
-                          return blockedDates.has(dateStr);
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  {validationErrors.preferredDate && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.preferredDate}</p>
-                  )}
-                </div>
+                          handleInputChange('preferredDate', dateStr);
+                          setFormData(prev => ({ ...prev, selectedTimeSlot: undefined }));
+                        }
+                      }}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        if (date < today) return true;
+                        const dateStr = date.toISOString().split('T')[0];
+                        return blockedDates.has(dateStr);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {validationErrors.preferredDate && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.preferredDate}</p>
+                )}
+              </div>
 
-                {/* Time Slot Picker */}
-                {formData.preferredDate && selectedService && (
+              {/* Time Slot Picker */}
+              {formData.preferredDate && selectedService && (
+                <div className="space-y-2">
                   <TimeSlotPicker
                     serviceId={selectedService.id}
                     selectedDate={new Date(formData.preferredDate + 'T00:00')}
@@ -651,11 +649,11 @@ export default function BookingDialog({
                     selectedSlot={formData.selectedTimeSlot}
                     tenantId={tenant.id}
                   />
-                )}
-                {validationErrors.preferredTime && (
-                  <p className="text-red-500 text-sm">{validationErrors.preferredTime}</p>
-                )}
-              </div>
+                </div>
+              )}
+              {validationErrors.preferredTime && (
+                <p className="text-red-500 text-sm">{validationErrors.preferredTime}</p>
+              )}
             </div>
 
             {/* Home Visit Option */}
