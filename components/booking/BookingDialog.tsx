@@ -19,7 +19,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare } from 'lucide-react';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { PricingCalculator } from '@/components/booking/PricingCalculator';
-import { Address } from '@/types/location';
+import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
+import { Address, TravelCalculation } from '@/types/location';
 import { Service } from '@/types/booking';
 import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
 
@@ -54,6 +55,7 @@ interface BookingFormData {
   notes: string;
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'qris';
   dpAmount?: number;
+  travelCalculation?: TravelCalculation;
 }
 
 export default function BookingDialog({ 
@@ -95,6 +97,7 @@ export default function BookingDialog({
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [travelCalculation, setTravelCalculation] = useState<TravelCalculation | undefined>(undefined);
 
   // Fetch invoice settings on mount
   React.useEffect(() => {
@@ -331,6 +334,14 @@ export default function BookingDialog({
         ...(formData.isHomeVisit && isFinite(Number(formData.homeVisitLat)) && isFinite(Number(formData.homeVisitLng))
           ? { homeVisitCoordinates: { lat: Number(formData.homeVisitLat), lng: Number(formData.homeVisitLng) } }
           : {}),
+        ...(formData.isHomeVisit && travelCalculation
+          ? { 
+              travelDistance: travelCalculation.distance,
+              travelDuration: travelCalculation.duration,
+              travelRoute: travelCalculation.route,
+              travelSurchargeAmount: travelCalculation.surcharge
+            }
+          : {}),
         ...(formData.notes ? { notes: formData.notes.trim() } : {}),
       };
 
@@ -390,8 +401,10 @@ export default function BookingDialog({
       notes: '',
       paymentMethod: 'cash',
       dpAmount: 0,
+      travelCalculation: undefined,
     });
     setCalculatedPrice(selectedService ? Number(selectedService.price) : 0);
+    setTravelCalculation(undefined);
   };
 
   const defaultTrigger = (
@@ -599,14 +612,48 @@ export default function BookingDialog({
                 </div>
                 
                 {formData.isHomeVisit && (
-                  <HomeVisitAddressSelector
-                    address={formData.homeVisitAddress}
-                    latitude={formData.homeVisitLat}
-                    longitude={formData.homeVisitLng}
-                    tenantId={tenant.id}
-                    onAddressChange={(addr) => setFormData(prev => ({ ...prev, homeVisitAddress: addr }))}
-                    onCoordinatesChange={(lat, lng) => setFormData(prev => ({ ...prev, homeVisitLat: lat, homeVisitLng: lng }))}
-                  />
+                  <>
+                    <HomeVisitAddressSelector
+                      address={formData.homeVisitAddress}
+                      latitude={formData.homeVisitLat}
+                      longitude={formData.homeVisitLng}
+                      tenantId={tenant.id}
+                      onAddressChange={(addr) => setFormData(prev => ({ ...prev, homeVisitAddress: addr }))}
+                      onCoordinatesChange={(lat, lng) => setFormData(prev => ({ ...prev, homeVisitLat: lat, homeVisitLng: lng }))}
+                    />
+
+                    {/* Travel Estimate Placeholder or Card */}
+                    {!formData.homeVisitAddress || formData.homeVisitLat === undefined || formData.homeVisitLat === null || formData.homeVisitLng === undefined || formData.homeVisitLng === null ? (
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center text-sm text-blue-700">
+                        📍 Masukkan alamat dan koordinat home visit untuk melihat estimasi biaya travel
+                      </div>
+                    ) : null}
+
+                    {/* Travel Estimate */}
+                    {formData.homeVisitAddress && typeof formData.homeVisitLat === 'number' && typeof formData.homeVisitLng === 'number' && businessCoordinates && selectedService && (
+                      <div className="mt-4">
+                        <TravelEstimateCard
+                          tenantId={tenant.id}
+                          origin={businessCoordinates}
+                          destination={formData.homeVisitAddress}
+                          destinationCoordinates={{
+                            lat: formData.homeVisitLat,
+                            lng: formData.homeVisitLng
+                          }}
+                          serviceId={selectedService.id}
+                          onCalculationComplete={(calc) => {
+                            console.log('[BookingDialog] Travel calculation complete:', calc);
+                            setTravelCalculation(calc);
+                          }}
+                          onConfirm={(calc) => {
+                            console.log('[BookingDialog] Travel calculation confirmed:', calc);
+                            setTravelCalculation(calc);
+                          }}
+                          autoCalculate={true}
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
