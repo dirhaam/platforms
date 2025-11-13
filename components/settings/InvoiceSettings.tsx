@@ -371,20 +371,14 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                         </Button>
                       )}
                     </div>
-                    {form.branding.logoUrl && !form.branding.logoUrl.startsWith('data:') && (
-                      <p className="text-xs text-gray-500 break-all">
-                        {form.branding.logoUrl}
-                      </p>
+                    {form.branding.logoUrl && (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
+                        <span>✓ Logo uploaded</span>
+                      </div>
                     )}
                     <p className="text-xs text-gray-500">
-                      Atau paste URL gambar publik di bawah. Format: PNG/JPG/WebP/SVG, Max 5MB.
+                      Format: PNG/JPG/WebP/SVG, Max 5MB.
                     </p>
-                    <Input
-                      placeholder="https://example.com/logo.png (optional)"
-                      value={form.branding.logoUrl}
-                      onChange={handleBrandingChange('logoUrl')}
-                      disabled={loading || saving || uploading}
-                    />
                   </div>
                 </div>
 
