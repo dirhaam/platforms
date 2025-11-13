@@ -61,8 +61,11 @@ export function BlockingDateCalendar({
           background-color: #f0fdf4 !important;
           color: #166534 !important;
         }
-        /* Sembunyikan nav bawaan DayPicker (karena kita buat sendiri) */
+        /* Sembunyikan nav & caption bawaan DayPicker */
         .blocking-date-calendar .rdp-nav {
+          display: none !important;
+        }
+        .blocking-date-calendar .rdp-caption {
           display: none !important;
         }
       `}</style>
