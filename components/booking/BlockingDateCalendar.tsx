@@ -196,7 +196,7 @@ export function BlockingDateCalendar({
                 flex items-center justify-center
                 ${
                   isSelectedDay
-                    ? 'bg-blue-600 text-white shadow-md'
+                    ? 'bg-black text-white shadow-md'
                     : isBlockedOrDisabled
                     ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
                     : isSundayDate
