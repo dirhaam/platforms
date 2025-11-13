@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Calendar, FileText, Palette } from 'lucide-react';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
+import OperatingHoursSettings from '@/components/settings/OperatingHoursSettings';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
 
 interface TenantData {
@@ -95,8 +96,15 @@ export default function SettingsPageContent() {
 
           {/* Calendar Tab */}
           <TabsContent value="calendar" className="mt-0">
-            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
-              {tenantId && <BlockedDatesManager tenantId={tenantId} />}
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2 space-y-6">
+              {tenantId && (
+                <>
+                  <OperatingHoursSettings tenantId={tenantId} />
+                  <div className="mt-8 pt-8 border-t">
+                    <BlockedDatesManager tenantId={tenantId} />
+                  </div>
+                </>
+              )}
             </div>
           </TabsContent>
         </div>

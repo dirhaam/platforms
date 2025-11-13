@@ -63,7 +63,13 @@ export const createServiceSchema = z.object({
   homeVisitAvailable: z.boolean().optional().default(false),
   homeVisitSurcharge: z.number().min(0).optional().nullable(),
   images: z.array(z.string().url()).optional().default([]),
-  requirements: z.array(z.string()).optional().default([])
+  requirements: z.array(z.string()).optional().default([]),
+  operatingHours: z.object({
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/)
+  }).optional(),
+  slotDurationMinutes: z.number().min(15).max(480).optional().default(30),
+  hourlyQuota: z.number().min(1).max(100).optional().default(10)
 });
 
 export const updateServiceSchema = z.object({
@@ -76,7 +82,13 @@ export const updateServiceSchema = z.object({
   homeVisitAvailable: z.boolean().optional(),
   homeVisitSurcharge: z.number().min(0).optional().nullable(),
   images: z.array(z.string().url()).optional().default([]),
-  requirements: z.array(z.string()).optional().default([])
+  requirements: z.array(z.string()).optional().default([]),
+  operatingHours: z.object({
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/)
+  }).optional().nullable(),
+  slotDurationMinutes: z.number().min(15).max(480).optional(),
+  hourlyQuota: z.number().min(1).max(100).optional()
 });
 
 // Customer validation schemas

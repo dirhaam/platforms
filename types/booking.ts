@@ -176,6 +176,12 @@ export interface CreateServiceRequest {
   homeVisitSurcharge?: number;
   images?: string[];
   requirements?: string[];
+  operatingHours?: {
+    startTime: string;
+    endTime: string;
+  };
+  slotDurationMinutes?: number;
+  hourlyQuota?: number;
 }
 
 // Update service request
@@ -190,6 +196,12 @@ export interface UpdateServiceRequest {
   homeVisitSurcharge?: number;
   images?: string[];
   requirements?: string[];
+  operatingHours?: {
+    startTime: string;
+    endTime: string;
+  } | null;
+  slotDurationMinutes?: number;
+  hourlyQuota?: number;
 }
 
 // Create customer request
