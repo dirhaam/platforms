@@ -48,13 +48,14 @@ export function BlockingDateCalendar({
   return (
     <div className="space-y-3 p-4">
       <style>{`
-        /* Sembunyikan caption & nav bawaan semua DayPicker */
-        .rdp-caption,
-        .rdp-nav {
+        /* Sembunyikan caption & nav bawaan DayPicker */
+        .blocking-date-calendar .rdp-caption,
+        .blocking-date-calendar .rdp-nav,
+        .blocking-date-calendar .rdp-button_reset {
           display: none !important;
         }
 
-        /* Styling tanggal: merah untuk blocked (aria-disabled="true"), hijau untuk available */
+        /* Styling tanggal: merah untuk blocked, hijau untuk available */
         .blocking-date-calendar button[aria-disabled="true"] {
           background-color: #fee2e2 !important;
           color: #b91c1c !important;
@@ -113,18 +114,17 @@ export function BlockingDateCalendar({
           disabled={isDisabledOrBlocked}
           month={currentMonth}
           onMonthChange={handleMonthChange}
+          weekStartsOn={1}
           disableNavigation
           className="w-full"
           classNames={{
             cell: 'h-9 w-9 text-center text-sm p-0 relative',
-            // tidak pakai bg di sini, biar diatur CSS aria-disabled di atas
             day: 'h-9 w-9 p-0 font-normal text-sm rounded',
             day_selected:
               'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
             day_today: 'bg-blue-100 text-blue-900 font-bold',
             day_outside: 'text-gray-400 opacity-50',
-            day_disabled:
-              'font-semibold', // warna & bg di-handle CSS aria-disabled
+            day_disabled: 'font-semibold',
             head_cell: 'text-gray-600 font-semibold text-xs',
             caption_label: 'text-sm font-semibold text-gray-900',
           }}
