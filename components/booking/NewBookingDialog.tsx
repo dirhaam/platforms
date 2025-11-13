@@ -98,7 +98,7 @@ export function NewBookingDialog({
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+  const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (open) {
@@ -155,12 +155,13 @@ export function NewBookingDialog({
         const data = await blockedDatesRes.json();
         console.log('[NewBookingDialog] Blocked dates loaded:', data.blockedDates?.length || 0);
         // Convert to Set of date strings (YYYY-MM-DD) for efficient lookup
-        const dateSet = new Set<string>(
-          (data.blockedDates || []).map((bd: any) => 
-            new Date(bd.date).toISOString().split('T')[0]
-          )
+        const dateMap = new Map<string, string>(
+          (data.blockedDates || []).map((bd: any) => [
+            new Date(bd.date).toISOString().split('T')[0],
+            bd.reason || 'No reason provided'
+          ])
         );
-        setBlockedDates(dateSet);
+        setBlockedDates(dateMap);
       } else {
         console.warn('[NewBookingDialog] Failed to fetch blocked dates:', blockedDatesRes.status);
       }

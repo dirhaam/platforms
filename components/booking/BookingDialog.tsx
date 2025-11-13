@@ -102,7 +102,7 @@ export default function BookingDialog({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [travelCalculation, setTravelCalculation] = useState<TravelCalculation | undefined>(undefined);
-  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+  const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
 
   // Fetch invoice settings on mount
   React.useEffect(() => {
@@ -145,13 +145,14 @@ export default function BookingDialog({
         }
         const data = await response.json();
         console.log('[BookingDialog] Blocked dates loaded:', data.blockedDates?.length || 0);
-        // Convert to Set of date strings (YYYY-MM-DD) for efficient lookup
-        const dateSet = new Set<string>(
-          (data.blockedDates || []).map((bd: any) => 
-            new Date(bd.date).toISOString().split('T')[0]
-          )
+        // Convert to Map of date strings (YYYY-MM-DD) -> reason for lookup with reason display
+        const dateMap = new Map<string, string>(
+          (data.blockedDates || []).map((bd: any) => [
+            new Date(bd.date).toISOString().split('T')[0],
+            bd.reason || 'No reason provided'
+          ])
         );
-        setBlockedDates(dateSet);
+        setBlockedDates(dateMap);
       } catch (error) {
         console.warn('[BookingDialog] Error fetching blocked dates:', error);
       }
