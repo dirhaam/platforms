@@ -58,6 +58,14 @@ export function TimeSlotPicker({
       const data = await response.json();
       console.log('[TimeSlotPicker] Availability response:', data);
       // API returns availability directly, not nested
+      // Convert string timestamps to Date objects
+      if (data && data.slots) {
+        data.slots = data.slots.map((slot: any) => ({
+          ...slot,
+          start: typeof slot.start === 'string' ? new Date(slot.start) : slot.start,
+          end: typeof slot.end === 'string' ? new Date(slot.end) : slot.end
+        }));
+      }
       setAvailability(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch availability');
