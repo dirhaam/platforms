@@ -73,23 +73,28 @@ export function BlockingDateCalendar({
     onMonthChange?.(newMonth);
   };
 
+  const getDateString = (year: number, month: number, day: number) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const isPastDate = (year: number, month: number, day: number) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateToCheck = new Date(year, month, day);
+    dateToCheck.setHours(0, 0, 0, 0);
+    return dateToCheck < today;
+  };
+
   const isDisabledOrBlocked = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     return disabled?.(date) || blockedDates.has(dateStr);
   };
 
-  const isSelected = (day: number) => {
+  const isSelected = (year: number, month: number, day: number) => {
     if (!selected) return false;
-    const date = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day
-    );
-    return (
-      date.getFullYear() === selected.getFullYear() &&
-      date.getMonth() === selected.getMonth() &&
-      date.getDate() === selected.getDate()
-    );
+    const selectedDateStr = selected.toISOString().split('T')[0];
+    const currentDateStr = getDateString(year, month, day);
+    return selectedDateStr === currentDateStr;
   };
 
   const calendarDays = getCalendarDays(currentMonth);
@@ -147,29 +152,30 @@ export function BlockingDateCalendar({
             );
           }
 
-          const date = new Date(
-            currentMonth.getFullYear(),
-            currentMonth.getMonth(),
-            day
-          );
+          const year = currentMonth.getFullYear();
+          const month = currentMonth.getMonth();
+          const date = new Date(year, month, day);
           const isBlockedOrDisabled = isDisabledOrBlocked(date);
-          const isSelectedDay = isSelected(day);
+          const isPast = isPastDate(year, month, day);
+          const isSelectedDay = isSelected(year, month, day);
 
           return (
             <button
               key={day}
               onClick={() => {
-                if (!isBlockedOrDisabled) {
+                if (!isBlockedOrDisabled && !isPast) {
                   onSelect(date);
                 }
               }}
-              disabled={isBlockedOrDisabled}
+              disabled={isBlockedOrDisabled || isPast}
               className={`
                 h-10 w-10 rounded-xl font-semibold text-sm transition-all
                 flex items-center justify-center
                 ${
                   isSelectedDay
                     ? 'bg-blue-600 text-white shadow-md'
+                    : isPast
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : isBlockedOrDisabled
                     ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
                     : 'bg-gray-50 text-gray-900 hover:bg-blue-50'
