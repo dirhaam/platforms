@@ -636,16 +636,17 @@ export class BookingService {
         return null;
       }
       
-      // Get operating hours from service, default to 8AM-5PM
-      const operatingHours = service.operatingHours;
-      if (!operatingHours) {
-        console.warn('[getAvailability] No operating hours configured for service:', request.serviceId);
-        return {
-          date: request.date,
-          slots: [],
-          businessHours: { isOpen: false }
-        };
-      }
+      // Get operating hours from service, default to 8AM-5PM if not set
+      const operatingHours = service.operatingHours || {
+        startTime: '08:00',
+        endTime: '17:00'
+      };
+      
+      console.log('[getAvailability] Using operating hours:', {
+        serviceId: request.serviceId,
+        operatingHours,
+        hasConfiguredHours: !!service.operatingHours
+      });
       
       const [startHourStr, startMinStr] = operatingHours.startTime.split(':').map(Number);
       const [endHourStr, endMinStr] = operatingHours.endTime.split(':').map(Number);
