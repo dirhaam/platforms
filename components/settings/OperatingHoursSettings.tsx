@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertCircle, CheckCircle } from '@/components/ui/alert';
-import { Clock, Zap, Clock3 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock, Zap, Clock3, AlertCircle, CheckCircle } from 'lucide-react';
 import { Service } from '@/types/booking';
 
 interface ServiceHours {
