@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Calendar } from '@/components/ui/calendar';
-import { AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BlockingDateCalendarProps {
   selected?: Date;
@@ -19,15 +18,49 @@ function addMonths(date: Date, months: number) {
   return d;
 }
 
+function getDaysInMonth(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+}
+
+function getCalendarDays(date: Date): (number | null)[] {
+  const daysInMonth = getDaysInMonth(date);
+  const firstDay = getFirstDayOfMonth(date);
+  const days: (number | null)[] = [];
+
+  // Previous month days
+  const prevMonthDays = getDaysInMonth(addMonths(date, -1));
+  for (let i = (firstDay + 6) % 7; i > 0; i--) {
+    days.push(null);
+  }
+
+  // Current month days
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+
+  // Next month days
+  while (days.length < 42) {
+    days.push(null);
+  }
+
+  return days;
+}
+
 export function BlockingDateCalendar({
   selected,
   onSelect,
   disabled,
   blockedDates,
   month,
-  onMonthChange
+  onMonthChange,
 }: BlockingDateCalendarProps) {
-  const [internalMonth, setInternalMonth] = useState<Date>(month ?? new Date());
+  const [internalMonth, setInternalMonth] = useState<Date>(
+    month ?? new Date()
+  );
 
   useEffect(() => {
     if (month) setInternalMonth(month);
@@ -45,112 +78,110 @@ export function BlockingDateCalendar({
     return disabled?.(date) || blockedDates.has(dateStr);
   };
 
+  const isSelected = (day: number) => {
+    if (!selected) return false;
+    const date = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    );
+    return (
+      date.getFullYear() === selected.getFullYear() &&
+      date.getMonth() === selected.getMonth() &&
+      date.getDate() === selected.getDate()
+    );
+  };
+
+  const calendarDays = getCalendarDays(currentMonth);
+  const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
   return (
-    <div className="space-y-3 p-4">
-      <style>{`
-        /* Sembunyikan caption & nav bawaan DayPicker */
-        .blocking-date-calendar .rdp-caption,
-        .blocking-date-calendar .rdp-nav,
-        .blocking-date-calendar .rdp-button_reset {
-          display: none !important;
-        }
-
-        /* Styling tanggal: merah untuk blocked, hijau untuk available */
-        .blocking-date-calendar button[aria-disabled="true"] {
-          background-color: #fee2e2 !important;
-          color: #b91c1c !important;
-          font-weight: 600 !important;
-          border: 2px solid #dc2626 !important;
-          cursor: not-allowed !important;
-        }
-        .blocking-date-calendar button[aria-disabled="false"] {
-          background-color: #f0fdf4 !important;
-          color: #166534 !important;
-        }
-      `}</style>
-
-      {/* Legend */}
-      <div className="grid grid-cols-2 gap-3 pb-3 border-b">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-red-100 border-2 border-red-500 rounded" />
-          <span className="text-xs text-gray-700">Blocked</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-green-100 border border-gray-300 rounded" />
-          <span className="text-xs text-gray-700">Available</span>
-        </div>
-      </div>
-
-      {/* Custom caption: < November 2025 > */}
-      <div className="flex items-center justify-center gap-3 text-sm font-semibold text-gray-900">
+    <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-sm mx-auto">
+      {/* Header dengan month/year dan navigation */}
+      <div className="flex items-center justify-between mb-6">
         <button
-          type="button"
-          className="px-2 py-1 rounded hover:bg-gray-100"
           onClick={() => handleMonthChange(addMonths(currentMonth, -1))}
-        >
-          &lt;
-        </button>
-        <span className="min-w-[140px] text-center">
-          {currentMonth.toLocaleDateString('en-US', {
-            month: 'long',
-            year: 'numeric',
-          })}
-        </span>
-        <button
+          className="w-12 h-12 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors"
           type="button"
-          className="px-2 py-1 rounded hover:bg-gray-100"
-          onClick={() => handleMonthChange(addMonths(currentMonth, 1))}
         >
-          &gt;
+          <ChevronLeft className="w-6 h-6 text-gray-700" />
         </button>
-      </div>
 
-      {/* Calendar */}
-      <div className="blocking-date-calendar">
-        <Calendar
-          mode="single"
-          selected={selected}
-          onSelect={onSelect}
-          disabled={isDisabledOrBlocked}
-          month={currentMonth}
-          onMonthChange={handleMonthChange}
-          weekStartsOn={1}
-          disableNavigation
-          className="w-full"
-          classNames={{
-            cell: 'h-9 w-9 text-center text-sm p-0 relative',
-            day: 'h-9 w-9 p-0 font-normal text-sm rounded',
-            day_selected:
-              'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
-            day_today: 'bg-blue-100 text-blue-900 font-bold',
-            day_outside: 'text-gray-400 opacity-50',
-            day_disabled: 'font-semibold',
-            head_cell: 'text-gray-600 font-semibold text-xs',
-            caption_label: 'text-sm font-semibold text-gray-900',
-          }}
-          formatters={{
-            formatWeekdayName: (date) =>
-              date.toLocaleDateString('en-US', { weekday: 'short' }),
-          }}
-        />
-      </div>
-
-      {/* Info Box */}
-      {blockedDates.size > 0 && (
-        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-medium text-red-800">
-                {blockedDates.size} date{blockedDates.size !== 1 ? 's' : ''} blocked
-              </p>
-              <p className="text-xs text-red-700 mt-1">
-                Dates marked in red are not available for booking.
-              </p>
-            </div>
+        <div className="text-center flex-1">
+          <div className="text-2xl font-bold text-gray-900 tracking-wide">
+            {currentMonth.toLocaleDateString('en-US', { month: 'long' })}{' '}
+            <span>{currentMonth.getFullYear()}</span>
           </div>
         </div>
-      )}
+
+        <button
+          onClick={() => handleMonthChange(addMonths(currentMonth, 1))}
+          className="w-12 h-12 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors"
+          type="button"
+        >
+          <ChevronRight className="w-6 h-6 text-gray-700" />
+        </button>
+      </div>
+
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 gap-2 mb-2">
+        {weekdays.map((day) => (
+          <div
+            key={day}
+            className="text-center text-sm font-semibold text-gray-600 h-10 flex items-center justify-center"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {calendarDays.map((day, idx) => {
+          if (day === null) {
+            return (
+              <div
+                key={`empty-${idx}`}
+                className="h-10 w-10 rounded-xl"
+              />
+            );
+          }
+
+          const date = new Date(
+            currentMonth.getFullYear(),
+            currentMonth.getMonth(),
+            day
+          );
+          const isBlockedOrDisabled = isDisabledOrBlocked(date);
+          const isSelectedDay = isSelected(day);
+
+          return (
+            <button
+              key={day}
+              onClick={() => {
+                if (!isBlockedOrDisabled) {
+                  onSelect(date);
+                }
+              }}
+              disabled={isBlockedOrDisabled}
+              className={`
+                h-10 w-10 rounded-xl font-semibold text-sm transition-all
+                flex items-center justify-center
+                ${
+                  isSelectedDay
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : isBlockedOrDisabled
+                    ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
+                    : 'bg-gray-50 text-gray-900 hover:bg-blue-50'
+                }
+              `}
+              type="button"
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
