@@ -20,6 +20,12 @@ interface NewService {
   isActive: boolean;
   homeVisitAvailable: boolean;
   homeVisitSurcharge: number;
+  operatingHours?: {
+    startTime: string;
+    endTime: string;
+  } | null;
+  slotDurationMinutes: number;
+  hourlyQuota: number;
 }
 
 const DEFAULT_SERVICE: NewService = {
@@ -30,7 +36,13 @@ const DEFAULT_SERVICE: NewService = {
   price: 0,
   isActive: true,
   homeVisitAvailable: false,
-  homeVisitSurcharge: 0
+  homeVisitSurcharge: 0,
+  operatingHours: {
+    startTime: '08:00',
+    endTime: '17:00'
+  },
+  slotDurationMinutes: 30,
+  hourlyQuota: 10
 };
 
 export function ServiceCreateContent() {
@@ -65,7 +77,10 @@ export function ServiceCreateContent() {
         },
         body: JSON.stringify({
           ...service,
-          homeVisitSurcharge: service.homeVisitSurcharge || 0
+          homeVisitSurcharge: service.homeVisitSurcharge || 0,
+          operatingHours: service.operatingHours,
+          slotDurationMinutes: service.slotDurationMinutes || 30,
+          hourlyQuota: service.hourlyQuota || 10
         })
       });
 
@@ -233,6 +248,93 @@ export function ServiceCreateContent() {
               <Label htmlFor="isActive" className="font-normal cursor-pointer">
                 Service is Active
               </Label>
+            </div>
+
+            {/* Operating Hours & Quota */}
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="font-semibold text-gray-900">Booking Availability</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startTime">Start Time</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={service.operatingHours?.startTime || '08:00'}
+                    onChange={(e) =>
+                      setService({
+                        ...service,
+                        operatingHours: {
+                          ...service.operatingHours || { startTime: '08:00', endTime: '17:00' },
+                          startTime: e.target.value
+                        }
+                      })
+                    }
+                    disabled={submitting}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endTime">End Time</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={service.operatingHours?.endTime || '17:00'}
+                    onChange={(e) =>
+                      setService({
+                        ...service,
+                        operatingHours: {
+                          ...service.operatingHours || { startTime: '08:00', endTime: '17:00' },
+                          endTime: e.target.value
+                        }
+                      })
+                    }
+                    disabled={submitting}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="slotDuration">Time Slot Duration (min)</Label>
+                  <Input
+                    id="slotDuration"
+                    type="number"
+                    value={service.slotDurationMinutes}
+                    onChange={(e) =>
+                      setService({
+                        ...service,
+                        slotDurationMinutes: parseInt(e.target.value) || 30
+                      })
+                    }
+                    disabled={submitting}
+                    className="mt-1"
+                    min="15"
+                    step="15"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Available time slot increment (15, 30, 60 min)</p>
+                </div>
+                <div>
+                  <Label htmlFor="hourlyQuota">Hourly Quota (max bookings/hour)</Label>
+                  <Input
+                    id="hourlyQuota"
+                    type="number"
+                    value={service.hourlyQuota}
+                    onChange={(e) =>
+                      setService({
+                        ...service,
+                        hourlyQuota: parseInt(e.target.value) || 10
+                      })
+                    }
+                    disabled={submitting}
+                    className="mt-1"
+                    min="1"
+                    step="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Max concurrent bookings per hour</p>
+                </div>
+              </div>
             </div>
 
             {/* Home Visit Options */}
