@@ -309,7 +309,7 @@ export function NewBookingDialog({
     <>
       {/* Main Booking Dialog */}
       <Dialog open={open && !showCustomerDialog} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6">
           <DialogHeader className="mb-6">
             <DialogTitle>Create New Booking</DialogTitle>
             <DialogDescription>
@@ -317,6 +317,7 @@ export function NewBookingDialog({
             </DialogDescription>
           </DialogHeader>
 
+          <div className="overflow-y-auto flex-1">
           {loading ? (
             <p className="text-gray-600 text-center py-8">Loading...</p>
           ) : (
@@ -659,13 +660,14 @@ export function NewBookingDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={submitting || !booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.scheduledTime}
+                  disabled={submitting || !booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.selectedTimeSlot}
                 >
                   {submitting ? 'Creating...' : 'Create Booking'}
                 </Button>
               </div>
             </form>
           )}
+          </div>
         </DialogContent>
       </Dialog>
 

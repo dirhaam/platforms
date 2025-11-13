@@ -451,7 +451,7 @@ export default function BookingDialog({
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {step === 'service' && 'Select Service'}
@@ -465,6 +465,7 @@ export default function BookingDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="overflow-y-auto flex-1 pr-4">
         {step === 'service' && (
           <div className="space-y-4">
             {selectedService ? (
@@ -974,6 +975,7 @@ export default function BookingDialog({
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
