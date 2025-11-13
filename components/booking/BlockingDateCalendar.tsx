@@ -111,6 +111,11 @@ export function BlockingDateCalendar({
     return selectedDateStr === currentDateStr;
   };
 
+  const isSunday = (year: number, month: number, day: number) => {
+    const date = new Date(year, month, day);
+    return date.getDay() === 0; // 0 = Sunday
+  };
+
   const calendarDays = getCalendarDays(currentMonth);
   const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
@@ -144,10 +149,12 @@ export function BlockingDateCalendar({
 
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-2 mb-2">
-        {weekdays.map((day) => (
+        {weekdays.map((day, index) => (
           <div
             key={day}
-            className="text-center text-sm font-semibold text-gray-600 h-10 flex items-center justify-center"
+            className={`text-center text-sm font-semibold h-10 flex items-center justify-center ${
+              index === 6 ? 'text-red-600' : 'text-gray-600'
+            }`}
           >
             {day}
           </div>
@@ -173,6 +180,7 @@ export function BlockingDateCalendar({
             const isBlockedOrDisabled = isDisabledOrBlocked(year, month, day);
             const isPast = isPastDate(year, month, day);
             const isSelectedDay = isSelected(year, month, day);
+            const isSundayDate = isSunday(year, month, day);
             const blockedReason = blockedDates.get(dateStr);
 
             const button = (
@@ -195,6 +203,8 @@ export function BlockingDateCalendar({
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : isBlockedOrDisabled
                       ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
+                      : isSundayDate
+                      ? 'bg-gray-50 text-red-600 hover:bg-blue-50'
                       : 'bg-gray-50 text-gray-900 hover:bg-blue-50'
                   }
                 `}
