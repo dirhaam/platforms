@@ -73,6 +73,13 @@ export function BlockingDateCalendar({
     onMonthChange?.(newMonth);
   };
 
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getDateString = (year: number, month: number, day: number) => {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
@@ -85,14 +92,15 @@ export function BlockingDateCalendar({
     return dateToCheck < today;
   };
 
-  const isDisabledOrBlocked = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+  const isDisabledOrBlocked = (year: number, month: number, day: number) => {
+    const dateStr = getDateString(year, month, day);
+    const date = new Date(year, month, day);
     return disabled?.(date) || blockedDates.has(dateStr);
   };
 
   const isSelected = (year: number, month: number, day: number) => {
     if (!selected) return false;
-    const selectedDateStr = selected.toISOString().split('T')[0];
+    const selectedDateStr = getLocalDateString(selected);
     const currentDateStr = getDateString(year, month, day);
     return selectedDateStr === currentDateStr;
   };
@@ -155,7 +163,7 @@ export function BlockingDateCalendar({
           const year = currentMonth.getFullYear();
           const month = currentMonth.getMonth();
           const date = new Date(year, month, day);
-          const isBlockedOrDisabled = isDisabledOrBlocked(date);
+          const isBlockedOrDisabled = isDisabledOrBlocked(year, month, day);
           const isPast = isPastDate(year, month, day);
           const isSelectedDay = isSelected(year, month, day);
 
