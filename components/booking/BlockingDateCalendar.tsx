@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertCircle } from 'lucide-react';
 
@@ -13,6 +13,12 @@ interface BlockingDateCalendarProps {
   onMonthChange?: (date: Date) => void;
 }
 
+function addMonths(date: Date, months: number) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
 export function BlockingDateCalendar({
   selected,
   onSelect,
@@ -21,6 +27,21 @@ export function BlockingDateCalendar({
   month,
   onMonthChange
 }: BlockingDateCalendarProps) {
+  // state internal untuk month kalau parent tidak kirim
+  const [internalMonth, setInternalMonth] = useState<Date>(month ?? new Date());
+
+  // sinkron kalau prop `month` berubah dari luar
+  useEffect(() => {
+    if (month) setInternalMonth(month);
+  }, [month]);
+
+  const currentMonth = month ?? internalMonth;
+
+  const handleMonthChange = (newMonth: Date) => {
+    setInternalMonth(newMonth);
+    onMonthChange?.(newMonth);
+  };
+
   // Custom disabled function that marks blocked dates red but still allows viewing
   const isDisabledOrBlocked = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
@@ -40,49 +61,46 @@ export function BlockingDateCalendar({
           background-color: #f0fdf4 !important;
           color: #166534 !important;
         }
-        /* Move prev/next buttons next to month name */
-        .blocking-date-calendar .rdp-caption {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 0.5rem !important;
-          position: relative !important;
-          width: 100% !important;
-        }
-        .blocking-date-calendar .rdp-caption_label {
-          order: 2 !important;
-          flex: 0 !important;
-          text-align: center !important;
-        }
+        /* Sembunyikan nav bawaan DayPicker (karena kita buat sendiri) */
         .blocking-date-calendar .rdp-nav {
-          position: static !important;
-          width: auto !important;
-          display: flex !important;
-          gap: 0.5rem !important;
-          order: 1 !important;
+          display: none !important;
         }
-        .blocking-date-calendar .rdp-nav_button_previous {
-          position: static !important;
-          order: 1 !important;
-        }
-        .blocking-date-calendar .rdp-nav_button_next {
-          position: static !important;
-          order: 3 !important;
-          margin-left: 0.5rem !important;
-        }
-
       `}</style>
 
       {/* Legend */}
       <div className="grid grid-cols-2 gap-3 pb-3 border-b">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-red-100 border-2 border-red-500 rounded"></div>
+          <div className="w-4 h-4 bg-red-100 border-2 border-red-500 rounded" />
           <span className="text-xs text-gray-700">Blocked</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-green-100 border border-gray-300 rounded"></div>
+          <div className="w-4 h-4 bg-green-100 border border-gray-300 rounded" />
           <span className="text-xs text-gray-700">Available</span>
         </div>
+      </div>
+
+      {/* Custom caption: < November 2025 > */}
+      <div className="flex items-center justify-center gap-3 text-sm font-semibold text-gray-900">
+        <button
+          type="button"
+          className="px-2 py-1 rounded hover:bg-gray-100"
+          onClick={() => handleMonthChange(addMonths(currentMonth, -1))}
+        >
+          &lt;
+        </button>
+        <span className="min-w-[140px] text-center">
+          {currentMonth.toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric',
+          })}
+        </span>
+        <button
+          type="button"
+          className="px-2 py-1 rounded hover:bg-gray-100"
+          onClick={() => handleMonthChange(addMonths(currentMonth, 1))}
+        >
+          &gt;
+        </button>
       </div>
 
       {/* Calendar */}
@@ -92,20 +110,23 @@ export function BlockingDateCalendar({
           selected={selected}
           onSelect={onSelect}
           disabled={isDisabledOrBlocked}
-          month={month}
-          onMonthChange={onMonthChange}
+          month={currentMonth}
+          onMonthChange={handleMonthChange}
+          disableNavigation
           className="w-full"
           classNames={{
             cell: 'h-9 w-9 text-center text-sm p-0 relative',
             day: 'h-9 w-9 p-0 font-normal text-sm rounded',
-            day_selected: 'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
+            day_selected:
+              'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
             day_today: 'bg-blue-100 text-blue-900 font-bold',
             day_outside: 'text-gray-400 opacity-50',
             head_cell: 'text-gray-600 font-semibold text-xs',
-            caption_label: 'text-sm font-semibold text-gray-900'
+            caption_label: 'text-sm font-semibold text-gray-900',
           }}
           formatters={{
-            formatWeekdayName: (date) => date.toLocaleDateString('en-US', { weekday: 'short' })
+            formatWeekdayName: (date) =>
+              date.toLocaleDateString('en-US', { weekday: 'short' }),
           }}
         />
       </div>
