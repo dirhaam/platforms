@@ -16,9 +16,9 @@ import { Plus, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
 import { TimeSlotPicker } from '@/components/booking/TimeSlotPicker';
+import { BlockingDateCalendar } from '@/components/booking/BlockingDateCalendar';
 import { TravelCalculation } from '@/types/location';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -394,8 +394,7 @@ export function NewBookingDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 z-50" align="start">
-                    <Calendar
-                      mode="single"
+                    <BlockingDateCalendar
                       selected={booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00') : undefined}
                       onSelect={(date) => {
                         if (date) {
@@ -406,10 +405,9 @@ export function NewBookingDialog({
                       disabled={(date) => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
-                        if (date < today) return true;
-                        const dateStr = date.toISOString().split('T')[0];
-                        return blockedDates.has(dateStr);
+                        return date < today;
                       }}
+                      blockedDates={blockedDates}
                     />
                   </PopoverContent>
                 </Popover>

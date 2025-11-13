@@ -21,7 +21,7 @@ import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddress
 import { PricingCalculator } from '@/components/booking/PricingCalculator';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
 import { TimeSlotPicker } from '@/components/booking/TimeSlotPicker';
-import { Calendar } from '@/components/ui/calendar';
+import { BlockingDateCalendar } from '@/components/booking/BlockingDateCalendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Address, TravelCalculation } from '@/types/location';
 import { Service, TimeSlot } from '@/types/booking';
@@ -615,8 +615,7 @@ export default function BookingDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 z-50" align="start">
-                    <Calendar
-                      mode="single"
+                    <BlockingDateCalendar
                       selected={formData.preferredDate ? new Date(formData.preferredDate + 'T00:00') : undefined}
                       onSelect={(date) => {
                         if (date) {
@@ -628,10 +627,9 @@ export default function BookingDialog({
                       disabled={(date) => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
-                        if (date < today) return true;
-                        const dateStr = date.toISOString().split('T')[0];
-                        return blockedDates.has(dateStr);
+                        return date < today;
                       }}
+                      blockedDates={blockedDates}
                     />
                   </PopoverContent>
                 </Popover>

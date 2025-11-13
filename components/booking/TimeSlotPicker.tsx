@@ -56,7 +56,9 @@ export function TimeSlotPicker({
       }
 
       const data = await response.json();
-      setAvailability(data.availability);
+      console.log('[TimeSlotPicker] Availability response:', data);
+      // API returns availability directly, not nested
+      setAvailability(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch availability');
     } finally {
