@@ -51,13 +51,13 @@ export function BlockingDateCalendar({
   return (
     <div className="space-y-3 p-4">
       <style>{`
-        .blocking-date-calendar button[aria-disabled="true"] {
+        .blocking-date-calendar .rdp-day_disabled {
           background-color: #fee2e2 !important;
           color: #b91c1c !important;
           font-weight: 600 !important;
           border: 2px solid #dc2626 !important;
         }
-        .blocking-date-calendar button[aria-disabled="false"]:not([aria-selected="true"]) {
+        .blocking-date-calendar .rdp-day:not(.rdp-day_disabled):not(.rdp-day_selected) {
           background-color: #f0fdf4 !important;
           color: #166534 !important;
         }
