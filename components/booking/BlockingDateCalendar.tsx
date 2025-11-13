@@ -27,10 +27,8 @@ export function BlockingDateCalendar({
   month,
   onMonthChange
 }: BlockingDateCalendarProps) {
-  // state internal untuk month kalau parent tidak kirim
   const [internalMonth, setInternalMonth] = useState<Date>(month ?? new Date());
 
-  // sinkron kalau prop `month` berubah dari luar
   useEffect(() => {
     if (month) setInternalMonth(month);
   }, [month]);
@@ -42,7 +40,6 @@ export function BlockingDateCalendar({
     onMonthChange?.(newMonth);
   };
 
-  // Custom disabled function that marks blocked dates red but still allows viewing
   const isDisabledOrBlocked = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     return disabled?.(date) || blockedDates.has(dateStr);
@@ -51,12 +48,23 @@ export function BlockingDateCalendar({
   return (
     <div className="space-y-3 p-4">
       <style>{`
-        /* Sembunyikan nav & caption bawaan DayPicker */
-        .blocking-date-calendar .rdp-nav {
+        /* Sembunyikan caption & nav bawaan semua DayPicker */
+        .rdp-caption,
+        .rdp-nav {
           display: none !important;
         }
-        .blocking-date-calendar .rdp-caption {
-          display: none !important;
+
+        /* Styling tanggal: merah untuk blocked (aria-disabled="true"), hijau untuk available */
+        .blocking-date-calendar button[aria-disabled="true"] {
+          background-color: #fee2e2 !important;
+          color: #b91c1c !important;
+          font-weight: 600 !important;
+          border: 2px solid #dc2626 !important;
+          cursor: not-allowed !important;
+        }
+        .blocking-date-calendar button[aria-disabled="false"] {
+          background-color: #f0fdf4 !important;
+          color: #166534 !important;
         }
       `}</style>
 
@@ -109,12 +117,14 @@ export function BlockingDateCalendar({
           className="w-full"
           classNames={{
             cell: 'h-9 w-9 text-center text-sm p-0 relative',
-            day: 'h-9 w-9 p-0 font-normal text-sm rounded bg-green-100 text-green-700',
+            // tidak pakai bg di sini, biar diatur CSS aria-disabled di atas
+            day: 'h-9 w-9 p-0 font-normal text-sm rounded',
             day_selected:
               'bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700',
             day_today: 'bg-blue-100 text-blue-900 font-bold',
             day_outside: 'text-gray-400 opacity-50',
-            day_disabled: 'bg-red-100 text-red-700 font-semibold border-2 border-red-600 cursor-not-allowed',
+            day_disabled:
+              'font-semibold', // warna & bg di-handle CSS aria-disabled
             head_cell: 'text-gray-600 font-semibold text-xs',
             caption_label: 'text-sm font-semibold text-gray-900',
           }}
