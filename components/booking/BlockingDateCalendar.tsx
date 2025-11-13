@@ -203,7 +203,7 @@ export function BlockingDateCalendar({
                   isSelectedDay
                     ? 'bg-black text-white shadow-md'
                     : isBlocked
-                    ? 'bg-red-100 text-red-700 border-2 border-red-600 cursor-not-allowed'
+                    ? 'bg-red-100 text-red-700 cursor-not-allowed'
                     : isSundayDate
                     ? isPast
                       ? 'bg-gray-100 text-red-600 cursor-not-allowed'
