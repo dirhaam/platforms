@@ -73,69 +73,53 @@ export async function PUT(req: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    // Update videos
+    // Update videos - delete all and re-insert (simpler approach)
     if (videos && Array.isArray(videos)) {
-      for (const video of videos) {
-        if (video.id && video.id.length > 5) {
-          // Update existing
-          await supabase
-            .from('tenant_videos')
-            .update({
-              title: video.title,
-              youtube_url: video.youtubeUrl,
-              thumbnail: video.thumbnail,
-              description: video.description,
-              display_order: video.displayOrder,
-              is_active: video.isActive,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', video.id)
-            .eq('tenant_id', tenant.id);
-        } else if (!video.id || video.id.length <= 5) {
-          // Insert new
-          await supabase
-            .from('tenant_videos')
-            .insert({
-              tenant_id: tenant.id,
-              title: video.title,
-              youtube_url: video.youtubeUrl,
-              thumbnail: video.thumbnail,
-              description: video.description,
-              display_order: video.displayOrder,
-              is_active: video.isActive,
-            });
-        }
+      // Delete existing videos for this tenant
+      await supabase
+        .from('tenant_videos')
+        .delete()
+        .eq('tenant_id', tenant.id);
+      
+      // Insert all videos
+      if (videos.length > 0) {
+        const videosToInsert = videos.map(video => ({
+          tenant_id: tenant.id,
+          title: video.title,
+          youtube_url: video.youtubeUrl,
+          thumbnail: video.thumbnail || null,
+          description: video.description || null,
+          display_order: video.displayOrder,
+          is_active: video.isActive !== false,
+        }));
+        
+        await supabase
+          .from('tenant_videos')
+          .insert(videosToInsert);
       }
     }
 
-    // Update social media
+    // Update social media - delete all and re-insert (simpler approach)
     if (socialMedia && Array.isArray(socialMedia)) {
-      for (const social of socialMedia) {
-        if (social.id && social.id.length > 5) {
-          // Update existing
-          await supabase
-            .from('tenant_social_media')
-            .update({
-              platform: social.platform,
-              url: social.url,
-              display_order: social.displayOrder,
-              is_active: social.isActive,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', social.id)
-            .eq('tenant_id', tenant.id);
-        } else if (!social.id || social.id.length <= 5) {
-          // Insert new
-          await supabase
-            .from('tenant_social_media')
-            .insert({
-              tenant_id: tenant.id,
-              platform: social.platform,
-              url: social.url,
-              display_order: social.displayOrder,
-              is_active: social.isActive,
-            });
-        }
+      // Delete existing social media for this tenant
+      await supabase
+        .from('tenant_social_media')
+        .delete()
+        .eq('tenant_id', tenant.id);
+      
+      // Insert all social media
+      if (socialMedia.length > 0) {
+        const socialToInsert = socialMedia.map(social => ({
+          tenant_id: tenant.id,
+          platform: social.platform,
+          url: social.url,
+          display_order: social.displayOrder,
+          is_active: social.isActive !== false,
+        }));
+        
+        await supabase
+          .from('tenant_social_media')
+          .insert(socialToInsert);
       }
     }
 
