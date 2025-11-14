@@ -364,49 +364,7 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
         </section>
       )}
 
-      {/* Contact */}
-      <section className="py-12 sm:py-16 bg-gray-50" aria-label="Contact">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-10" style={{ color: secondaryColor }}>Contact</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {tenant.phone && (
-              <Card className="border border-gray-200">
-                <CardContent className="pt-6">
-                  <Phone className="h-7 w-7 mx-auto mb-3" style={{ color: primaryColor }} />
-                  <h3 className="font-semibold text-center mb-2">Emergency & Appointments</h3>
-                  <a href={`tel:${tenant.phone}`} className="block text-center font-semibold hover:underline" style={{ color: secondaryColor }}>{tenant.phone}</a>
-                </CardContent>
-              </Card>
-            )}
-            {tenant.email && (
-              <Card className="border border-gray-200">
-                <CardContent className="pt-6">
-                  <Mail className="h-7 w-7 mx-auto mb-3" style={{ color: primaryColor }} />
-                  <h3 className="font-semibold text-center mb-2">Email</h3>
-                  <a href={`mailto:${tenant.email}`} className="block text-center font-semibold hover:underline" style={{ color: secondaryColor }}>{tenant.email}</a>
-                </CardContent>
-              </Card>
-            )}
-            {tenant.address && (
-              <Card className="border border-gray-200">
-                <CardContent className="pt-6">
-                  <MapPin className="h-7 w-7 mx-auto mb-3" style={{ color: primaryColor }} />
-                  <h3 className="font-semibold text-center mb-2">Location</h3>
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(tenant.address)}`}
-                    className="block text-center font-semibold hover:underline"
-                    style={{ color: secondaryColor }}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Get Directions
-                  </a>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </section>
+
 
       {/* Videos Section */}
       {videos && videos.length > 0 && (
@@ -438,33 +396,32 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
         />
       ))}
 
-      {/* CTA band */}
-      <section className="py-10" style={{ background: bgGradient }}>
+      {/* Unified Footer */}
+      <footer className="py-16 text-white" style={{ background: bgGradient }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-white">
+          {/* CTA Section */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-12 pb-8 border-b border-white/20">
             <div>
-              <p className="text-2xl font-bold">Ready to feel better?</p>
+              <p className="text-3xl font-bold mb-2">Ready to feel better?</p>
               <p className="text-white/90">Secure your slot in seconds. No upfront payment needed.</p>
             </div>
-            <Button size="lg" onClick={() => handleBookService()} className="bg-white text-gray-900 hover:bg-gray-100">
+            <Button size="lg" onClick={() => handleBookService()} className="bg-white text-gray-900 hover:bg-gray-100 whitespace-nowrap">
               Schedule Appointment
             </Button>
           </div>
-        </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="py-10 text-white" style={{ background: bgGradient }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="font-semibold mb-1">{tenant.businessName}</p>
-          <p className="text-sm opacity-90 mb-3">Providing quality healthcare services since 2024</p>
-          <Separator className="mx-auto max-w-sm bg-white/20" />
-          <p className="text-xs opacity-80 mt-3">© {new Date().getFullYear()} {tenant.businessName}. All rights reserved.</p>
-          <p className="text-xs opacity-80 mt-2 flex flex-wrap justify-center gap-2">
-            Powered by <Link href={buildPoweredByUrl()} className="underline underline-offset-2">{getRootDomain()}</Link>
-            <span>•</span>
-            <Link href="/tenant/login" className="underline underline-offset-2">Business Admin Login</Link>
-          </p>
+          {/* Footer Info Section */}
+          <div className="text-center">
+            <p className="font-semibold mb-1">{tenant.businessName}</p>
+            <p className="text-sm text-white/90 mb-4">Providing quality healthcare services since 2024</p>
+            <Separator className="mx-auto max-w-sm bg-white/20 mb-4" />
+            <p className="text-xs text-white/80">© {new Date().getFullYear()} {tenant.businessName}. All rights reserved.</p>
+            <p className="text-xs text-white/80 mt-3 flex flex-wrap justify-center gap-2">
+              Powered by <Link href={buildPoweredByUrl()} className="underline underline-offset-2">{getRootDomain()}</Link>
+              <span>•</span>
+              <Link href="/tenant/login" className="underline underline-offset-2">Business Admin Login</Link>
+            </p>
+          </div>
         </div>
       </footer>
 
