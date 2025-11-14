@@ -328,6 +328,7 @@ export default function HealthcareTemplate({
       <BookingDialog
         service={selectedService}
         tenant={tenant}
+        template="healthcare"
         isOpen={isBookingOpen}
         onOpenChange={setIsBookingOpen}
       />

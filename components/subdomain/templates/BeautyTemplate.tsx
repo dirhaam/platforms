@@ -302,6 +302,7 @@ export default function BeautyTemplate({
       <BookingDialog
         service={selectedService}
         tenant={tenant}
+        template="beauty"
         isOpen={isBookingOpen}
         onOpenChange={setIsBookingOpen}
       />

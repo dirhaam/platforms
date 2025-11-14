@@ -252,6 +252,7 @@ export default function ClassicTemplate({
       <BookingDialog
         service={selectedService}
         tenant={tenant}
+        template="classic"
         isOpen={isBookingOpen}
         onOpenChange={setIsBookingOpen}
       />

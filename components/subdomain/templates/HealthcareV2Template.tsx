@@ -549,6 +549,7 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
       <BookingDialog
         service={selectedService}
         tenant={tenant}
+        template="healthcarev2"
         isOpen={isBookingOpen}
         onOpenChange={setIsBookingOpen}
       />

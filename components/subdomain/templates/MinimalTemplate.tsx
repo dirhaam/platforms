@@ -598,6 +598,7 @@ export default function MinimalTemplate({
       <BookingDialog
         service={selectedService}
         tenant={tenant}
+        template="minimal"
         isOpen={isBookingOpen}
         onOpenChange={setIsBookingOpen}
       />

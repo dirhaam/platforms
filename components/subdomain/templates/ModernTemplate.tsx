@@ -464,6 +464,7 @@ export default function ModernTemplate({
       <BookingDialog
         service={selectedService}
         tenant={tenant}
+        template="modern"
         isOpen={isBookingOpen}
         onOpenChange={setIsBookingOpen}
       />
