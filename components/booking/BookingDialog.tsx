@@ -538,11 +538,11 @@ export default function BookingDialog({
         {step === 'service' && (
           <div className="space-y-4">
             {selectedService ? (
-              <Card className="border-blue-200 bg-blue-50">
+              <Card className={themeConfig.cardClass}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{selectedService.name}</CardTitle>
-                    <Badge variant="secondary">{selectedService.category}</Badge>
+                    <Badge className={themeConfig.badgeClass}>{selectedService.category}</Badge>
                   </div>
                   <CardDescription>{selectedService.description}</CardDescription>
                 </CardHeader>
@@ -563,7 +563,7 @@ export default function BookingDialog({
                     )}
                   </div>
                   <Button 
-                    className="w-full mt-4" 
+                    className={`w-full mt-4 ${themeConfig.buttonClass}`}
                     onClick={() => setStep('details')}
                   >
                     Continue with this service
@@ -573,7 +573,7 @@ export default function BookingDialog({
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-500 mb-4">Please select a service from the main page first</p>
-                <Button variant="outline" onClick={() => onOpenChange?.(false)}>
+                <Button className={themeConfig.buttonClass} onClick={() => onOpenChange?.(false)}>
                   Go back to services
                 </Button>
               </div>
@@ -584,7 +584,7 @@ export default function BookingDialog({
         {step === 'details' && selectedService && (
           <div className="space-y-6">
             {/* Service Summary */}
-            <Card className="bg-gray-50">
+            <Card className={themeConfig.cardClass}>
               <CardContent className="pt-4">
                 <div className="flex justify-between items-center">
                   <div>
@@ -625,7 +625,7 @@ export default function BookingDialog({
                     value={formData.customerName}
                     onChange={(e) => handleInputChange('customerName', e.target.value)}
                     placeholder="Enter your full name"
-                    className={validationErrors.customerName ? 'border-red-500' : ''}
+                    className={`${themeConfig.inputClass} ${validationErrors.customerName ? 'border-red-500' : ''}`}
                     required
                   />
                   {validationErrors.customerName && (
@@ -638,7 +638,7 @@ export default function BookingDialog({
                   <Input
                     id="customerPhone"
                     type="tel"
-                    className={validationErrors.customerPhone ? 'border-red-500' : ''}
+                    className={`${themeConfig.inputClass} ${validationErrors.customerPhone ? 'border-red-500' : ''}`}
                     value={formData.customerPhone}
                     onChange={(e) => handleInputChange('customerPhone', e.target.value)}
                     placeholder="Enter your phone number"
@@ -657,7 +657,7 @@ export default function BookingDialog({
                     value={formData.customerEmail}
                     onChange={(e) => handleInputChange('customerEmail', e.target.value)}
                     placeholder="Enter your email address"
-                    className={validationErrors.customerEmail ? 'border-red-500' : ''}
+                    className={`${themeConfig.inputClass} ${validationErrors.customerEmail ? 'border-red-500' : ''}`}
                   />
                   {validationErrors.customerEmail && (
                     <p className="text-red-500 text-sm mt-1">{validationErrors.customerEmail}</p>
@@ -678,7 +678,7 @@ export default function BookingDialog({
                 <Label>Preferred Date *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left">
+                    <Button className={`w-full justify-start text-left ${themeConfig.buttonClass}`}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.preferredDate ? new Date(formData.preferredDate + 'T00:00').toLocaleDateString() : 'Pick a date'}
                     </Button>
@@ -901,6 +901,7 @@ export default function BookingDialog({
                       value={formData.dpAmount || 0}
                       onChange={(e) => handleInputChange('dpAmount', parseInt(e.target.value) || 0)}
                       placeholder="Enter DP amount (IDR)"
+                      className={themeConfig.inputClass}
                     />
                     <div className="flex items-center justify-center px-3 py-2 bg-gray-100 rounded-md border border-gray-300 text-sm font-semibold text-gray-700 whitespace-nowrap">
                       / {Number(calculateTotal()).toLocaleString('id-ID')}
@@ -931,15 +932,14 @@ export default function BookingDialog({
             {/* Action Buttons */}
             <div className="flex space-x-3">
               <Button 
-                variant="outline" 
                 onClick={() => setStep('service')}
-                className="flex-1"
+                className={`flex-1 ${themeConfig.buttonClass}`}
               >
                 Back
               </Button>
               <Button 
                 onClick={handleSubmit}
-                className="flex-1"
+                className={`flex-1 ${themeConfig.buttonClass}`}
                 disabled={!formData.customerName || !formData.customerPhone || !formData.preferredDate || !formData.selectedTimeSlot || isLoading}
               >
                 {isLoading ? 'Creating Booking...' : 'Submit Booking Request'}
@@ -964,7 +964,7 @@ export default function BookingDialog({
             </div>
 
             {/* Booking Summary */}
-            <Card className="text-left">
+            <Card className={`text-left ${themeConfig.cardClass}`}>
               <CardHeader>
                 <CardTitle className="text-lg">Booking Summary</CardTitle>
               </CardHeader>
@@ -1006,8 +1006,8 @@ export default function BookingDialog({
             </Card>
 
             {/* Contact Information */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800 mb-2">
+            <div className={`${themeConfig.cardClass} p-4`}>
+              <p className="text-sm mb-2">
                 <strong>We'll contact you at:</strong>
               </p>
               <div className="space-y-1 text-sm">
@@ -1027,15 +1027,14 @@ export default function BookingDialog({
             {/* Action Buttons */}
             <div className="flex space-x-3">
               <Button 
-                variant="outline" 
                 onClick={resetForm}
-                className="flex-1"
+                className={`flex-1 ${themeConfig.buttonClass}`}
               >
                 Book Another Service
               </Button>
               <Button 
                 onClick={() => onOpenChange?.(false)}
-                className="flex-1"
+                className={`flex-1 ${themeConfig.buttonClass}`}
               >
                 Close
               </Button>
