@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Palette, Check, Loader, Image } from 'lucide-react';
+import { Palette, Check, Loader } from 'lucide-react';
 import { toast } from 'sonner';
-import LandingPageMediaSettings from '@/components/settings/LandingPageMediaSettings';
 
 interface Template {
   id: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare' | 'healthcarev2';
@@ -72,18 +70,12 @@ const TEMPLATES: Template[] = [
 interface LandingPageStyleSettingsProps {
   subdomain: string;
   currentTemplate?: string;
-  tenantId?: string;
 }
 
-export default function LandingPageStyleSettings({ subdomain, currentTemplate, tenantId }: LandingPageStyleSettingsProps) {
+export default function LandingPageStyleSettings({ subdomain, currentTemplate }: LandingPageStyleSettingsProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
   const [fetchedCurrentTemplate, setFetchedCurrentTemplate] = useState<string | null>(null);
   const [initialTemplateLoaded, setInitialTemplateLoaded] = useState(false);
-  const [landingPageMedia, setLandingPageMedia] = useState({
-    videos: [],
-    socialMedia: [],
-    galleries: [],
-  });
 
   useEffect(() => {
     const fetchCurrentTemplate = async () => {
@@ -124,29 +116,6 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate, t
       setFetchedCurrentTemplate(fallbackTemplate);
     }
   }, [subdomain, currentTemplate]);
-
-  // Fetch landing page media
-  useEffect(() => {
-    if (!tenantId) return;
-
-    const fetchMedia = async () => {
-      try {
-        const response = await fetch('/api/settings/landing-page-media');
-        if (response.ok) {
-          const result = await response.json();
-          setLandingPageMedia(result.data || {
-            videos: [],
-            socialMedia: [],
-            galleries: [],
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching landing page media:', error);
-      }
-    };
-
-    fetchMedia();
-  }, [tenantId]);
 
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -205,156 +174,130 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate, t
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Palette className="w-5 h-5" />
-          Landing Page Appearance & Media
+          Landing Page Style
         </CardTitle>
         <CardDescription>
-          Customize your landing page style and manage media content
+          Choose the design template for your landing page. All templates include your services, booking system, and contact information.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="style" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="style" className="flex items-center gap-2">
-              <Palette className="w-4 h-4" />
-              <span className="hidden sm:inline">Style</span>
-            </TabsTrigger>
-            <TabsTrigger value="media" className="flex items-center gap-2">
-              <Image className="w-4 h-4" />
-              <span className="hidden sm:inline">Media</span>
-            </TabsTrigger>
-          </TabsList>
+      <CardContent className="space-y-6">
+        {/* Current Template Info */}
+        {currentTemplateData && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-900">
+              <strong>Current Style:</strong> {currentTemplateData.name}
+            </p>
+            <p className="text-xs text-blue-700 mt-1">{currentTemplateData.description}</p>
+          </div>
+        )}
 
-          {/* Style Tab */}
-          <TabsContent value="style" className="space-y-6">
-          {/* Current Template Info */}
-          {currentTemplateData && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-900">
-                <strong>Current Style:</strong> {currentTemplateData.name}
-              </p>
-              <p className="text-xs text-blue-700 mt-1">{currentTemplateData.description}</p>
-            </div>
-          )}
-
-          {/* Templates Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {TEMPLATES.map((template) => (
-              <div
-                key={template.id}
-                onClick={() => setSelectedTemplate(template.id)}
-                className={`
-                  p-4 rounded-lg border-2 cursor-pointer transition-all
-                  ${selectedTemplate === template.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }
-                `}
-              >
-                {/* Template Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="text-3xl">{template.icon}</div>
-                  {selectedTemplate === template.id && (
-                    <Badge className="bg-blue-600">
-                      <Check className="h-3 w-3 mr-1" />
-                      Selected
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Template Name */}
-                <h3 className="font-bold text-sm mb-1">{template.name}</h3>
-
-                {/* Template Description */}
-                <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-                  {template.description}
-                </p>
-
-                {/* Best For */}
-                <p className="text-xs text-gray-500 mb-3 pb-3 border-b">
-                  <strong>Best for:</strong> {template.bestFor}
-                </p>
-
-                {/* Color Preview */}
-                <div className="flex gap-1">
-                  {template.colors.map((color, idx) => (
-                    <div
-                      key={idx}
-                      className="flex-1 h-6 rounded-sm"
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    />
-                  ))}
-                </div>
+        {/* Templates Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {TEMPLATES.map((template) => (
+            <div
+              key={template.id}
+              onClick={() => setSelectedTemplate(template.id)}
+              className={`
+                p-4 rounded-lg border-2 cursor-pointer transition-all
+                ${selectedTemplate === template.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300 bg-white'
+                }
+              `}
+            >
+              {/* Template Header */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="text-3xl">{template.icon}</div>
+                {selectedTemplate === template.id && (
+                  <Badge className="bg-blue-600">
+                    <Check className="h-3 w-3 mr-1" />
+                    Selected
+                  </Badge>
+                )}
               </div>
-            ))}
-          </div>
 
-          {/* Selected Template Preview Info */}
-          {selectedTemplateData && selectedTemplate !== fetchedCurrentTemplate && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-900">
-                <strong>Preview:</strong> {selectedTemplateData.name}
+              {/* Template Name */}
+              <h3 className="font-bold text-sm mb-1">{template.name}</h3>
+
+              {/* Template Description */}
+              <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                {template.description}
               </p>
-              <p className="text-xs text-amber-700 mt-1">{selectedTemplateData.description}</p>
-              <p className="text-xs text-amber-700 mt-2">
-                <strong>Best for:</strong> {selectedTemplateData.bestFor}
+
+              {/* Best For */}
+              <p className="text-xs text-gray-500 mb-3 pb-3 border-b">
+                <strong>Best for:</strong> {template.bestFor}
               </p>
-              <p className="text-xs text-amber-700 mt-2">
-                <strong>Note:</strong> Changes will be visible on your landing page after saving and refreshing.
-              </p>
+
+              {/* Color Preview */}
+              <div className="flex gap-1">
+                {template.colors.map((color, idx) => (
+                  <div
+                    key={idx}
+                    className="flex-1 h-6 rounded-sm"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
             </div>
-          )}
+          ))}
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPreviewOpen(!previewOpen);
-                toast.info(`Preview opening in new tab... Note: You'll see the current template, not the new selection until saved.`);
-                window.open(`https://${subdomain}.booqing.my.id/`, '_blank');
-              }}
-            >
-              Preview Live
-            </Button>
-            <Button
-              onClick={handleSaveTemplate}
-              disabled={saving || selectedTemplate === fetchedCurrentTemplate}
-              className="flex-1"
-            >
-              {saving ? (
-                <>
-                  <Loader className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  Save Style
-                  {selectedTemplate !== fetchedCurrentTemplate && ' (Changes pending)'}
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Info Box */}
-          <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-            <p>
-              <strong>💡 Note:</strong> All templates include your services, pricing, business hours, and booking system. 
-              The style you choose only affects how your landing page looks, not the functionality.
+        {/* Selected Template Preview Info */}
+        {selectedTemplateData && selectedTemplate !== fetchedCurrentTemplate && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-900">
+              <strong>Preview:</strong> {selectedTemplateData.name}
+            </p>
+            <p className="text-xs text-amber-700 mt-1">{selectedTemplateData.description}</p>
+            <p className="text-xs text-amber-700 mt-2">
+              <strong>Best for:</strong> {selectedTemplateData.bestFor}
+            </p>
+            <p className="text-xs text-amber-700 mt-2">
+              <strong>Note:</strong> Changes will be visible on your landing page after saving and refreshing.
             </p>
           </div>
-          </TabsContent>
+        )}
 
-          {/* Media Tab */}
-          <TabsContent value="media" className="space-y-6">
-            {tenantId && (
-              <LandingPageMediaSettings 
-                tenantId={tenantId}
-                initialData={landingPageMedia}
-              />
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setPreviewOpen(!previewOpen);
+              toast.info(`Preview opening in new tab... Note: You'll see the current template, not the new selection until saved.`);
+              window.open(`https://${subdomain}.booqing.my.id/`, '_blank');
+            }}
+          >
+            Preview Live
+          </Button>
+          <Button
+            onClick={handleSaveTemplate}
+            disabled={saving || selectedTemplate === fetchedCurrentTemplate}
+            className="flex-1"
+          >
+            {saving ? (
+              <>
+                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Save Style
+                {selectedTemplate !== fetchedCurrentTemplate && ' (Changes pending)'}
+              </>
             )}
-          </TabsContent>
-        </Tabs>
+          </Button>
+        </div>
+
+        {/* Info Box */}
+        <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+          <p>
+            <strong>💡 Note:</strong> All templates include your services, pricing, business hours, and booking system. 
+            The style you choose only affects how your landing page looks, not the functionality.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
