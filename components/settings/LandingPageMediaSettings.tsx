@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,10 +37,24 @@ export default function LandingPageMediaSettings({
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  useEffect(() => {
+    console.log('[LandingPageMediaSettings] State updated - videos:', videos.length, 'social:', socialMedia.length);
+  }, [videos, socialMedia]);
+
+  useEffect(() => {
+    console.log('[LandingPageMediaSettings] Component mounted with initial data:', {
+      videosCount: initialData.videos?.length || 0,
+      socialCount: initialData.socialMedia?.length || 0,
+    });
+  }, []);
+
   // Video Management
   const [newVideo, setNewVideo] = useState({ title: '', youtubeUrl: '', description: '' });
   const addVideo = () => {
+    console.log('[addVideo] Called with:', { newVideo, currentVideosCount: videos.length });
+    
     if (!newVideo.title || !newVideo.youtubeUrl) {
+      console.log('[addVideo] Validation failed - missing title or URL');
       setMessage({ type: 'error', text: 'Please fill in title and YouTube URL' });
       return;
     }
@@ -54,6 +68,7 @@ export default function LandingPageMediaSettings({
       createdAt: new Date(),
       updatedAt: new Date()
     };
+    console.log('[addVideo] Adding video:', video);
     setVideos([...videos, video]);
     setNewVideo({ title: '', youtubeUrl: '', description: '' });
     setMessage(null);
@@ -76,7 +91,10 @@ export default function LandingPageMediaSettings({
   // Social Media Management
   const [newSocial, setNewSocial] = useState({ platform: 'instagram', url: '' });
   const addSocial = () => {
+    console.log('[addSocial] Called with:', { newSocial, currentSocialCount: socialMedia.length });
+    
     if (!newSocial.url) {
+      console.log('[addSocial] Validation failed - missing URL');
       setMessage({ type: 'error', text: 'Please enter a social media URL' });
       return;
     }
@@ -89,6 +107,7 @@ export default function LandingPageMediaSettings({
       createdAt: new Date(),
       updatedAt: new Date()
     };
+    console.log('[addSocial] Adding social media:', social);
     setSocialMedia([...socialMedia, social]);
     setNewSocial({ platform: 'instagram', url: '' });
     setMessage(null);
