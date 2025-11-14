@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Calendar, FileText, Palette } from 'lucide-react';
+import { Settings, Calendar, FileText, Palette, Image } from 'lucide-react';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
 import OperatingHoursSettings from '@/components/settings/OperatingHoursSettings';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
+import LandingPageMediaSettings from '@/components/settings/LandingPageMediaSettings';
 
 interface TenantData {
   id: string;
@@ -21,6 +22,11 @@ export default function SettingsPageContent() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('appearance');
+  const [landingPageMedia, setLandingPageMedia] = useState({
+    videos: [],
+    socialMedia: [],
+    galleries: [],
+  });
 
   useEffect(() => {
     if (!subdomain) {
@@ -46,6 +52,29 @@ export default function SettingsPageContent() {
     fetchTenantId();
   }, [subdomain, router]);
 
+  // Fetch landing page media
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const fetchMedia = async () => {
+      try {
+        const response = await fetch('/api/settings/landing-page-media');
+        if (response.ok) {
+          const result = await response.json();
+          setLandingPageMedia(result.data || {
+            videos: [],
+            socialMedia: [],
+            galleries: [],
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching landing page media:', error);
+      }
+    };
+
+    fetchMedia();
+  }, [tenantId]);
+
   if (!subdomain || loading) {
     return null;
   }
@@ -63,7 +92,7 @@ export default function SettingsPageContent() {
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsList className="grid w-full grid-cols-4 mb-4">
           <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="w-4 h-4" />
             <span className="hidden sm:inline">Appearance</span>
@@ -71,6 +100,10 @@ export default function SettingsPageContent() {
           <TabsTrigger value="invoice" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             <span className="hidden sm:inline">Invoice</span>
+          </TabsTrigger>
+          <TabsTrigger value="media" className="flex items-center gap-2">
+            <Image className="w-4 h-4" />
+            <span className="hidden sm:inline">Media</span>
           </TabsTrigger>
           <TabsTrigger value="calendar" className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
@@ -94,18 +127,26 @@ export default function SettingsPageContent() {
             </div>
           </TabsContent>
 
-          {/* Calendar Tab */}
-          <TabsContent value="calendar" className="mt-0">
+          {/* Media Tab */}
+          <TabsContent value="media" className="mt-0">
             <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
               {tenantId && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <OperatingHoursSettings tenantId={tenantId} />
-                  </div>
-                  <div>
-                    <BlockedDatesManager tenantId={tenantId} />
-                  </div>
-                </div>
+                <LandingPageMediaSettings 
+                  tenantId={tenantId}
+                  initialData={landingPageMedia}
+                />
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Calendar Tab */}
+          <TabsContent value="calendar" className="mt-0">
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2 space-y-4">
+              {tenantId && (
+                <>
+                  <OperatingHoursSettings tenantId={tenantId} />
+                  <BlockedDatesManager tenantId={tenantId} />
+                </>
               )}
             </div>
           </TabsContent>
