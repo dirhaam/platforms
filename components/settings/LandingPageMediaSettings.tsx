@@ -184,14 +184,14 @@ export default function LandingPageMediaSettings({
           'x-tenant-id': tenantId,
         },
         credentials: 'same-origin',
-        body: JSON.stringify(() => {
+        body: (() => {
           const payload: any = { tenantId, galleries, settings: { videoSize, autoplay } };
           const vids = pendingVideos.filter(v => v.id.toString().length > 0);
           const socials = pendingSocial.filter(s => s.id.toString().length > 0);
           if (vids.length > 0) payload.videos = vids;
           if (socials.length > 0) payload.socialMedia = socials;
-          return payload;
-        }()),
+          return JSON.stringify(payload);
+        })(),
       });
 
       const result = await response.json();
