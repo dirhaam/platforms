@@ -236,12 +236,21 @@ export class TenantService {
           console.log('[getTenantBusinessHours] Raw record from DB:', records?.[0]);
           
           const record = records && records.length > 0 ? records[0] : null;
+          console.log('[getTenantBusinessHours] Full record:', JSON.stringify(record));
+          
           let schedule = record?.schedule;
           
           console.log('[getTenantBusinessHours] Schedule before parsing:', schedule, 'Type:', typeof schedule);
+          console.log('[getTenantBusinessHours] Is schedule a string?', typeof schedule === 'string');
+          console.log('[getTenantBusinessHours] Is schedule an object?', typeof schedule === 'object');
           
+          // Handle if schedule is already an object (Supabase might return it parsed)
+          if (typeof schedule === 'object' && schedule !== null) {
+            console.log('[getTenantBusinessHours] Schedule already parsed as object, using as-is');
+            // Already an object, use as-is
+          } 
           // Parse schedule if it's a string (from JSONB field)
-          if (typeof schedule === 'string') {
+          else if (typeof schedule === 'string') {
             try {
               schedule = JSON.parse(schedule);
               console.log('[getTenantBusinessHours] Schedule after parsing:', schedule);
