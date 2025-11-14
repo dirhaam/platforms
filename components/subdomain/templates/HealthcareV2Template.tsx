@@ -55,6 +55,7 @@ interface HealthcareTemplateProps {
   videos?: VideoItem[];
   socialMedia?: SocialMediaLink[];
   galleries?: PhotoGallery[];
+  videoOptions?: { videoSize: 'small'|'medium'|'large'; autoplay: boolean };
 }
 
 const getRawEnv = (key: string): string => {
@@ -89,7 +90,7 @@ const getRootDomain = (): string => {
 
 const buildPoweredByUrl = (): string => `${getProtocol()}://${getRootDomain()}`;
 
-export default function HealthcareTemplateV2({ tenant, services = [], businessHours, videos = [], socialMedia = [], galleries = [] }: HealthcareTemplateProps) {
+export default function HealthcareTemplateV2({ tenant, services = [], businessHours, videos = [], socialMedia = [], galleries = [], videoOptions }: HealthcareTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -366,13 +367,16 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
 
 
 
-      {/* Videos Section */}
+      {/* Videos Inline (no section/header) */}
       {videos && videos.length > 0 && (
         <VideoSection 
           videos={videos} 
           displayType="grid"
-          title="Our Videos"
           primaryColor={primaryColor}
+          mode="inline"
+          showHeader={false}
+          size={videoOptions?.videoSize}
+          autoplay={videoOptions?.autoplay}
         />
       )}
 

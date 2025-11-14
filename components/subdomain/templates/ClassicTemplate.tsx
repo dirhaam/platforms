@@ -48,6 +48,7 @@ interface ClassicTemplateProps {
   videos?: VideoItem[];
   socialMedia?: SocialMediaLink[];
   galleries?: PhotoGallery[];
+  videoOptions?: { videoSize: 'small'|'medium'|'large'; autoplay: boolean };
 }
 
 export default function ClassicTemplate({ 
@@ -56,7 +57,8 @@ export default function ClassicTemplate({
   businessHours,
   videos = [],
   socialMedia = [],
-  galleries = []
+  galleries = [],
+  videoOptions
 }: ClassicTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -206,13 +208,16 @@ export default function ClassicTemplate({
             </section>
           )}
 
-          {/* Videos Section */}
+          {/* Videos Inline (no section/header) */}
           {videos && videos.length > 0 && (
             <VideoSection 
               videos={videos} 
               displayType="grid"
-              title="Our Videos"
               primaryColor={primaryColor}
+              mode="inline"
+              showHeader={false}
+              size={videoOptions?.videoSize}
+              autoplay={videoOptions?.autoplay}
             />
           )}
 

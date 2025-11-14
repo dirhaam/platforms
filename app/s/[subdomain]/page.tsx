@@ -63,12 +63,13 @@ export default async function SubdomainPage({
     console.log('[SubdomainPage] Tenant Name:', tenantData.businessName);
 
     // Get services, business hours, and media data
-    const [services, businessHours, videos, socialMedia, galleries] = await Promise.all([
+    const [services, businessHours, videos, socialMedia, galleries, mediaSettings] = await Promise.all([
       TenantService.getTenantServices(tenantData.id),
       TenantService.getTenantBusinessHours(tenantData.id),
       TenantService.getTenantVideos(tenantData.id),
       TenantService.getTenantSocialMedia(tenantData.id),
       TenantService.getTenantGalleries(tenantData.id),
+      TenantService.getTenantMediaSettings(tenantData.id),
     ]);
     
     console.log('[SubdomainPage] Business Hours received:', businessHours);
@@ -95,6 +96,7 @@ export default async function SubdomainPage({
             videos={videos}
             socialMedia={socialMedia}
             galleries={galleries}
+            videoOptions={mediaSettings}
           />
         );
       
@@ -107,6 +109,7 @@ export default async function SubdomainPage({
             videos={videos}
             socialMedia={socialMedia}
             galleries={galleries}
+            videoOptions={mediaSettings}
           />
         );
       
@@ -119,6 +122,7 @@ export default async function SubdomainPage({
             videos={videos}
             socialMedia={socialMedia}
             galleries={galleries}
+            videoOptions={mediaSettings}
           />
         );
       
@@ -131,6 +135,7 @@ export default async function SubdomainPage({
             videos={videos}
             socialMedia={socialMedia}
             galleries={galleries}
+            videoOptions={mediaSettings}
           />
         );
       
@@ -143,6 +148,7 @@ export default async function SubdomainPage({
             videos={videos}
             socialMedia={socialMedia}
             galleries={galleries}
+            videoOptions={mediaSettings}
           />
         );
       
@@ -155,6 +161,7 @@ export default async function SubdomainPage({
             videos={videos}
             socialMedia={socialMedia}
             galleries={galleries}
+            videoOptions={mediaSettings}
           />
         );
       

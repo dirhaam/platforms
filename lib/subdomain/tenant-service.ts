@@ -481,6 +481,36 @@ export class TenantService {
     );
   }
 
+  static async getTenantMediaSettings(tenantId: string): Promise<{ videoSize: 'small'|'medium'|'large'; autoplay: boolean }> {
+    return await PerformanceMonitor.monitorDatabaseQuery(
+      'getTenantMediaSettings',
+      async () => {
+        try {
+          const supabase = getSupabaseClient();
+          const { data, error } = await supabase
+            .from('tenant_media_settings')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .limit(1);
+
+          if (error) {
+            console.warn('[getTenantMediaSettings] DB error:', error.message);
+          }
+
+          const row = data && data[0];
+          return {
+            videoSize: (row?.video_size as any) || 'medium',
+            autoplay: Boolean(row?.video_autoplay) || false,
+          };
+        } catch (e) {
+          console.warn('[getTenantMediaSettings] Exception:', e);
+          return { videoSize: 'medium', autoplay: false };
+        }
+      },
+      tenantId
+    );
+  }
+
   private static getDefaultBusinessHours(): BusinessHours {
     return {
       monday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },

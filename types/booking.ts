@@ -298,4 +298,8 @@ export interface LandingPageMediaData {
   videos?: VideoItem[];
   socialMedia?: SocialMediaLink[];
   galleries?: PhotoGallery[];
+  settings?: {
+    videoSize?: 'small' | 'medium' | 'large';
+    autoplay?: boolean;
+  };
 }

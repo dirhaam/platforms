@@ -381,6 +381,7 @@ export const tenantRelations = relations(tenants, ({ many, one }) => ({
   videos: many(tenantVideos),
   socialMedia: many(tenantSocialMedia),
   photoGalleries: many(tenantPhotoGalleries),
+  mediaSettings: one(tenantMediaSettings),
 }));
 
 export const serviceRelations = relations(services, ({ one, many }) => ({
@@ -529,4 +530,18 @@ export const tenantPhotoGalleriesRelations = relations(tenantPhotoGalleries, ({ 
 
 export const tenantGalleryPhotosRelations = relations(tenantGalleryPhotos, ({ one }) => ({
   gallery: one(tenantPhotoGalleries, { fields: [tenantGalleryPhotos.galleryId], references: [tenantPhotoGalleries.id] }),
+}));
+
+// Tenant Media Settings table
+export const tenantMediaSettings = pgTable('tenant_media_settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().unique().references(() => tenants.id, { onDelete: 'cascade' }),
+  videoSize: text('video_size').notNull().default('medium'),
+  videoAutoplay: boolean('video_autoplay').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const tenantMediaSettingsRelations = relations(tenantMediaSettings, ({ one }) => ({
+  tenant: one(tenants, { fields: [tenantMediaSettings.tenantId], references: [tenants.id] }),
 }));

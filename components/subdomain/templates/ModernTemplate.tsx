@@ -46,6 +46,7 @@ interface ModernTemplateProps {
   videos?: VideoItem[];
   socialMedia?: SocialMediaLink[];
   galleries?: PhotoGallery[];
+  videoOptions?: { videoSize: 'small'|'medium'|'large'; autoplay: boolean };
 }
 
 export default function ModernTemplate({ 
@@ -54,7 +55,8 @@ export default function ModernTemplate({
   businessHours,
   videos = [],
   socialMedia = [],
-  galleries = []
+  galleries = [],
+  videoOptions
 }: ModernTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -379,16 +381,17 @@ export default function ModernTemplate({
         </div>
       </section>
 
-      {/* Videos Section */}
+      {/* Videos Inline (no section/header) */}
       {videos && videos.length > 0 && (
-        <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-gray-950">
-          <VideoSection 
-            videos={videos} 
-            displayType="grid"
-            title="Our Videos"
-            primaryColor={primaryColor}
-          />
-        </section>
+        <VideoSection 
+          videos={videos} 
+          displayType="grid"
+          primaryColor={primaryColor}
+          mode="inline"
+          showHeader={false}
+          size={videoOptions?.videoSize}
+          autoplay={videoOptions?.autoplay}
+        />
       )}
 
       {/* Social Media Section */}

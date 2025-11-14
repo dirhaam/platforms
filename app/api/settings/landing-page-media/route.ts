@@ -43,6 +43,14 @@ export async function GET(req: NextRequest) {
       .eq('tenant_id', tenant.id)
       .order('created_at', { ascending: false });
 
+    // Fetch media settings
+    const { data: settingsRow } = await supabase
+      .from('tenant_media_settings')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .limit(1)
+      .maybeSingle();
+
     console.log('[Landing Page Media API] Fetched media:', {
       tenantId: tenant.id,
       videosCount: videos?.length || 0,
@@ -56,6 +64,10 @@ export async function GET(req: NextRequest) {
         videos: videos || [],
         socialMedia: socialMedia || [],
         galleries: galleries || [],
+        settings: settingsRow ? {
+          videoSize: settingsRow.video_size || 'medium',
+          autoplay: Boolean(settingsRow.video_autoplay),
+        } : { videoSize: 'medium', autoplay: false },
       }
     });
   } catch (error) {
@@ -76,7 +88,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { videos, socialMedia, galleries } = body;
+    const { videos, socialMedia, galleries, settings } = body;
 
     console.log('[Landing Page Media API] PUT request:', {
       tenantId: tenant.id,
@@ -84,6 +96,7 @@ export async function PUT(req: NextRequest) {
       socialMediaCount: socialMedia?.length || 0,
       videos: videos?.slice(0, 1), // Log first video as sample
       socialMedia: socialMedia?.slice(0, 1), // Log first social as sample
+      settings,
     });
 
     const supabase = getSupabaseClient();
@@ -164,6 +177,45 @@ export async function PUT(req: NextRequest) {
           console.error('[Social Media] Insert error:', insertError);
           return NextResponse.json(
             { error: `Failed to insert social media: ${insertError.message}` },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
+    // Upsert media settings if provided
+    if (settings && (settings.videoSize || typeof settings.autoplay === 'boolean')) {
+      const payload = {
+        tenant_id: tenant.id,
+        video_size: settings.videoSize || 'medium',
+        video_autoplay: Boolean(settings.autoplay),
+        updated_at: new Date().toISOString(),
+      } as any;
+
+      // Try update, if 0 rows then insert
+      const { error: updateErr } = await supabase
+        .from('tenant_media_settings')
+        .update(payload)
+        .eq('tenant_id', tenant.id);
+
+      if (updateErr) {
+        console.warn('[Media Settings] Update failed, will try insert:', updateErr.message);
+      }
+
+      const { data: existing } = await supabase
+        .from('tenant_media_settings')
+        .select('id')
+        .eq('tenant_id', tenant.id)
+        .limit(1);
+
+      if (!existing || existing.length === 0) {
+        const { error: insertErr } = await supabase
+          .from('tenant_media_settings')
+          .insert({ ...payload, created_at: new Date().toISOString() });
+        if (insertErr) {
+          console.error('[Media Settings] Insert error:', insertErr);
+          return NextResponse.json(
+            { error: `Failed to save media settings: ${insertErr.message}` },
             { status: 500 }
           );
         }

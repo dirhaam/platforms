@@ -47,6 +47,7 @@ interface BeautyTemplateProps {
   videos?: VideoItem[];
   socialMedia?: SocialMediaLink[];
   galleries?: PhotoGallery[];
+  videoOptions?: { videoSize: 'small'|'medium'|'large'; autoplay: boolean };
 }
 
 export default function BeautyTemplate({ 
@@ -55,7 +56,8 @@ export default function BeautyTemplate({
   businessHours,
   videos = [],
   socialMedia = [],
-  galleries = []
+  galleries = [],
+  videoOptions
 }: BeautyTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -257,13 +259,16 @@ export default function BeautyTemplate({
         </div>
       </section>
 
-      {/* Videos Section */}
+      {/* Videos Inline (no section/header) */}
       {videos && videos.length > 0 && (
         <VideoSection 
           videos={videos} 
           displayType="grid"
-          title="Our Videos"
           primaryColor={primaryColor}
+          mode="inline"
+          showHeader={false}
+          size={videoOptions?.videoSize}
+          autoplay={videoOptions?.autoplay}
         />
       )}
 

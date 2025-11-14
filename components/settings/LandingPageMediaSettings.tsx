@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { VideoItem, SocialMediaLink, PhotoGallery, PhotoGalleryItem } from '@/types/booking';
 import { Loader2, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 
@@ -18,6 +19,10 @@ interface LandingPageMediaSettingsProps {
     videos?: VideoItem[];
     socialMedia?: SocialMediaLink[];
     galleries?: PhotoGallery[];
+    settings?: {
+      videoSize?: 'small' | 'medium' | 'large';
+      autoplay?: boolean;
+    };
   };
 }
 
@@ -36,6 +41,8 @@ export default function LandingPageMediaSettings({
   const [galleries, setGalleries] = useState<PhotoGallery[]>(initialData.galleries || []);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [videoSize, setVideoSize] = useState<'small' | 'medium' | 'large'>(initialData.settings?.videoSize || 'medium');
+  const [autoplay, setAutoplay] = useState<boolean>(Boolean(initialData.settings?.autoplay));
 
   useEffect(() => {
     console.log('[LandingPageMediaSettings] State updated - videos:', videos.length, 'social:', socialMedia.length);
@@ -133,12 +140,41 @@ export default function LandingPageMediaSettings({
     setMessage(null);
 
     try {
+      // Include any pending inputs that haven't been added via the Add buttons
+      const pendingVideos = [...videos];
+      if (newVideo.title && newVideo.youtubeUrl) {
+        pendingVideos.push({
+          id: Date.now().toString(),
+          title: newVideo.title,
+          youtubeUrl: newVideo.youtubeUrl,
+          description: newVideo.description,
+          displayOrder: videos.length,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as any);
+      }
+
+      const pendingSocial = [...socialMedia];
+      if (newSocial.url) {
+        pendingSocial.push({
+          id: Date.now().toString(),
+          platform: newSocial.platform as any,
+          url: newSocial.url,
+          displayOrder: socialMedia.length,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as any);
+      }
+
       console.log('[LandingPageMediaSettings] Submitting:', {
         tenantId,
-        videosCount: videos.length,
-        socialMediaCount: socialMedia.length,
-        videos: videos.slice(0, 1),
-        socialMedia: socialMedia.slice(0, 1),
+        videosCount: pendingVideos.length,
+        socialMediaCount: pendingSocial.length,
+        videosSample: pendingVideos.slice(0, 1),
+        socialSample: pendingSocial.slice(0, 1),
+        settings: { videoSize, autoplay },
       });
 
       const response = await fetch('/api/settings/landing-page-media', {
@@ -148,12 +184,14 @@ export default function LandingPageMediaSettings({
           'x-tenant-id': tenantId,
         },
         credentials: 'same-origin',
-        body: JSON.stringify({
-          tenantId,
-          videos: videos.filter(v => v.id.toString().length > 0),
-          socialMedia: socialMedia.filter(s => s.id.toString().length > 0),
-          galleries,
-        }),
+        body: JSON.stringify(() => {
+          const payload: any = { tenantId, galleries, settings: { videoSize, autoplay } };
+          const vids = pendingVideos.filter(v => v.id.toString().length > 0);
+          const socials = pendingSocial.filter(s => s.id.toString().length > 0);
+          if (vids.length > 0) payload.videos = vids;
+          if (socials.length > 0) payload.socialMedia = socials;
+          return payload;
+        }()),
       });
 
       const result = await response.json();
@@ -167,6 +205,15 @@ export default function LandingPageMediaSettings({
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Landing page media updated successfully!' });
+        // Reflect pending inputs into local state after save
+        if (pendingVideos.length !== videos.length) {
+          setVideos(pendingVideos);
+          setNewVideo({ title: '', youtubeUrl: '', description: '' });
+        }
+        if (pendingSocial.length !== socialMedia.length) {
+          setSocialMedia(pendingSocial);
+          setNewSocial({ platform: 'instagram', url: '' });
+        }
       } else {
         const errorText = result.details ? `${result.error}: ${result.details}` : (result.error || 'Failed to update media');
         setMessage({ type: 'error', text: errorText });
@@ -186,6 +233,36 @@ export default function LandingPageMediaSettings({
           <AlertDescription>{message.text}</AlertDescription>
         </Alert>
       )}
+
+      {/* Global Video Options */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Video Options</CardTitle>
+          <CardDescription>Global settings for how videos appear on your landing page</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="videoSize">Video Size</Label>
+            <Select value={videoSize} onValueChange={(v) => setVideoSize(v as any)}>
+              <SelectTrigger id="videoSize">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">Small</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="large">Large</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between rounded-md border p-4">
+            <div>
+              <Label className="block">Autoplay (muted)</Label>
+              <p className="text-sm text-gray-600">Autoplay will be muted to comply with browser policies</p>
+            </div>
+            <Switch checked={autoplay} onCheckedChange={setAutoplay} />
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="videos" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
