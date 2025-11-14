@@ -71,6 +71,7 @@ export default async function SubdomainPage({
       TenantService.getTenantGalleries(tenantData.id),
     ]);
     
+    console.log('[SubdomainPage] Business Hours received:', businessHours);
     console.log('[SubdomainPage] Services received - count:', services.length);
     if (services.length > 0) {
       console.log('[SubdomainPage] First service:', {

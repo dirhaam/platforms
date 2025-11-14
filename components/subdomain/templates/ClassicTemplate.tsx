@@ -96,9 +96,9 @@ export default function ClassicTemplate({
         </div>
       </nav>
 
-      <div className="flex">
+      <div className="flex items-stretch">
         {/* Sidebar */}
-        <aside className="w-64 border-r border-gray-300 p-8 hidden lg:block bg-gray-50">
+        <aside className="min-w-[240px] w-64 max-w-xs flex-shrink-0 border-r border-gray-300 p-8 hidden lg:block bg-gray-50">
           <div className="space-y-8">
             {/* About */}
             <div>
@@ -110,7 +110,9 @@ export default function ClassicTemplate({
             {businessHours && (
               <div>
                 <h3 className="text-lg font-bold mb-3" style={{ color: primaryColor }}>Hours</h3>
-                <BusinessHoursDisplay businessHours={businessHours} />
+                <div className="w-full">
+                  <BusinessHoursDisplay businessHours={businessHours} />
+                </div>
               </div>
             )}
 
@@ -120,20 +122,20 @@ export default function ClassicTemplate({
               <div className="space-y-3">
                 {tenant.phone && (
                   <a href={`tel:${tenant.phone}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600">
-                    <Phone className="h-4 w-4" />
-                    {tenant.phone}
+                      <Phone className="h-4 w-4" />
+                      {tenant.phone}
                   </a>
                 )}
                 {tenant.email && (
                   <a href={`mailto:${tenant.email}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600">
-                    <Mail className="h-4 w-4" />
-                    {tenant.email}
+                      <Mail className="h-4 w-4" />
+                      {tenant.email}
                   </a>
                 )}
                 {tenant.address && (
                   <a href={`https://maps.google.com/?q=${encodeURIComponent(tenant.address)}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600">
-                    <MapPin className="h-4 w-4" />
-                    {tenant.address}
+                      <MapPin className="h-4 w-4" />
+                      {tenant.address}
                   </a>
                 )}
               </div>

@@ -213,6 +213,7 @@ export class TenantService {
       async () => {
         // Try to get from cache first
         const cached = await CacheService.getBusinessHours(tenantId);
+        console.log('[getTenantBusinessHours] Cache check - cached value:', cached, 'type:', typeof cached);
         if (cached && typeof cached === 'object') {
           console.log('[getTenantBusinessHours] Returning cached data:', cached);
           return cached as BusinessHours;
