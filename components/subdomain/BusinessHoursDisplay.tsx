@@ -22,7 +22,18 @@ export default function BusinessHoursDisplay({
   className = '',
   compact = false 
 }: BusinessHoursDisplayProps) {
-  if (!businessHours) {
+  // Handle if businessHours is still a string
+  let schedule = businessHours;
+  if (typeof businessHours === 'string') {
+    try {
+      schedule = JSON.parse(businessHours);
+    } catch (e) {
+      console.error('Error parsing businessHours:', e);
+      schedule = null;
+    }
+  }
+
+  if (!schedule) {
     return compact ? (
       <div className={`flex items-center space-x-2 ${className}`}>
         <XCircle className="h-4 w-4 text-gray-400" />
@@ -36,7 +47,7 @@ export default function BusinessHoursDisplay({
   }
 
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-  const todayHours = businessHours[currentDay];
+  const todayHours = schedule[currentDay];
   const isOpenToday = todayHours?.isOpen || false;
 
   const getCurrentStatus = () => {
@@ -114,7 +125,7 @@ export default function BusinessHoursDisplay({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {Object.entries(businessHours).map(([day, hours]) => (
+          {Object.entries(schedule).map(([day, hours]) => (
             <div 
               key={day} 
               className={`flex justify-between items-center p-3 rounded-lg transition-colors ${
@@ -156,7 +167,7 @@ export default function BusinessHoursDisplay({
         {currentStatus.status === 'closed' && (
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Next opening:</strong> {getNextOpening(businessHours, currentDay)}
+              <strong>Next opening:</strong> {getNextOpening(schedule, currentDay)}
             </p>
           </div>
         )}
