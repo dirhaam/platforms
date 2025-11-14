@@ -43,6 +43,13 @@ export async function GET(req: NextRequest) {
       .eq('tenant_id', tenant.id)
       .order('created_at', { ascending: false });
 
+    console.log('[Landing Page Media API] Fetched media:', {
+      tenantId: tenant.id,
+      videosCount: videos?.length || 0,
+      socialMediaCount: socialMedia?.length || 0,
+      galleriesCount: galleries?.length || 0,
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -71,15 +78,31 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { videos, socialMedia, galleries } = body;
 
+    console.log('[Landing Page Media API] PUT request:', {
+      tenantId: tenant.id,
+      videosCount: videos?.length || 0,
+      socialMediaCount: socialMedia?.length || 0,
+      videos: videos?.slice(0, 1), // Log first video as sample
+      socialMedia: socialMedia?.slice(0, 1), // Log first social as sample
+    });
+
     const supabase = getSupabaseClient();
 
     // Update videos - delete all and re-insert (simpler approach)
     if (videos && Array.isArray(videos)) {
       // Delete existing videos for this tenant
-      await supabase
+      const { error: deleteError } = await supabase
         .from('tenant_videos')
         .delete()
         .eq('tenant_id', tenant.id);
+      
+      if (deleteError) {
+        console.error('[Videos] Delete error:', deleteError);
+        return NextResponse.json(
+          { error: `Failed to delete videos: ${deleteError.message}` },
+          { status: 500 }
+        );
+      }
       
       // Insert all videos
       if (videos.length > 0) {
@@ -93,19 +116,35 @@ export async function PUT(req: NextRequest) {
           is_active: video.isActive !== false,
         }));
         
-        await supabase
+        const { error: insertError } = await supabase
           .from('tenant_videos')
           .insert(videosToInsert);
+        
+        if (insertError) {
+          console.error('[Videos] Insert error:', insertError);
+          return NextResponse.json(
+            { error: `Failed to insert videos: ${insertError.message}` },
+            { status: 500 }
+          );
+        }
       }
     }
 
     // Update social media - delete all and re-insert (simpler approach)
     if (socialMedia && Array.isArray(socialMedia)) {
       // Delete existing social media for this tenant
-      await supabase
+      const { error: deleteError } = await supabase
         .from('tenant_social_media')
         .delete()
         .eq('tenant_id', tenant.id);
+      
+      if (deleteError) {
+        console.error('[Social Media] Delete error:', deleteError);
+        return NextResponse.json(
+          { error: `Failed to delete social media: ${deleteError.message}` },
+          { status: 500 }
+        );
+      }
       
       // Insert all social media
       if (socialMedia.length > 0) {
@@ -117,20 +156,30 @@ export async function PUT(req: NextRequest) {
           is_active: social.isActive !== false,
         }));
         
-        await supabase
+        const { error: insertError } = await supabase
           .from('tenant_social_media')
           .insert(socialToInsert);
+        
+        if (insertError) {
+          console.error('[Social Media] Insert error:', insertError);
+          return NextResponse.json(
+            { error: `Failed to insert social media: ${insertError.message}` },
+            { status: 500 }
+          );
+        }
       }
     }
+
+    console.log('[Landing Page Media API] Successfully updated media for tenant:', tenant.id);
 
     return NextResponse.json({
       success: true,
       message: 'Landing page media updated successfully'
     });
   } catch (error) {
-    console.error('Error updating landing page media:', error);
+    console.error('[Landing Page Media API] Error updating landing page media:', error);
     return NextResponse.json(
-      { error: 'Failed to update media' },
+      { error: 'Failed to update media', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

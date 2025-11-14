@@ -114,6 +114,14 @@ export default function LandingPageMediaSettings({
     setMessage(null);
 
     try {
+      console.log('[LandingPageMediaSettings] Submitting:', {
+        tenantId,
+        videosCount: videos.length,
+        socialMediaCount: socialMedia.length,
+        videos: videos.slice(0, 1),
+        socialMedia: socialMedia.slice(0, 1),
+      });
+
       const response = await fetch('/api/settings/landing-page-media', {
         method: 'PUT',
         headers: {
@@ -131,14 +139,22 @@ export default function LandingPageMediaSettings({
 
       const result = await response.json();
 
+      console.log('[LandingPageMediaSettings] Response:', {
+        status: response.status,
+        success: result.success,
+        error: result.error,
+        details: result.details,
+      });
+
       if (result.success) {
         setMessage({ type: 'success', text: 'Landing page media updated successfully!' });
       } else {
-        setMessage({ type: 'error', text: result.error || 'Failed to update media' });
+        const errorText = result.details ? `${result.error}: ${result.details}` : (result.error || 'Failed to update media');
+        setMessage({ type: 'error', text: errorText });
       }
     } catch (error) {
-      console.error('Error updating landing page media:', error);
-      setMessage({ type: 'error', text: 'An unexpected error occurred' });
+      console.error('[LandingPageMediaSettings] Error:', error);
+      setMessage({ type: 'error', text: `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}` });
     } finally {
       setIsLoading(false);
     }
