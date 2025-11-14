@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SocialMediaLink } from '@/types/booking';
-import { Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Twitter, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 
 interface SocialMediaSectionProps {
@@ -38,7 +38,7 @@ const getPlatformIcon = (platform: string) => {
         </svg>
       );
     default:
-      return <Link {...iconProps} />;
+      return <LinkIcon {...iconProps} />;
   }
 };
 
