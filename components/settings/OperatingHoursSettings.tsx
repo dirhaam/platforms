@@ -212,7 +212,7 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
                       value={service.startTime}
                       onChange={(e) => updateServiceField(service.id, 'startTime', e.target.value)}
                       disabled={saving}
-                      className="max-w-[120px] h-9"
+                      className="max-w-[120px] h-9 !ring-0 !ring-offset-0 focus-visible:!ring-0 focus-visible:!ring-offset-0"
                     />
                   </td>
                   <td className="py-3 px-4">
@@ -221,7 +221,7 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
                       value={service.endTime}
                       onChange={(e) => updateServiceField(service.id, 'endTime', e.target.value)}
                       disabled={saving}
-                      className="max-w-[120px] h-9"
+                      className="max-w-[120px] h-9 !ring-0 !ring-offset-0 focus-visible:!ring-0 focus-visible:!ring-offset-0"
                     />
                   </td>
                   <td className="py-3 px-4">
@@ -229,7 +229,7 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
                       value={service.slotDurationMinutes}
                       onChange={(e) => updateServiceField(service.id, 'slotDurationMinutes', parseInt(e.target.value))}
                       disabled={saving}
-                      className="h-9 max-w-[120px] px-3 py-1 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-9 max-w-[120px] px-3 py-1 bg-white border border-gray-200 rounded-md text-sm !ring-0 !ring-offset-0 focus:!ring-0 focus:!ring-offset-0 outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value={15}>15 min</option>
                       <option value={30}>30 min</option>
@@ -243,7 +243,7 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
                       value={service.hourlyQuota}
                       onChange={(e) => updateServiceField(service.id, 'hourlyQuota', parseInt(e.target.value) || 1)}
                       disabled={saving}
-                      className="max-w-[100px] h-9"
+                      className="max-w-[100px] h-9 !ring-0 !ring-offset-0 focus-visible:!ring-0 focus-visible:!ring-offset-0"
                     />
                   </td>
                 </tr>
