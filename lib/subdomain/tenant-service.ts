@@ -214,6 +214,7 @@ export class TenantService {
         // Try to get from cache first
         const cached = await CacheService.getBusinessHours(tenantId);
         if (cached && typeof cached === 'object') {
+          console.log('[getTenantBusinessHours] Returning cached data:', cached);
           return cached as BusinessHours;
         }
 
@@ -227,19 +228,24 @@ export class TenantService {
             .limit(1);
           
           if (error) {
-            console.error('Error fetching business hours:', error);
+            console.error('[getTenantBusinessHours] Error fetching business hours:', error);
             throw error;
           }
           
+          console.log('[getTenantBusinessHours] Raw record from DB:', records?.[0]);
+          
           const record = records && records.length > 0 ? records[0] : null;
           let schedule = record?.schedule;
+          
+          console.log('[getTenantBusinessHours] Schedule before parsing:', schedule, 'Type:', typeof schedule);
           
           // Parse schedule if it's a string (from JSONB field)
           if (typeof schedule === 'string') {
             try {
               schedule = JSON.parse(schedule);
+              console.log('[getTenantBusinessHours] Schedule after parsing:', schedule);
             } catch (e) {
-              console.error('Error parsing schedule JSON:', e);
+              console.error('[getTenantBusinessHours] Error parsing schedule JSON:', e);
               schedule = null;
             }
           }
@@ -248,6 +254,8 @@ export class TenantService {
             ? (schedule as BusinessHours)
             : this.getDefaultBusinessHours();
 
+          console.log('[getTenantBusinessHours] Final result:', result);
+          
           await CacheService.setBusinessHours(tenantId, result);
 
           return result;
