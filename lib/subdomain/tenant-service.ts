@@ -232,8 +232,20 @@ export class TenantService {
           }
           
           const record = records && records.length > 0 ? records[0] : null;
-          const result: BusinessHours = record?.schedule
-            ? (record.schedule as BusinessHours)
+          let schedule = record?.schedule;
+          
+          // Parse schedule if it's a string (from JSONB field)
+          if (typeof schedule === 'string') {
+            try {
+              schedule = JSON.parse(schedule);
+            } catch (e) {
+              console.error('Error parsing schedule JSON:', e);
+              schedule = null;
+            }
+          }
+          
+          const result: BusinessHours = schedule
+            ? (schedule as BusinessHours)
             : this.getDefaultBusinessHours();
 
           await CacheService.setBusinessHours(tenantId, result);
