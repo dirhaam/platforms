@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Palette, Check, Loader } from 'lucide-react';
+import { Palette, Check, Loader, Image } from 'lucide-react';
 import { toast } from 'sonner';
+import LandingPageMediaSettings from '@/components/settings/LandingPageMediaSettings';
 
 interface Template {
   id: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare' | 'healthcarev2';
@@ -70,12 +72,18 @@ const TEMPLATES: Template[] = [
 interface LandingPageStyleSettingsProps {
   subdomain: string;
   currentTemplate?: string;
+  tenantId?: string;
 }
 
-export default function LandingPageStyleSettings({ subdomain, currentTemplate }: LandingPageStyleSettingsProps) {
+export default function LandingPageStyleSettings({ subdomain, currentTemplate, tenantId }: LandingPageStyleSettingsProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
   const [fetchedCurrentTemplate, setFetchedCurrentTemplate] = useState<string | null>(null);
   const [initialTemplateLoaded, setInitialTemplateLoaded] = useState(false);
+  const [landingPageMedia, setLandingPageMedia] = useState({
+    videos: [],
+    socialMedia: [],
+    galleries: [],
+  });
 
   useEffect(() => {
     const fetchCurrentTemplate = async () => {
@@ -116,6 +124,30 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
       setFetchedCurrentTemplate(fallbackTemplate);
     }
   }, [subdomain, currentTemplate]);
+
+  // Fetch landing page media
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const fetchMedia = async () => {
+      try {
+        const response = await fetch('/api/settings/landing-page-media');
+        if (response.ok) {
+          const result = await response.json();
+          setLandingPageMedia(result.data || {
+            videos: [],
+            socialMedia: [],
+            galleries: [],
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching landing page media:', error);
+      }
+    };
+
+    fetchMedia();
+  }, [tenantId]);
+
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -169,18 +201,31 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
   const selectedTemplateData = TEMPLATES.find(t => t.id === selectedTemplate);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="w-5 h-5" />
-            Landing Page Style
-          </CardTitle>
-          <CardDescription>
-            Choose the design template for your landing page. All templates include your services, booking system, and contact information.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Palette className="w-5 h-5" />
+          Landing Page Appearance & Media
+        </CardTitle>
+        <CardDescription>
+          Customize your landing page style and manage media content
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="style" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="style" className="flex items-center gap-2">
+              <Palette className="w-4 h-4" />
+              <span className="hidden sm:inline">Style</span>
+            </TabsTrigger>
+            <TabsTrigger value="media" className="flex items-center gap-2">
+              <Image className="w-4 h-4" />
+              <span className="hidden sm:inline">Media</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Style Tab */}
+          <TabsContent value="style" className="space-y-6">
           {/* Current Template Info */}
           {currentTemplateData && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -298,8 +343,19 @@ export default function LandingPageStyleSettings({ subdomain, currentTemplate }:
               The style you choose only affects how your landing page looks, not the functionality.
             </p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          </TabsContent>
+
+          {/* Media Tab */}
+          <TabsContent value="media" className="space-y-6">
+            {tenantId && (
+              <LandingPageMediaSettings 
+                tenantId={tenantId}
+                initialData={landingPageMedia}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }

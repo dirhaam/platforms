@@ -4,10 +4,8 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Clock, Zap, Clock3, AlertCircle, CheckCircle } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Service } from '@/types/booking';
 
 interface ServiceHours {
@@ -17,7 +15,6 @@ interface ServiceHours {
   endTime: string;
   slotDurationMinutes: number;
   hourlyQuota: number;
-  modified?: boolean;
 }
 
 interface OperatingHoursSettingsProps {
@@ -27,10 +24,11 @@ interface OperatingHoursSettingsProps {
 export default function OperatingHoursSettings({ tenantId }: OperatingHoursSettingsProps) {
   const [services, setServices] = useState<ServiceHours[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [subdomain, setSubdomain] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Get subdomain from URL
   useEffect(() => {
@@ -78,57 +76,55 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
 
   const updateServiceField = (
     serviceId: string,
-    field: keyof Omit<ServiceHours, 'id' | 'name' | 'modified'>,
+    field: keyof Omit<ServiceHours, 'id' | 'name'>,
     value: string | number
   ) => {
     setServices(services.map(s => 
       s.id === serviceId 
-        ? { ...s, [field]: value, modified: true }
+        ? { ...s, [field]: value }
         : s
     ));
+    setHasChanges(true);
   };
 
-  const handleSave = async (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
-    if (!service) return;
-
+  const handleSaveAll = async () => {
     try {
-      setSaving(serviceId);
+      setSaving(true);
       setError(null);
 
-      const response = await fetch(`/api/services/${serviceId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': subdomain!
-        },
-        body: JSON.stringify({
-          operatingHours: {
-            startTime: service.startTime,
-            endTime: service.endTime
+      // Save all services in parallel
+      const savePromises = services.map(service =>
+        fetch(`/api/services/${service.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': subdomain!
           },
-          slotDurationMinutes: parseInt(String(service.slotDurationMinutes)),
-          hourlyQuota: parseInt(String(service.hourlyQuota))
+          body: JSON.stringify({
+            operatingHours: {
+              startTime: service.startTime,
+              endTime: service.endTime
+            },
+            slotDurationMinutes: parseInt(String(service.slotDurationMinutes)),
+            hourlyQuota: parseInt(String(service.hourlyQuota))
+          })
         })
-      });
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to save operating hours');
+      const results = await Promise.all(savePromises);
+      
+      // Check if all requests were successful
+      if (results.some(r => !r.ok)) {
+        throw new Error('Failed to save some operating hours');
       }
 
-      setServices(services.map(s =>
-        s.id === serviceId
-          ? { ...s, modified: false }
-          : s
-      ));
-
-      setSuccess(`Operating hours for "${service.name}" updated successfully`);
+      setSuccess('All operating hours updated successfully');
+      setHasChanges(false);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
-      setSaving(null);
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   };
 
@@ -169,162 +165,116 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Operating Hours & Booking Slots
-          </CardTitle>
-          <CardDescription>
-            Configure business hours, time slot duration, and hourly booking limits for each service
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="w-5 h-5" />
+          Operating Hours & Booking Slots
+        </CardTitle>
+        <CardDescription>
+          Configure business hours, time slot duration, and hourly booking limits for all services
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {success && (
+          <Alert className="bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">{success}</AlertDescription>
+          </Alert>
+        )}
 
-      {success && (
-        <Alert className="bg-green-50 border-green-200">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">{success}</AlertDescription>
-        </Alert>
-      )}
+        {/* Services Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="text-left py-3 px-4 font-semibold">Service Name</th>
+                <th className="text-left py-3 px-4 font-semibold">Start Time</th>
+                <th className="text-left py-3 px-4 font-semibold">End Time</th>
+                <th className="text-left py-3 px-4 font-semibold">Slot Duration</th>
+                <th className="text-left py-3 px-4 font-semibold">Hourly Quota</th>
+              </tr>
+            </thead>
+            <tbody>
+              {services.map((service, idx) => (
+                <tr key={service.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="py-3 px-4 font-medium">{service.name}</td>
+                  <td className="py-3 px-4">
+                    <Input
+                      type="time"
+                      value={service.startTime}
+                      onChange={(e) => updateServiceField(service.id, 'startTime', e.target.value)}
+                      disabled={saving}
+                      className="max-w-[120px]"
+                    />
+                  </td>
+                  <td className="py-3 px-4">
+                    <Input
+                      type="time"
+                      value={service.endTime}
+                      onChange={(e) => updateServiceField(service.id, 'endTime', e.target.value)}
+                      disabled={saving}
+                      className="max-w-[120px]"
+                    />
+                  </td>
+                  <td className="py-3 px-4">
+                    <select
+                      value={service.slotDurationMinutes}
+                      onChange={(e) => updateServiceField(service.id, 'slotDurationMinutes', parseInt(e.target.value))}
+                      disabled={saving}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm max-w-[120px]"
+                    >
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={60}>60 min</option>
+                    </select>
+                  </td>
+                  <td className="py-3 px-4">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={service.hourlyQuota}
+                      onChange={(e) => updateServiceField(service.id, 'hourlyQuota', parseInt(e.target.value) || 1)}
+                      disabled={saving}
+                      className="max-w-[100px]"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Services Grid */}
-      <div className="grid gap-4">
-        {services.map((service) => (
-          <Card key={service.id} className={service.modified ? 'border-blue-300 bg-blue-50' : ''}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-lg">{service.name}</CardTitle>
-                {service.modified && (
-                  <Badge variant="default" className="bg-blue-600">
-                    Unsaved
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Operating Hours Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor={`start-${service.id}`} className="flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4" />
-                    Start Time
-                  </Label>
-                  <Input
-                    id={`start-${service.id}`}
-                    type="time"
-                    value={service.startTime}
-                    onChange={(e) => updateServiceField(service.id, 'startTime', e.target.value)}
-                    disabled={saving === service.id}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">When business opens</p>
-                </div>
-                <div>
-                  <Label htmlFor={`end-${service.id}`} className="flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4" />
-                    End Time
-                  </Label>
-                  <Input
-                    id={`end-${service.id}`}
-                    type="time"
-                    value={service.endTime}
-                    onChange={(e) => updateServiceField(service.id, 'endTime', e.target.value)}
-                    disabled={saving === service.id}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">When business closes</p>
-                </div>
-              </div>
-
-              {/* Slot Duration & Quota Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor={`duration-${service.id}`} className="flex items-center gap-2 mb-2">
-                    <Clock3 className="w-4 h-4" />
-                    Time Slot Duration
-                  </Label>
-                  <select
-                    id={`duration-${service.id}`}
-                    value={service.slotDurationMinutes}
-                    onChange={(e) => updateServiceField(service.id, 'slotDurationMinutes', parseInt(e.target.value))}
-                    disabled={saving === service.id}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value={15}>15 minutes</option>
-                    <option value={30}>30 minutes</option>
-                    <option value={60}>60 minutes</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Duration of each time slot</p>
-                </div>
-                <div>
-                  <Label htmlFor={`quota-${service.id}`} className="flex items-center gap-2 mb-2">
-                    <Zap className="w-4 h-4" />
-                    Hourly Quota
-                  </Label>
-                  <Input
-                    id={`quota-${service.id}`}
-                    type="number"
-                    min="1"
-                    value={service.hourlyQuota}
-                    onChange={(e) => updateServiceField(service.id, 'hourlyQuota', parseInt(e.target.value) || 1)}
-                    disabled={saving === service.id}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Max bookings per hour</p>
-                </div>
-              </div>
-
-              {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
-                <strong>Example:</strong> If you open at 09:00, close at 18:00, slot duration is 30min, and quota is 3:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>9:00-9:30, 9:00-9:30, 9:00-9:30 → 3 slots in first hour</li>
-                  <li>Then 10:00 hour starts fresh with new quota</li>
-                </ul>
-              </div>
-
-              {/* Save Button */}
-              <div className="flex gap-2 pt-2 border-t">
-                <Button
-                  onClick={() => handleSave(service.id)}
-                  disabled={saving === service.id || !service.modified}
-                  className="flex-1"
-                >
-                  {saving === service.id ? 'Saving...' : 'Save Changes'}
-                </Button>
-                {service.modified && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setServices(services.map(s =>
-                        s.id === service.id
-                          ? {
-                              ...s,
-                              startTime: s.startTime,
-                              endTime: s.endTime,
-                              slotDurationMinutes: s.slotDurationMinutes,
-                              hourlyQuota: s.hourlyQuota,
-                              modified: false
-                            }
-                          : s
-                      ));
-                    }}
-                    disabled={saving === service.id}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+        {/* Save Button */}
+        <div className="flex gap-2 pt-4 border-t">
+          <Button
+            onClick={handleSaveAll}
+            disabled={saving || !hasChanges}
+            className="gap-2"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving All...
+              </>
+            ) : (
+              'Save All Changes'
+            )}
+          </Button>
+          {hasChanges && (
+            <span className="text-sm text-orange-600 flex items-center">
+              ⚠️ You have unsaved changes
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
