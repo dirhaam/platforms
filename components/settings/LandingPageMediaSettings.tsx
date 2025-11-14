@@ -118,7 +118,9 @@ export default function LandingPageMediaSettings({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
           tenantId,
           videos: videos.filter(v => v.id.toString().length > 0),

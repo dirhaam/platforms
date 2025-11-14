@@ -59,7 +59,13 @@ export default function SettingsPageContent() {
 
     const fetchMedia = async () => {
       try {
-        const response = await fetch('/api/settings/landing-page-media');
+        const response = await fetch('/api/settings/landing-page-media', {
+          headers: {
+            'x-tenant-id': tenantId,
+          },
+          cache: 'no-store',
+          credentials: 'same-origin',
+        });
         if (response.ok) {
           const result = await response.json();
           setLandingPageMedia(result.data || {
