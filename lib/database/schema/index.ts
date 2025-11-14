@@ -52,11 +52,7 @@ export const services = pgTable('services', {
   homeVisitAvailable: boolean('home_visit_available').default(false),
   homeVisitSurcharge: real('home_visit_surcharge'),
   
-  // Operating hours and quota
-  operatingHours: jsonb('operating_hours').$type<{
-    startTime: string; // HH:MM format, e.g., "08:00"
-    endTime: string;   // HH:MM format, e.g., "17:00"
-  } | null>(),
+  // Time slot configuration (uses global tenant business hours)
   slotDurationMinutes: integer('slot_duration_minutes').default(30), // Duration of each time slot
   hourlyQuota: integer('hourly_quota').default(10), // Max bookings per hour
   
