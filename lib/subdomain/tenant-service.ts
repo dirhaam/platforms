@@ -211,13 +211,13 @@ export class TenantService {
     return await PerformanceMonitor.monitorDatabaseQuery(
       'getTenantBusinessHours',
       async () => {
-        // Try to get from cache first
-        const cached = await CacheService.getBusinessHours(tenantId);
-        console.log('[getTenantBusinessHours] Cache check - cached value:', cached, 'type:', typeof cached);
-        if (cached && typeof cached === 'object') {
-          console.log('[getTenantBusinessHours] Returning cached data:', cached);
-          return cached as BusinessHours;
-        }
+        // SKIP CACHE FOR NOW - force fetch fresh data
+        // const cached = await CacheService.getBusinessHours(tenantId);
+        // console.log('[getTenantBusinessHours] Cache check - cached value:', cached, 'type:', typeof cached);
+        // if (cached && typeof cached === 'object') {
+        //   console.log('[getTenantBusinessHours] Returning cached data:', cached);
+        //   return cached as BusinessHours;
+        // }
 
         try {
           const supabase = getSupabaseClient();
@@ -266,20 +266,22 @@ export class TenantService {
 
           console.log('[getTenantBusinessHours] Final result:', result);
           
-          await CacheService.setBusinessHours(tenantId, result);
+          // SKIP CACHE FOR NOW
+          // await CacheService.setBusinessHours(tenantId, result);
 
           return result;
         } catch (error) {
           console.warn('Could not fetch business hours from database:', error);
+          console.warn('[getTenantBusinessHours] ERROR DETAILS:', error);
           
-          // Return null if no business hours found. This ensures 
-          // we only show data that comes from admin dashboard
-          const noHours: BusinessHours | null = null;
+          // Return default hours on error (for now)
+          const defaultHours = this.getDefaultBusinessHours();
+          console.log('[getTenantBusinessHours] Returning default hours due to error:', defaultHours);
           
-          // Cache null result to prevent repeated failed calls
-          await CacheService.setBusinessHours(tenantId, null);
+          // SKIP CACHE FOR NOW
+          // await CacheService.setBusinessHours(tenantId, null);
           
-          return null;
+          return defaultHours;
         }
       },
       tenantId
