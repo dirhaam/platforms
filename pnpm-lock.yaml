@@ -4318,6 +4318,4 @@ snapshots:
       y18n: 4.0.3
       yargs-parser: 18.1.3
 
-  react-is@19.2.0: {}
-
   zod@4.1.12: {}
