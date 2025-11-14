@@ -30,7 +30,6 @@ const mapToService = (dbData: any): Service => {
     homeVisitSurcharge: dbData.home_visit_surcharge,
     images: dbData.images,
     requirements: dbData.requirements,
-    operatingHours: dbData.operating_hours,
     slotDurationMinutes: dbData.slot_duration_minutes,
     hourlyQuota: dbData.hourly_quota,
     createdAt: dbData.created_at,
@@ -59,7 +58,6 @@ export class ServiceService {
         home_visit_surcharge: data.homeVisitSurcharge || null,
         images: data.images || [],
         requirements: data.requirements || [],
-        operating_hours: data.operatingHours || { startTime: '08:00', endTime: '17:00' },
         slot_duration_minutes: data.slotDurationMinutes || 30,
         hourly_quota: data.hourlyQuota || 10,
         created_at: new Date().toISOString(),
@@ -110,7 +108,6 @@ export class ServiceService {
       if (data.homeVisitSurcharge !== undefined) updateData.home_visit_surcharge = data.homeVisitSurcharge;
       if (data.images !== undefined) updateData.images = data.images;
       if (data.requirements !== undefined) updateData.requirements = data.requirements;
-      if (data.operatingHours !== undefined) updateData.operating_hours = data.operatingHours;
       if (data.slotDurationMinutes !== undefined) updateData.slot_duration_minutes = data.slotDurationMinutes;
       if (data.hourlyQuota !== undefined) updateData.hourly_quota = data.hourlyQuota;
       

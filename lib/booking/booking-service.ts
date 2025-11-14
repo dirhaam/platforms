@@ -636,22 +636,46 @@ export class BookingService {
         return null;
       }
       
-      // Get operating hours from service, default to 8AM-5PM if not set
-      const operatingHours = service.operatingHours || {
-        startTime: '08:00',
-        endTime: '17:00'
+      // Get global business hours for the tenant
+      const { data: businessHoursData } = await supabase
+        .from('business_hours')
+        .select('schedule')
+        .eq('tenant_id', tenantId)
+        .single();
+      
+      // Get the day's hours from the business_hours schedule
+      const bookingDate = new Date(request.date);
+      const dayOfWeek = bookingDate.getDay();
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayKey = dayNames[dayOfWeek];
+      
+      const schedule = businessHoursData?.schedule || {};
+      const dayHours = schedule[dayKey] || { isOpen: true, openTime: '08:00', closeTime: '17:00' };
+      
+      // Check if business is open on this day
+      if (!dayHours.isOpen) {
+        return {
+          date: request.date,
+          slots: [],
+          businessHours: { isOpen: false }
+        };
+      }
+      
+      const operatingHours = {
+        startTime: dayHours.openTime,
+        endTime: dayHours.closeTime
       };
       
-      console.log('[getAvailability] Using operating hours:', {
+      console.log('[getAvailability] Using global business hours:', {
         serviceId: request.serviceId,
-        operatingHours,
-        hasConfiguredHours: !!service.operatingHours
+        date: request.date,
+        dayOfWeek,
+        operatingHours
       });
       
       const [startHourStr, startMinStr] = operatingHours.startTime.split(':').map(Number);
       const [endHourStr, endMinStr] = operatingHours.endTime.split(':').map(Number);
       
-      const bookingDate = new Date(request.date);
       const startOfDay = new Date(bookingDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(bookingDate);

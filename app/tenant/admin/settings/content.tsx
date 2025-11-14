@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Calendar, FileText, Palette, Image } from 'lucide-react';
+import { Settings, Calendar, FileText, Palette, Image, Clock } from 'lucide-react';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
+import BusinessHoursGlobalSettings from '@/components/settings/BusinessHoursGlobalSettings';
 import OperatingHoursSettings from '@/components/settings/OperatingHoursSettings';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
 import LandingPageMediaSettings from '@/components/settings/LandingPageMediaSettings';
@@ -144,6 +145,7 @@ export default function SettingsPageContent() {
             <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2 space-y-4">
               {tenantId && (
                 <>
+                  <BusinessHoursGlobalSettings tenantId={tenantId} />
                   <OperatingHoursSettings tenantId={tenantId} />
                   <BlockedDatesManager tenantId={tenantId} />
                 </>

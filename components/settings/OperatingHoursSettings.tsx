@@ -4,17 +4,24 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Clock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Loader2, Zap, Clock3 } from 'lucide-react';
 import { Service } from '@/types/booking';
 
-interface ServiceHours {
+interface ServiceConfig {
   id: string;
   name: string;
-  startTime: string;
-  endTime: string;
   slotDurationMinutes: number;
   hourlyQuota: number;
+}
+
+interface BusinessHours {
+  [day: string]: {
+    isOpen: boolean;
+    openTime: string;
+    closeTime: string;
+  };
 }
 
 interface OperatingHoursSettingsProps {
@@ -22,7 +29,8 @@ interface OperatingHoursSettingsProps {
 }
 
 export default function OperatingHoursSettings({ tenantId }: OperatingHoursSettingsProps) {
-  const [services, setServices] = useState<ServiceHours[]>([]);
+  const [services, setServices] = useState<ServiceConfig[]>([]);
+  const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,51 +46,50 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
     }
   }, []);
 
-  // Fetch services
+  // Fetch services and business hours
   useEffect(() => {
     if (!subdomain) return;
-    
-    const fetchServices = async () => {
+
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('/api/services', {
-          headers: {
-            'x-tenant-id': subdomain
-          }
+
+        // Fetch services
+        const servicesResponse = await fetch('/api/services', {
+          headers: { 'x-tenant-id': subdomain }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch services');
+        if (!servicesResponse.ok) throw new Error('Failed to fetch services');
 
-        const data = await response.json();
-        const servicesList = (data.services || []).map((service: Service) => ({
+        const servicesData = await servicesResponse.json();
+        const servicesList = (servicesData.services || []).map((service: Service) => ({
           id: service.id,
           name: service.name,
-          startTime: service.operatingHours?.startTime || '08:00',
-          endTime: service.operatingHours?.endTime || '17:00',
           slotDurationMinutes: service.slotDurationMinutes || 30,
           hourlyQuota: service.hourlyQuota || 10,
         }));
         setServices(servicesList);
+
+        // Fetch business hours
+        const hoursResponse = await fetch(`/api/settings/business-hours?tenantId=${tenantId}`);
+        if (hoursResponse.ok) {
+          const hoursData = await hoursResponse.json();
+          setBusinessHours(hoursData.schedule);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch services');
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchServices();
-  }, [subdomain]);
+    fetchData();
+  }, [subdomain, tenantId]);
 
-  const updateServiceField = (
-    serviceId: string,
-    field: keyof Omit<ServiceHours, 'id' | 'name'>,
-    value: string | number
-  ) => {
-    setServices(services.map(s => 
-      s.id === serviceId 
-        ? { ...s, [field]: value }
-        : s
+  const updateServiceField = (serviceId: string, field: string, value: any) => {
+    setServices(services.map(s =>
+      s.id === serviceId ? { ...s, [field]: value } : s
     ));
     setHasChanges(true);
   };
@@ -92,7 +99,6 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
       setSaving(true);
       setError(null);
 
-      // Save all services in parallel
       const savePromises = services.map(service =>
         fetch(`/api/services/${service.id}`, {
           method: 'PUT',
@@ -101,24 +107,19 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
             'x-tenant-id': subdomain!
           },
           body: JSON.stringify({
-            operatingHours: {
-              startTime: service.startTime,
-              endTime: service.endTime
-            },
-            slotDurationMinutes: parseInt(String(service.slotDurationMinutes)),
-            hourlyQuota: parseInt(String(service.hourlyQuota))
+            slotDurationMinutes: service.slotDurationMinutes,
+            hourlyQuota: service.hourlyQuota
           })
         })
       );
 
       const results = await Promise.all(savePromises);
-      
-      // Check if all requests were successful
+
       if (results.some(r => !r.ok)) {
-        throw new Error('Failed to save some operating hours');
+        throw new Error('Failed to save some services');
       }
 
-      setSuccess('All operating hours updated successfully');
+      setSuccess('All service configurations updated successfully!');
       setHasChanges(false);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
@@ -131,10 +132,8 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
   if (loading) {
     return (
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
+        <CardContent className="pt-6 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </CardContent>
       </Card>
     );
@@ -146,11 +145,8 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Operating Hours
+            Service Time Slots
           </CardTitle>
-          <CardDescription>
-            Set service availability and booking slots
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert>
@@ -169,13 +165,13 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="w-5 h-5" />
-          Operating Hours & Booking Slots
+          Service Time Slots & Quotas
         </CardTitle>
         <CardDescription>
-          Configure business hours, time slot duration, and hourly booking limits for all services
+          Configure time slot duration and hourly booking limits for each service
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -190,14 +186,22 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
           </Alert>
         )}
 
+        {/* Global Business Hours Reference */}
+        {businessHours && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm font-semibold text-blue-900 mb-2">Global Business Hours</p>
+            <p className="text-xs text-blue-800">
+              All services operate within these global hours. Manage global hours in the Business Hours Settings.
+            </p>
+          </div>
+        )}
+
         {/* Services Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="text-left py-3 px-4 font-semibold">Service Name</th>
-                <th className="text-left py-3 px-4 font-semibold">Start Time</th>
-                <th className="text-left py-3 px-4 font-semibold">End Time</th>
                 <th className="text-left py-3 px-4 font-semibold">Slot Duration</th>
                 <th className="text-left py-3 px-4 font-semibold">Hourly Quota</th>
               </tr>
@@ -206,24 +210,6 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
               {services.map((service, idx) => (
                 <tr key={service.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="py-3 px-4 font-medium">{service.name}</td>
-                  <td className="py-3 px-4">
-                    <Input
-                      type="time"
-                      value={service.startTime}
-                      onChange={(e) => updateServiceField(service.id, 'startTime', e.target.value)}
-                      disabled={saving}
-                      className="max-w-[120px] h-9 !ring-0 !ring-offset-0 focus-visible:!ring-0 focus-visible:!ring-offset-0"
-                    />
-                  </td>
-                  <td className="py-3 px-4">
-                    <Input
-                      type="time"
-                      value={service.endTime}
-                      onChange={(e) => updateServiceField(service.id, 'endTime', e.target.value)}
-                      disabled={saving}
-                      className="max-w-[120px] h-9 !ring-0 !ring-offset-0 focus-visible:!ring-0 focus-visible:!ring-offset-0"
-                    />
-                  </td>
                   <td className="py-3 px-4">
                     <select
                       value={service.slotDurationMinutes}
@@ -250,6 +236,11 @@ export default function OperatingHoursSettings({ tenantId }: OperatingHoursSetti
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Info Box */}
+        <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-900">
+          <strong>Example:</strong> If slot duration is 30 min and quota is 3, customers can book 3 slots of 30 minutes each hour (total 1.5 hours capacity per hour).
         </div>
 
         {/* Save Button */}
