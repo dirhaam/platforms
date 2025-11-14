@@ -35,7 +35,7 @@ export default function BusinessHoursDisplay({
     );
   }
 
-  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   const todayHours = businessHours[currentDay];
   const isOpenToday = todayHours?.isOpen || false;
 
