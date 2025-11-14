@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import BusinessProfileSettings from './BusinessProfileSettings';
 import LandingPageSettings from './LandingPageSettings';
+import LandingPageMediaSettings from './LandingPageMediaSettings';
 import ServiceSettings from './ServiceSettings';
 import BusinessHoursSettings from './BusinessHoursSettings';
 import NotificationSettings from './NotificationSettings';
@@ -19,22 +20,25 @@ export default async function TenantSettings({ session }: TenantSettingsProps) {
     services,
     businessHours,
     landingPageSettings,
+    landingPageMedia,
     notificationSettings,
   ] = await Promise.all([
     SettingsService.getBusinessProfile(session.tenantId),
     SettingsService.getServices(session.tenantId),
     SettingsService.getBusinessHours(session.tenantId),
     SettingsService.getLandingPageSettings(session.tenantId),
+    SettingsService.getLandingPageMedia(session.tenantId),
     SettingsService.getNotificationSettings(session.tenantId),
   ]);
 
   return (
     <Tabs defaultValue="profile" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="profile">Business Profile</TabsTrigger>
         <TabsTrigger value="services">Services</TabsTrigger>
         <TabsTrigger value="hours">Business Hours</TabsTrigger>
         <TabsTrigger value="landing">Landing Page</TabsTrigger>
+        <TabsTrigger value="media">Media</TabsTrigger>
         <TabsTrigger value="notifications">Notifications</TabsTrigger>
       </TabsList>
 
@@ -101,6 +105,23 @@ export default async function TenantSettings({ session }: TenantSettingsProps) {
             <LandingPageSettings 
               tenantId={session.tenantId}
               initialData={landingPageSettings}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="media" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Landing Page Media</CardTitle>
+            <CardDescription>
+              Manage videos, social media links, and photo galleries on your landing page
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LandingPageMediaSettings 
+              tenantId={session.tenantId}
+              initialData={landingPageMedia}
             />
           </CardContent>
         </Card>

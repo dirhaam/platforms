@@ -96,14 +96,16 @@ export default function SettingsPageContent() {
 
           {/* Calendar Tab */}
           <TabsContent value="calendar" className="mt-0">
-            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2 space-y-6">
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
               {tenantId && (
-                <>
-                  <OperatingHoursSettings tenantId={tenantId} />
-                  <div className="mt-8 pt-8 border-t">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <OperatingHoursSettings tenantId={tenantId} />
+                  </div>
+                  <div>
                     <BlockedDatesManager tenantId={tenantId} />
                   </div>
-                </>
+                </div>
               )}
             </div>
           </TabsContent>

@@ -398,6 +398,53 @@ export class SettingsService {
     };
   }
 
+  // Get landing page media
+  static async getLandingPageMedia(tenantId: string) {
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      // Fetch videos
+      const { data: videos } = await supabase
+        .from('tenant_videos')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('display_order', { ascending: true });
+
+      // Fetch social media
+      const { data: socialMedia } = await supabase
+        .from('tenant_social_media')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('display_order', { ascending: true });
+
+      // Fetch galleries with photos
+      const { data: galleries } = await supabase
+        .from('tenant_photo_galleries')
+        .select(`
+          *,
+          photos:tenant_gallery_photos(*)
+        `)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      return {
+        videos: videos || [],
+        socialMedia: socialMedia || [],
+        galleries: galleries || [],
+      };
+    } catch (error) {
+      console.error('Error fetching landing page media:', error);
+      return {
+        videos: [],
+        socialMedia: [],
+        galleries: [],
+      };
+    }
+  }
+
   // Update notification settings (mock implementation)
   static async updateNotificationSettings(
     tenantId: string,
