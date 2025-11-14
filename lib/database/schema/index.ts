@@ -453,23 +453,6 @@ export const superAdminRelations = relations(superAdmins, () => ({}));
 
 export const securityAuditLogRelations = relations(securityAuditLogs, () => ({}));
 
-export const tenantVideosRelations = relations(tenantVideos, ({ one }) => ({
-  tenant: one(tenants, { fields: [tenantVideos.tenantId], references: [tenants.id] }),
-}));
-
-export const tenantSocialMediaRelations = relations(tenantSocialMedia, ({ one }) => ({
-  tenant: one(tenants, { fields: [tenantSocialMedia.tenantId], references: [tenants.id] }),
-}));
-
-export const tenantPhotoGalleriesRelations = relations(tenantPhotoGalleries, ({ one, many }) => ({
-  tenant: one(tenants, { fields: [tenantPhotoGalleries.tenantId], references: [tenants.id] }),
-  photos: many(tenantGalleryPhotos),
-}));
-
-export const tenantGalleryPhotosRelations = relations(tenantGalleryPhotos, ({ one }) => ({
-  gallery: one(tenantPhotoGalleries, { fields: [tenantGalleryPhotos.galleryId], references: [tenantPhotoGalleries.id] }),
-}));
-
 // Blocked Dates table
 export const blockedDates = pgTable('blocked_dates', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -533,3 +516,21 @@ export const tenantGalleryPhotos = pgTable('tenant_gallery_photos', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Relations for tenant videos, social media, and photo galleries
+export const tenantVideosRelations = relations(tenantVideos, ({ one }) => ({
+  tenant: one(tenants, { fields: [tenantVideos.tenantId], references: [tenants.id] }),
+}));
+
+export const tenantSocialMediaRelations = relations(tenantSocialMedia, ({ one }) => ({
+  tenant: one(tenants, { fields: [tenantSocialMedia.tenantId], references: [tenants.id] }),
+}));
+
+export const tenantPhotoGalleriesRelations = relations(tenantPhotoGalleries, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [tenantPhotoGalleries.tenantId], references: [tenants.id] }),
+  photos: many(tenantGalleryPhotos),
+}));
+
+export const tenantGalleryPhotosRelations = relations(tenantGalleryPhotos, ({ one }) => ({
+  gallery: one(tenantPhotoGalleries, { fields: [tenantGalleryPhotos.galleryId], references: [tenantPhotoGalleries.id] }),
+}));
