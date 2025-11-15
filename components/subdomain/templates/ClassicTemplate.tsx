@@ -63,7 +63,6 @@ export default function ClassicTemplate({
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
-  // Warna sesuai mockup navy + krem
   const defaultPrimary = '#1f3447';
   const primaryColor = tenant.brandColors?.primary || defaultPrimary;
 
@@ -114,19 +113,22 @@ export default function ClassicTemplate({
         <section className="px-4 sm:px-6 lg:px-8 pt-6 pb-10">
           <div className="max-w-6xl mx-auto">
             <div
-              className="relative rounded-[2.2rem] overflow-hidden shadow-md"
+              className="relative rounded-[2.2rem] overflow-visible shadow-md"
               style={{ backgroundColor: primaryColor }}
             >
-              <div className="px-7 sm:px-12 py-12 sm:py-16 text-white">
+              <div className="px-7 sm:pr-44 sm:pl-12 py-12 sm:py-16 text-white">
                 <div className="max-w-xl">
                   <p className="text-xs sm:text-sm tracking-[0.18em] uppercase text-sky-200 mb-3">
                     Welcome
                   </p>
-                  <h2 className="text-4xl font-bold mb-2 drop-shadow">Welcome to {tenant.businessName}</h2>
+                  <h2 className="text-4xl font-bold mb-2 drop-shadow">
+                    Welcome to {tenant.businessName}
+                  </h2>
                   {tenant.businessDescription && (
-                    <p className="text-base text-blue-100/90 mb-7">{tenant.businessDescription}</p>
+                    <p className="text-base text-blue-100/90 mb-7">
+                      {tenant.businessDescription}
+                    </p>
                   )}
-
                   <div className="flex flex-wrap gap-3 items-center">
                     <Button
                       size="lg"
@@ -147,8 +149,8 @@ export default function ClassicTemplate({
                   </div>
                 </div>
               </div>
-              {/* Card Today Info floating (desktop) */}
-              <div className="hidden md:block absolute right-8 top-1/2 -translate-y-1/2">
+              {/* Floating Info Card on desktop */}
+              <div className="hidden md:block absolute right-[-60px] top-1/2 -translate-y-1/2 z-20">
                 <Card className="w-80 shadow-lg rounded-2xl border-none bg-white">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
@@ -156,18 +158,87 @@ export default function ClassicTemplate({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-0">
-                    {businessHours && (
-                      <div className="space-y-2">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                          Business Hours
-                        </p>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                          <BusinessHoursDisplay businessHours={businessHours} />
-                        </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                        Business Hours
+                      </p>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                        <BusinessHoursDisplay
+                          businessHours={businessHours}
+                          onlyToday={true}
+                          className="flex flex-col gap-1"
+                          renderStatus={({ isOpen, label }) => (
+                            <span className={`rounded px-2 py-0.5 text-xs font-semibold border ${isOpen ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-red-100 text-red-600 border-red-200"}`}>{label}</span>
+                          )}
+                        />
                       </div>
-                    )}
+                    </div>
                     <div className="h-px bg-slate-200" />
-                    <div className="space-y-2">
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                        Contact
+                      </p>
+                      <div className="space-y-2 text-sm text-slate-700">
+                        {tenant.phone && (
+                          <a
+                            href={`tel:${tenant.phone}`}
+                            className="flex items-center gap-2 hover:text-sky-600"
+                          >
+                            <Phone className="h-4 w-4" />
+                            {tenant.phone}
+                          </a>
+                        )}
+                        {tenant.email && (
+                          <a
+                            href={`mailto:${tenant.email}`}
+                            className="flex items-center gap-2 hover:text-sky-600"
+                          >
+                            <Mail className="h-4 w-4" />
+                            {tenant.email}
+                          </a>
+                        )}
+                        {tenant.address && (
+                          <a
+                            href={`https://maps.google.com/?q=${encodeURIComponent(tenant.address)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 hover:text-sky-600"
+                          >
+                            <MapPin className="h-4 w-4" />
+                            <span className="truncate">{tenant.address}</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              {/* Card Info mobile di bawah hero */}
+              <div className="mt-4 md:hidden">
+                <Card className="shadow-md rounded-2xl border-none bg-white">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                      Today's Info
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pt-0">
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                        Business Hours
+                      </p>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                        <BusinessHoursDisplay
+                          businessHours={businessHours}
+                          onlyToday={true}
+                          className="flex flex-col gap-1"
+                          renderStatus={({ isOpen, label }) => (
+                            <span className={`rounded px-2 py-0.5 text-xs font-semibold border ${isOpen ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-red-100 text-red-600 border-red-200"}`}>{label}</span>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    <div className="h-px bg-slate-200" />
+                    <div>
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
                         Contact
                       </p>
@@ -207,65 +278,6 @@ export default function ClassicTemplate({
                 </Card>
               </div>
             </div>
-            {/* Card Today's Info versi mobile */}
-            <div className="mt-4 md:hidden">
-              <Card className="shadow-md rounded-2xl border-none bg-white">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
-                    Today's Info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-0">
-                  {businessHours && (
-                    <div className="space-y-2">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                        Business Hours
-                      </p>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                        <BusinessHoursDisplay businessHours={businessHours} />
-                      </div>
-                    </div>
-                  )}
-                  <div className="h-px bg-slate-200" />
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                      Contact
-                    </p>
-                    <div className="space-y-2 text-sm text-slate-700">
-                      {tenant.phone && (
-                        <a
-                          href={`tel:${tenant.phone}`}
-                          className="flex items-center gap-2 hover:text-sky-600"
-                        >
-                          <Phone className="h-4 w-4" />
-                          {tenant.phone}
-                        </a>
-                      )}
-                      {tenant.email && (
-                        <a
-                          href={`mailto:${tenant.email}`}
-                          className="flex items-center gap-2 hover:text-sky-600"
-                        >
-                          <Mail className="h-4 w-4" />
-                          {tenant.email}
-                        </a>
-                      )}
-                      {tenant.address && (
-                        <a
-                          href={`https://maps.google.com/?q=${encodeURIComponent(tenant.address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 hover:text-sky-600"
-                        >
-                          <MapPin className="h-4 w-4" />
-                          <span className="truncate">{tenant.address}</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         </section>
 
@@ -299,7 +311,9 @@ export default function ClassicTemplate({
                             )}
                           </div>
                           {service.description && (
-                            <p className="text-sm text-slate-600 mb-3">{service.description}</p>
+                            <p className="text-sm text-slate-600 mb-3">
+                              {service.description}
+                            </p>
                           )}
                           <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-slate-600">
                             <span>⏱ {service.duration} min</span>
