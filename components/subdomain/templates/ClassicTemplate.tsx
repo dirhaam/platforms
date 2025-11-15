@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
-import VideoSection from '@/components/subdomain/sections/VideoSection';
+import VideoCarousel from '@/components/subdomain/sections/VideoCarousel';
 import SocialMediaSection from '@/components/subdomain/sections/SocialMediaSection';
 import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySection';
 import { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
@@ -179,6 +179,21 @@ export default function ClassicTemplate({
         </div>
         {/* Body */}
         <div className="px-4 sm:px-8 py-8">
+          {/* Videos Section - Above Our Services */}
+          {videos.length > 0 && (
+            <section className="mb-12 pb-8 border-b border-slate-200">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: primaryColor }}>
+                Our Videos
+              </h3>
+              <VideoCarousel
+                videos={videos}
+                primaryColor={primaryColor}
+                size={videoOptions?.videoSize}
+                autoplay={videoOptions?.autoplay}
+              />
+            </section>
+          )}
+
           {/* Our Services */}
           {services.length > 0 && (
             <section>
@@ -230,21 +245,6 @@ export default function ClassicTemplate({
                   </Card>
                 ))}
               </div>
-            </section>
-          )}
-
-          {/* Videos Section */}
-          {videos.length > 0 && (
-            <section className="py-8 bg-slate-100 rounded-xl">
-              <VideoSection
-                videos={videos}
-                displayType="grid"
-                primaryColor={primaryColor}
-                mode="inline"
-                showHeader={false}
-                size={videoOptions?.videoSize}
-                autoplay={videoOptions?.autoplay}
-              />
             </section>
           )}
 
