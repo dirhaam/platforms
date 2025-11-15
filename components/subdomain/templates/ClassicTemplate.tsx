@@ -176,24 +176,22 @@ export default function ClassicTemplate({
               </CardContent>
             </Card>
           </div>
-        </div>
-        {/* Body */}
-        <div className="px-4 sm:px-8 py-8">
-          {/* Videos Section - Above Our Services */}
+
+          {/* Videos Section - Below Navy Card */}
           {videos.length > 0 && (
-            <section className="mb-12 pb-8 border-b border-slate-200">
-              <h3 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: primaryColor }}>
-                Our Videos
-              </h3>
+            <div className="px-4 sm:px-8 pt-12 pb-8">
               <VideoCarousel
                 videos={videos}
                 primaryColor={primaryColor}
                 size={videoOptions?.videoSize}
                 autoplay={videoOptions?.autoplay}
+                showTitle={false}
               />
-            </section>
+            </div>
           )}
-
+        </div>
+        {/* Body */}
+        <div className="px-4 sm:px-8 py-8">
           {/* Our Services */}
           {services.length > 0 && (
             <section>

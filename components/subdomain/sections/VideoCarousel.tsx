@@ -10,6 +10,7 @@ interface VideoCarouselProps {
   primaryColor?: string;
   size?: 'small' | 'medium' | 'large';
   autoplay?: boolean;
+  showTitle?: boolean;
 }
 
 const extractYoutubeId = (url: string): string => {
@@ -24,6 +25,7 @@ export default function VideoCarousel({
   primaryColor = '#1f3447',
   size = 'medium',
   autoplay = false,
+  showTitle = false,
 }: VideoCarouselProps) {
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -71,12 +73,12 @@ export default function VideoCarousel({
                 allowFullScreen
               />
             </div>
-            {video.title && (
+            {showTitle && video.title && (
               <h3 className="text-base font-semibold text-slate-900 mt-3 line-clamp-2">
                 {video.title}
               </h3>
             )}
-            {video.description && (
+            {showTitle && video.description && (
               <p className="text-sm text-slate-600 mt-1 line-clamp-2">
                 {video.description}
               </p>
