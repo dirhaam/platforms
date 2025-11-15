@@ -82,13 +82,12 @@ export default function ClassicTemplate({
             >Book Now</Button>
           </div>
         </header>
-        {/* HERO NAVY */}
+        {/* HERO NAVY + Floating Info */}
         <div className="relative px-0 pb-0">
           <div style={{ backgroundColor: primaryColor }}>
             <div className="px-7 sm:px-12 py-12 sm:py-16 text-white">
               <div className="max-w-xl">
-                <p className="text-xs sm:text-sm tracking-[0.18em] uppercase text-sky-200 mb-3">
-                </p>
+                <p className="text-xs sm:text-sm tracking-[0.18em] uppercase text-sky-200 mb-3"></p>
                 <h2 className="text-3xl sm:text-4xl font-bold mb-2 drop-shadow text-white">
                   Welcome to {tenant.businessName}
                 </h2>
@@ -176,23 +175,21 @@ export default function ClassicTemplate({
               </CardContent>
             </Card>
           </div>
-
         </div>
+        {/* Video Section */}
+        {videos.length > 0 && (
+          <section className="px-7 sm:px-12 py-8">
+            <VideoCarousel
+              videos={videos}
+              primaryColor={primaryColor}
+              size={videoOptions?.videoSize}
+              autoplay={videoOptions?.autoplay}
+              showTitle={false}
+            />
+          </section>
+        )}
         {/* Body */}
         <div className="px-4 sm:px-8 py-8">
-          {/* Videos Section - Left Side Above Our Services */}
-          {videos.length > 0 && (
-            <div className="-ml-4 sm:-ml-8 pl-4 sm:pl-8 mb-12 pb-8 border-b border-slate-200">
-              <VideoCarousel
-                videos={videos}
-                primaryColor={primaryColor}
-                size={videoOptions?.videoSize}
-                autoplay={videoOptions?.autoplay}
-                showTitle={false}
-              />
-            </div>
-          )}
-
           {/* Our Services */}
           {services.length > 0 && (
             <section>
@@ -246,7 +243,6 @@ export default function ClassicTemplate({
               </div>
             </section>
           )}
-
           {/* Social Media */}
           {socialMedia.length > 0 && (
             <section className="py-8">
@@ -259,7 +255,6 @@ export default function ClassicTemplate({
               />
             </section>
           )}
-
           {/* Photo Galleries */}
           {galleries &&
             galleries.map((gallery) => (
@@ -274,8 +269,6 @@ export default function ClassicTemplate({
               </section>
             ))}
         </div>
-
-        {/* FOOTER */}
         <footer
           className="mt-8 py-8 px-4 sm:px-8"
           style={{ backgroundColor: primaryColor, color: 'white' }}
