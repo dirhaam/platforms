@@ -60,8 +60,8 @@ export default function VideoCarousel({
 
   return (
     <section className="w-full">
-      {/* Video Grid - 2 columns */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${containerClass} mb-6`}>
+      {/* Video Grid - 2 columns, or full width for single video */}
+      <div className={`grid ${activeVideos.length === 1 ? 'grid-cols-1' : `grid-cols-1 md:grid-cols-2`} ${containerClass} mb-6`}>
         {displayedVideos.map((video, index) => (
           <div key={video.id} className="group">
             <div className={`relative w-full ${aspectRatioClass} bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow`}>

@@ -121,7 +121,7 @@ export default function ClassicTemplate({
           <div className="w-full flex justify-between items-start gap-6" style={{ position: 'relative', marginTop: '-10rem' }}>
             {/* Videos Section - Left Side, aligned with middle of card */}
             {videos.length > 0 && (
-              <div className="ml-10 flex-1 mt-32">
+              <div className="ml-10 flex-1" style={{ marginTop: '10.5rem' }}>
                 <VideoCarousel
                   videos={videos}
                   primaryColor={primaryColor}
