@@ -88,7 +88,6 @@ export default function ClassicTemplate({
             <div className="px-7 sm:px-12 py-12 sm:py-16 text-white">
               <div className="max-w-xl">
                 <p className="text-xs sm:text-sm tracking-[0.18em] uppercase text-sky-200 mb-3">
-                  Welcome
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-bold mb-2 drop-shadow text-white">
                   Welcome to {tenant.businessName}
