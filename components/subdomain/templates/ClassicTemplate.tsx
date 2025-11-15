@@ -119,9 +119,9 @@ export default function ClassicTemplate({
           </div>
           {/* Floating Today’s Info - crossing navy & card bawah */}
           <div className="w-full flex justify-between items-start gap-6" style={{ position: 'relative', marginTop: '-10rem' }}>
-            {/* Videos Section - Left Side */}
+            {/* Videos Section - Left Side, aligned with middle of card */}
             {videos.length > 0 && (
-              <div className="ml-10 flex-1">
+              <div className="ml-10 flex-1 mt-12">
                 <VideoCarousel
                   videos={videos}
                   primaryColor={primaryColor}
