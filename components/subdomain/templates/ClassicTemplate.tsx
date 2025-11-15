@@ -119,7 +119,7 @@ export default function ClassicTemplate({
             </div>
           </div>
           {/* Floating Today’s Info - crossing navy & card bawah */}
-          <div className="w-full flex justify-end" style={{ position: 'relative', marginTop: '-2rem' }}>
+          <div className="w-full flex justify-end" style={{ position: 'relative', marginTop: '-6rem' }}>
             <Card className="w-72 shadow-lg rounded-2xl border-none bg-white mr-10">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
