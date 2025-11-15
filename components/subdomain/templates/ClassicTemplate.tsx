@@ -66,9 +66,9 @@ export default function ClassicTemplate({
 
   return (
     <div className="min-h-screen bg-[#f5efe6] flex flex-col items-center">
-      <div className="w-full max-w-4xl bg-white rounded-xl shadow-lg my-8 mx-auto overflow-visible">
-        {/* HEADER (putih) with curved bottom */}
-        <header className="px-4 sm:px-8 pt-6 pb-8 bg-white relative">
+      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-lg my-8 mx-auto overflow-hidden">
+        {/* HEADER (putih) */}
+        <header className="px-4 sm:px-8 pt-6 pb-0 bg-white">
           <div className="flex items-center justify-between py-2">
             <div>
               <span className="font-semibold text-lg text-slate-900">
@@ -81,11 +81,6 @@ export default function ClassicTemplate({
               onClick={() => setIsBookingOpen(true)}
             >Book Now</Button>
           </div>
-          {/* Curved bottom wave */}
-          <svg className="absolute bottom-0 left-0 w-full" style={{ height: '60px', transform: 'translateY(100%)' }} viewBox="0 0 1200 120" preserveAspectRatio="none">
-            <path d="M0,50 Q300,0 600,50 T1200,50 L1200,120 L0,120 Z" fill="white" opacity="0.1"/>
-            <path d="M0,60 Q300,10 600,60 T1200,60 L1200,120 L0,120 Z" fill="white"/>
-          </svg>
         </header>
         {/* HERO NAVY + Floating Info */}
         <div className="relative px-0 pb-0">
@@ -276,13 +271,8 @@ export default function ClassicTemplate({
               </section>
             ))}
         </div>
-        {/* Curved top wave before footer */}
-        <svg className="w-full" style={{ height: '60px', marginTop: '2rem' }} viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path d="M0,70 Q300,120 600,70 T1200,70 L1200,0 L0,0 Z" fill="white" opacity="0.1" style={{ backgroundColor: primaryColor }}/>
-          <path d="M0,60 Q300,110 600,60 T1200,60 L1200,0 L0,0 Z" style={{ fill: primaryColor }}/>
-        </svg>
         <footer
-          className="py-8 px-4 sm:px-8 relative"
+          className="mt-8 py-8 px-4 sm:px-8"
           style={{ backgroundColor: primaryColor, color: 'white' }}
         >
           <div className="text-center text-xs sm:text-sm">
