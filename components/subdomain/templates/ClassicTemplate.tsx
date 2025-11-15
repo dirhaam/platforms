@@ -63,8 +63,9 @@ export default function ClassicTemplate({
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
-  const primaryColor = tenant.brandColors?.primary || '#1f2937'; // slate-800
-  const accentColor = tenant.brandColors?.accent || '#0ea5e9'; // sky-500
+  // warna default mirip mockup: navy + krem
+  const defaultPrimary = '#1f3447';
+  const primaryColor = tenant.brandColors?.primary || defaultPrimary;
 
   const handleBookService = (service?: Service) => {
     setSelectedService(service);
@@ -72,9 +73,9 @@ export default function ClassicTemplate({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#f5efe6] flex flex-col">
       {/* HEADER */}
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
+      <header className="bg-[#f5efe6] border-b border-[#e5ddcf]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
@@ -82,14 +83,14 @@ export default function ClassicTemplate({
                 <img
                   src={tenant.logo}
                   alt={tenant.businessName}
-                  className="h-10 w-10 rounded-md object-cover"
+                  className="h-9 w-9 rounded-md object-cover"
                 />
               ) : (
-                <div className="text-3xl">{tenant.emoji}</div>
+                <div className="text-3xl leading-none">{tenant.emoji}</div>
               )}
               <div>
                 <h1
-                  className="text-lg sm:text-xl font-semibold"
+                  className="text-lg sm:text-xl font-semibold text-slate-900"
                   style={{ color: primaryColor }}
                 >
                   {tenant.businessName}
@@ -101,8 +102,8 @@ export default function ClassicTemplate({
             </div>
 
             <Button
-              variant="outline"
-              className="hidden sm:inline-flex"
+              className="hidden sm:inline-flex text-white px-5"
+              style={{ backgroundColor: primaryColor }}
               onClick={() => handleBookService()}
             >
               Book Now
@@ -113,64 +114,64 @@ export default function ClassicTemplate({
 
       {/* MAIN */}
       <main className="flex-1">
-        {/* HERO + INFO */}
-        <section className="bg-white border-b border-slate-200">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-            <div className="flex flex-col lg:flex-row gap-8 lg:gap-10 items-start">
-              {/* Left: hero copy */}
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-sky-600 mb-2">
-                  Welcome
-                </p>
-                <h2
-                  className="text-3xl md:text-4xl font-bold tracking-tight mb-3"
-                  style={{ color: primaryColor }}
-                >
-                  Welcome to {tenant.businessName}
-                </h2>
-                {tenant.businessDescription && (
-                  <p className="text-sm sm:text-base text-slate-600 mb-6 max-w-xl">
-                    {tenant.businessDescription}
+        {/* HERO */}
+        <section className="px-4 sm:px-6 lg:px-8 pt-6 pb-10">
+          <div className="max-w-6xl mx-auto">
+            <div
+              className="relative rounded-3xl overflow-hidden shadow-md"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <div className="px-6 sm:px-10 py-10 sm:py-14 text-white">
+                <div className="max-w-xl">
+                  <p className="text-xs sm:text-sm tracking-[0.2em] uppercase text-sky-200 mb-2">
+                    Welcome
                   </p>
-                )}
-
-                <div className="flex flex-wrap gap-3 items-center">
-                  <Button
-                    size="lg"
-                    className="text-white shadow-sm"
-                    style={{ backgroundColor: primaryColor }}
-                    onClick={() => handleBookService()}
-                  >
-                    Book Appointment
-                  </Button>
-
-                  {tenant.phone && (
-                    <a
-                      href={`tel:${tenant.phone}`}
-                      className="text-sm text-slate-600 hover:text-sky-600 inline-flex items-center gap-2"
-                    >
-                      <Phone className="h-4 w-4" />
-                      Call us: {tenant.phone}
-                    </a>
+                  <h2 className="text-3xl md:text-4xl font-bold mb-3">
+                    Welcome to {tenant.businessName}
+                  </h2>
+                  {tenant.businessDescription && (
+                    <p className="text-sm sm:text-base text-blue-100/90 mb-7">
+                      {tenant.businessDescription}
+                    </p>
                   )}
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      size="lg"
+                      className="bg-white text-slate-900 hover:bg-slate-100 font-semibold px-5"
+                      onClick={() => handleBookService()}
+                    >
+                      Book Appointment
+                    </Button>
+
+                    {tenant.phone && (
+                      <a
+                        href={`tel:${tenant.phone}`}
+                        className="inline-flex items-center gap-2 text-sm text-blue-100 hover:text-sky-200"
+                      >
+                        <Phone className="h-4 w-4" />
+                        Call us: {tenant.phone}
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Right: hours + contact card */}
-              <div className="w-full lg:w-80">
-                <Card className="shadow-sm border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold text-slate-800">
+              {/* Card Today's Info floating di kanan (desktop) */}
+              <div className="hidden md:block absolute right-8 top-1/2 -translate-y-1/2">
+                <Card className="w-80 shadow-lg border-none bg-white">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-slate-900">
                       Today&apos;s Info
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 pt-0">
                     {businessHours && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                           Business Hours
                         </p>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                           <BusinessHoursDisplay businessHours={businessHours} />
                         </div>
                       </div>
@@ -179,7 +180,7 @@ export default function ClassicTemplate({
                     <div className="h-px bg-slate-200" />
 
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                         Contact
                       </p>
                       <div className="space-y-2 text-sm text-slate-700">
@@ -220,12 +221,76 @@ export default function ClassicTemplate({
                 </Card>
               </div>
             </div>
+
+            {/* Card Today's Info versi mobile (di bawah hero) */}
+            <div className="mt-4 md:hidden">
+              <Card className="shadow-md border-none bg-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-slate-900">
+                    Today&apos;s Info
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  {businessHours && (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                        Business Hours
+                      </p>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                        <BusinessHoursDisplay businessHours={businessHours} />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="h-px bg-slate-200" />
+
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                      Contact
+                    </p>
+                    <div className="space-y-2 text-sm text-slate-700">
+                      {tenant.phone && (
+                        <a
+                          href={`tel:${tenant.phone}`}
+                          className="flex items-center gap-2 hover:text-sky-600"
+                        >
+                          <Phone className="h-4 w-4" />
+                          {tenant.phone}
+                        </a>
+                      )}
+                      {tenant.email && (
+                        <a
+                          href={`mailto:${tenant.email}`}
+                          className="flex items-center gap-2 hover:text-sky-600"
+                        >
+                          <Mail className="h-4 w-4" />
+                          {tenant.email}
+                        </a>
+                      )}
+                      {tenant.address && (
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(
+                            tenant.address
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 hover:text-sky-600"
+                        >
+                          <MapPin className="h-4 w-4" />
+                          <span className="truncate">{tenant.address}</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </section>
 
-        {/* SERVICES */}
+        {/* OUR SERVICES */}
         {services.length > 0 && (
-          <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+          <section className="px-4 sm:px-6 lg:px-8 py-10">
             <div className="max-w-4xl mx-auto">
               <h3
                 className="text-2xl md:text-3xl font-semibold text-center mb-8"
@@ -238,7 +303,7 @@ export default function ClassicTemplate({
                 {services.slice(0, 8).map((service) => (
                   <Card
                     key={service.id}
-                    className="border border-slate-200 hover:shadow-md transition-shadow bg-white"
+                    className="border border-[#e3d9c8] bg-white hover:shadow-md transition-shadow"
                   >
                     <CardContent className="p-5 sm:p-6">
                       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-between">
@@ -253,11 +318,13 @@ export default function ClassicTemplate({
                               </Badge>
                             )}
                           </div>
+
                           {service.description && (
                             <p className="text-sm text-slate-600 mb-3">
                               {service.description}
                             </p>
                           )}
+
                           <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-slate-600">
                             <span>⏱ {service.duration} min</span>
                             <span>
@@ -274,7 +341,7 @@ export default function ClassicTemplate({
 
                         <div className="flex items-start sm:items-center">
                           <Button
-                            className="w-full sm:w-auto text-white"
+                            className="w-full sm:w-auto text-white px-5"
                             style={{ backgroundColor: primaryColor }}
                             onClick={() => handleBookService(service)}
                           >
@@ -293,7 +360,7 @@ export default function ClassicTemplate({
 
         {/* VIDEOS */}
         {videos.length > 0 && (
-          <section className="py-10 px-4 sm:px-6 lg:px-8 bg-slate-100">
+          <section className="px-4 sm:px-6 lg:px-8 py-10 bg-slate-100">
             <div className="max-w-4xl mx-auto">
               <VideoSection
                 videos={videos}
@@ -310,7 +377,7 @@ export default function ClassicTemplate({
 
         {/* SOCIAL MEDIA */}
         {socialMedia.length > 0 && (
-          <section className="py-10 px-4 sm:px-6 lg:px-8">
+          <section className="px-4 sm:px-6 lg:px-8 py-10">
             <div className="max-w-4xl mx-auto">
               <SocialMediaSection
                 socialMedia={socialMedia}
@@ -328,7 +395,7 @@ export default function ClassicTemplate({
           galleries.map((gallery) => (
             <section
               key={gallery.id}
-              className="py-10 px-4 sm:px-6 lg:px-8 bg-white"
+              className="px-4 sm:px-6 lg:px-8 py-10 bg-[#f8f2e8]"
             >
               <div className="max-w-4xl mx-auto">
                 <PhotoGallerySection
@@ -342,12 +409,12 @@ export default function ClassicTemplate({
 
       {/* FOOTER */}
       <footer
-        className="mt-8 border-t border-slate-800/40 py-8 px-4 sm:px-6 lg:px-8"
+        className="mt-8 py-8 px-4 sm:px-6 lg:px-8"
         style={{ backgroundColor: primaryColor, color: 'white' }}
       >
         <div className="max-w-4xl mx-auto text-center text-xs sm:text-sm">
           <p>© 2024 {tenant.businessName}. All rights reserved.</p>
-          <p className="opacity-80 flex flex-wrap justify-center gap-2 mt-1">
+          <p className="opacity-85 flex flex-wrap justify-center gap-2 mt-1">
             Powered by{' '}
             <Link
               href={`${protocol}://${rootDomain}`}
