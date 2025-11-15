@@ -68,15 +68,15 @@ export default function ClassicTemplate({
     <div className="min-h-screen bg-[#f5efe6] flex flex-col items-center">
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-lg my-8 mx-auto overflow-hidden">
         {/* HEADER (putih) */}
-        <header className="px-4 sm:px-8 pt-6 pb-0 bg-white">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-2">
-            <div>
+        <header className="px-4 sm:px-8 pt-6 pb-6 bg-white">
+          <div className="flex items-center justify-between py-0">
+            <div className="flex items-center h-10">
               <span className="font-semibold text-lg text-slate-900">
                 {tenant.businessName}
               </span>
             </div>
             <Button
-              className="rounded-xl text-white px-6 py-2 shadow font-medium"
+              className="rounded-xl text-white px-6 py-2 shadow font-medium h-10 flex items-center"
               style={{ backgroundColor: primaryColor }}
               onClick={() => setIsBookingOpen(true)}
             >Book Now</Button>
