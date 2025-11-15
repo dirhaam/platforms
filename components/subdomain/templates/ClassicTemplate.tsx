@@ -116,7 +116,8 @@ export default function ClassicTemplate({
               className="relative rounded-[2.2rem] overflow-visible shadow-md"
               style={{ backgroundColor: primaryColor }}
             >
-              <div className="px-7 sm:pr-44 sm:pl-12 py-12 sm:py-16 text-white">
+              {/* area navy - dengan padding kanan agak besar */}
+              <div className="px-7 sm:pl-12 sm:pr-12 py-12 sm:py-16 text-white">
                 <div className="max-w-xl">
                   <p className="text-xs sm:text-sm tracking-[0.18em] uppercase text-sky-200 mb-3">
                     Welcome
@@ -149,9 +150,10 @@ export default function ClassicTemplate({
                   </div>
                 </div>
               </div>
-              {/* Floating Info Card on desktop */}
-              <div className="hidden md:block absolute right-[-60px] top-1/2 -translate-y-1/2 z-20">
-                <Card className="w-80 shadow-lg rounded-2xl border-none bg-white">
+
+              {/* Floating Info Card (desktop) - lebih ramping & tidak terlalu ke kanan */}
+              <div className="hidden md:block absolute top-8 right-8 z-20">
+                <Card className="w-64 shadow-lg rounded-2xl border-none bg-white">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
                       Today's Info
@@ -164,7 +166,7 @@ export default function ClassicTemplate({
                       </p>
                       <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                         <BusinessHoursDisplay
-                          businessHours={businessHours}
+                          businessHours={businessHours ?? null}
                           onlyToday={true}
                           className="flex flex-col gap-1"
                           renderStatus={({ isOpen, label }) => (
@@ -213,6 +215,7 @@ export default function ClassicTemplate({
                   </CardContent>
                 </Card>
               </div>
+
               {/* Card Info mobile di bawah hero */}
               <div className="mt-4 md:hidden">
                 <Card className="shadow-md rounded-2xl border-none bg-white">
@@ -228,7 +231,7 @@ export default function ClassicTemplate({
                       </p>
                       <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                         <BusinessHoursDisplay
-                          businessHours={businessHours}
+                          businessHours={businessHours ?? null}
                           onlyToday={true}
                           className="flex flex-col gap-1"
                           renderStatus={({ isOpen, label }) => (
