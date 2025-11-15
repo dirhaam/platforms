@@ -20,7 +20,7 @@ import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySec
 import type { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
 
 // ---- VideoCarouselGrid --- //
-function VideoItem({ video }) {
+function VideoItem({ video }: { video: any }) {
   return (
     <div className="aspect-video rounded-xl overflow-hidden bg-black flex items-center justify-center shadow">
       {video.type === 'youtube' ? (
@@ -38,7 +38,7 @@ function VideoItem({ video }) {
   );
 }
 
-function VideoCarouselGrid({ videos = [] }) {
+function VideoCarouselGrid({ videos = [] }: { videos?: any[] }) {
   const [page, setPage] = useState(0);
   const perPage = 3;
   if (!videos || videos.length === 0) return null;
