@@ -69,14 +69,14 @@ export default function ClassicTemplate({
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-lg my-8 mx-auto overflow-hidden">
         {/* HEADER (putih) */}
         <header className="px-4 sm:px-8 pt-6 pb-0 bg-white">
-          <div className="flex items-center justify-between py-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-2">
             <div>
               <span className="font-semibold text-lg text-slate-900">
                 {tenant.businessName}
               </span>
             </div>
             <Button
-              className="hidden sm:inline-flex rounded-full text-white px-6 py-2 shadow font-medium"
+              className="rounded-xl text-white px-6 py-2 shadow font-medium"
               style={{ backgroundColor: primaryColor }}
               onClick={() => setIsBookingOpen(true)}
             >Book Now</Button>
@@ -232,7 +232,10 @@ export default function ClassicTemplate({
                         <div className="flex items-start sm:items-center">
                           <Button
                             className="w-full sm:w-auto text-white bg-[#1f3447] hover:bg-[#233b4e] rounded-lg px-5 shadow-sm flex items-center gap-1"
-                            onClick={() => setIsBookingOpen(true)}
+                            onClick={() => {
+                              setSelectedService(service);
+                              setIsBookingOpen(true);
+                            }}
                           >
                             Book
                             <ChevronRight className="h-4 w-4 ml-1" />
