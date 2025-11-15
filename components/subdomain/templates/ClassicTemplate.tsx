@@ -118,8 +118,22 @@ export default function ClassicTemplate({
             </div>
           </div>
           {/* Floating Today’s Info - crossing navy & card bawah */}
-          <div className="w-full flex justify-end" style={{ position: 'relative', marginTop: '-10rem' }}>
-            <Card className="w-72 shadow-lg rounded-2xl border-none bg-white mr-10">
+          <div className="w-full flex justify-between items-start gap-6" style={{ position: 'relative', marginTop: '-10rem' }}>
+            {/* Videos Section - Left Side */}
+            {videos.length > 0 && (
+              <div className="ml-10 flex-1">
+                <VideoCarousel
+                  videos={videos}
+                  primaryColor={primaryColor}
+                  size={videoOptions?.videoSize}
+                  autoplay={videoOptions?.autoplay}
+                  showTitle={false}
+                />
+              </div>
+            )}
+            
+            {/* Today's Info Card - Right Side */}
+            <Card className="w-72 shadow-lg rounded-2xl border-none bg-white mr-10" style={{ flexShrink: 0 }}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
                   Today's Info
@@ -176,18 +190,6 @@ export default function ClassicTemplate({
             </Card>
           </div>
         </div>
-        {/* Video Section */}
-        {videos.length > 0 && (
-          <section className="px-7 sm:px-12 py-8">
-            <VideoCarousel
-              videos={videos}
-              primaryColor={primaryColor}
-              size={videoOptions?.videoSize}
-              autoplay={videoOptions?.autoplay}
-              showTitle={false}
-            />
-          </section>
-        )}
         {/* Body */}
         <div className="px-4 sm:px-8 py-8">
           {/* Our Services */}
