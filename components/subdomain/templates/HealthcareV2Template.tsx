@@ -20,26 +20,55 @@ import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySec
 import type { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
 
 // ---- VideoCarouselGrid --- //
-function VideoItem({ video }: { video: any }) {
+function getYoutubeEmbedUrl(raw: string, autoplay?: boolean) {
+  try {
+    const url = new URL(raw);
+    // If already an embed URL, just append autoplay if needed
+    if (url.pathname.startsWith('/embed/')) {
+      if (autoplay) url.searchParams.set('autoplay', '1');
+      return url.toString();
+    }
+    const id = url.searchParams.get('v');
+    if (!id) return raw;
+    const params = new URLSearchParams();
+    if (autoplay) {
+      params.set('autoplay', '1');
+      params.set('mute', '1');
+    }
+    return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+  } catch {
+    return raw;
+  }
+}
+
+function HeroVideo({ video, autoplay }: { video: any; autoplay?: boolean }) {
+  const type = (video && (video.type || video.provider)) as string | undefined;
+  const rawUrl = video && (video.url || video.link);
+
+  if (!rawUrl) return null;
+
+  if (type === 'youtube') {
+    const src = getYoutubeEmbedUrl(rawUrl, autoplay);
+    return (
+      <iframe
+        src={src}
+        frameBorder="0"
+        allowFullScreen
+        title={video.title || 'Video'}
+        className="w-full h-full rounded-2xl overflow-hidden shadow"
+      />
+    );
+  }
+
   return (
-    <div className="w-full h-full">
-      {video.type === 'youtube' ? (
-        <iframe
-          src={video.url}
-          frameBorder="0"
-          allowFullScreen
-          title={video.title}
-          className="w-full h-full rounded-xl overflow-hidden shadow"
-          style={{ pointerEvents: 'auto' }}
-        />
-      ) : (
-        <video
-          controls
-          src={video.url}
-          className="w-full h-full object-cover rounded-xl overflow-hidden shadow"
-        />
-      )}
-    </div>
+    <video
+      controls={!autoplay}
+      autoPlay={!!autoplay}
+      muted={!!autoplay}
+      playsInline
+      src={rawUrl}
+      className="w-full h-full object-cover rounded-2xl overflow-hidden shadow"
+    />
   );
 }
 
@@ -138,6 +167,8 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
   const primaryColor = tenant.brandColors?.primary || '#0ea5e9';
   const secondaryColor = tenant.brandColors?.secondary || '#0369a1';
   const accentColor = tenant.brandColors?.accent || '#22c55e';
+  const videoSize = videoOptions?.videoSize || 'medium';
+  const autoplay = videoOptions?.autoplay ?? false;
 
   // Category logic (tanpa emoji/kategori front)
   const categories = useMemo(() => {
@@ -246,9 +277,18 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                 <div>Trusted by thousands of patients</div>
               </div>
             </div>
-            <div className="relative lg:h-80 h-56 rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-xl bg-black pointer-events-auto">
+            <div
+              className={
+                `relative rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-xl bg-black ` +
+                (videoSize === 'small'
+                  ? 'lg:h-64 h-40'
+                  : videoSize === 'large'
+                  ? 'lg:h-[26rem] h-72'
+                  : 'lg:h-80 h-56')
+              }
+            >
               {videos && videos.length > 0 ? (
-                <VideoItem video={videos[0]} />
+                <HeroVideo video={videos[0]} autoplay={autoplay} />
               ) : (
                 <Image
                   src={tenant.logo || '/placeholder.svg'}
