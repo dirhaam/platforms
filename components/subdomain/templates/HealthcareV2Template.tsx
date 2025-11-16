@@ -328,7 +328,10 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                                 )}
                               </div>
                               {service.category && (
-                                <Badge variant="outline" className="text-[11px] font-medium">
+                                <Badge
+                                  variant="outline"
+                                  className="max-w-[120px] truncate whitespace-nowrap text-[10px] font-medium"
+                                >
                                   {service.category}
                                 </Badge>
                               )}
