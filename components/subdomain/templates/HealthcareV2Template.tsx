@@ -366,13 +366,13 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                                 </div>
                               )}
                             </div>
-                            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
-                              <div className="flex flex-col text-[11px] text-gray-500">
-                                <span>Tap to see available time</span>
-                              </div>
+                            <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                              <p className="text-[10px] text-gray-500 leading-snug">
+                                Tap to see available time
+                              </p>
                               <Button
                                 size="sm"
-                                className="ml-auto px-4"
+                                className="px-4 ml-auto"
                                 style={{ backgroundColor: primaryColor, color: 'white' }}
                                 onClick={() => handleBookService(service)}
                               >
