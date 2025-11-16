@@ -316,24 +316,22 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                           className="border border-gray-200 hover:shadow-lg transition-shadow flex flex-col h-full"
                         >
                           <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1">
-                                <CardTitle className="text-base font-semibold leading-tight line-clamp-2">
-                                  {service.name}
-                                </CardTitle>
-                                {service.description && (
-                                  <p className="text-xs text-gray-600 line-clamp-3">
-                                    {service.description}
-                                  </p>
-                                )}
-                              </div>
+                            <div className="space-y-1">
+                              <CardTitle className="text-base font-semibold leading-tight line-clamp-2">
+                                {service.name}
+                              </CardTitle>
                               {service.category && (
                                 <Badge
                                   variant="outline"
-                                  className="max-w-[120px] truncate whitespace-nowrap text-[10px] font-medium"
+                                  className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
                                 >
                                   {service.category}
                                 </Badge>
+                              )}
+                              {service.description && (
+                                <p className="text-xs text-gray-600 line-clamp-3">
+                                  {service.description}
+                                </p>
                               )}
                             </div>
                           </CardHeader>
