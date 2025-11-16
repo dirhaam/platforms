@@ -98,7 +98,7 @@ function VideoCarouselGrid({ videos = [] }: { videos?: any[] }) {
     <div className="py-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {slides[page].map((video, i) => (
-          <VideoItem key={i} video={video} />
+          <HeroVideo key={i} video={video} />
         ))}
       </div>
       <div className="flex justify-center items-center gap-2 mt-6">
