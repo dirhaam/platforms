@@ -20,59 +20,33 @@ import PhotoGallerySection from '@/components/subdomain/sections/PhotoGallerySec
 import type { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/booking';
 
 // ---- VideoCarouselGrid --- //
-function getYoutubeEmbedUrl(raw: string, autoplay?: boolean) {
-  try {
-    const url = new URL(raw);
-    // If already an embed URL, just append autoplay if needed
-    if (url.pathname.startsWith('/embed/')) {
-      if (autoplay) url.searchParams.set('autoplay', '1');
-      return url.toString();
-    }
-    const id = url.searchParams.get('v');
-    if (!id) return raw;
-    const params = new URLSearchParams();
-    if (autoplay) {
-      params.set('autoplay', '1');
-      params.set('mute', '1');
-    }
-    return `https://www.youtube.com/embed/${id}?${params.toString()}`;
-  } catch {
-    return raw;
-  }
+function extractYoutubeId(url: string): string {
+  const match = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/
+  );
+  return match ? match[1] : url;
 }
 
-function HeroVideo({ video, autoplay }: { video: any; autoplay?: boolean }) {
-  const type = (video && (video.type || video.provider)) as string | undefined;
-  const rawUrl = video && (video.url || video.link);
+function buildYoutubeSrc(item: VideoItem, autoplay?: boolean) {
+  const id = extractYoutubeId(item.youtubeUrl);
+  const base = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`;
+  if (!autoplay) return base;
+  return `${base}&autoplay=1&mute=1&playsinline=1`;
+}
 
-  if (!rawUrl) return null;
-
-  if (type === 'youtube') {
-    const src = getYoutubeEmbedUrl(rawUrl, autoplay);
-    return (
-      <iframe
-        src={src}
-        frameBorder="0"
-        allowFullScreen
-        title={video.title || 'Video'}
-        className="w-full h-full rounded-2xl overflow-hidden shadow"
-      />
-    );
-  }
-
+function HeroVideo({ video, autoplay }: { video: VideoItem; autoplay?: boolean }) {
   return (
-    <video
-      controls={!autoplay}
-      autoPlay={!!autoplay}
-      muted={!!autoplay}
-      playsInline
-      src={rawUrl}
-      className="w-full h-full object-cover rounded-2xl overflow-hidden shadow"
+    <iframe
+      className="w-full h-full rounded-2xl overflow-hidden shadow"
+      src={buildYoutubeSrc(video, autoplay)}
+      title={video.title}
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowFullScreen
     />
   );
 }
 
-function VideoCarouselGrid({ videos = [] }: { videos?: any[] }) {
+function VideoCarouselGrid({ videos = [] }: { videos?: VideoItem[] }) {
   const [page, setPage] = useState(0);
   const perPage = 3;
   if (!videos || videos.length === 0) return null;
@@ -288,7 +262,7 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
               }
             >
               {videos && videos.length > 0 ? (
-                <HeroVideo video={videos[0]} autoplay={autoplay} />
+                <HeroVideo video={videos[0] as VideoItem} autoplay={autoplay} />
               ) : (
                 <Image
                   src={tenant.logo || '/placeholder.svg'}
