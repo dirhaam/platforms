@@ -248,15 +248,19 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                 <div>Trusted by thousands of patients</div>
               </div>
             </div>
-            <div className="relative lg:h-80 h-56 rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-xl">
-              <Image
-                src={tenant.logo || '/placeholder.svg'}
-                alt={`${tenant.businessName} cover`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
+            <div className="relative lg:h-80 h-56 rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-xl bg-black">
+              {videos && videos.length > 0 ? (
+                <VideoItem video={videos[0]} />
+              ) : (
+                <Image
+                  src={tenant.logo || '/placeholder.svg'}
+                  alt={`${tenant.businessName} cover`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  priority
+                />
+              )}
             </div>
           </div>
         </div>
