@@ -317,17 +317,19 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                         >
                           <CardHeader className="pb-3">
                             <div className="space-y-1">
-                              <CardTitle className="text-base font-semibold leading-tight line-clamp-2">
-                                {service.name}
-                              </CardTitle>
-                              {service.category && (
-                                <Badge
-                                  variant="outline"
-                                  className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
-                                >
-                                  {service.category}
-                                </Badge>
-                              )}
+                              <div className="flex items-center justify-between gap-2">
+                                <CardTitle className="text-base font-semibold leading-tight line-clamp-2">
+                                  {service.name}
+                                </CardTitle>
+                                {service.category && (
+                                  <Badge
+                                    variant="outline"
+                                    className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium whitespace-nowrap flex-shrink-0 rounded-md"
+                                  >
+                                    {service.category}
+                                  </Badge>
+                                )}
+                              </div>
                               {service.description && (
                                 <p className="text-xs text-gray-600 line-clamp-3">
                                   {service.description}
