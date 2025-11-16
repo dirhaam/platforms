@@ -22,17 +22,22 @@ import type { Service, VideoItem, SocialMediaLink, PhotoGallery } from '@/types/
 // ---- VideoCarouselGrid --- //
 function VideoItem({ video }: { video: any }) {
   return (
-    <div className="aspect-video rounded-xl overflow-hidden bg-black flex items-center justify-center shadow">
+    <div className="w-full h-full">
       {video.type === 'youtube' ? (
         <iframe
           src={video.url}
           frameBorder="0"
           allowFullScreen
           title={video.title}
-          className="w-full h-full"
+          className="w-full h-full rounded-xl overflow-hidden shadow"
+          style={{ pointerEvents: 'auto' }}
         />
       ) : (
-        <video controls src={video.url} className="w-full h-full object-cover" />
+        <video
+          controls
+          src={video.url}
+          className="w-full h-full object-cover rounded-xl overflow-hidden shadow"
+        />
       )}
     </div>
   );
@@ -241,7 +246,7 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                 <div>Trusted by thousands of patients</div>
               </div>
             </div>
-            <div className="relative lg:h-80 h-56 rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-xl bg-black">
+            <div className="relative lg:h-80 h-56 rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-xl bg-black pointer-events-auto">
               {videos && videos.length > 0 ? (
                 <VideoItem video={videos[0]} />
               ) : (
@@ -387,8 +392,16 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
         />
       ))}
 
+      <BookingDialog
+        service={selectedService}
+        tenant={tenant}
+        template="healthcarev2"
+        isOpen={isBookingOpen}
+        onOpenChange={setIsBookingOpen}
+      />
+
       {/* Footer bisa copy dari kode kamu sebelumnya */}
-      {/* BookingDialog, WhatsApp floating, dsb */}
+      {/* WhatsApp floating, dsb */}
     </div>
   );
 }
