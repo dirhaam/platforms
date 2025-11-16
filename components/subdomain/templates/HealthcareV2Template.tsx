@@ -309,48 +309,76 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
                 const visible = (services || []).filter(filterBy(cat, query));
                 return (
                   <TabsContent key={cat} value={cat} className="mt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
                       {visible.map((service) => (
-                        <Card key={service.id} className="border border-gray-200 hover:shadow-lg transition-shadow flex flex-col h-full">
-                          <CardHeader className="pb-2">
+                        <Card
+                          key={service.id}
+                          className="border border-gray-200 hover:shadow-lg transition-shadow flex flex-col h-full"
+                        >
+                          <CardHeader className="pb-3">
                             <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <CardTitle className="text-lg leading-tight">{service.name}</CardTitle>
+                              <div className="space-y-1">
+                                <CardTitle className="text-base font-semibold leading-tight line-clamp-2">
+                                  {service.name}
+                                </CardTitle>
                                 {service.description && (
-                                  <p className="text-sm mt-1 line-clamp-2">{service.description}</p>
+                                  <p className="text-xs text-gray-600 line-clamp-3">
+                                    {service.description}
+                                  </p>
                                 )}
                               </div>
+                              {service.category && (
+                                <Badge variant="outline" className="text-[11px] font-medium">
+                                  {service.category}
+                                </Badge>
+                              )}
                             </div>
                           </CardHeader>
-                          <CardContent className="pt-2 flex-1 flex flex-col space-y-4">
-                            <div>
-                              <div className="flex justify-between items-center text-sm text-gray-700 py-2 border-y border-gray-100">
+                          <CardContent className="pt-0 flex-1 flex flex-col gap-3">
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center text-xs text-gray-700 py-2 border-y border-gray-100">
                                 <span className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4" /> Duration
+                                  <Clock className="h-4 w-4" />
+                                  <span>Duration</span>
                                 </span>
-                                <span className="font-semibold">{service.duration} min</span>
+                                <span className="font-semibold text-sm">{service.duration} min</span>
                               </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-700">Price</span>
-                                <span className="text-xl font-bold" style={{ color: primaryColor }}>
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-xs text-gray-600">Starting from</span>
+                                <span
+                                  className="text-lg font-bold tracking-tight"
+                                  style={{ color: primaryColor }}
+                                >
                                   {formatPrice(service.price as any)}
                                 </span>
                               </div>
                               {service.homeVisitAvailable && (
-                                <div className="p-3 rounded-md text-sm border mt-2" style={{ backgroundColor: `${primaryColor}0d`, borderColor: `${primaryColor}33`, color: secondaryColor }}>
-                                  🏥 Home visit available
+                                <div
+                                  className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                                  style={{
+                                    backgroundColor: `${primaryColor}0d`,
+                                    borderColor: `${primaryColor}33`,
+                                    color: secondaryColor
+                                  }}
+                                >
+                                  <span className="mt-0.5">🏥</span>
+                                  <span className="leading-snug">Home visit available</span>
                                 </div>
                               )}
                             </div>
-                            {/* EMPTY FLEX-1 */}
-                            <div className="flex-1" />
-                            <Button 
-                              className="w-full mt-4"
-                              style={{ backgroundColor: primaryColor, color: 'white' }}
-                              onClick={() => handleBookService(service)}
-                            >
-                              Schedule Service
-                            </Button>
+                            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                              <div className="flex flex-col text-[11px] text-gray-500">
+                                <span>Tap to see available time</span>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="ml-auto px-4"
+                                style={{ backgroundColor: primaryColor, color: 'white' }}
+                                onClick={() => handleBookService(service)}
+                              >
+                                Schedule
+                              </Button>
+                            </div>
                           </CardContent>
                         </Card>
                       ))}
