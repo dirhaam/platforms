@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
   Phone, Mail, MapPin, Clock, Shield, Heart, Users,
-  Star, ChevronRight, Filter as FilterIcon, MessageCircle
+  Star, ChevronRight, ChevronLeft, Filter as FilterIcon, MessageCircle
 } from 'lucide-react';
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
