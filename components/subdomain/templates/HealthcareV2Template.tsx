@@ -87,7 +87,7 @@ function VideoCarouselGrid({ videos = [] }: { videos?: any[] }) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 py-6">
         {videos.map((video, i) => (
-          <VideoItem key={i} video={video} />
+          <HeroVideo key={i} video={video} />
         ))}
       </div>
     );
