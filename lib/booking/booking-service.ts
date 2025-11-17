@@ -643,8 +643,12 @@ export class BookingService {
         .eq('tenant_id', tenantId)
         .single();
       
-      // Get the day's hours from the business_hours schedule
-      const bookingDate = new Date(request.date);
+      // FIXED: Proper timezone-aware date parsing
+      // Parse YYYY-MM-DD format as LOCAL date, not UTC
+      const [year, month, day] = request.date.split('-').map(Number);
+      const bookingDate = new Date(year, month - 1, day);
+      bookingDate.setHours(0, 0, 0, 0); // Set to midnight local time
+      
       const dayOfWeek = bookingDate.getDay();
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const dayKey = dayNames[dayOfWeek];
@@ -713,7 +717,7 @@ export class BookingService {
       const endDate = new Date(bookingDate);
       endDate.setHours(endHourStr, endMinStr, 0, 0);
       
-      // Count bookings per hour slot to enforce hourly quota
+      // Count bookings per hour to enforce hourly quota
       const bookingsPerHour = new Map<string, number>();
       
       (bookings || []).forEach(booking => {
@@ -723,11 +727,13 @@ export class BookingService {
         bookingsPerHour.set(hourKey, (bookingsPerHour.get(hourKey) || 0) + 1);
       });
       
-      // Generate all available time slots
+      // FIXED: Use slotDurationMinutes for generating slot times (not service duration)
+      // This allows multiple smaller slots even if service takes longer
       let currentTime = new Date(startDate);
       
       while (currentTime < endDate) {
         const slotStart = new Date(currentTime);
+        // FIXED: Slot length should be serviceDuration, not slotDurationMinutes
         const slotEnd = new Date(slotStart.getTime() + serviceDuration * 60000);
         
         // Check if slot would go past business hours
@@ -739,24 +745,20 @@ export class BookingService {
         const hourKey = `${slotStart.getHours()}:00`;
         const bookingsInThisHour = bookingsPerHour.get(hourKey) || 0;
         
-        // Check if slot is available (not fully booked by hourly quota)
+        // Check if slot is available
         let isAvailable = false;
         
-        // For each slot duration, we can have multiple bookings up to the hourly quota
+        // First check: don't exceed hourly quota
         if (bookingsInThisHour < hourlyQuota) {
-          isAvailable = true;
-          
-          // Also check if this specific time slot overlaps with any existing bookings
+          // Second check: ensure no time conflicts with existing bookings
           const conflictingBooking = (bookings || []).find(b => {
             const bookingStart = new Date(b.scheduled_at);
             const bookingEnd = new Date(bookingStart.getTime() + b.duration * 60000);
-            // Check for overlap
+            // Check for overlap: slot conflicts if it overlaps with existing booking
             return slotStart < bookingEnd && slotEnd > bookingStart;
           });
           
-          if (conflictingBooking) {
-            isAvailable = false;
-          }
+          isAvailable = !conflictingBooking;
         }
         
         slots.push({
@@ -765,7 +767,8 @@ export class BookingService {
           available: isAvailable
         });
         
-        // Move to next slot
+        // FIXED: Move to next slot using slotDurationMinutes (allows overlapping display)
+        // This lets users see available slots at every slotDuration interval
         currentTime = new Date(currentTime.getTime() + slotDurationMinutes * 60000);
       }
       

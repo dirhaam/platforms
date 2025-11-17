@@ -137,6 +137,8 @@ export function validateBusinessHours(
     return { valid: true }; // No business hours restriction
   }
   
+  // FIXED: Use consistent day-of-week calculation
+  // scheduledAt is a Date object in local time, so getDay() is correct here
   const dayOfWeek = scheduledAt.getDay(); // 0 = Sunday, 1 = Monday, etc.
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayName = dayNames[dayOfWeek];
@@ -147,7 +149,10 @@ export function validateBusinessHours(
     return { valid: false, message: 'Business is closed on this day' };
   }
   
-  const bookingTime = scheduledAt.toTimeString().slice(0, 5); // HH:MM format
+  // Get time in HH:MM format in local timezone
+  const hours = scheduledAt.getHours().toString().padStart(2, '0');
+  const minutes = scheduledAt.getMinutes().toString().padStart(2, '0');
+  const bookingTime = `${hours}:${minutes}`; // HH:MM format
   
   if (bookingTime < daySchedule.openTime || bookingTime > daySchedule.closeTime) {
     return { 

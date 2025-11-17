@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
   Phone, Mail, MapPin, Clock, Shield, Heart, Users,
-  Star, ChevronRight, ChevronLeft, Filter as FilterIcon, MessageCircle
+  Star, ChevronRight, ChevronLeft, Filter as FilterIcon, MessageCircle, ChevronDown
 } from 'lucide-react';
 import BookingDialog from '@/components/booking/BookingDialog';
 import BusinessHoursDisplay from '@/components/subdomain/BusinessHoursDisplay';
@@ -150,9 +150,54 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
     return ['All', ...cats];
   }, [services]);
   const [activeCat, setActiveCat] = useState<string>('All');
+  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0);
+  const [email, setEmail] = useState('');
+  
   useEffect(() => {
     if (!categories.includes(activeCat)) setActiveCat('All');
   }, [categories, activeCat]);
+
+  // Sample testimonials
+  const testimonials = [
+    {
+      name: 'Dr. Robert Patient',
+      role: 'Patient',
+      text: 'Exceptional healthcare with dedicated professional staff. Very satisfied with my treatment and care.',
+      rating: 5
+    },
+    {
+      name: 'Linda Kusuma',
+      role: 'Patient',
+      text: 'Best medical experience I could ask for! Highly professional doctors and clean facilities. Highly recommended!',
+      rating: 5
+    },
+    {
+      name: 'Wijaya Setia',
+      role: 'Patient',
+      text: 'Outstanding healthcare service. The doctors really care about patient well-being. Will visit again!',
+      rating: 5
+    }
+  ];
+
+  // Sample FAQ
+  const faqItems = [
+    {
+      question: 'How do I schedule an appointment?',
+      answer: 'You can schedule an appointment by clicking the Schedule button next to your preferred service. Select your date and time, and we will confirm your booking immediately.'
+    },
+    {
+      question: 'What should I bring to my appointment?',
+      answer: 'Please bring a valid ID and your medical insurance card if applicable. Having your medical history available is also helpful.'
+    },
+    {
+      question: 'Is this clinic accepting new patients?',
+      answer: 'Yes, we are always welcoming new patients. Please contact us or use our online booking system to schedule your first appointment.'
+    },
+    {
+      question: 'Do you offer telemedicine consultations?',
+      answer: 'Yes, we offer telemedicine services for certain types of consultations. Please check service availability or contact us for details.'
+    }
+  ];
 
   const filterBy = (cat: string, q: string) => (s: Service) => {
     const inCat = cat === 'All' || s.category === cat;
@@ -399,6 +444,111 @@ export default function HealthcareTemplateV2({ tenant, services = [], businessHo
           </div>
         </section>
       )}
+
+      {/* Testimonials Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white border-t">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-4" style={{ color: primaryColor }}>
+            Patient Testimonials
+          </h2>
+          <p className="text-center text-gray-600 mb-12">What our patients say about their experience</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, idx) => (
+              <Card key={idx} className="border hover:shadow-lg transition-shadow">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex gap-1">
+                    {[...Array(testimonial.rating)].map((_, j) => (
+                      <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <p className="text-gray-700 leading-relaxed italic">"{testimonial.text}"</p>
+                  <div className="pt-2 border-t border-gray-200">
+                    <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                    <p className="text-xs text-gray-500">{testimonial.role}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-4" style={{ color: primaryColor }}>
+            Frequently Asked Questions
+          </h2>
+          <p className="text-center text-gray-600 mb-12">Find answers to common questions about our services</p>
+
+          <div className="space-y-4">
+            {faqItems.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => setExpandedFAQ(expandedFAQ === idx ? null : idx)}
+                className="w-full text-left p-5 bg-gray-50 border border-gray-200 rounded-lg hover:border-gray-300 transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900">{item.question}</h3>
+                  <div 
+                    className="w-6 h-6 rounded-full flex items-center justify-center transition-transform"
+                    style={{ 
+                      backgroundColor: primaryColor + '20',
+                      color: primaryColor,
+                      transform: expandedFAQ === idx ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }}
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </div>
+                
+                {expandedFAQ === idx && (
+                  <p className="mt-3 text-gray-600 text-sm leading-relaxed">
+                    {item.answer}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 border-t">
+        <div className="max-w-2xl mx-auto text-center space-y-8">
+          <div>
+            <h2 className="text-4xl font-bold mb-4" style={{ color: primaryColor }}>
+              Stay Informed
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Subscribe to our newsletter for health tips and updates
+            </p>
+          </div>
+
+          <div className="flex gap-2 flex-col sm:flex-row max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2"
+              style={{ focusRingColor: primaryColor + '30' } as any}
+            />
+            <Button 
+              onClick={() => {
+                if (email) {
+                  setEmail('');
+                }
+              }}
+              style={{ backgroundColor: primaryColor }}
+              className="text-white hover:opacity-90 transition-opacity rounded-lg"
+            >
+              Subscribe
+            </Button>
+          </div>
+        </div>
+      </section>
 
       {/* Business Hours */}
       {businessHours && (

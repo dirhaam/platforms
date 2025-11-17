@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MapPin, Clock, Shield, Heart, Users } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Shield, Heart, Users, Star, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
@@ -62,6 +62,8 @@ export default function HealthcareTemplate({
 }: HealthcareTemplateProps) {
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0);
+  const [email, setEmail] = useState('');
   
   const primaryColor = tenant.brandColors?.primary || '#0369a1';
   
@@ -69,6 +71,52 @@ export default function HealthcareTemplate({
     setSelectedService(service);
     setIsBookingOpen(true);
   };
+
+  // Sample testimonials
+  const testimonials = [
+    {
+      name: 'Dr. Patient Testimonial',
+      role: 'Patient',
+      text: 'Excellent medical care with very professional and knowledgeable staff. They made me feel comfortable and addressed all my concerns.',
+      rating: 5
+    },
+    {
+      name: 'Maria Santoso',
+      role: 'Patient',
+      text: 'Great experience! The doctors are highly skilled and the clinic is very clean. I highly recommend this healthcare provider!',
+      rating: 5
+    },
+    {
+      name: 'Budi Setiawan',
+      role: 'Patient',
+      text: 'Outstanding patient care from start to finish. The staff is caring and the treatment was effective. Will definitely come back!',
+      rating: 5
+    }
+  ];
+
+  // Sample FAQ
+  const faqItems = [
+    {
+      question: 'How do I schedule an appointment?',
+      answer: 'Click the "Schedule Appointment" button and select your preferred service, date, and time. You can also call us directly at the phone number provided.'
+    },
+    {
+      question: 'What insurance does your clinic accept?',
+      answer: 'We accept most major health insurance plans. Please contact us to confirm if your specific insurance is accepted.'
+    },
+    {
+      question: 'Do you accept walk-in patients?',
+      answer: 'While walk-ins are welcome, scheduling an appointment ensures shorter wait times and availability of your preferred doctor.'
+    },
+    {
+      question: 'What are your emergency procedures?',
+      answer: 'For medical emergencies, please call our emergency line or visit the nearest emergency room. We are available for urgent care during business hours.'
+    }
+  ];
+
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const todayHours = businessHours?.[currentDay];
+  const isOpen = todayHours?.isOpen || false;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -274,6 +322,109 @@ export default function HealthcareTemplate({
                 </CardContent>
               </Card>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-12" style={{ color: primaryColor }}>
+            Patient Testimonials
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, idx) => (
+              <Card key={idx} className="border border-blue-100 hover:shadow-lg transition-shadow">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex gap-1">
+                    {[...Array(testimonial.rating)].map((_, j) => (
+                      <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <p className="text-gray-700 leading-relaxed italic">"{testimonial.text}"</p>
+                  <div className="pt-2 border-t border-blue-100">
+                    <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                    <p className="text-xs text-gray-500">{testimonial.role}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-blue-50">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-12" style={{ color: primaryColor }}>
+            Frequently Asked Questions
+          </h2>
+
+          <div className="space-y-4">
+            {faqItems.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => setExpandedFAQ(expandedFAQ === idx ? null : idx)}
+                className="w-full text-left p-5 bg-white border border-blue-100 rounded-lg hover:border-blue-200 transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900">{item.question}</h3>
+                  <div 
+                    className="w-6 h-6 rounded-full flex items-center justify-center transition-transform"
+                    style={{ 
+                      backgroundColor: primaryColor + '20',
+                      color: primaryColor,
+                      transform: expandedFAQ === idx ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+                
+                {expandedFAQ === idx && (
+                  <p className="mt-3 text-gray-600 text-sm leading-relaxed">
+                    {item.answer}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto text-center space-y-8">
+          <div>
+            <h2 className="text-4xl font-bold mb-4" style={{ color: primaryColor }}>
+              Stay Informed
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Subscribe to our newsletter for health tips and updates
+            </p>
+          </div>
+
+          <div className="flex gap-2 flex-col sm:flex-row">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-lg border border-blue-200 focus:outline-none focus:ring-2"
+              style={{ focusRingColor: primaryColor + '30' } as any}
+            />
+            <Button 
+              onClick={() => {
+                if (email) {
+                  setEmail('');
+                }
+              }}
+              style={{ backgroundColor: primaryColor }}
+              className="text-white hover:opacity-90 transition-opacity rounded-lg"
+            >
+              Subscribe
+            </Button>
           </div>
         </div>
       </section>

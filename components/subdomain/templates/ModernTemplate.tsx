@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MapPin, Star, ArrowRight, Calendar, Users, Zap } from 'lucide-react';
+import { Phone, Mail, MapPin, Star, ArrowRight, Calendar, Users, Zap, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
@@ -61,9 +61,53 @@ export default function ModernTemplate({
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0);
+  const [email, setEmail] = useState('');
   
   const primaryColor = tenant.brandColors?.primary || '#0066ff';
   const secondaryColor = tenant.brandColors?.secondary || '#00d4ff';
+
+  // Sample testimonials
+  const testimonials = [
+    {
+      name: 'Alex Johnson',
+      role: 'CEO, TechCorp',
+      text: 'Exceptional service with outstanding attention to detail. Truly a game-changer for our business!',
+      rating: 5
+    },
+    {
+      name: 'Sarah Chen',
+      role: 'Entrepreneur',
+      text: 'Professional, efficient, and results-driven. Exceeded all expectations and delivered beyond deadlines.',
+      rating: 5
+    },
+    {
+      name: 'Marcus Williams',
+      role: 'Director',
+      text: 'The team demonstrated excellent expertise and commitment. Highly satisfied with the outcome!',
+      rating: 5
+    }
+  ];
+
+  // Sample FAQ
+  const faqItems = [
+    {
+      question: 'How do I get started with your services?',
+      answer: 'Simply click the "Reserve Now" button, select your preferred service, and choose your desired date and time. Our team will confirm your booking immediately.'
+    },
+    {
+      question: 'What makes your service unique?',
+      answer: 'We combine cutting-edge technology with personalized service, ensuring every client receives a premium experience tailored to their specific needs.'
+    },
+    {
+      question: 'Do you offer custom packages?',
+      answer: 'Absolutely! We offer flexible custom packages to meet your specific requirements. Contact us to discuss your needs.'
+    },
+    {
+      question: 'What is your cancellation policy?',
+      answer: 'Cancellations made 24 hours before your appointment are fully refundable. For urgent cancellations, contact us directly.'
+    }
+  ];
   
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   const todayHours = businessHours?.[currentDay];
@@ -416,6 +460,115 @@ export default function ModernTemplate({
           />
         </section>
       ))}
+
+      {/* Testimonials Section */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-black mb-4">
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Client Stories
+              </span>
+            </h2>
+            <p className="text-gray-400">What our satisfied clients say about us</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, idx) => (
+              <div key={idx} className="bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl p-8 hover:border-blue-500/50 transition-all hover:shadow-lg hover:shadow-blue-500/20">
+                <div className="flex gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, j) => (
+                    <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-gray-300 leading-relaxed mb-6 italic">"{testimonial.text}"</p>
+                <div className="pt-4 border-t border-white/10">
+                  <p className="font-semibold text-white">{testimonial.name}</p>
+                  <p className="text-xs text-gray-400">{testimonial.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black via-purple-900/10 to-black">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-black mb-4">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                FAQ
+              </span>
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            {faqItems.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => setExpandedFAQ(expandedFAQ === idx ? null : idx)}
+                className="w-full text-left p-6 bg-gradient-to-r from-white/10 to-white/5 border border-white/20 rounded-xl hover:border-blue-500/50 transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-white text-lg">{item.question}</h3>
+                  <div 
+                    className="w-6 h-6 rounded-full flex items-center justify-center transition-transform"
+                    style={{ 
+                      color: primaryColor,
+                      transform: expandedFAQ === idx ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+                
+                {expandedFAQ === idx && (
+                  <p className="mt-4 text-gray-300 leading-relaxed">
+                    {item.answer}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto text-center space-y-8">
+          <div>
+            <h2 className="text-5xl font-black mb-4">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Stay Connected
+              </span>
+            </h2>
+            <p className="text-gray-400 text-lg">
+              Subscribe to our newsletter for exclusive updates and special offers
+            </p>
+          </div>
+
+          <div className="flex gap-2 flex-col sm:flex-row max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+            />
+            <Button 
+              onClick={() => {
+                if (email) {
+                  setEmail('');
+                }
+              }}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-blue-500/50 transition-all duration-300 rounded-lg"
+            >
+              Subscribe
+            </Button>
+          </div>
+        </div>
+      </section>
 
       {/* Hours Section */}
       {businessHours && (

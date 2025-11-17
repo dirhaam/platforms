@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MapPin, ChevronRight } from 'lucide-react';
+import { Phone, Mail, MapPin, ChevronRight, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { protocol, rootDomain } from '@/lib/utils';
 import BookingDialog from '@/components/booking/BookingDialog';
@@ -60,9 +60,57 @@ export default function ClassicTemplate({
 
   const [selectedService, setSelectedService] = useState<Service | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0);
+  const [email, setEmail] = useState('');
 
   const defaultPrimary = '#1f3447';
   const primaryColor = tenant.brandColors?.primary || defaultPrimary;
+
+  // Sample testimonials
+  const testimonials = [
+    {
+      name: 'Ahmad Wijaya',
+      role: 'Regular Client',
+      text: 'Layanan berkualitas tinggi dengan staf yang sangat profesional. Selalu puas dengan hasilnya!',
+      rating: 5
+    },
+    {
+      name: 'Nur Hasanah',
+      role: 'Client',
+      text: 'Pengalaman yang luar biasa! Staf mereka sangat berpengalaman dan ramah. Pasti akan kembali lagi!',
+      rating: 5
+    },
+    {
+      name: 'Budi Santoso',
+      role: 'Client',
+      text: 'Rekomendasi terbaik untuk siapa pun yang mencari layanan berkualitas. Sangat memuaskan!',
+      rating: 5
+    }
+  ];
+
+  // Sample FAQ
+  const faqItems = [
+    {
+      question: 'Bagaimana cara memesan janji?',
+      answer: 'Klik tombol "Book Appointment" dan pilih layanan, tanggal, dan waktu yang Anda inginkan. Sistem kami akan menampilkan slot yang tersedia.'
+    },
+    {
+      question: 'Bisakah saya mengubah atau membatalkan janji?',
+      answer: 'Ya, Anda dapat mengubah atau membatalkan janji hingga 24 jam sebelum waktu yang dijadwalkan melalui email konfirmasi booking.'
+    },
+    {
+      question: 'Apakah ada diskon untuk pelanggan baru?',
+      answer: 'Ya, kami menawarkan diskon khusus untuk pelanggan pertama kali. Hubungi kami untuk informasi lebih lanjut!'
+    },
+    {
+      question: 'Apa metode pembayaran yang diterima?',
+      answer: 'Kami menerima semua metode pembayaran utama termasuk kartu kredit, transfer bank, dan dompet digital.'
+    }
+  ];
+
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const todayHours = businessHours?.[currentDay];
+  const isOpen = todayHours?.isOpen || false;
 
   return (
     <div className="min-h-screen bg-[#f5efe6] flex flex-col items-center">
@@ -273,6 +321,124 @@ export default function ClassicTemplate({
                 />
               </section>
             ))}
+          
+          {/* Testimonials Section */}
+          <section className="py-12 border-t border-slate-200">
+            <h3 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: primaryColor }}>
+              Testimonial Klien
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {testimonials.map((testimonial, idx) => (
+                <Card key={idx} className="rounded-2xl border border-slate-200 hover:shadow-md transition-shadow">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex gap-1">
+                      {[...Array(testimonial.rating)].map((_, j) => (
+                        <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <p className="text-slate-700 leading-relaxed italic">"{testimonial.text}"</p>
+                    <div className="pt-2 border-t border-slate-200">
+                      <p className="font-semibold text-slate-900">{testimonial.name}</p>
+                      <p className="text-xs text-slate-500">{testimonial.role}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+
+          {/* Business Hours Grid */}
+          {businessHours && (
+            <section className="py-12 border-t border-slate-200">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: primaryColor }}>
+                Jam Operasional
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Object.entries(businessHours).map(([day, hours]) => (
+                  <Card key={day} className="rounded-xl border border-slate-200 hover:shadow-sm transition-all">
+                    <CardContent className="p-4 text-center">
+                      <p className="text-xs font-bold uppercase text-slate-500 mb-2">
+                        {day}
+                      </p>
+                      <p className={`text-sm font-semibold ${hours.isOpen ? 'text-slate-900' : 'text-slate-400'}`}>
+                        {hours.isOpen ? `${hours.openTime} - ${hours.closeTime}` : 'Tutup'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* FAQ Section */}
+          <section className="py-12 border-t border-slate-200">
+            <h3 className="text-2xl md:text-3xl font-semibold mb-8" style={{ color: primaryColor }}>
+              Pertanyaan Umum
+            </h3>
+            <div className="space-y-4">
+              {faqItems.map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setExpandedFAQ(expandedFAQ === idx ? null : idx)}
+                  className="w-full text-left p-5 bg-white border border-slate-200 rounded-xl hover:border-slate-300 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-slate-900">{item.question}</h4>
+                    <div 
+                      className="w-6 h-6 rounded-full flex items-center justify-center transition-transform"
+                      style={{ 
+                        backgroundColor: primaryColor + '20',
+                        color: primaryColor,
+                        transform: expandedFAQ === idx ? 'rotate(180deg)' : 'rotate(0deg)'
+                      }}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                  {expandedFAQ === idx && (
+                    <p className="mt-3 text-slate-600 text-sm leading-relaxed">
+                      {item.answer}
+                    </p>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Newsletter Section */}
+          <section className="py-12 border-t border-slate-200">
+            <div className="text-center space-y-6 rounded-xl p-8 bg-slate-50">
+              <div>
+                <h3 className="text-2xl md:text-3xl font-semibold mb-2" style={{ color: primaryColor }}>
+                  Tetap Update
+                </h3>
+                <p className="text-slate-600">
+                  Dapatkan penawaran khusus dan pembaruan langsung ke inbox Anda
+                </p>
+              </div>
+              <div className="flex gap-2 flex-col sm:flex-row max-w-md mx-auto">
+                <input
+                  type="email"
+                  placeholder="Masukkan email Anda"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2"
+                  style={{ focusRingColor: primaryColor + '30' } as any}
+                />
+                <Button 
+                  onClick={() => {
+                    if (email) {
+                      setEmail('');
+                    }
+                  }}
+                  style={{ backgroundColor: primaryColor }}
+                  className="text-white hover:opacity-90 transition-opacity rounded-lg px-6"
+                >
+                  Daftar
+                </Button>
+              </div>
+            </div>
+          </section>
         </div>
         <footer
           className="mt-8 py-8 px-4 sm:px-8"
