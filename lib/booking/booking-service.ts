@@ -637,18 +637,11 @@ export class BookingService {
       }
       
       // Get global business hours for the tenant
-      const { data: businessHoursData, error: hoursError } = await supabase
+      const { data: businessHoursData } = await supabase
         .from('business_hours')
         .select('*')
         .eq('tenant_id', tenantId)
         .single();
-      
-      console.log('[getAvailability] Business hours fetch:', {
-        serviceId: request.serviceId,
-        tenantId,
-        hoursError: hoursError?.message,
-        businessHoursData,
-      });
 
       // FIXED: Proper timezone-aware date parsing
       // Parse YYYY-MM-DD format as LOCAL date, not UTC
@@ -676,20 +669,11 @@ export class BookingService {
       
       // Fallback to default if not found
       if (!dayHours) {
-        console.warn(`[getAvailability] No business hours found for ${dayKey}, using defaults`);
         dayHours = { isOpen: true, openTime: '08:00', closeTime: '17:00' };
       }
-      
-      console.log('[getAvailability] Day lookup:', {
-        dayOfWeek,
-        dayKey,
-        schedule,
-        dayHours
-      });
 
       // Check if business is open on this day
       if (!dayHours.isOpen) {
-        console.log('[getAvailability] Business closed on this day:', dayKey);
         return {
           date: request.date,
           slots: [],
@@ -701,15 +685,6 @@ export class BookingService {
         startTime: dayHours.openTime,
         endTime: dayHours.closeTime
       };
-      
-      console.log('[getAvailability] Using global business hours:', {
-        serviceId: request.serviceId,
-        date: request.date,
-        dayOfWeek,
-        dayKey,
-        operatingHours,
-        dayHours
-      });
       
       const [startHourStr, startMinStr] = operatingHours.startTime.split(':').map(Number);
       const [endHourStr, endMinStr] = operatingHours.endTime.split(':').map(Number);
@@ -763,55 +738,28 @@ export class BookingService {
         'Europe/Paris': 1,
       };
       
-      const tzOffset = timezoneOffsets[timezone] || 7; // Default to Jakarta
-      
-      console.log('[getAvailability] Timezone info:', {
-        timezone,
-        tzOffset,
-        operatingHours
-      });
+      const tzOffset = timezoneOffsets[timezone] || 7;
       
       // Generate slots based on operating hours
       // Business hours are in LOCAL time, so we need to adjust to UTC
-      // Example: 07:00 local (UTC+7) = 00:00 UTC
       const startDate = new Date(bookingDate);
       startDate.setHours(startHourStr, startMinStr, 0, 0);
-      // Adjust from local to UTC: subtract the offset
       startDate.setHours(startDate.getHours() - tzOffset);
       
       const endDate = new Date(bookingDate);
       endDate.setHours(endHourStr, endMinStr, 0, 0);
-      // Adjust from local to UTC
       endDate.setHours(endDate.getHours() - tzOffset);
-      
-      console.log('[getAvailability] Adjusted slot times (UTC):', {
-        originalStartLocal: `${startHourStr}:${startMinStr}`,
-        originalEndLocal: `${endHourStr}:${endMinStr}`,
-        adjustedStart: startDate.toISOString(),
-        adjustedEnd: endDate.toISOString()
-      });
       
       // Count bookings per hour to enforce hourly quota
       const bookingsPerHour = new Map<string, number>();
       
       (bookings || []).forEach(booking => {
         const bookingTime = new Date(booking.scheduled_at);
-        // Get the hour slot (round down to nearest hour)
         const hourKey = `${bookingTime.getHours()}:00`;
         bookingsPerHour.set(hourKey, (bookingsPerHour.get(hourKey) || 0) + 1);
       });
       
-      // FIXED: Use slotDurationMinutes for generating slot times (not service duration)
-      // This allows multiple smaller slots even if service takes longer
       let currentTime = new Date(startDate);
-      
-      console.log('[getAvailability] Slot generation started:', {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        slotDurationMinutes,
-        serviceDuration,
-        hourlyQuota
-      });
       
       while (currentTime < endDate) {
         const slotStart = new Date(currentTime);
@@ -853,12 +801,6 @@ export class BookingService {
         // This lets users see available slots at every slotDuration interval
         currentTime = new Date(currentTime.getTime() + slotDurationMinutes * 60000);
       }
-      
-      console.log('[getAvailability] Slot generation completed:', {
-        totalSlots: slots.length,
-        firstSlot: slots[0] ? { start: slots[0].start.toISOString(), available: slots[0].available } : null,
-        lastSlot: slots[slots.length - 1] ? { start: slots[slots.length - 1].start.toISOString(), available: slots[slots.length - 1].available } : null
-      });
       
       return {
         date: request.date,

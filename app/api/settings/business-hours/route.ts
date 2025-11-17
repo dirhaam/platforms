@@ -63,17 +63,11 @@ export async function PUT(req: NextRequest) {
     }
 
     // Validate schedule format
-    console.log('[business-hours PUT] Received schedule:', JSON.stringify(schedule, null, 2));
-
     for (const [day, hoursData] of Object.entries(schedule)) {
       const hours = hoursData as any;
       if (hours && hours.isOpen) {
         // Validate time format HH:MM
         if (!/^\d{2}:\d{2}$/.test(hours.openTime) || !/^\d{2}:\d{2}$/.test(hours.closeTime)) {
-          console.error(`[business-hours PUT] Invalid time format for ${day}:`, { 
-            openTime: hours.openTime, 
-            closeTime: hours.closeTime 
-          });
           return NextResponse.json(
             { error: `Invalid time format for ${day}. Expected HH:MM format.` },
             { status: 400 }
@@ -97,11 +91,6 @@ export async function PUT(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    console.log('[business-hours PUT] Saving to database:', {
-      tenantId,
-      dataToSave,
-    });
-
     if (existing) {
       const { error } = await supabase
         .from('business_hours')
@@ -109,10 +98,8 @@ export async function PUT(req: NextRequest) {
         .eq('tenant_id', tenantId);
 
       if (error) {
-        console.error('[business-hours PUT] Update error:', error);
         throw error;
       }
-      console.log('[business-hours PUT] Update successful');
     } else {
       const { error } = await supabase
         .from('business_hours')
@@ -122,10 +109,8 @@ export async function PUT(req: NextRequest) {
         });
 
       if (error) {
-        console.error('[business-hours PUT] Insert error:', error);
         throw error;
       }
-      console.log('[business-hours PUT] Insert successful');
     }
 
     return NextResponse.json({ success: true });

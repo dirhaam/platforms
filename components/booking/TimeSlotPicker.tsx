@@ -56,29 +56,12 @@ export function TimeSlotPicker({
       }
 
       const data = await response.json();
-      console.log('[TimeSlotPicker] Availability response:', data);
-      // API returns availability directly, not nested
-      // Convert string timestamps to Date objects
       if (data && data.slots) {
-        data.slots = data.slots.map((slot: any) => {
-          const start = typeof slot.start === 'string' ? new Date(slot.start) : slot.start;
-          const end = typeof slot.end === 'string' ? new Date(slot.end) : slot.end;
-          
-          // Debug timezone
-          console.log('[TimeSlotPicker] Slot conversion:', {
-            originalStart: slot.start,
-            parsedStart: start.toISOString(),
-            localStart: start.toLocaleString(),
-            getHours: start.getHours(),
-            getUTCHours: start.getUTCHours()
-          });
-          
-          return {
-            ...slot,
-            start,
-            end
-          };
-        });
+        data.slots = data.slots.map((slot: any) => ({
+          ...slot,
+          start: typeof slot.start === 'string' ? new Date(slot.start) : slot.start,
+          end: typeof slot.end === 'string' ? new Date(slot.end) : slot.end
+        }));
       }
       setAvailability(data);
     } catch (err) {
@@ -98,18 +81,8 @@ export function TimeSlotPicker({
   };
 
   // Group slots by time periods
-  // IMPORTANT: Use getUTCHours() because backend sends UTC times
+  // IMPORTANT: Use LOCAL time (getHours) for grouping since display is in local time
   const groupSlotsByPeriod = (slots: TimeSlot[]) => {
-    console.log('[groupSlotsByPeriod] Total slots received:', slots.length);
-    if (slots.length > 0) {
-      console.log('[groupSlotsByPeriod] First slot start:', slots[0].start);
-      console.log('[groupSlotsByPeriod] First slot getHours() (local):', slots[0].start.getHours());
-      console.log('[groupSlotsByPeriod] First slot getUTCHours():', slots[0].start.getUTCHours());
-      console.log('[groupSlotsByPeriod] First slot toLocaleString():', slots[0].start.toLocaleString());
-    }
-
-    // FIXED: Group by LOCAL display time (getHours), not UTC
-    // This way labels match what user SEES (e.g., 2:00 PM shows in Afternoon, not Morning)
     const morning = slots.filter(slot => {
       const hour = slot.start.getHours();
       return hour >= 6 && hour < 12;
@@ -123,15 +96,6 @@ export function TimeSlotPicker({
     const evening = slots.filter(slot => {
       const hour = slot.start.getHours();
       return hour >= 17 && hour < 22;
-    });
-
-    console.log('[groupSlotsByPeriod] Results (local display time-based grouping):', { 
-      morning: morning.length, 
-      afternoon: afternoon.length, 
-      evening: evening.length,
-      morningHours: morning.length > 0 ? `${morning[0].start.getHours()}-${morning[morning.length-1].start.getHours()}` : 'N/A',
-      afternoonHours: afternoon.length > 0 ? `${afternoon[0].start.getHours()}-${afternoon[afternoon.length-1].start.getHours()}` : 'N/A',
-      eveningHours: evening.length > 0 ? `${evening[0].start.getHours()}-${evening[evening.length-1].start.getHours()}` : 'N/A'
     });
 
     return { morning, afternoon, evening };
