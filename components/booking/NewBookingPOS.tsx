@@ -768,7 +768,8 @@ export function NewBookingPOS({
         </div>
       </DialogContent>
     </Dialog>
-      {/* Date & Time Step Modal */}
+
+    {/* Date & Time Step Modal */}
       <Dialog open={currentStep !== 'main'} onOpenChange={(open) => !open && setCurrentStep('main')}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0">
           <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
@@ -938,6 +939,6 @@ export function NewBookingPOS({
           </div>
         </DialogContent>
       </Dialog>
-    </>;
+    </>
   );
 }
