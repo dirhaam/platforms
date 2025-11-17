@@ -99,6 +99,7 @@ export function NewBookingDialog({
   const [loading, setLoading] = useState(true);
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -387,7 +388,7 @@ export function NewBookingDialog({
               {/* Date Picker */}
               <div className="space-y-2">
                 <Label>Date *</Label>
-                <Popover>
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left">
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -401,6 +402,8 @@ export function NewBookingDialog({
                         if (date) {
                           const dateStr = date.toISOString().split('T')[0];
                           setBooking({ ...booking, scheduledAt: dateStr, selectedTimeSlot: undefined });
+                          // Close popover after date selection
+                          setCalendarOpen(false);
                         }
                       }}
                       disabled={(date) => {
