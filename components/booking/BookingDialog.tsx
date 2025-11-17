@@ -178,11 +178,10 @@ export default function BookingDialog({
       try {
         const response = await fetch(`/api/settings/invoice-config?tenantId=${tenant.id}`);
         if (!response.ok) {
-          console.warn('[BookingDialog] Failed to fetch invoice settings:', response.status);
+
           return;
         }
         const data = await response.json();
-        console.log('[BookingDialog] Invoice settings loaded:', data.settings);
         setInvoiceSettings(data.settings || null);
         // Get business coordinates for travel calculation
         if (data.settings?.branding?.businessLatitude && data.settings?.branding?.businessLongitude) {
@@ -192,12 +191,11 @@ export default function BookingDialog({
           });
         }
       } catch (error) {
-        console.warn('[BookingDialog] Error fetching invoice settings:', error);
+        // Error logged silently
       }
     };
     
     if (tenant?.id) {
-      console.log('[BookingDialog] Fetching invoice settings for tenant:', tenant.id);
       fetchSettings();
     }
   }, [tenant?.id]);
@@ -208,11 +206,9 @@ export default function BookingDialog({
       try {
         const response = await fetch(`/api/bookings/blocked-dates?tenantId=${tenant.id}`);
         if (!response.ok) {
-          console.warn('[BookingDialog] Failed to fetch blocked dates:', response.status);
           return;
         }
         const data = await response.json();
-        console.log('[BookingDialog] Blocked dates loaded:', data.blockedDates?.length || 0);
         // Convert to Map of date strings (YYYY-MM-DD) -> reason for lookup with reason display
         const dateMap = new Map<string, string>(
           (data.blockedDates || []).map((bd: any) => [
@@ -222,12 +218,11 @@ export default function BookingDialog({
         );
         setBlockedDates(dateMap);
       } catch (error) {
-        console.warn('[BookingDialog] Error fetching blocked dates:', error);
+        // Error logged silently
       }
     };
     
     if (tenant?.id) {
-      console.log('[BookingDialog] Fetching blocked dates for tenant:', tenant.id);
       fetchBlockedDates();
     }
   }, [tenant?.id]);
@@ -238,12 +233,6 @@ export default function BookingDialog({
       // First set the service from props
       setSelectedService(service);
       setCalculatedPrice(Number(service.price));
-      console.log('[BookingDialog] Service updated from props:', { 
-        id: service.id, 
-        name: service.name,
-        homeVisitAvailable: service.homeVisitAvailable,
-        homeVisitSurcharge: service.homeVisitSurcharge
-      });
 
       // Then fetch latest service details from API to ensure we have current settings
       const fetchLatestService = async () => {
@@ -255,14 +244,9 @@ export default function BookingDialog({
             const data = await response.json();
             const updatedService = data.service || data;
             setSelectedService(updatedService);
-            console.log('[BookingDialog] Service refreshed from API:', { 
-              id: updatedService.id, 
-              homeVisitAvailable: updatedService.homeVisitAvailable,
-              homeVisitSurcharge: updatedService.homeVisitSurcharge
-            });
           }
         } catch (error) {
-          console.warn('[BookingDialog] Failed to refresh service details:', error);
+          // Error logged silently
         }
       };
 
