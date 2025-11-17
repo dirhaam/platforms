@@ -586,8 +586,8 @@ export function NewBookingPOS({
             </div>
 
             {/* Right Panel - Summary & Payment (60%) */}
-            <div className="flex-[1.5] flex flex-col overflow-hidden bg-white">
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-[1.5] flex flex-col overflow-hidden bg-white border-l border-gray-200">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-4">
                 {/* Amount Breakdown */}
                 {selectedService && (
                   <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
@@ -731,7 +731,7 @@ export function NewBookingPOS({
               </div>
 
               {/* Action Buttons */}
-              <div className="border-t border-gray-200 p-4 flex gap-2 justify-end bg-gray-50">
+              <div className="border-t border-gray-200 p-4 flex gap-2 justify-end bg-gray-50 flex-shrink-0">
                 <Button
                   variant="outline"
                   onClick={() => onOpenChange(false)}
