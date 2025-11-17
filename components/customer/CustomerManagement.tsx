@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Customer, CreateCustomerRequest, UpdateCustomerRequest } from '@/types/booking';
 import { CustomerDialog } from '@/components/customer/CustomerDialog';
 import { CustomerDetailsDialog } from '@/components/customer/CustomerDetailsDialog';
+import { maskPhoneNumberCompact } from '@/lib/utils/phone-masking';
 
 interface CustomerManagementProps {
   tenantId: string;
@@ -202,8 +203,7 @@ export function CustomerManagement({
       headers.join(','),
       ...filteredCustomers.map(customer => [
         `"${customer.name}"`,
-        `"${customer.phone}"`,
-        `"${customer.email || ''}"`,
+        `"${maskPhoneNumberCompact(customer.phone)}"`,
         customer.totalBookings,
         customer.lastBookingAt ? new Date(customer.lastBookingAt).toLocaleDateString() : '',
         new Date(customer.createdAt).toLocaleDateString()
@@ -432,10 +432,7 @@ export function CustomerManagement({
                             )}
                           </div>
                           <div className="flex items-center space-x-4 mt-1">
-                            <span className="text-sm text-gray-500">{customer.phone}</span>
-                            {customer.email && (
-                              <span className="text-sm text-gray-500">{customer.email}</span>
-                            )}
+                            <span className="text-sm text-gray-500">{maskPhoneNumberCompact(customer.phone)}</span>
                           </div>
                           <div className="text-xs text-gray-400 mt-1">
                             Last booking: {formatLastBooking(customer.lastBookingAt || null)}
