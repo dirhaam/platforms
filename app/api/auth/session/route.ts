@@ -1,50 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { TenantAuth } from '@/lib/auth/tenant-auth';
 
-interface SessionData {
-  userId?: string;
-  tenantId?: string;
-  role?: string;
-  permissions?: string[];
-  email?: string;
-  name?: string;
-  isSuperAdmin?: boolean;
-}
-
+/**
+ * GET /api/auth/session
+ * Returns the current user session
+ * Used by client to get session data including user name
+ */
 export async function GET(request: NextRequest) {
   try {
-    // Get session from cookie
-    const sessionCookie = request.cookies.get('tenant-auth');
-    
-    if (!sessionCookie) {
+    const session = await TenantAuth.getSessionFromRequest(request);
+
+    if (!session) {
       return NextResponse.json(
-        { authenticated: false },
+        { error: 'No active session' },
         { status: 401 }
       );
     }
 
-    // Parse session from cookie value
-    const cookieValue = sessionCookie.value;
-    
-    if (cookieValue.startsWith('inline.')) {
-      // Decode inline session
-      const encoded = cookieValue.substring('inline.'.length);
-      const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
-      const sessionData: SessionData = JSON.parse(decoded);
-
-      return NextResponse.json({
-        authenticated: true,
-        ...sessionData,
-      });
-    }
-
-    return NextResponse.json(
-      { authenticated: false },
-      { status: 401 }
-    );
+    return NextResponse.json({
+      session: {
+        userId: session.userId,
+        tenantId: session.tenantId,
+        name: session.name,
+        email: session.email,
+        role: session.role
+      }
+    });
   } catch (error) {
-    console.error('Session retrieval error:', error);
+    console.error('Error fetching session:', error);
     return NextResponse.json(
-      { authenticated: false, error: 'Failed to retrieve session' },
+      { error: 'Failed to fetch session' },
       { status: 500 }
     );
   }

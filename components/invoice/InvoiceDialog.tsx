@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Invoice, CreateInvoiceRequest, CreateInvoiceItemRequest, UpdateInvoiceRequest, InvoiceStatus, PaymentMethod } from '@/types/invoice';
 import { Customer } from '@/types/booking';
 import { Plus, Trash2 } from 'lucide-react';
+import { getUserName } from '@/lib/auth/use-session';
 
 interface InvoiceDialogProps {
   open: boolean;
@@ -148,9 +149,15 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess, tenantId
         const createUrl = new URL('/api/invoices', window.location.origin);
         createUrl.searchParams.set('tenantId', tenantId);
 
+        // Get user name from session
+        const userName = await getUserName();
+
         const response = await fetch(createUrl.toString(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-name': userName
+          },
           body: JSON.stringify(createData)
         });
 
