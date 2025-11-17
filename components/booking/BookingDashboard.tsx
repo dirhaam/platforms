@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
 import { BookingCalendar } from './BookingCalendar';
-import { NewBookingDialog } from './NewBookingDialog';
+import { NewBookingPOS } from './NewBookingPOS';
 import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
 import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2, MapPin } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -773,7 +773,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       />
 
       {/* New Booking Dialog */}
-      <NewBookingDialog
+      <NewBookingPOS
         open={showNewBookingDialog}
         onOpenChange={setShowNewBookingDialog}
         subdomain={tenantSubdomain}

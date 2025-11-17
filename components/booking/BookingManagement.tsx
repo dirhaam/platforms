@@ -16,7 +16,7 @@ import { BookingCalendar } from './BookingCalendar';
 import { TimeSlotPicker } from './TimeSlotPicker';
 import { RecurringBookingManager } from './RecurringBookingManager';
 import { BlackoutDatesManager } from './BlackoutDatesManager';
-import { NewBookingDialog } from './NewBookingDialog';
+import { NewBookingPOS } from './NewBookingPOS';
 import { Booking, Service, Customer, TimeSlot, PaymentStatus } from '@/types/booking';
 import { ReminderTemplate, reminderService } from '@/lib/reminder/reminder-service';
 
@@ -1904,7 +1904,7 @@ export function BookingManagement({
       </Dialog>
 
       {/* New Booking Dialog */}
-      <NewBookingDialog
+      <NewBookingPOS
         open={showNewBookingDialog}
         onOpenChange={setShowNewBookingDialog}
         subdomain={tenantId}

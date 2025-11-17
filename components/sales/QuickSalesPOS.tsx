@@ -379,21 +379,19 @@ export function QuickSalesPOS({
       <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden">
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
-          <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
-            <div className="flex justify-between items-center">
-              <div>
-                <DialogTitle className="text-gray-900 text-2xl font-bold">Quick Sales</DialogTitle>
-                <DialogDescription className="text-gray-600 text-sm mt-1">Fast checkout for in-store sales</DialogDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenChange(false)}
-                className="text-gray-600 hover:bg-gray-100"
-              >
-                <X className="h-5 w-5" />
-              </Button>
+          <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex justify-between items-center">
+            <div>
+              <h1 className="text-gray-900 text-2xl font-bold">Quick Sales</h1>
+              <p className="text-gray-600 text-sm mt-1">Fast checkout for in-store sales</p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              className="text-gray-600 hover:bg-gray-100"
+            >
+              <X className="h-5 w-5" />
+            </Button>
           </div>
 
           {/* Main Content */}
