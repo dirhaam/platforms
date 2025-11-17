@@ -82,11 +82,9 @@ export function PricingCalculator({
         if (response.ok) {
           travelInfo = await response.json();
           travelSurcharge = travelInfo?.surcharge || 0;
-        } else {
-          console.warn('[PricingCalculator] Travel calculation failed:', response.status);
         }
       } catch (error) {
-        console.error('[PricingCalculator] Error calculating travel surcharge:', error);
+        // Error logged silently
       } finally {
         setCalculating(false);
       }
@@ -103,7 +101,6 @@ export function PricingCalculator({
       travelInfo
     };
 
-    console.log('[PricingCalculator] Calculated breakdown:', newBreakdown);
     setBreakdown(newBreakdown);
     onPriceCalculated?.(totalPrice, newBreakdown);
   };
