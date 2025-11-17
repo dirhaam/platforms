@@ -197,6 +197,17 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     window.print();
   };
 
+  const getPaymentStatusLabel = (invoice: Invoice): string => {
+    const paymentStatus = getPaymentStatus(invoice);
+    const labels = {
+      [PaymentStatus.UNPAID]: 'BELUM DIBAYAR',
+      [PaymentStatus.PARTIAL_PAID]: 'SEBAGIAN DIBAYAR',
+      [PaymentStatus.PAID]: 'SUDAH DIBAYAR',
+      [PaymentStatus.OVERDUE]: 'JATUH TEMPO'
+    };
+    return labels[paymentStatus];
+  };
+
   const getPaymentStatusBadge = (invoice: Invoice) => {
     const paymentStatus = getPaymentStatus(invoice);
     const variants = {
@@ -327,9 +338,15 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 <span>{formatDate(invoice.issueDate)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span>Payment Status</span>
-                <span>{getPaymentStatusBadge(invoice)}</span>
+                <span>Status Pembayaran</span>
+                <span className="font-medium">{getPaymentStatusLabel(invoice)}</span>
               </div>
+              {invoice.cashierName && (
+                <div className="flex justify-between">
+                  <span>Kasir</span>
+                  <span>{invoice.cashierName}</span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-dashed border-gray-300 pt-3 text-xs text-gray-700">

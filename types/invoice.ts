@@ -56,6 +56,7 @@ export interface Invoice {
   issueDate: Date;
   dueDate: Date;
   paidDate?: Date;
+  cashierName?: string;
   
   // Financial details
   subtotal: number;

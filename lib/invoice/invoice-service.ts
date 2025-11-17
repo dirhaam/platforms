@@ -55,7 +55,7 @@ export class InvoiceService {
     return `INV-${year}${month}-${sequence}`;
   }
 
-  static async createInvoice(tenantId: string, data: CreateInvoiceRequest, initialStatus?: string, paidAmount?: number, sourceNumber?: string): Promise<Invoice> {
+  static async createInvoice(tenantId: string, data: CreateInvoiceRequest, initialStatus?: string, paidAmount?: number, sourceNumber?: string, cashierName?: string): Promise<Invoice> {
     try {
       const supabase = getSupabaseClient();
       const invoiceNumber = await this.generateInvoiceNumber(tenantId, sourceNumber);
@@ -151,6 +151,7 @@ export class InvoiceService {
         additional_fees_amount: additionalFeesAmount.toNumber(),
         notes: data.notes,
         terms: data.terms,
+        cashier_name: cashierName || null,
         created_at: nowIso,
         updated_at: nowIso,
       };
@@ -259,6 +260,7 @@ export class InvoiceService {
         issueDate: new Date(data.issueDate ?? data.issue_date),
         dueDate: new Date(data.dueDate ?? data.due_date),
         paidDate: data.paidDate ? new Date(data.paidDate) : data.paid_date ? new Date(data.paid_date) : undefined,
+        cashierName: data.cashierName ?? data.cashier_name,
         subtotal: parseDecimal(data.subtotal),
         taxRate: parseDecimal(data.taxRate ?? data.tax_rate),
         taxAmount: parseDecimal(data.taxAmount ?? data.tax_amount),
