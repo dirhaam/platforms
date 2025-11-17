@@ -15,7 +15,7 @@ import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
 import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2, MapPin } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
+import { QuickSalesPOS } from '@/components/sales/QuickSalesPOS';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
 import { SalesTransactionPanel } from '@/components/sales/SalesTransactionPanel';
 import { SalesTransaction, SalesSummary } from '@/types/sales';
@@ -760,13 +760,11 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         </TabsContent>
       </Tabs>
 
-      <SalesTransactionDialog
+      <QuickSalesPOS
         open={showQuickSaleDialog}
         onOpenChange={setShowQuickSaleDialog}
         tenantId={resolvedTenantId}
         subdomain={tenantSubdomain}
-        allowedTypes={["on_the_spot"]}
-        defaultType="on_the_spot"
         onCreated={async (transaction) => {
           toast.success('Quick sale created successfully!');
           void Promise.all([fetchBookings(), fetchSalesTransactions(), fetchSalesSummary()]);

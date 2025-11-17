@@ -335,14 +335,17 @@ export function QuickSalesPOS({
       <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden">
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 border-b">
+          <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
             <div className="flex justify-between items-center">
-              <DialogTitle className="text-white text-xl">Quick Sales - POS</DialogTitle>
+              <div>
+                <DialogTitle className="text-gray-900 text-2xl font-bold">Quick Sales</DialogTitle>
+                <DialogDescription className="text-gray-600 text-sm mt-1">Fast checkout for in-store sales</DialogDescription>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onOpenChange(false)}
-                className="text-white hover:bg-blue-700"
+                className="text-gray-600 hover:bg-gray-100"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -352,22 +355,22 @@ export function QuickSalesPOS({
           {/* Main Content */}
           <div className="flex flex-1 overflow-hidden gap-0">
             {/* Left: Services Grid */}
-            <div className="flex-1 flex flex-col overflow-hidden border-r">
+            <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200">
               {/* Customer Selector */}
-              <div className="bg-gray-50 border-b p-4 space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Customer</label>
+              <div className="bg-white border-b border-gray-200 p-4 space-y-3">
+                <label className="text-sm font-semibold text-gray-900">Select Customer</label>
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Search customer..."
+                      placeholder="Search by name or phone..."
                       value={customerSearchQuery}
                       onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 border-gray-300"
                       disabled={loading}
                     />
                     {customerSearchQuery && filteredCustomers.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-md z-10 max-h-48 overflow-y-auto">
                         {filteredCustomers.map(customer => (
                           <button
                             key={customer.id}
@@ -375,9 +378,9 @@ export function QuickSalesPOS({
                               setSelectedCustomerId(customer.id);
                               setCustomerSearchQuery('');
                             }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 border-b last:border-b-0 text-sm"
+                            className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm transition"
                           >
-                            <div className="font-medium">{customer.name}</div>
+                            <div className="font-medium text-gray-900">{customer.name}</div>
                             <div className="text-xs text-gray-500">{customer.phone}</div>
                           </button>
                         ))}
@@ -388,31 +391,32 @@ export function QuickSalesPOS({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowNewCustomerDialog(true)}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     New
                   </Button>
                 </div>
                 {selectedCustomer && (
-                  <div className="text-sm bg-blue-50 p-2 rounded border border-blue-200">
-                    <div className="font-medium text-blue-900">{selectedCustomer.name}</div>
-                    <div className="text-xs text-blue-700">{selectedCustomer.phone}</div>
+                  <div className="text-sm bg-green-50 p-3 rounded-md border border-green-200">
+                    <div className="font-semibold text-green-900">{selectedCustomer.name}</div>
+                    <div className="text-xs text-green-700">{selectedCustomer.phone}</div>
                   </div>
                 )}
               </div>
 
               {/* Services Grid */}
               <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="bg-gray-50 border-b p-3">
+                <div className="bg-white border-b border-gray-200 p-3">
                   <Input
                     placeholder="Search services..."
                     value={serviceSearchQuery}
                     onChange={(e) => setServiceSearchQuery(e.target.value)}
-                    className="text-sm"
+                    className="text-sm border-gray-300"
                     disabled={loading}
                   />
                 </div>
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {filteredServices.map(service => {
                       const cartItem = cart.find(item => item.serviceId === service.id);
@@ -420,16 +424,20 @@ export function QuickSalesPOS({
                         <button
                           key={service.id}
                           onClick={() => addToCart(service)}
-                          className="relative bg-white border-2 border-gray-200 rounded-lg p-3 hover:border-blue-400 hover:shadow-md transition-all text-left"
+                          className={`relative bg-white border rounded-lg p-4 transition-all text-left ${
+                            cartItem
+                              ? 'border-emerald-400 shadow-md bg-emerald-50'
+                              : 'border-gray-300 hover:border-emerald-400 hover:shadow-md'
+                          } ${loading || !selectedCustomerId ? 'opacity-50 cursor-not-allowed' : 'hover:shadow'}`}
                           disabled={loading || !selectedCustomerId}
                         >
-                          <div className="font-semibold text-sm truncate">{service.name}</div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="font-semibold text-sm truncate text-gray-900">{service.name}</div>
+                          <div className="text-xs text-gray-600 mt-2">
                             Rp {service.price.toLocaleString('id-ID')}
                           </div>
                           {cartItem && (
-                            <Badge className="absolute top-2 right-2 bg-blue-600 text-white text-xs">
-                              {cartItem.quantity}
+                            <Badge className="absolute top-2 right-2 bg-emerald-600 text-white text-xs font-semibold">
+                              {cartItem.quantity}x
                             </Badge>
                           )}
                         </button>
@@ -441,21 +449,21 @@ export function QuickSalesPOS({
             </div>
 
             {/* Right: Cart + Payment */}
-            <div className="w-80 flex flex-col border-l bg-gray-50">
+            <div className="w-80 flex flex-col border-l border-gray-200 bg-white">
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto border-b">
-                <div className="p-4 space-y-2">
-                  <h3 className="font-bold text-sm text-gray-900">Cart ({cart.length})</h3>
+              <div className="flex-1 overflow-y-auto border-b border-gray-200 bg-gray-50">
+                <div className="p-4 space-y-3">
+                  <h3 className="font-bold text-sm text-gray-900">Cart ({cart.length} items)</h3>
                   {cart.length === 0 ? (
-                    <p className="text-xs text-gray-500">Add items to cart</p>
+                    <p className="text-xs text-gray-500 py-8 text-center">Add items to get started</p>
                   ) : (
                     <div className="space-y-2">
                       {cart.map(item => (
-                        <div key={item.serviceId} className="bg-white p-3 rounded border space-y-2">
+                        <div key={item.serviceId} className="bg-white p-3 rounded-md border border-gray-200 space-y-2 hover:border-gray-300 transition">
                           <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="text-sm font-medium truncate">{item.serviceName}</div>
-                              <div className="text-xs text-gray-500">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-gray-900 truncate">{item.serviceName}</div>
+                              <div className="text-xs text-gray-600">
                                 Rp {item.unitPrice.toLocaleString('id-ID')}
                               </div>
                             </div>
@@ -463,31 +471,31 @@ export function QuickSalesPOS({
                               variant="ghost"
                               size="sm"
                               onClick={() => removeFromCart(item.serviceId)}
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
                             >
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 bg-gray-100 rounded p-1">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => updateCartQuantity(item.serviceId, item.quantity - 1)}
-                              className="h-6 w-6 p-0 text-xs"
+                              className="h-6 w-6 p-0 text-xs text-gray-700 hover:bg-white"
                             >
                               −
                             </Button>
-                            <span className="flex-1 text-center text-sm font-semibold">{item.quantity}</span>
+                            <span className="flex-1 text-center text-sm font-semibold text-gray-900">{item.quantity}</span>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => updateCartQuantity(item.serviceId, item.quantity + 1)}
-                              className="h-6 w-6 p-0 text-xs"
+                              className="h-6 w-6 p-0 text-xs text-gray-700 hover:bg-white"
                             >
                               +
                             </Button>
                           </div>
-                          <div className="text-sm font-semibold text-right">
+                          <div className="text-sm font-bold text-right text-emerald-700">
                             Rp {(item.quantity * item.unitPrice).toLocaleString('id-ID')}
                           </div>
                         </div>
@@ -498,60 +506,61 @@ export function QuickSalesPOS({
               </div>
 
               {/* Totals */}
-              <div className="p-4 bg-white border-b space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span>Rp {subtotal.toLocaleString('id-ID')}</span>
+              <div className="p-4 bg-gradient-to-b from-gray-50 to-white border-b border-gray-200 space-y-3 text-sm">
+                <div className="flex justify-between text-gray-700">
+                  <span>Subtotal</span>
+                  <span className="font-medium">Rp {subtotal.toLocaleString('id-ID')}</span>
                 </div>
                 {taxAmount > 0 && (
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-gray-700">
                     <span>Tax</span>
-                    <span>Rp {taxAmount.toLocaleString('id-ID')}</span>
+                    <span className="font-medium">Rp {taxAmount.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {serviceChargeAmount > 0 && (
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-gray-700">
                     <span>Service Charge</span>
-                    <span>Rp {serviceChargeAmount.toLocaleString('id-ID')}</span>
+                    <span className="font-medium">Rp {serviceChargeAmount.toLocaleString('id-ID')}</span>
                   </div>
                 )}
-                <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                  <span>TOTAL</span>
-                  <span className="text-blue-600">Rp {totalAmount.toLocaleString('id-ID')}</span>
+                <div className="border-t border-gray-300 pt-3 flex justify-between bg-emerald-50 -mx-4 px-4 py-3 rounded-md">
+                  <span className="font-bold text-gray-900">TOTAL</span>
+                  <span className="font-bold text-lg text-emerald-700">Rp {totalAmount.toLocaleString('id-ID')}</span>
                 </div>
               </div>
 
               {/* Payment Methods */}
-              <div className="p-4 space-y-2">
-                <h3 className="font-semibold text-sm">Payment</h3>
+              <div className="p-4 space-y-3">
+                <h3 className="font-semibold text-sm text-gray-900">Payment Method</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={() => handleQuickPayment(SalesPaymentMethod.CASH)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                   >
                     💵 Cash
                   </Button>
                   <Button
                     onClick={() => handleQuickPayment(SalesPaymentMethod.QRIS)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-sky-600 hover:bg-sky-700 text-white font-semibold"
                   >
                     📱 QRIS
                   </Button>
                   <Button
                     onClick={() => handleQuickPayment(SalesPaymentMethod.CARD)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
                   >
                     💳 Card
                   </Button>
                   <Button
                     onClick={() => setShowPaymentDialog(true)}
-                    disabled={!selectedCustomerId || cart.length === 0}
+                    disabled={!selectedCustomerId || cart.length === 0 || submitting}
                     variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold"
                   >
-                    ⚙️ Custom
+                    ⚙️ More
                   </Button>
                 </div>
               </div>
