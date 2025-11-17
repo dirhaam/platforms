@@ -65,8 +65,9 @@ export async function PUT(req: NextRequest) {
     // Validate schedule format
     console.log('[business-hours PUT] Received schedule:', JSON.stringify(schedule, null, 2));
 
-    for (const [day, hours] of Object.entries(schedule)) {
-      if (hours.isOpen) {
+    for (const [day, hoursData] of Object.entries(schedule)) {
+      const hours = hoursData as any;
+      if (hours && hours.isOpen) {
         // Validate time format HH:MM
         if (!/^\d{2}:\d{2}$/.test(hours.openTime) || !/^\d{2}:\d{2}$/.test(hours.closeTime)) {
           console.error(`[business-hours PUT] Invalid time format for ${day}:`, { 
