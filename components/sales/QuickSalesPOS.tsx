@@ -228,7 +228,7 @@ export function QuickSalesPOS({
 
     setSubmitting(true);
     try {
-      const paymentData = [{ method, amount: totalAmount }];
+      const paymentData: PaymentEntry[] = [{ method, amount: totalAmount }];
       
       const response = await fetch('/api/sales/transactions', {
         method: 'POST',
@@ -244,11 +244,16 @@ export function QuickSalesPOS({
             unitPrice: item.unitPrice,
           })),
           totalAmount,
-          payments: paymentData.map(p => ({
-            method: p.method,
-            amount: p.amount,
-            ...(p.reference && { reference: p.reference }),
-          })),
+          payments: paymentData.map(p => {
+            const payment: any = {
+              method: p.method,
+              amount: p.amount,
+            };
+            if (p.reference) {
+              payment.reference = p.reference;
+            }
+            return payment;
+          }),
           notes,
           source: 'pos',
         }),
@@ -297,11 +302,16 @@ export function QuickSalesPOS({
             unitPrice: item.unitPrice,
           })),
           totalAmount,
-          payments: payments.map(p => ({
-            method: p.method,
-            amount: p.amount,
-            ...(p.reference && { reference: p.reference }),
-          })),
+          payments: payments.map(p => {
+            const payment: any = {
+              method: p.method,
+              amount: p.amount,
+            };
+            if (p.reference) {
+              payment.reference = p.reference;
+            }
+            return payment;
+          }),
           notes,
           source: 'pos',
         }),
