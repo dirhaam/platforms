@@ -247,7 +247,7 @@ export function QuickSalesPOS({
           payments: paymentData.map(p => ({
             method: p.method,
             amount: p.amount,
-            reference: p.reference,
+            ...(p.reference && { reference: p.reference }),
           })),
           notes,
           source: 'pos',
@@ -300,7 +300,7 @@ export function QuickSalesPOS({
           payments: payments.map(p => ({
             method: p.method,
             amount: p.amount,
-            reference: p.reference,
+            ...(p.reference && { reference: p.reference }),
           })),
           notes,
           source: 'pos',
