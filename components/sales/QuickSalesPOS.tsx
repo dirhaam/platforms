@@ -579,7 +579,7 @@ export function QuickSalesPOS({
               </div>
 
               {/* Payment Methods */}
-              <div className="flex flex-col border-t border-gray-200 flex-shrink-0 overflow-hidden bg-white">
+              <div className="flex flex-col border-t border-gray-200 flex-shrink-0 bg-white min-h-0">
                 {/* Header */}
                 <div className="p-4 space-y-3 border-b border-gray-200 flex-shrink-0">
                   <div className="flex justify-between items-center">
@@ -598,7 +598,7 @@ export function QuickSalesPOS({
                 </div>
 
                 {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
 
                 {/* Manual Payment Entries */}
                 {payments.length > 0 && (
