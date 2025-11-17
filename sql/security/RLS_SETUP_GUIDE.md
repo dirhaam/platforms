@@ -79,7 +79,8 @@ When a request comes in:
 ### 3. **Function-based Policies**
 The helper function `get_current_tenant_id()` reads from:
 1. Current session variable (`app.current_tenant_id`)
-2. Or looks up from `sessions` table if needed
+2. Or looks up from `sessions` table using `user_id`
+3. Returns TEXT (not UUID) for flexibility with different ID formats
 
 ## Tables Protected
 

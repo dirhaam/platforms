@@ -64,10 +64,10 @@ ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
 -- These policies ensure users can only access data for their tenant
 
 -- Helper function to get current tenant_id (must be set in session)
-CREATE OR REPLACE FUNCTION get_current_tenant_id() RETURNS UUID AS $$
+CREATE OR REPLACE FUNCTION get_current_tenant_id() RETURNS TEXT AS $$
   SELECT COALESCE(
-    current_setting('app.current_tenant_id', true)::uuid,
-    (SELECT tenant_id FROM sessions WHERE session_token = current_setting('app.session_token', true) LIMIT 1)
+    current_setting('app.current_tenant_id', true),
+    (SELECT tenant_id FROM sessions WHERE user_id = current_setting('app.user_id', true) LIMIT 1)
   );
 $$ LANGUAGE SQL STABLE;
 
@@ -146,7 +146,7 @@ CREATE POLICY "booking_payments_isolation" ON booking_payments
 -- ============================================================================
 
 CREATE POLICY "tenants_own_data" ON tenants
-  USING (id = get_current_tenant_id());
+  USING (id::text = get_current_tenant_id());
 
 CREATE POLICY "services_tenant_isolation" ON services
   USING (tenant_id = get_current_tenant_id());
