@@ -98,30 +98,40 @@ export function TimeSlotPicker({
   };
 
   // Group slots by time periods
+  // IMPORTANT: Use getUTCHours() because backend sends UTC times
   const groupSlotsByPeriod = (slots: TimeSlot[]) => {
     console.log('[groupSlotsByPeriod] Total slots received:', slots.length);
     if (slots.length > 0) {
       console.log('[groupSlotsByPeriod] First slot start:', slots[0].start);
-      console.log('[groupSlotsByPeriod] First slot getHours():', slots[0].start.getHours());
+      console.log('[groupSlotsByPeriod] First slot getHours() (local):', slots[0].start.getHours());
+      console.log('[groupSlotsByPeriod] First slot getUTCHours():', slots[0].start.getUTCHours());
       console.log('[groupSlotsByPeriod] First slot toLocaleString():', slots[0].start.toLocaleString());
     }
 
+    // FIXED: Use getUTCHours() for grouping since backend sends UTC times
     const morning = slots.filter(slot => {
-      const hour = slot.start.getHours();
+      const hour = slot.start.getUTCHours();
       return hour >= 6 && hour < 12;
     });
 
     const afternoon = slots.filter(slot => {
-      const hour = slot.start.getHours();
+      const hour = slot.start.getUTCHours();
       return hour >= 12 && hour < 17;
     });
 
     const evening = slots.filter(slot => {
-      const hour = slot.start.getHours();
+      const hour = slot.start.getUTCHours();
       return hour >= 17 && hour < 22;
     });
 
-    console.log('[groupSlotsByPeriod] Results:', { morning: morning.length, afternoon: afternoon.length, evening: evening.length });
+    console.log('[groupSlotsByPeriod] Results (UTC-based grouping):', { 
+      morning: morning.length, 
+      afternoon: afternoon.length, 
+      evening: evening.length,
+      morningHours: morning.length > 0 ? `${morning[0].start.getUTCHours()}-${morning[morning.length-1].start.getUTCHours()}` : 'N/A',
+      afternoonHours: afternoon.length > 0 ? `${afternoon[0].start.getUTCHours()}-${afternoon[afternoon.length-1].start.getUTCHours()}` : 'N/A',
+      eveningHours: evening.length > 0 ? `${evening[0].start.getUTCHours()}-${evening[evening.length-1].start.getUTCHours()}` : 'N/A'
+    });
 
     return { morning, afternoon, evening };
   };
