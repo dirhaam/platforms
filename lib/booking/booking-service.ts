@@ -745,11 +745,51 @@ export class BookingService {
       
       const slots: TimeSlot[] = [];
       
+      // Get timezone offset from database
+      const timezone = businessHoursData?.timezone || 'Asia/Jakarta';
+      
+      // Calculate timezone offset in hours
+      // For now, using a simple mapping for common timezones
+      // In production, use a library like date-fns-tz or moment-timezone
+      const timezoneOffsets: Record<string, number> = {
+        'Asia/Jakarta': 7,
+        'Asia/Bangkok': 7,
+        'Asia/Ho_Chi_Minh': 7,
+        'UTC': 0,
+        'America/New_York': -5, // EST
+        'America/Chicago': -6,
+        'America/Los_Angeles': -8,
+        'Europe/London': 0,
+        'Europe/Paris': 1,
+      };
+      
+      const tzOffset = timezoneOffsets[timezone] || 7; // Default to Jakarta
+      
+      console.log('[getAvailability] Timezone info:', {
+        timezone,
+        tzOffset,
+        operatingHours
+      });
+      
       // Generate slots based on operating hours
+      // Business hours are in LOCAL time, so we need to adjust to UTC
+      // Example: 07:00 local (UTC+7) = 00:00 UTC
       const startDate = new Date(bookingDate);
       startDate.setHours(startHourStr, startMinStr, 0, 0);
+      // Adjust from local to UTC: subtract the offset
+      startDate.setHours(startDate.getHours() - tzOffset);
+      
       const endDate = new Date(bookingDate);
       endDate.setHours(endHourStr, endMinStr, 0, 0);
+      // Adjust from local to UTC
+      endDate.setHours(endDate.getHours() - tzOffset);
+      
+      console.log('[getAvailability] Adjusted slot times (UTC):', {
+        originalStartLocal: `${startHourStr}:${startMinStr}`,
+        originalEndLocal: `${endHourStr}:${endMinStr}`,
+        adjustedStart: startDate.toISOString(),
+        adjustedEnd: endDate.toISOString()
+      });
       
       // Count bookings per hour to enforce hourly quota
       const bookingsPerHour = new Map<string, number>();
