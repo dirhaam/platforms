@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Invoice, InvoiceStatus, PaymentStatus, getPaymentStatus } from '@/types/invoice';
 import jsPDF from 'jspdf';
 import { Download, ImageDown, Printer } from 'lucide-react';
+import { maskPhoneNumberCompact } from '@/lib/utils/phone-masking';
 
 interface InvoicePreviewProps {
   open: boolean;
@@ -353,9 +354,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
               <p className="font-semibold text-center mb-2">Pelanggan</p>
               <div className="space-y-1">
                 <p className="font-medium text-gray-900">{invoice.customer?.name}</p>
-                {invoice.customer?.phone && <p>{invoice.customer.phone}</p>}
-                {invoice.customer?.email && <p>{invoice.customer.email}</p>}
-                {invoice.customer?.address && <p>{invoice.customer.address}</p>}
+                {invoice.customer?.phone && <p>{maskPhoneNumberCompact(invoice.customer.phone)}</p>}
               </div>
             </div>
 
