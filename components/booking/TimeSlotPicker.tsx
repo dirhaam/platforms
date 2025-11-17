@@ -60,11 +60,25 @@ export function TimeSlotPicker({
       // API returns availability directly, not nested
       // Convert string timestamps to Date objects
       if (data && data.slots) {
-        data.slots = data.slots.map((slot: any) => ({
-          ...slot,
-          start: typeof slot.start === 'string' ? new Date(slot.start) : slot.start,
-          end: typeof slot.end === 'string' ? new Date(slot.end) : slot.end
-        }));
+        data.slots = data.slots.map((slot: any) => {
+          const start = typeof slot.start === 'string' ? new Date(slot.start) : slot.start;
+          const end = typeof slot.end === 'string' ? new Date(slot.end) : slot.end;
+          
+          // Debug timezone
+          console.log('[TimeSlotPicker] Slot conversion:', {
+            originalStart: slot.start,
+            parsedStart: start.toISOString(),
+            localStart: start.toLocaleString(),
+            getHours: start.getHours(),
+            getUTCHours: start.getUTCHours()
+          });
+          
+          return {
+            ...slot,
+            start,
+            end
+          };
+        });
       }
       setAvailability(data);
     } catch (err) {
@@ -85,6 +99,13 @@ export function TimeSlotPicker({
 
   // Group slots by time periods
   const groupSlotsByPeriod = (slots: TimeSlot[]) => {
+    console.log('[groupSlotsByPeriod] Total slots received:', slots.length);
+    if (slots.length > 0) {
+      console.log('[groupSlotsByPeriod] First slot start:', slots[0].start);
+      console.log('[groupSlotsByPeriod] First slot getHours():', slots[0].start.getHours());
+      console.log('[groupSlotsByPeriod] First slot toLocaleString():', slots[0].start.toLocaleString());
+    }
+
     const morning = slots.filter(slot => {
       const hour = slot.start.getHours();
       return hour >= 6 && hour < 12;
@@ -99,6 +120,8 @@ export function TimeSlotPicker({
       const hour = slot.start.getHours();
       return hour >= 17 && hour < 22;
     });
+
+    console.log('[groupSlotsByPeriod] Results:', { morning: morning.length, afternoon: afternoon.length, evening: evening.length });
 
     return { morning, afternoon, evening };
   };

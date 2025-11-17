@@ -765,6 +765,14 @@ export class BookingService {
       // This allows multiple smaller slots even if service takes longer
       let currentTime = new Date(startDate);
       
+      console.log('[getAvailability] Slot generation started:', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        slotDurationMinutes,
+        serviceDuration,
+        hourlyQuota
+      });
+      
       while (currentTime < endDate) {
         const slotStart = new Date(currentTime);
         // FIXED: Slot length should be serviceDuration, not slotDurationMinutes
@@ -805,6 +813,12 @@ export class BookingService {
         // This lets users see available slots at every slotDuration interval
         currentTime = new Date(currentTime.getTime() + slotDurationMinutes * 60000);
       }
+      
+      console.log('[getAvailability] Slot generation completed:', {
+        totalSlots: slots.length,
+        firstSlot: slots[0] ? { start: slots[0].start.toISOString(), available: slots[0].available } : null,
+        lastSlot: slots[slots.length - 1] ? { start: slots[slots.length - 1].start.toISOString(), available: slots[slots.length - 1].available } : null
+      });
       
       return {
         date: request.date,
