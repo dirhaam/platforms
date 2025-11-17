@@ -98,7 +98,7 @@ export function NewBookingPOS({
   const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [currentStep, setCurrentStep] = useState<'main' | 'date' | 'time'>('main');
+  const [currentStep, setCurrentStep] = useState<'main' | 'date' | 'time' | 'homevisit'>('main');
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
 
   useEffect(() => {
@@ -550,7 +550,12 @@ export function NewBookingPOS({
                         <Checkbox
                           id="homeVisit"
                           checked={booking.isHomeVisit}
-                          onCheckedChange={(checked) => setBooking({ ...booking, isHomeVisit: checked as boolean })}
+                          onCheckedChange={(checked) => {
+                            setBooking({ ...booking, isHomeVisit: checked as boolean });
+                            if (checked as boolean) {
+                              setCurrentStep('homevisit');
+                            }
+                          }}
                         />
                         <Label htmlFor="homeVisit" className="cursor-pointer text-sm font-semibold flex items-center">
                           <MapPin className="inline w-3 h-3 mr-1" />
@@ -558,39 +563,21 @@ export function NewBookingPOS({
                         </Label>
                       </div>
 
-                      {booking.isHomeVisit && (
-                        <>
-                          <HomeVisitAddressSelector
-                            address={booking.homeVisitAddress}
-                            latitude={booking.homeVisitLat}
-                            longitude={booking.homeVisitLng}
-                            tenantId={subdomain}
-                            onAddressChange={(addr) => setBooking({ ...booking, homeVisitAddress: addr })}
-                            onCoordinatesChange={(lat, lng) => setBooking({ ...booking, homeVisitLat: lat, homeVisitLng: lng })}
-                          />
-
-                          {booking.homeVisitAddress && typeof booking.homeVisitLat === 'number' && typeof booking.homeVisitLng === 'number' && businessCoordinates && (
-                            <div className="mt-2">
-                              <TravelEstimateCard
-                                tenantId={subdomain}
-                                origin={businessCoordinates}
-                                destination={booking.homeVisitAddress}
-                                destinationCoordinates={{
-                                  lat: booking.homeVisitLat,
-                                  lng: booking.homeVisitLng
-                                }}
-                                serviceId={booking.serviceId}
-                                onCalculationComplete={(calc) => {
-                                  setBooking({ ...booking, travelCalculation: calc });
-                                }}
-                                onConfirm={(calc) => {
-                                  setBooking({ ...booking, travelCalculation: calc });
-                                }}
-                                autoCalculate={true}
-                              />
-                            </div>
-                          )}
-                        </>
+                      {booking.isHomeVisit && booking.homeVisitAddress && (
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                          <div className="font-semibold text-blue-900">{booking.homeVisitAddress}</div>
+                          <div className="text-blue-700 text-xs">
+                            {booking.homeVisitLat?.toFixed(4)}, {booking.homeVisitLng?.toFixed(4)}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCurrentStep('homevisit')}
+                            className="w-full mt-2 h-7 text-xs"
+                          >
+                            Edit Address
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </>
@@ -940,6 +927,77 @@ export function NewBookingPOS({
           </div>
         </DialogContent>
       </Dialog>
+
+    {/* Home Visit Modal */}
+    <Dialog open={currentStep === 'homevisit'} onOpenChange={(open) => !open && setCurrentStep('main')}>
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+        <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Home Visit Address</h2>
+            <p className="text-xs text-gray-600 mt-1">Enter address and coordinates</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCurrentStep('main')}
+            className="text-gray-600 hover:bg-gray-100"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <HomeVisitAddressSelector
+            address={booking.homeVisitAddress}
+            latitude={booking.homeVisitLat}
+            longitude={booking.homeVisitLng}
+            tenantId={subdomain}
+            onAddressChange={(addr) => setBooking({ ...booking, homeVisitAddress: addr })}
+            onCoordinatesChange={(lat, lng) => setBooking({ ...booking, homeVisitLat: lat, homeVisitLng: lng })}
+          />
+
+          {booking.homeVisitAddress && typeof booking.homeVisitLat === 'number' && typeof booking.homeVisitLng === 'number' && businessCoordinates && (
+            <div className="mt-4 space-y-3">
+              <h3 className="font-semibold text-sm">Travel Estimate</h3>
+              <TravelEstimateCard
+                tenantId={subdomain}
+                origin={businessCoordinates}
+                destination={booking.homeVisitAddress}
+                destinationCoordinates={{
+                  lat: booking.homeVisitLat,
+                  lng: booking.homeVisitLng
+                }}
+                serviceId={booking.serviceId}
+                onCalculationComplete={(calc) => {
+                  setBooking({ ...booking, travelCalculation: calc });
+                }}
+                onConfirm={(calc) => {
+                  setBooking({ ...booking, travelCalculation: calc });
+                }}
+                autoCalculate={true}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-200 p-4 flex gap-2 justify-end bg-gray-50">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentStep('main')}
+            className="text-sm"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => setCurrentStep('main')}
+            disabled={booking.isHomeVisit && !booking.homeVisitAddress}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+          >
+            Done
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
