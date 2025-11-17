@@ -376,7 +376,7 @@ export function NewBookingPOS({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden">
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex justify-between items-center">
@@ -759,7 +759,7 @@ export function NewBookingPOS({
 
     {/* Date & Time Step Modal */}
       <Dialog open={currentStep !== 'main'} onOpenChange={(open) => !open && setCurrentStep('main')}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
           <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold text-gray-900">
@@ -930,7 +930,7 @@ export function NewBookingPOS({
 
     {/* Home Visit Modal */}
     <Dialog open={currentStep === 'homevisit'} onOpenChange={(open) => !open && setCurrentStep('main')}>
-      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
         <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Home Visit Address</h2>
