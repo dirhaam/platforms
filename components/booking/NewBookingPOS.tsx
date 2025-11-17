@@ -98,6 +98,8 @@ export function NewBookingPOS({
   const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [currentStep, setCurrentStep] = useState<'main' | 'date' | 'time'>('main');
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -293,6 +295,51 @@ export function NewBookingPOS({
     );
   }, [customers, customerSearch]);
 
+  const fetchAvailableSlots = async () => {
+    if (!booking.serviceId || !booking.scheduledAt || !subdomain) return;
+    try {
+      const response = await fetch(
+        `/api/bookings/availability?serviceId=${booking.serviceId}&date=${booking.scheduledAt}`,
+        { headers: { 'x-tenant-id': subdomain } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const slots = (data.slots || []).map((slot: any) => ({
+          ...slot,
+          start: typeof slot.start === 'string' ? new Date(slot.start) : slot.start,
+          end: typeof slot.end === 'string' ? new Date(slot.end) : slot.end
+        }));
+        setAvailableSlots(slots);
+      }
+    } catch (err) {
+      console.error('Error fetching slots:', err);
+    }
+  };
+
+  const groupSlotsByPeriod = (slots: TimeSlot[]) => {
+    const morning = slots.filter(slot => {
+      const hour = slot.start.getHours();
+      return hour >= 6 && hour < 12;
+    });
+    const afternoon = slots.filter(slot => {
+      const hour = slot.start.getHours();
+      return hour >= 12 && hour < 17;
+    });
+    const evening = slots.filter(slot => {
+      const hour = slot.start.getHours();
+      return hour >= 17 && hour < 22;
+    });
+    return { morning, afternoon, evening };
+  };
+
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   const calculateTotal = () => {
     if (!selectedService) return 0;
     
@@ -479,50 +526,22 @@ export function NewBookingPOS({
                       </div>
                     </div>
 
-                    {/* Date Picker */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Date *</Label>
-                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left h-8 text-xs">
-                            <CalendarIcon className="mr-2 h-3 w-3" />
-                            {booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00').toLocaleDateString() : 'Pick date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-50" align="start">
-                          <BlockingDateCalendar
-                            selected={booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00') : undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                const dateStr = date.toISOString().split('T')[0];
-                                setBooking({ ...booking, scheduledAt: dateStr, selectedTimeSlot: undefined });
-                                setCalendarOpen(false);
-                              }
-                            }}
-                            disabled={(date) => {
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              return date < today;
-                            }}
-                            blockedDates={blockedDates}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Time Slots */}
-                    {booking.scheduledAt && booking.serviceId && (
+                    {/* Date & Time Selection */}
+                    <div className="space-y-2 p-3 bg-white rounded border">
                       <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Time *</Label>
-                        <TimeSlotPicker
-                          serviceId={booking.serviceId}
-                          selectedDate={new Date(booking.scheduledAt + 'T00:00')}
-                          onSlotSelect={(slot) => setBooking({ ...booking, selectedTimeSlot: slot })}
-                          selectedSlot={booking.selectedTimeSlot}
-                          tenantId={subdomain}
-                        />
+                        <Label className="text-xs font-semibold">Date & Time *</Label>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left h-8 text-xs"
+                          onClick={() => setCurrentStep('date')}
+                        >
+                          <CalendarIcon className="mr-2 h-3 w-3" />
+                          {booking.scheduledAt 
+                            ? `${new Date(booking.scheduledAt + 'T00:00').toLocaleDateString()} ${booking.selectedTimeSlot ? formatTime(booking.selectedTimeSlot.start) : '(Pick time)'}`
+                            : 'Select date & time'}
+                        </Button>
                       </div>
-                    )}
+                    </div>
 
                     {/* Home Visit */}
                     <div className="space-y-2 p-3 bg-white rounded border">
@@ -749,5 +768,176 @@ export function NewBookingPOS({
         </div>
       </DialogContent>
     </Dialog>
+      {/* Date & Time Step Modal */}
+      <Dialog open={currentStep !== 'main'} onOpenChange={(open) => !open && setCurrentStep('main')}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+          <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {currentStep === 'date' ? 'Select Date' : 'Select Time'}
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                {currentStep === 'date' ? 'Choose your preferred date' : 'Choose your preferred time'}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCurrentStep('main')}
+              className="text-gray-600 hover:bg-gray-100"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {currentStep === 'date' && (
+              <div className="space-y-4">
+                <BlockingDateCalendar
+                  selected={booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00') : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      const dateStr = date.toISOString().split('T')[0];
+                      setBooking({ ...booking, scheduledAt: dateStr, selectedTimeSlot: undefined });
+                      setAvailableSlots([]);
+                      setCurrentStep('time');
+                      // Fetch slots for this date
+                      setTimeout(() => {
+                        const newBooking = { ...booking, scheduledAt: dateStr };
+                        if (newBooking.serviceId && subdomain) {
+                          fetch(
+                            `/api/bookings/availability?serviceId=${newBooking.serviceId}&date=${dateStr}`,
+                            { headers: { 'x-tenant-id': subdomain } }
+                          ).then(r => r.json()).then(data => {
+                            const slots = (data.slots || []).map((slot: any) => ({
+                              ...slot,
+                              start: typeof slot.start === 'string' ? new Date(slot.start) : slot.start,
+                              end: typeof slot.end === 'string' ? new Date(slot.end) : slot.end
+                            }));
+                            setAvailableSlots(slots);
+                          }).catch(err => console.error('Error fetching slots:', err));
+                        }
+                      }, 0);
+                    }
+                  }}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today;
+                  }}
+                  blockedDates={blockedDates}
+                />
+              </div>
+            )}
+
+            {currentStep === 'time' && booking.scheduledAt && (
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-gray-700">
+                  Selected Date: {new Date(booking.scheduledAt + 'T00:00').toLocaleDateString()}
+                </div>
+                
+                {availableSlots.length === 0 ? (
+                  <div className="text-center text-sm text-gray-600 py-8">
+                    No available time slots for this date
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(() => {
+                      const { morning, afternoon, evening } = groupSlotsByPeriod(availableSlots);
+                      
+                      return (
+                        <>
+                          {morning.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Morning (6AM - 12PM)</h4>
+                              <div className="grid grid-cols-4 gap-2">
+                                {morning.map((slot, idx) => (
+                                  <Button
+                                    key={idx}
+                                    variant={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => {
+                                      setBooking({ ...booking, selectedTimeSlot: slot });
+                                      setCurrentStep('main');
+                                    }}
+                                    className={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                  >
+                                    {formatTime(slot.start)}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {afternoon.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Afternoon (12PM - 5PM)</h4>
+                              <div className="grid grid-cols-4 gap-2">
+                                {afternoon.map((slot, idx) => (
+                                  <Button
+                                    key={idx}
+                                    variant={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => {
+                                      setBooking({ ...booking, selectedTimeSlot: slot });
+                                      setCurrentStep('main');
+                                    }}
+                                    className={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                  >
+                                    {formatTime(slot.start)}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {evening.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Evening (5PM - 10PM)</h4>
+                              <div className="grid grid-cols-4 gap-2">
+                                {evening.map((slot, idx) => (
+                                  <Button
+                                    key={idx}
+                                    variant={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => {
+                                      setBooking({ ...booking, selectedTimeSlot: slot });
+                                      setCurrentStep('main');
+                                    }}
+                                    className={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                  >
+                                    {formatTime(slot.start)}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                <div className="flex gap-2 justify-between pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep('date')}
+                    className="text-sm"
+                  >
+                    Back to Date
+                  </Button>
+                  <Button
+                    onClick={() => setCurrentStep('main')}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>;
   );
 }
