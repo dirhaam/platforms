@@ -237,6 +237,8 @@ export function QuickSalesPOS({
           'x-tenant-id': tenantId,
         },
         body: JSON.stringify({
+          tenantId,
+          type: 'on_the_spot',
           customerId: selectedCustomerId,
           items: cart.map(item => ({
             serviceId: item.serviceId,
@@ -295,6 +297,8 @@ export function QuickSalesPOS({
           'x-tenant-id': tenantId,
         },
         body: JSON.stringify({
+          tenantId,
+          type: 'on_the_spot',
           customerId: selectedCustomerId,
           items: cart.map(item => ({
             serviceId: item.serviceId,
@@ -317,7 +321,10 @@ export function QuickSalesPOS({
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create transaction');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create transaction');
+      }
       const data = await response.json();
 
       toast.success('Transaction completed');
