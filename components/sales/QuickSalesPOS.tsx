@@ -377,6 +377,7 @@ export function QuickSalesPOS({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden">
+        <DialogTitle className="sr-only">Quick Sales</DialogTitle>
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex justify-between items-center">

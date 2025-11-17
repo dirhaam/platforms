@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -377,6 +378,7 @@ export function NewBookingPOS({
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden">
+        <DialogTitle className="sr-only">New Booking</DialogTitle>
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex justify-between items-center">
@@ -760,6 +762,7 @@ export function NewBookingPOS({
     {/* Date & Time Step Modal */}
       <Dialog open={currentStep !== 'main'} onOpenChange={(open) => !open && setCurrentStep('main')}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+          <DialogTitle className="sr-only">{currentStep === 'date' ? 'Select Date' : 'Select Time'}</DialogTitle>
           <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold text-gray-900">
@@ -931,6 +934,7 @@ export function NewBookingPOS({
     {/* Home Visit Modal */}
     <Dialog open={currentStep === 'homevisit'} onOpenChange={(open) => !open && setCurrentStep('main')}>
       <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+        <DialogTitle className="sr-only">Home Visit Address</DialogTitle>
         <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Home Visit Address</h2>
