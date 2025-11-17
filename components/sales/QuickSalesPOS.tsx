@@ -209,9 +209,17 @@ export function QuickSalesPOS({
     return subtotal * (value / 100);
   }, [subtotal, invoiceSettings]);
 
+  const additionalFeesAmount = useMemo(() => {
+    if (!invoiceSettings?.additionalFees || invoiceSettings.additionalFees.length === 0) return 0;
+    return invoiceSettings.additionalFees.reduce((sum, fee) => {
+      if (fee.type === 'fixed') return sum + fee.value;
+      return sum + (subtotal * (fee.value / 100));
+    }, 0);
+  }, [subtotal, invoiceSettings]);
+
   const totalAmount = useMemo(() => {
-    return subtotal + taxAmount + serviceChargeAmount;
-  }, [subtotal, taxAmount, serviceChargeAmount]);
+    return subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount;
+  }, [subtotal, taxAmount, serviceChargeAmount, additionalFeesAmount]);
 
   const totalPayment = useMemo(() => {
     return payments.reduce((sum, p) => sum + p.amount, 0);
@@ -540,6 +548,12 @@ export function QuickSalesPOS({
                   <div className="flex justify-between text-gray-700">
                     <span>Service Charge</span>
                     <span className="font-medium">Rp {serviceChargeAmount.toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+                {additionalFeesAmount > 0 && (
+                  <div className="flex justify-between text-gray-700">
+                    <span>Additional Fees</span>
+                    <span className="font-medium">Rp {additionalFeesAmount.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 <div className="border-t border-gray-300 pt-3 flex justify-between bg-emerald-50 -mx-4 px-4 py-3 rounded-md">
