@@ -707,7 +707,7 @@ export class InvoiceService {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  static async createInvoiceFromBooking(tenantId: string, bookingId: string): Promise<Invoice> {
+  static async createInvoiceFromBooking(tenantId: string, bookingId: string, cashierName?: string): Promise<Invoice> {
     try {
       const supabase = getSupabaseClient();
       const { data: booking, error: bookingError } = await supabase
@@ -861,7 +861,7 @@ export class InvoiceService {
         paymentHistoryCount: paymentHistory?.length || 0
       });
 
-      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount > 0 ? invoicePaidAmount : undefined, booking.booking_number);
+      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount > 0 ? invoicePaidAmount : undefined, booking.booking_number, cashierName);
 
       console.log('[InvoiceService.createInvoiceFromBooking] ✅ Invoice created successfully:', {
         bookingId,
@@ -884,7 +884,7 @@ export class InvoiceService {
     }
   }
 
-  static async createInvoiceFromSalesTransaction(tenantId: string, transactionId: string): Promise<Invoice> {
+  static async createInvoiceFromSalesTransaction(tenantId: string, transactionId: string, cashierName?: string): Promise<Invoice> {
     try {
       const supabase = getSupabaseClient();
       const { data: transaction, error: transactionError } = await supabase
@@ -978,7 +978,7 @@ export class InvoiceService {
         invoicePaidAmount = parseDecimal(transaction.paid_amount ?? 0);
       }
 
-      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount, transaction.transaction_number);
+      const invoice = await this.createInvoice(tenantId, invoiceData, invoiceStatus, invoicePaidAmount, transaction.transaction_number, cashierName);
 
       console.log('[InvoiceService.createInvoiceFromSalesTransaction] ✅ Invoice created successfully:', {
         transactionId,

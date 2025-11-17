@@ -15,9 +15,12 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get cashier name from header or session
+    const cashierName = request.headers.get('x-user-name') || 'System';
+
     console.log(`[Invoice] Creating invoice from booking: ${bookingId} for tenant: ${tenant.id}`);
 
-    const invoice = await InvoiceService.createInvoiceFromBooking(tenant.id, bookingId);
+    const invoice = await InvoiceService.createInvoiceFromBooking(tenant.id, bookingId, cashierName);
     
     console.log(`[Invoice] Successfully created invoice: ${invoice.id}`);
     return NextResponse.json(invoice, { status: 201 });
