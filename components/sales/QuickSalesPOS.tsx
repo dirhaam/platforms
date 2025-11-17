@@ -246,6 +246,7 @@ export function QuickSalesPOS({
             unitPrice: item.unitPrice,
           })),
           totalAmount,
+          paymentAmount: totalPayment,
           payments: paymentData.map(p => {
             const payment: any = {
               method: p.method,
@@ -306,6 +307,7 @@ export function QuickSalesPOS({
             unitPrice: item.unitPrice,
           })),
           totalAmount,
+          paymentAmount: totalPayment,
           payments: payments.map(p => {
             const payment: any = {
               method: p.method,
