@@ -171,6 +171,7 @@ export default function BookingDialog({
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [travelCalculation, setTravelCalculation] = useState<TravelCalculation | undefined>(undefined);
   const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Fetch invoice settings on mount
   React.useEffect(() => {
@@ -660,7 +661,7 @@ export default function BookingDialog({
               {/* Date Picker */}
               <div className="space-y-2">
                 <Label>Preferred Date *</Label>
-                <Popover>
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button className={`w-full justify-start text-left ${themeConfig.buttonClass}`}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -675,6 +676,8 @@ export default function BookingDialog({
                           const dateStr = date.toISOString().split('T')[0];
                           handleInputChange('preferredDate', dateStr);
                           setFormData(prev => ({ ...prev, selectedTimeSlot: undefined }));
+                          // Close popover after date selection
+                          setCalendarOpen(false);
                         }
                       }}
                       disabled={(date) => {
