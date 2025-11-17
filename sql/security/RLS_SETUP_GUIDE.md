@@ -27,23 +27,58 @@ This will:
 
 After enabling RLS, you MUST set the tenant context in every request:
 
+**Option 1: Using Supabase client with query**
 ```typescript
-// In your API middleware or endpoint handlers
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(url, key);
 
-// Set tenant context for RLS to work
-const { error } = await supabase.rpc('set_config', {
-  key: 'app.current_tenant_id',
-  value: tenantId
-});
-
-// OR using connection string if available
+// Method 1: Set session context for the connection
 const { data, error } = await supabase
   .from('invoices')
   .select('*')
-  .eq('tenant_id', tenantId);  // Always filter by tenant_id as fallback
+  .eq('tenant_id', tenantId);  // RLS will check this context
+```
+
+**Option 2: Using raw SQL (recommended for backend)**
+```typescript
+// In your backend API handler
+const client = require('@supabase/supabase-js').createClient(url, serviceRoleKey);
+
+// Set the tenant context using SET command
+await client.rpc('temp_set', {
+  app_name: 'app.current_tenant_id', 
+  app_value: tenantId
+});
+
+// OR directly via SQL if using connection pool:
+const { rows } = await db.query(
+  "SET app.current_tenant_id = $1; SELECT * FROM invoices;",
+  [tenantId]
+);
+```
+
+**Option 3: Via middleware (Recommended)**
+```typescript
+// Express/Next.js middleware
+export async function rls Middleware(req, res, next) {
+  const tenantId = req.headers['x-tenant-id'] || req.user?.tenantId;
+  
+  if (!tenantId) {
+    return res.status(401).json({ error: 'No tenant context' });
+  }
+  
+  // Store tenant context
+  req.tenantId = tenantId;
+  
+  next();
+}
+
+// In your route handler
+const { data } = await supabase
+  .from('invoices')
+  .select('*')
+  .eq('tenant_id', req.tenantId);  // RLS enforces this automatically
 ```
 
 ### Step 3: Important: Always Include Tenant ID Filter

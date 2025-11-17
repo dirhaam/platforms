@@ -63,12 +63,10 @@ ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 -- These policies ensure users can only access data for their tenant
 
--- Helper function to get current tenant_id (must be set in session)
+-- Helper function to get current tenant_id from session context
+-- IMPORTANT: Application must set app.current_tenant_id before querying
 CREATE OR REPLACE FUNCTION get_current_tenant_id() RETURNS TEXT AS $$
-  SELECT COALESCE(
-    current_setting('app.current_tenant_id', true),
-    (SELECT tenant_id FROM sessions WHERE user_id = current_setting('app.user_id', true) LIMIT 1)
-  );
+  SELECT current_setting('app.current_tenant_id', true);
 $$ LANGUAGE SQL STABLE;
 
 -- ============================================================================
