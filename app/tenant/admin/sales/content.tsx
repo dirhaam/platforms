@@ -49,7 +49,7 @@ import {
   SalesSummary,
   SalesFilters,
 } from '@/types/sales';
-import { SalesTransactionDialog } from '@/components/sales/SalesTransactionDialog';
+import { QuickSalesPOS } from '@/components/sales/QuickSalesPOS';
 import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
 import { SalesTransactionPanel } from '@/components/sales/SalesTransactionPanel';
 import { Invoice } from '@/types/invoice';
@@ -517,13 +517,12 @@ export function SalesContent() {
               New Transaction
             </Button>
 
-            <SalesTransactionDialog
+            <QuickSalesPOS
               open={showNewTransactionDialog}
               onOpenChange={setShowNewTransactionDialog}
               tenantId={tenantId}
               subdomain={subdomain || ''}
               onCreated={handleTransactionCreated}
-              onError={(message) => setError(message)}
             />
           </div>
         </div>
