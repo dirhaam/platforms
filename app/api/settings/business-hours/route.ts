@@ -62,6 +62,25 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    // Validate schedule format
+    console.log('[business-hours PUT] Received schedule:', JSON.stringify(schedule, null, 2));
+
+    for (const [day, hours] of Object.entries(schedule)) {
+      if (hours.isOpen) {
+        // Validate time format HH:MM
+        if (!/^\d{2}:\d{2}$/.test(hours.openTime) || !/^\d{2}:\d{2}$/.test(hours.closeTime)) {
+          console.error(`[business-hours PUT] Invalid time format for ${day}:`, { 
+            openTime: hours.openTime, 
+            closeTime: hours.closeTime 
+          });
+          return NextResponse.json(
+            { error: `Invalid time format for ${day}. Expected HH:MM format.` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const supabase = getSupabaseClient();
 
     // Try to update, if not found insert
@@ -71,27 +90,41 @@ export async function PUT(req: NextRequest) {
       .eq('tenant_id', tenantId)
       .single();
 
+    const dataToSave = {
+      schedule,
+      timezone,
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log('[business-hours PUT] Saving to database:', {
+      tenantId,
+      dataToSave,
+    });
+
     if (existing) {
       const { error } = await supabase
         .from('business_hours')
-        .update({
-          schedule,
-          timezone,
-          updated_at: new Date().toISOString(),
-        })
+        .update(dataToSave)
         .eq('tenant_id', tenantId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[business-hours PUT] Update error:', error);
+        throw error;
+      }
+      console.log('[business-hours PUT] Update successful');
     } else {
       const { error } = await supabase
         .from('business_hours')
         .insert({
           tenant_id: tenantId,
-          schedule,
-          timezone,
+          ...dataToSave
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[business-hours PUT] Insert error:', error);
+        throw error;
+      }
+      console.log('[business-hours PUT] Insert successful');
     }
 
     return NextResponse.json({ success: true });

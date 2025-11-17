@@ -637,12 +637,19 @@ export class BookingService {
       }
       
       // Get global business hours for the tenant
-      const { data: businessHoursData } = await supabase
+      const { data: businessHoursData, error: hoursError } = await supabase
         .from('business_hours')
-        .select('schedule')
+        .select('*')
         .eq('tenant_id', tenantId)
         .single();
       
+      console.log('[getAvailability] Business hours fetch:', {
+        serviceId: request.serviceId,
+        tenantId,
+        hoursError: hoursError?.message,
+        businessHoursData,
+      });
+
       // FIXED: Proper timezone-aware date parsing
       // Parse YYYY-MM-DD format as LOCAL date, not UTC
       const [year, month, day] = request.date.split('-').map(Number);
@@ -654,10 +661,35 @@ export class BookingService {
       const dayKey = dayNames[dayOfWeek];
       
       const schedule = businessHoursData?.schedule || {};
-      const dayHours = schedule[dayKey] || { isOpen: true, openTime: '08:00', closeTime: '17:00' };
       
+      // Try exact key, then try with capitalized, then case-insensitive
+      let dayHours = schedule[dayKey];
+      if (!dayHours) {
+        const capitalizedKey = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+        dayHours = schedule[capitalizedKey];
+      }
+      if (!dayHours) {
+        // Try case-insensitive search
+        const matchKey = Object.keys(schedule).find(key => key.toLowerCase() === dayKey.toLowerCase());
+        dayHours = matchKey ? schedule[matchKey] : null;
+      }
+      
+      // Fallback to default if not found
+      if (!dayHours) {
+        console.warn(`[getAvailability] No business hours found for ${dayKey}, using defaults`);
+        dayHours = { isOpen: true, openTime: '08:00', closeTime: '17:00' };
+      }
+      
+      console.log('[getAvailability] Day lookup:', {
+        dayOfWeek,
+        dayKey,
+        schedule,
+        dayHours
+      });
+
       // Check if business is open on this day
       if (!dayHours.isOpen) {
+        console.log('[getAvailability] Business closed on this day:', dayKey);
         return {
           date: request.date,
           slots: [],
@@ -674,7 +706,9 @@ export class BookingService {
         serviceId: request.serviceId,
         date: request.date,
         dayOfWeek,
-        operatingHours
+        dayKey,
+        operatingHours,
+        dayHours
       });
       
       const [startHourStr, startMinStr] = operatingHours.startTime.split(':').map(Number);
