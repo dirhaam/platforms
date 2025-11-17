@@ -522,6 +522,7 @@ export function QuickSalesPOS({
               <DialogTitle>Create New Customer</DialogTitle>
             </DialogHeader>
             <NewCustomerForm
+              subdomain={subdomain || ''}
               tenantId={tenantId}
               onSuccess={async (customer) => {
                 await fetchCustomers();
@@ -529,7 +530,7 @@ export function QuickSalesPOS({
                 setShowNewCustomerDialog(false);
                 toast.success('Customer created');
               }}
-              onError={(error) => toast.error(error)}
+              onCancel={() => setShowNewCustomerDialog(false)}
             />
           </DialogContent>
         </Dialog>
