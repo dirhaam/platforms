@@ -491,9 +491,9 @@ export function QuickSalesPOS({
             </div>
 
             {/* Right: Cart + Payment */}
-            <div className="w-80 flex flex-col border-l border-gray-200 bg-white">
+            <div className="w-80 flex flex-col border-l border-gray-200 bg-white overflow-hidden">
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto border-b border-gray-200 bg-gray-50">
+              <div className="flex-1 overflow-y-auto border-b border-gray-200 bg-gray-50 pb-4">
                 <div className="p-4 space-y-3">
                   <h3 className="font-bold text-sm text-gray-900">Cart ({cart.length} items)</h3>
                   {cart.length === 0 ? (
@@ -548,7 +548,7 @@ export function QuickSalesPOS({
               </div>
 
               {/* Totals */}
-              <div className="p-4 bg-gradient-to-b from-gray-50 to-white border-b border-gray-200 space-y-3 text-sm">
+              <div className="p-4 bg-gradient-to-b from-gray-50 to-white border-b border-gray-200 space-y-3 text-sm flex-shrink-0">
                 <div className="flex justify-between text-gray-700">
                   <span>Subtotal</span>
                   <span className="font-medium">Rp {subtotal.toLocaleString('id-ID')}</span>
@@ -578,20 +578,26 @@ export function QuickSalesPOS({
               </div>
 
               {/* Payment Methods */}
-              <div className="p-4 space-y-3 border-t border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-sm text-gray-900">Payment Methods</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addPaymentEntry}
-                    className="text-xs"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add
-                  </Button>
+              <div className="flex flex-col border-t border-gray-200 flex-shrink-0 overflow-hidden bg-white">
+                {/* Header */}
+                <div className="p-4 space-y-3 border-b border-gray-200 flex-shrink-0">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-sm text-gray-900">Payment Methods</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPaymentEntry}
+                      className="text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Button>
+                  </div>
                 </div>
+
+                {/* Scrollable Content Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
                 {/* Manual Payment Entries */}
                 {payments.length > 0 && (
@@ -664,9 +670,10 @@ export function QuickSalesPOS({
                     )}
                   </div>
                 )}
+                </div>
 
-                {/* Quick Payment Buttons */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* Quick Payment Buttons - Fixed at Bottom */}
+                <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0 grid grid-cols-2 gap-2">
                   <Button
                     onClick={() => handleQuickPayment(SalesPaymentMethod.CASH)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
