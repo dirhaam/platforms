@@ -227,6 +227,23 @@ export function QuickSalesPOS({
 
   const remainingAmount = totalAmount - totalPayment;
 
+  // Payment Entry Management Functions
+  const addPaymentEntry = useCallback(() => {
+    setPayments(prev => [...prev, { method: SalesPaymentMethod.CASH, amount: 0 }]);
+  }, []);
+
+  const removePaymentEntry = useCallback((index: number) => {
+    setPayments(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updatePaymentEntry = useCallback((index: number, field: keyof PaymentEntry, value: any) => {
+    setPayments(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }, []);
+
   // Payment Operations
   const handleQuickPayment = useCallback(async (method: SalesPaymentMethod) => {
     if (!selectedCustomerId || cart.length === 0) {
@@ -563,27 +580,113 @@ export function QuickSalesPOS({
               </div>
 
               {/* Payment Methods */}
-              <div className="p-4 space-y-3">
-                <h3 className="font-semibold text-sm text-gray-900">Payment Method</h3>
+              <div className="p-4 space-y-3 border-t border-gray-200">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-sm text-gray-900">Payment Methods</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPaymentEntry}
+                    className="text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                </div>
+
+                {/* Manual Payment Entries */}
+                {payments.length > 0 && (
+                  <div className="space-y-2 p-3 bg-gray-50 rounded border">
+                    {payments.map((payment, index) => (
+                      <div key={index} className="flex gap-2 items-end">
+                        <Select
+                          value={payment.method}
+                          onValueChange={(value) =>
+                            updatePaymentEntry(index, 'method', value as SalesPaymentMethod)
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-xs w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={SalesPaymentMethod.CASH}>Cash</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.CARD}>Card</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.TRANSFER}>Transfer</SelectItem>
+                            <SelectItem value={SalesPaymentMethod.QRIS}>QRIS</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={payment.amount}
+                          onChange={(e) =>
+                            updatePaymentEntry(index, 'amount', parseFloat(e.target.value) || 0)
+                          }
+                          placeholder="Amount"
+                          className="h-8 text-xs flex-1"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removePaymentEntry(index)}
+                          className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Payment Summary */}
+                {payments.length > 0 && (
+                  <div className="p-3 bg-blue-50 rounded border border-blue-200 text-sm space-y-1">
+                    <div className="flex justify-between font-semibold text-blue-900">
+                      <span>Total Payment:</span>
+                      <span>Rp {totalPayment.toLocaleString('id-ID')}</span>
+                    </div>
+                    {totalPayment < totalAmount && (
+                      <div className="flex justify-between text-orange-600 text-xs font-medium">
+                        <span>Remaining:</span>
+                        <span>Rp {remainingAmount.toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    {totalPayment > totalAmount && (
+                      <div className="flex justify-between text-red-600 text-xs font-medium">
+                        <span>Overpay:</span>
+                        <span>Rp {(totalPayment - totalAmount).toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    {totalPayment === totalAmount && totalPayment > 0 && (
+                      <div className="flex justify-between text-green-600 text-xs font-medium">
+                        <span>✓ Exact Payment</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Quick Payment Buttons */}
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={() => handleQuickPayment(SalesPaymentMethod.CASH)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm"
                   >
                     💵 Cash
                   </Button>
                   <Button
                     onClick={() => handleQuickPayment(SalesPaymentMethod.QRIS)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
-                    className="bg-sky-600 hover:bg-sky-700 text-white font-semibold"
+                    className="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm"
                   >
                     📱 QRIS
                   </Button>
                   <Button
                     onClick={() => handleQuickPayment(SalesPaymentMethod.CARD)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm"
                   >
                     💳 Card
                   </Button>
@@ -591,7 +694,7 @@ export function QuickSalesPOS({
                     onClick={() => setShowPaymentDialog(true)}
                     disabled={!selectedCustomerId || cart.length === 0 || submitting}
                     variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold text-sm"
                   >
                     ⚙️ More
                   </Button>
