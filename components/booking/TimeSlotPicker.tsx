@@ -108,29 +108,30 @@ export function TimeSlotPicker({
       console.log('[groupSlotsByPeriod] First slot toLocaleString():', slots[0].start.toLocaleString());
     }
 
-    // FIXED: Use getUTCHours() for grouping since backend sends UTC times
+    // FIXED: Group by LOCAL display time (getHours), not UTC
+    // This way labels match what user SEES (e.g., 2:00 PM shows in Afternoon, not Morning)
     const morning = slots.filter(slot => {
-      const hour = slot.start.getUTCHours();
+      const hour = slot.start.getHours();
       return hour >= 6 && hour < 12;
     });
 
     const afternoon = slots.filter(slot => {
-      const hour = slot.start.getUTCHours();
+      const hour = slot.start.getHours();
       return hour >= 12 && hour < 17;
     });
 
     const evening = slots.filter(slot => {
-      const hour = slot.start.getUTCHours();
+      const hour = slot.start.getHours();
       return hour >= 17 && hour < 22;
     });
 
-    console.log('[groupSlotsByPeriod] Results (UTC-based grouping):', { 
+    console.log('[groupSlotsByPeriod] Results (local display time-based grouping):', { 
       morning: morning.length, 
       afternoon: afternoon.length, 
       evening: evening.length,
-      morningHours: morning.length > 0 ? `${morning[0].start.getUTCHours()}-${morning[morning.length-1].start.getUTCHours()}` : 'N/A',
-      afternoonHours: afternoon.length > 0 ? `${afternoon[0].start.getUTCHours()}-${afternoon[afternoon.length-1].start.getUTCHours()}` : 'N/A',
-      eveningHours: evening.length > 0 ? `${evening[0].start.getUTCHours()}-${evening[evening.length-1].start.getUTCHours()}` : 'N/A'
+      morningHours: morning.length > 0 ? `${morning[0].start.getHours()}-${morning[morning.length-1].start.getHours()}` : 'N/A',
+      afternoonHours: afternoon.length > 0 ? `${afternoon[0].start.getHours()}-${afternoon[afternoon.length-1].start.getHours()}` : 'N/A',
+      eveningHours: evening.length > 0 ? `${evening[0].start.getHours()}-${evening[evening.length-1].start.getHours()}` : 'N/A'
     });
 
     return { morning, afternoon, evening };
