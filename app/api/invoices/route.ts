@@ -80,7 +80,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const invoice = await InvoiceService.createInvoice(tenant.id, data);
+    // Extract cashier name from request header
+    const cashierName = request.headers.get('x-user-name') || 'System';
+
+    const invoice = await InvoiceService.createInvoice(tenant.id, data, undefined, undefined, undefined, cashierName);
     
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
