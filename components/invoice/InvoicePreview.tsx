@@ -202,7 +202,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     const labels = {
       [PaymentStatus.UNPAID]: 'BELUM DIBAYAR',
       [PaymentStatus.PARTIAL_PAID]: 'SEBAGIAN DIBAYAR',
-      [PaymentStatus.PAID]: 'SUDAH DIBAYAR',
+      [PaymentStatus.PAID]: 'LUNAS',
       [PaymentStatus.OVERDUE]: 'JATUH TEMPO'
     };
     return labels[paymentStatus];
