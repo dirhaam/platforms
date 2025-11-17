@@ -220,12 +220,57 @@ export function QuickSalesPOS({
   const remainingAmount = totalAmount - totalPayment;
 
   // Payment Operations
-  const handleQuickPayment = useCallback((method: SalesPaymentMethod) => {
-    setPayments([{ method, amount: totalAmount }]);
-    handleCompleteTransaction();
-  }, [totalAmount]);
+  const handleQuickPayment = useCallback(async (method: SalesPaymentMethod) => {
+    if (!selectedCustomerId || cart.length === 0) {
+      toast.error('Please select customer and add items');
+      return;
+    }
 
-  const handleCompleteTransaction = async () => {
+    setSubmitting(true);
+    try {
+      const paymentData = [{ method, amount: totalAmount }];
+      
+      const response = await fetch('/api/sales/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify({
+          customerId: selectedCustomerId,
+          items: cart.map(item => ({
+            serviceId: item.serviceId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+          totalAmount,
+          payments: paymentData.map(p => ({
+            method: p.method,
+            amount: p.amount,
+            reference: p.reference,
+          })),
+          notes,
+          source: 'pos',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to create transaction');
+      const data = await response.json();
+
+      toast.success('Transaction completed');
+      if (onCreated) await onCreated(data.transaction);
+
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error completing transaction:', error);
+      toast.error('Failed to complete transaction');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [selectedCustomerId, cart, totalAmount, notes, tenantId, onCreated, onOpenChange]);
+
+  const handleCompleteTransaction = useCallback(async () => {
     if (!selectedCustomerId || cart.length === 0 || payments.length === 0) {
       toast.error('Please fill all required fields');
       return;
@@ -269,13 +314,14 @@ export function QuickSalesPOS({
       if (onCreated) await onCreated(data.transaction);
 
       resetForm();
+      onOpenChange(false);
     } catch (error) {
       console.error('Error completing transaction:', error);
       toast.error('Failed to complete transaction');
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [selectedCustomerId, cart, payments, totalAmount, totalPayment, notes, tenantId, onCreated, onOpenChange]);
 
   const selectedCustomer = useMemo(
     () => customers.find(c => c.id === selectedCustomerId),
@@ -541,7 +587,7 @@ export function QuickSalesPOS({
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Custom Payment</DialogTitle>
+              <DialogTitle>Select Payment Method</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="bg-blue-50 p-4 rounded border border-blue-200">
@@ -554,14 +600,19 @@ export function QuickSalesPOS({
                 {[SalesPaymentMethod.CASH, SalesPaymentMethod.CARD, SalesPaymentMethod.TRANSFER, SalesPaymentMethod.QRIS].map(method => (
                   <Button
                     key={method}
-                    onClick={() => {
-                      setPayments([{ method, amount: totalAmount }]);
+                    onClick={async () => {
                       setShowPaymentDialog(false);
-                      handleCompleteTransaction();
+                      await handleQuickPayment(method);
                     }}
+                    disabled={submitting}
                     variant="outline"
                     className="w-full justify-start"
                   >
+                    {method === SalesPaymentMethod.CASH && '💵'}
+                    {method === SalesPaymentMethod.CARD && '💳'}
+                    {method === SalesPaymentMethod.TRANSFER && '🔄'}
+                    {method === SalesPaymentMethod.QRIS && '📱'}
+                    {' '}
                     {method.charAt(0).toUpperCase() + method.slice(1)}
                   </Button>
                 ))}
