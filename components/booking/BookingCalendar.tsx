@@ -311,14 +311,14 @@ export function BookingCalendar({
           </div>
           {/* Day headers */}
           <div className="flex gap-2 mb-2">
-            <div className="w-10 flex-shrink-0"></div>
+            <div className="w-12 flex-shrink-0"></div>
             <div className="flex gap-2">
               {days.map(day => {
                 const isToday = day.toDateString() === new Date().toDateString();
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`w-10 h-10 p-1 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-12 h-12 p-1 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
                   >
                     <div className="text-xs text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                     <div className="text-xs font-medium">{day.getDate()}</div>
@@ -329,9 +329,9 @@ export function BookingCalendar({
           </div>
           {/* Hours grid - fixed width, no scroll */}
           <div className="flex gap-2">
-            <div className="w-10 space-y-2 flex-shrink-0">
+            <div className="w-12 space-y-2 flex-shrink-0">
               {hours.map(hour => (
-                <div key={hour} className="h-10 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
+                <div key={hour} className="h-12 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
                   {hour.toString().padStart(2, '0')}
                 </div>
               ))}
@@ -346,7 +346,7 @@ export function BookingCalendar({
                   return acc;
                 }, {} as Record<number, Booking[]>);
                 return (
-                  <div key={day.toISOString()} className="w-10 space-y-2 flex-shrink-0">
+                  <div key={day.toISOString()} className="w-12 space-y-2 flex-shrink-0">
                     {hours.map(hour => {
                       const hasBooking = bookingsByHour[hour];
                       const bookingCount = hasBooking ? bookingsByHour[hour].length : 0;
@@ -354,7 +354,7 @@ export function BookingCalendar({
                       return (
                         <div
                           key={hour}
-                          className={`h-10 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold relative ${
+                          className={`h-12 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold relative ${
                             hasBooking ? 'bg-blue-200 hover:bg-blue-300 text-blue-900' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'
                           }`}
                           onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
