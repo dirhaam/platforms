@@ -583,61 +583,62 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
         {/* Calendar View */}
         <TabsContent value="calendar" className="mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardContent className="pt-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Calendar Section */}
+                <div className="lg:col-span-2">
                   <BookingCalendar
                     bookings={filteredBookings}
                     selectedDate={selectedDate}
                     onDateSelect={setSelectedDate}
                     onBookingClick={handleBookingClick}
                   />
-                </CardContent>
-              </Card>
-            </div>
+                </div>
 
-            {/* Bookings for selected date */}
-            <div className="space-y-3">
-              <h3 className="font-semibold">
-                {selectedDate.toLocaleDateString('id-ID', { weekday: 'long', month: 'long', day: 'numeric' })}
-              </h3>
-              {bookingsForDate.length === 0 ? (
-                <p className="text-sm text-gray-600">No bookings for this date</p>
-              ) : (
-                bookingsForDate.map(booking => (
-                  <Card
-                    key={booking.id}
-                    className="cursor-pointer hover:border-blue-500 transition-colors"
-                    onClick={() => handleBookingClick(booking)}
-                  >
-                    <CardContent className="pt-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">{booking.customer?.name}</p>
-                            <p className="text-sm text-gray-600">{booking.service?.name}</p>
+                {/* Bookings for selected date */}
+                <div className="space-y-3 lg:border-l lg:pl-6">
+                  <h3 className="font-semibold">
+                    {selectedDate.toLocaleDateString('id-ID', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </h3>
+                  {bookingsForDate.length === 0 ? (
+                    <p className="text-sm text-gray-600">No bookings for this date</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {bookingsForDate.map(booking => (
+                        <div
+                          key={booking.id}
+                          className="p-3 border rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                          onClick={() => handleBookingClick(booking)}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{booking.customer?.name}</p>
+                                <p className="text-xs text-gray-600">{booking.service?.name}</p>
+                              </div>
+                              <Badge className={
+                                booking.status === BookingStatus.CONFIRMED
+                                  ? 'bg-green-100 text-green-800'
+                                  : booking.status === BookingStatus.PENDING
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }>
+                                {booking.status}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {new Date(booking.scheduledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
                           </div>
-                          <Badge className={
-                            booking.status === BookingStatus.CONFIRMED
-                              ? 'bg-green-100 text-green-800'
-                              : booking.status === BookingStatus.PENDING
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }>
-                            {booking.status}
-                          </Badge>
                         </div>
-                        <p className="text-xs text-gray-500">
-                          {new Date(booking.scheduledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* List View */}
