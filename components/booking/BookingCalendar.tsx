@@ -466,17 +466,19 @@ export function BookingCalendar({
   return (
     <div className={`min-h-fit w-full px-2 py-2 ${className}`}>
       <div className="flex gap-4 w-full">
-        {/* Calendar views - fixed width */}
-        <div className="w-80 flex-shrink-0">
+        {/* Calendar views */}
+        <div className={`flex-shrink-0 ${viewMode === 'week' ? 'flex-1' : 'w-80'}`}>
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
         </div>
 
         {/* Booking detail panel - single instance */}
-        <div className="w-72 pl-4 border-l border-gray-200">
-          <BookingDetailPanel />
-        </div>
+        {viewMode !== 'week' && (
+          <div className="w-72 pl-4 border-l border-gray-200">
+            <BookingDetailPanel />
+          </div>
+        )}
       </div>
     </div>
   );
