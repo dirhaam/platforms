@@ -5,24 +5,7 @@ import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-// ===== Tipe Booking dan Status sesuai project =====
-export enum BookingStatus {
-  PENDING = 'pending',
-  CONFIRMED = 'confirmed',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-  NO_SHOW = 'no_show'
-}
-
-export interface Booking {
-  id: string;
-  customer?: { name: string };
-  service?: { name: string };
-  scheduledAt: string; // ISO date string
-  duration: number;    // in minutes
-  status: BookingStatus;
-}
+import { Booking, BookingStatus } from '@/types/booking';
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -54,10 +37,15 @@ export function BookingCalendar({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
+  // Helper to convert scheduledAt to Date
+  const toDate = (scheduledAt: Date | string): Date => {
+    return typeof scheduledAt === 'string' ? new Date(scheduledAt) : scheduledAt;
+  };
+
   // Get bookings for a specific date
   const getBookingsForDate = (date: Date): Booking[] => {
     return bookings.filter(booking => {
-      const bookingDate = new Date(booking.scheduledAt);
+      const bookingDate = toDate(booking.scheduledAt);
       return (
         bookingDate.getDate() === date.getDate() &&
         bookingDate.getMonth() === date.getMonth() &&
@@ -262,7 +250,7 @@ export function BookingCalendar({
                 {/* Hour slots */}
                 {hours.map(hour => {
                   const hourBookings = dayBookings.filter(booking => {
-                    const bookingHour = new Date(booking.scheduledAt).getHours();
+                    const bookingHour = toDate(booking.scheduledAt).getHours();
                     return bookingHour === hour;
                   });
                   return (
@@ -318,7 +306,7 @@ export function BookingCalendar({
         <div className="space-y-1">
           {hours.map(hour => {
             const hourBookings = dayBookings.filter(booking => {
-              const bookingHour = new Date(booking.scheduledAt).getHours();
+              const bookingHour = toDate(booking.scheduledAt).getHours();
               return bookingHour === hour;
             });
             return (
@@ -345,8 +333,8 @@ export function BookingCalendar({
                           <div className="font-medium">{booking.customer?.name}</div>
                           <div className="text-sm">{booking.service?.name}</div>
                           <div className="text-xs">
-                            {formatTime(new Date(booking.scheduledAt))} -{' '}
-                            {formatTime(new Date(new Date(booking.scheduledAt).getTime() + booking.duration * 60000))}
+                            {formatTime(toDate(booking.scheduledAt))} -{' '}
+                            {formatTime(new Date(toDate(booking.scheduledAt).getTime() + booking.duration * 60000))}
                           </div>
                         </div>
                         <Badge variant="outline">{booking.status}</Badge>
