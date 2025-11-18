@@ -120,6 +120,15 @@ export function BookingCalendar({
     setCurrentDate(newDate);
   };
 
+  const getInitials = (name: string): string => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 2);
+  };
+
   /* Booking detail yang ditampilkan di kanan */
   const BookingDetailPanel = () => {
     const displayDate = currentDate; // Always use currentDate (dari navigation)
@@ -338,15 +347,18 @@ export function BookingCalendar({
                   <div key={day.toISOString()} className="w-12 space-y-1">
                     {hours.map(hour => {
                       const hasBooking = bookingsByHour[hour];
+                      const initials = hasBooking ? getInitials(bookingsByHour[hour][0].customer?.name || '') : '';
                       return (
                         <div
                           key={hour}
-                          className={`h-12 rounded cursor-pointer transition ${
-                            hasBooking ? 'bg-blue-200 hover:bg-blue-300' : 'bg-gray-100 hover:bg-gray-200'
+                          className={`h-12 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold ${
+                            hasBooking ? 'bg-blue-200 hover:bg-blue-300 text-blue-900' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'
                           }`}
                           onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
                           title={hasBooking ? `${bookingsByHour[hour].length} booking(s)` : 'No bookings'}
-                        />
+                        >
+                          {initials}
+                        </div>
                       );
                     })}
                   </div>
