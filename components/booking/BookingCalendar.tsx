@@ -382,11 +382,14 @@ export function BookingCalendar({
   return (
     <div className={`min-h-fit w-full ${className}`}>
       {/* Header: Judul */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2 font-semibold text-lg">
           <Calendar className="h-5 w-5" />
           <span>Booking Calendar</span>
         </div>
+      </div>
+      {/* View Selector */}
+      <div className="flex items-center justify-end mb-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
