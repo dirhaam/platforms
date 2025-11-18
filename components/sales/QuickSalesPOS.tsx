@@ -378,7 +378,7 @@ export function QuickSalesPOS({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[95vw]">
         <DialogTitle className="sr-only">Quick Sales</DialogTitle>
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white overflow-hidden">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm flex justify-between items-center gap-2">
             <div className="min-w-0">
@@ -396,7 +396,7 @@ export function QuickSalesPOS({
           </div>
 
           {/* Main Content */}
-          <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-0">
+          <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden gap-0">
             {/* Left: Services Grid (full width on mobile, flex-1 on desktop) */}
             <div className="flex-1 flex flex-col overflow-hidden border-r-0 lg:border-r border-gray-200">
               {/* Customer Selector */}
