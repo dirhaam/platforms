@@ -310,15 +310,15 @@ export function BookingCalendar({
             </DropdownMenu>
           </div>
           {/* Day headers */}
-          <div className="flex gap-1 mb-1">
-            <div className="w-8 flex-shrink-0"></div>
-            <div className="flex gap-1">
+          <div className="flex gap-2 mb-2">
+            <div className="w-10 flex-shrink-0"></div>
+            <div className="flex gap-2">
               {days.map(day => {
                 const isToday = day.toDateString() === new Date().toDateString();
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`w-8 h-8 p-0.5 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-10 h-10 p-1 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
                   >
                     <div className="text-xs text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                     <div className="text-xs font-medium">{day.getDate()}</div>
@@ -328,15 +328,15 @@ export function BookingCalendar({
             </div>
           </div>
           {/* Hours grid - fixed width, no scroll */}
-          <div className="flex gap-1">
-            <div className="w-8 space-y-1 flex-shrink-0">
+          <div className="flex gap-2">
+            <div className="w-10 space-y-2 flex-shrink-0">
               {hours.map(hour => (
-                <div key={hour} className="h-8 text-xs text-gray-500 text-right pr-0.5 flex items-center justify-end">
+                <div key={hour} className="h-10 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
                   {hour.toString().padStart(2, '0')}
                 </div>
               ))}
             </div>
-            <div className="flex gap-1 flex-shrink-0">
+            <div className="flex gap-2 flex-shrink-0">
               {days.map(day => {
                 const dayBookings = getBookingsForDate(day);
                 const bookingsByHour = dayBookings.reduce((acc, booking) => {
@@ -346,7 +346,7 @@ export function BookingCalendar({
                   return acc;
                 }, {} as Record<number, Booking[]>);
                 return (
-                  <div key={day.toISOString()} className="w-8 space-y-1 flex-shrink-0">
+                  <div key={day.toISOString()} className="w-10 space-y-2 flex-shrink-0">
                     {hours.map(hour => {
                       const hasBooking = bookingsByHour[hour];
                       const bookingCount = hasBooking ? bookingsByHour[hour].length : 0;
@@ -354,7 +354,7 @@ export function BookingCalendar({
                       return (
                         <div
                           key={hour}
-                          className={`h-8 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold relative ${
+                          className={`h-10 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold relative ${
                             hasBooking ? 'bg-blue-200 hover:bg-blue-300 text-blue-900' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'
                           }`}
                           onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
@@ -362,7 +362,7 @@ export function BookingCalendar({
                         >
                           {bookingCount > 1 ? bookingCount : initials}
                           {bookingCount > 1 && (
-                            <div className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center transform translate-x-0.5 -translate-y-0.5">
+                            <div className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center transform translate-x-0.5 -translate-y-0.5">
                               {bookingCount}
                             </div>
                           )}
