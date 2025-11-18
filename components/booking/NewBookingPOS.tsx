@@ -397,9 +397,15 @@ export function NewBookingPOS({
           </div>
 
           {/* Main Content */}
+<<<<<<< HEAD
           <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden gap-0">
             {/* Left Panel - Selection (40% on desktop, full on mobile) */}
             <div className="flex-1 lg:flex-none lg:w-2/5 flex flex-col overflow-hidden border-r-0 lg:border-r border-gray-200 bg-gray-50">
+=======
+          <div className="flex flex-1 min-h-0 overflow-hidden gap-0">
+            {/* Left Panel - Selection (40%) */}
+            <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200 bg-gray-50">
+>>>>>>> 73054feb2ef637a1053c85bee777abe30450f35c
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {loading ? (
                   <p className="text-gray-600 text-center py-8">Loading...</p>

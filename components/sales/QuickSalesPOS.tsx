@@ -396,9 +396,15 @@ export function QuickSalesPOS({
           </div>
 
           {/* Main Content */}
+<<<<<<< HEAD
           <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden gap-0">
             {/* Left: Services Grid (full width on mobile, flex-1 on desktop) */}
             <div className="flex-1 flex flex-col overflow-hidden border-r-0 lg:border-r border-gray-200">
+=======
+          <div className="flex flex-1 min-h-0 overflow-hidden gap-0">
+            {/* Left: Services Grid */}
+            <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200">
+>>>>>>> 73054feb2ef637a1053c85bee777abe30450f35c
               {/* Customer Selector */}
               <div className="bg-white border-b border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3">
                 <label className="text-xs sm:text-sm font-semibold text-gray-900">Select Customer</label>
