@@ -172,25 +172,47 @@ export class LocationService {
 
   private static async geocodeWithNominatim(address: string): Promise<AddressValidation> {
     try {
-      const encodedAddress = encodeURIComponent(address);
+      if (!address || address.trim().length === 0) {
+        return {
+          isValid: false,
+          error: 'Address is required'
+        };
+      }
+
+      const encodedAddress = encodeURIComponent(address.trim());
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&countrycodes=${this.config.defaultCountry}&limit=5&addressdetails=1`;
       
       console.log('[LocationService.geocodeWithNominatim] Geocoding:', { address, url });
       
+      // Add timeout to avoid hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Booqing-Platform/1.0'
-        }
+        },
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
+        console.error(`[LocationService.geocodeWithNominatim] API error: ${response.status}`);
+        // Handle rate limiting and other errors gracefully
+        if (response.status === 429) {
+          return {
+            isValid: false,
+            error: 'Service temporarily unavailable, please try again later'
+          };
+        }
         throw new Error(`Geocoding API error: ${response.status}`);
       }
 
       const data = await response.json();
       console.log('[LocationService.geocodeWithNominatim] Response data:', { count: data?.length, data });
 
-      if (!data || data.length === 0) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
         console.warn('[LocationService.geocodeWithNominatim] No results for address:', address);
         return {
           isValid: false,
@@ -199,13 +221,33 @@ export class LocationService {
       }
 
       const result = data[0];
+      
+      // Validate result has required fields
+      if (!result.lat || !result.lon || !result.display_name) {
+        console.error('[LocationService.geocodeWithNominatim] Invalid result format:', result);
+        return {
+          isValid: false,
+          error: 'Invalid response format from geocoding service'
+        };
+      }
+
       const coordinates = {
         lat: parseFloat(result.lat),
         lng: parseFloat(result.lon)
       };
 
+      // Validate coordinates are numbers
+      if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
+        console.error('[LocationService.geocodeWithNominatim] Invalid coordinates:', coordinates);
+        return {
+          isValid: false,
+          error: 'Invalid coordinates from geocoding service'
+        };
+      }
+
       // Validate coordinates are within Indonesia
       if (!this.isValidIndonesiaCoordinate(coordinates)) {
+        console.warn('[LocationService.geocodeWithNominatim] Address outside Indonesia:', { address, coordinates });
         return {
           isValid: false,
           error: 'Address coordinates are outside of Indonesia'
@@ -223,25 +265,39 @@ export class LocationService {
       };
 
       const suggestions = data.slice(1, 4).map((item: any) => {
-        const suggestionCoords = {
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon)
-        };
+        try {
+          if (!item.lat || !item.lon || !item.display_name) {
+            return null;
+          }
 
-        // Only include suggestions with valid Indonesia coordinates
-        if (!this.isValidIndonesiaCoordinate(suggestionCoords)) {
-          return null; // Will be filtered out below
+          const suggestionCoords = {
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon)
+          };
+
+          // Validate parsed coordinates
+          if (isNaN(suggestionCoords.lat) || isNaN(suggestionCoords.lng)) {
+            return null;
+          }
+
+          // Only include suggestions with valid Indonesia coordinates
+          if (!this.isValidIndonesiaCoordinate(suggestionCoords)) {
+            return null; // Will be filtered out below
+          }
+
+          return {
+            street: item.display_name.split(',')[0] || '',
+            city: item.address?.city || item.address?.town || item.address?.village || '',
+            state: item.address?.state || '',
+            postalCode: item.address?.postcode || '',
+            country: item.address?.country || this.config.defaultCountry,
+            fullAddress: item.display_name,
+            coordinates: suggestionCoords
+          };
+        } catch (err) {
+          console.error('[LocationService.geocodeWithNominatim] Error parsing suggestion:', item, err);
+          return null;
         }
-
-        return {
-          street: item.display_name.split(',')[0] || '',
-          city: item.address?.city || item.address?.town || item.address?.village || '',
-          state: item.address?.state || '',
-          postalCode: item.address?.postcode || '',
-          country: item.address?.country || this.config.defaultCountry,
-          fullAddress: item.display_name,
-          coordinates: suggestionCoords
-        };
       }).filter(Boolean); // Remove null values
 
       return {
@@ -251,10 +307,24 @@ export class LocationService {
         confidence: parseFloat(result.importance) || 0.5
       };
     } catch (error) {
-      console.error('Nominatim geocoding error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[LocationService.geocodeWithNominatim] Error:', {
+        message: errorMessage,
+        address,
+        error
+      });
+      
+      // Provide more specific error messages
+      if (errorMessage.includes('aborted') || errorMessage.includes('timeout')) {
+        return {
+          isValid: false,
+          error: 'Geocoding service request timeout. Please try again.'
+        };
+      }
+      
       return {
         isValid: false,
-        error: 'Geocoding service unavailable'
+        error: 'Geocoding service unavailable. Please try again later.'
       };
     }
   }
