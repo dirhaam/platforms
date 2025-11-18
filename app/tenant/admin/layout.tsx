@@ -93,16 +93,6 @@ function TenantAdminLayoutContent({
       icon: TrendingUp,
     },
     {
-      href: `/tenant/admin/finance?subdomain=${subdomain}`,
-      label: 'Finance',
-      icon: Wallet,
-    },
-    {
-      href: `/tenant/admin/invoices?subdomain=${subdomain}`,
-      label: 'Invoices',
-      icon: FileText,
-    },
-    {
       href: `/tenant/admin/whatsapp?subdomain=${subdomain}`,
       label: 'WhatsApp',
       icon: MessageSquare,
