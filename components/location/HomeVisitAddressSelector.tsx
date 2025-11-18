@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -24,48 +24,74 @@ export function HomeVisitAddressSelector({
 }: HomeVisitAddressSelectorProps) {
   const [addrSuggestions, setAddrSuggestions] = useState<Array<{ label: string; lat: number; lng: number }>>([]);
   const [addrLoading, setAddrLoading] = useState(false);
-  const [addrTimer, setAddrTimer] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const addrTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSearchRef = useRef<string>('');
 
-  const handleAddressInput = (val: string) => {
+  const performSearch = useCallback(async (searchAddress: string) => {
+    // Prevent duplicate searches
+    if (lastSearchRef.current === searchAddress) {
+      return;
+    }
+    lastSearchRef.current = searchAddress;
+
+    if (!searchAddress || searchAddress.trim().length < 4) {
+      setAddrSuggestions([]);
+      return;
+    }
+
+    setAddrLoading(true);
+    try {
+      const res = await fetch('/api/location/validate-address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: searchAddress.trim(), tenantId })
+      });
+      const data = await res.json();
+      const list: Array<{ label: string; lat: number; lng: number }> = [];
+      if (data?.address?.fullAddress && data?.address?.coordinates) {
+        list.push({ label: data.address.fullAddress, lat: data.address.coordinates.lat, lng: data.address.coordinates.lng });
+      }
+      (data?.suggestions || []).forEach((s: any) => {
+        if (s?.fullAddress && s?.coordinates) {
+          list.push({ label: s.fullAddress, lat: s.coordinates.lat, lng: s.coordinates.lng });
+        }
+      });
+      setAddrSuggestions(list.slice(0, 5));
+      // Auto-fill coords if empty and we have a primary hit
+      if (list.length > 0 && (!latitude || !longitude)) {
+        onCoordinatesChange(list[0].lat, list[0].lng);
+      }
+    } catch (e) {
+      console.error('Error searching address:', e);
+      setAddrSuggestions([]);
+    } finally {
+      setAddrLoading(false);
+    }
+  }, [tenantId, latitude, longitude, onCoordinatesChange]);
+
+  const handleAddressInput = useCallback((val: string) => {
     onAddressChange(val);
-    if (addrTimer) clearTimeout(addrTimer);
     
-    const t = setTimeout(async () => {
-      if (!val || val.trim().length < 4) {
-        setAddrSuggestions([]);
-        return;
+    // Clear existing timer
+    if (addrTimerRef.current) {
+      clearTimeout(addrTimerRef.current);
+    }
+    
+    // Set new debounced search with 500ms delay
+    addrTimerRef.current = setTimeout(() => {
+      performSearch(val);
+    }, 500);
+  }, [onAddressChange, performSearch]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (addrTimerRef.current) {
+        clearTimeout(addrTimerRef.current);
       }
-      setAddrLoading(true);
-      try {
-        const res = await fetch('/api/location/validate-address', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: val.trim(), tenantId })
-        });
-        const data = await res.json();
-        const list: Array<{ label: string; lat: number; lng: number }> = [];
-        if (data?.address?.fullAddress && data?.address?.coordinates) {
-          list.push({ label: data.address.fullAddress, lat: data.address.coordinates.lat, lng: data.address.coordinates.lng });
-        }
-        (data?.suggestions || []).forEach((s: any) => {
-          if (s?.fullAddress && s?.coordinates) {
-            list.push({ label: s.fullAddress, lat: s.coordinates.lat, lng: s.coordinates.lng });
-          }
-        });
-        setAddrSuggestions(list.slice(0, 5));
-        // Auto-fill coords if empty and we have a primary hit
-        if (list.length > 0 && (!latitude || !longitude)) {
-          onCoordinatesChange(list[0].lat, list[0].lng);
-        }
-      } catch (e) {
-        setAddrSuggestions([]);
-      } finally {
-        setAddrLoading(false);
-      }
-    }, 450);
-    setAddrTimer(t);
-  };
+    };
+  }, []);
 
   const handleSuggestionSelect = (suggestion: { label: string; lat: number; lng: number }) => {
     onAddressChange(suggestion.label);
