@@ -370,17 +370,29 @@ export class LocationService {
       console.log('[LocationService.calculateTravel] Initial surcharge from service area:', serviceAreaCheck.surcharge);
       
       const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
-      console.log('[LocationService.calculateTravel] Invoice settings travel config:', invoiceSettings.travelSurcharge);
+      console.log('[LocationService.calculateTravel] Invoice settings travel config:', {
+        travelSurcharge: invoiceSettings.travelSurcharge,
+        baseTravelSurcharge: invoiceSettings.travelSurcharge?.baseTravelSurcharge,
+        perKmSurcharge: invoiceSettings.travelSurcharge?.perKmSurcharge
+      });
       
       if (invoiceSettings.travelSurcharge) {
         // Calculate distance-based surcharge (base + distance × per_km)
+        const base = invoiceSettings.travelSurcharge.baseTravelSurcharge || 0;
+        const perKm = invoiceSettings.travelSurcharge.perKmSurcharge || 5000;
+        const calculated = base + (actualDistance * perKm);
+        
         surcharge = this.calculateTravelSurcharge(
           actualDistance,
           invoiceSettings.travelSurcharge
         );
         console.log('[LocationService.calculateTravel] Calculated surcharge from invoice settings:', {
-          formula: `${invoiceSettings.travelSurcharge.baseTravelSurcharge} + (${actualDistance} × ${invoiceSettings.travelSurcharge.perKmSurcharge})`,
-          result: surcharge
+          base,
+          perKm,
+          distance: actualDistance,
+          formulaCalculation: calculated,
+          finalSurcharge: surcharge,
+          formula: `${base} + (${actualDistance.toFixed(2)} × ${perKm})`
         });
       } else {
         // Fallback to service area surcharge if no invoice settings
