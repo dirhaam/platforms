@@ -132,10 +132,29 @@ export function BookingCalendar({
         >
           <ChevronLeft className="w-5 h-5 text-gray-700" />
         </button>
-        <div className="text-center flex-1">
+        <div className="text-center flex-1 flex items-center justify-center gap-3">
           <div className="text-xl font-bold text-gray-900 tracking-wide">
             {monthNames[currentDate.getMonth()]} <span>{currentDate.getFullYear()}</span>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="text-xs">
+                Month
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              <DropdownMenuItem onClick={() => setViewMode('month')}>
+                Month View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('week')}>
+                Week View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('day')}>
+                Day View
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <button
           onClick={() => navigateMonth('next')}
@@ -220,10 +239,29 @@ export function BookingCalendar({
           >
             <ChevronLeft className="w-5 h-5 text-gray-700" />
           </button>
-          <div className="text-center flex-1">
+          <div className="text-center flex-1 flex items-center justify-center gap-3">
             <div className="text-xl font-bold text-gray-900 tracking-wide">
               Week {Math.ceil(((days[0].getDate() + 6) / 7))}
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">
+                  Week
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem onClick={() => setViewMode('month')}>
+                  Month View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('week')}>
+                  Week View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('day')}>
+                  Day View
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <button
             onClick={() => navigateWeek('next')}
@@ -319,12 +357,31 @@ export function BookingCalendar({
           >
             <ChevronLeft className="w-5 h-5 text-gray-700" />
           </button>
-          <div className="text-center flex-1">
+          <div className="text-center flex-1 flex items-center justify-center gap-3">
             <div className="text-xl font-bold text-gray-900 tracking-wide">
               {currentDate.toLocaleDateString('en-US', {
                 month: 'short', day: 'numeric'
               })}
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">
+                  Day
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem onClick={() => setViewMode('month')}>
+                  Month View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('week')}>
+                  Week View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('day')}>
+                  Day View
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <button
             onClick={() => navigateDay('next')}
@@ -382,33 +439,9 @@ export function BookingCalendar({
   return (
     <div className={`min-h-fit w-full ${className}`}>
       {/* Header: Judul */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2 font-semibold text-lg">
-          <Calendar className="h-5 w-5" />
-          <span>Booking Calendar</span>
-        </div>
-      </div>
-      {/* View Selector */}
-      <div className="flex items-center justify-end mb-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              {viewMode === 'month' ? 'Month' : viewMode === 'week' ? 'Week' : 'Day'}
-              <ChevronDown className="h-4 w-4 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setViewMode('month')}>
-              Month View
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setViewMode('week')}>
-              Week View
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setViewMode('day')}>
-              Day View
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="flex items-center space-x-2 font-semibold text-lg mb-4">
+        <Calendar className="h-5 w-5" />
+        <span>Booking Calendar</span>
       </div>
       {/* Main Content */}
       {viewMode === 'month' && renderMonthView()}
