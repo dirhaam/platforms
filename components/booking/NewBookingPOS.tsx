@@ -377,29 +377,29 @@ export function NewBookingPOS({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden">
+      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[95vw]">
         <DialogTitle className="sr-only">New Booking</DialogTitle>
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
-          <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex justify-between items-center">
-            <div>
-              <h1 className="text-gray-900 text-2xl font-bold">New Booking</h1>
-              <p className="text-gray-600 text-sm mt-1">Schedule service for customer</p>
+          <div className="bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm flex justify-between items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-gray-900 text-lg sm:text-2xl font-bold truncate">New Booking</h1>
+              <p className="text-gray-600 text-xs sm:text-sm mt-1 hidden sm:block">Schedule service for customer</p>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="text-gray-600 hover:bg-gray-100"
+              className="text-gray-600 hover:bg-gray-100 flex-shrink-0"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 sm:h-5 w-4 sm:w-5" />
             </Button>
           </div>
 
           {/* Main Content */}
-          <div className="flex flex-1 overflow-hidden gap-0">
-            {/* Left Panel - Selection (40%) */}
-            <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200 bg-gray-50">
+          <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-0">
+            {/* Left Panel - Selection (40% on desktop, full on mobile) */}
+            <div className="flex-1 lg:flex-none lg:w-2/5 flex flex-col overflow-hidden border-r-0 lg:border-r border-gray-200 bg-gray-50">
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {loading ? (
                   <p className="text-gray-600 text-center py-8">Loading...</p>
@@ -587,13 +587,13 @@ export function NewBookingPOS({
               </div>
             </div>
 
-            {/* Right Panel - Summary & Payment (60%) */}
-            <div className="flex-[1.5] flex flex-col overflow-hidden bg-white border-l border-gray-200">
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-4">
+            {/* Right Panel - Summary & Payment (60% on desktop, full on mobile) */}
+            <div className="flex-1 lg:flex-none lg:w-3/5 flex flex-col overflow-hidden bg-white border-l-0 lg:border-l border-gray-200 border-t lg:border-t-0 border-gray-200">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 pb-4">
                 {/* Amount Breakdown */}
                 {selectedService && (
-                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
-                    <h3 className="font-semibold text-sm">Amount Breakdown</h3>
+                  <div className="space-y-3 p-3 sm:p-4 bg-gray-50 rounded-lg border">
+                    <h3 className="font-semibold text-xs sm:text-sm">Amount Breakdown</h3>
                     
                     {(() => {
                       const basePrice = Number(selectedService.price);
@@ -657,8 +657,8 @@ export function NewBookingPOS({
                 )}
 
                 {/* Payment Information */}
-                <div className="space-y-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <h3 className="font-semibold text-sm">Payment</h3>
+                <div className="space-y-3 p-3 sm:p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <h3 className="font-semibold text-xs sm:text-sm">Payment</h3>
                   
                   {/* Payment Method Quick Buttons */}
                   <div className="grid grid-cols-2 gap-2">
@@ -712,14 +712,14 @@ export function NewBookingPOS({
                 </div>
 
                 {/* Notes */}
-                <div className="space-y-1">
+                <div className="space-y-1 hidden sm:block">
                   <Label htmlFor="notes" className="text-xs font-semibold">Notes (Optional)</Label>
                   <Textarea
                     id="notes"
                     placeholder="Additional booking notes"
                     value={booking.notes}
                     onChange={(e) => setBooking({ ...booking, notes: e.target.value })}
-                    rows={3}
+                    rows={2}
                     className="text-xs"
                   />
                 </div>
@@ -733,12 +733,12 @@ export function NewBookingPOS({
               </div>
 
               {/* Action Buttons */}
-              <div className="border-t border-gray-200 p-4 flex gap-2 justify-end bg-gray-50 flex-shrink-0">
+              <div className="border-t border-gray-200 p-3 sm:p-4 flex gap-2 justify-end bg-gray-50 flex-shrink-0">
                 <Button
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                   disabled={submitting}
-                  className="text-sm"
+                  className="text-xs sm:text-sm"
                 >
                   Cancel
                 </Button>
@@ -748,7 +748,7 @@ export function NewBookingPOS({
                     handleSubmit(e as any);
                   }}
                   disabled={submitting || !booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.selectedTimeSlot}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-6"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm px-3 sm:px-6"
                 >
                   {submitting ? 'Creating...' : 'Create Booking'}
                 </Button>

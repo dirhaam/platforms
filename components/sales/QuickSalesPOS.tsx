@@ -376,32 +376,32 @@ export function QuickSalesPOS({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden">
+      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[95vw]">
         <DialogTitle className="sr-only">Quick Sales</DialogTitle>
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
-          <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex justify-between items-center">
-            <div>
-              <h1 className="text-gray-900 text-2xl font-bold">Quick Sales</h1>
-              <p className="text-gray-600 text-sm mt-1">Fast checkout for in-store sales</p>
+          <div className="bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm flex justify-between items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-gray-900 text-lg sm:text-2xl font-bold truncate">Quick Sales</h1>
+              <p className="text-gray-600 text-xs sm:text-sm mt-1 hidden sm:block">Fast checkout for in-store sales</p>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="text-gray-600 hover:bg-gray-100"
+              className="text-gray-600 hover:bg-gray-100 flex-shrink-0"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 sm:h-5 w-4 sm:w-5" />
             </Button>
           </div>
 
           {/* Main Content */}
-          <div className="flex flex-1 overflow-hidden gap-0">
-            {/* Left: Services Grid */}
-            <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200">
+          <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-0">
+            {/* Left: Services Grid (full width on mobile, flex-1 on desktop) */}
+            <div className="flex-1 flex flex-col overflow-hidden border-r-0 lg:border-r border-gray-200">
               {/* Customer Selector */}
-              <div className="bg-white border-b border-gray-200 p-4 space-y-3">
-                <label className="text-sm font-semibold text-gray-900">Select Customer</label>
+              <div className="bg-white border-b border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3">
+                <label className="text-xs sm:text-sm font-semibold text-gray-900">Select Customer</label>
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -409,7 +409,7 @@ export function QuickSalesPOS({
                       placeholder="Search by name or phone..."
                       value={customerSearchQuery}
                       onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                      className="pl-10 border-gray-300"
+                      className="pl-10 border-gray-300 text-xs sm:text-sm h-8 sm:h-9"
                       disabled={loading}
                     />
                     {customerSearchQuery && filteredCustomers.length > 0 && (
@@ -421,9 +421,9 @@ export function QuickSalesPOS({
                               setSelectedCustomerId(customer.id);
                               setCustomerSearchQuery('');
                             }}
-                            className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm transition"
+                            className="w-full text-left px-3 sm:px-4 py-2 sm:py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-xs sm:text-sm transition"
                           >
-                            <div className="font-medium text-gray-900">{customer.name}</div>
+                            <div className="font-medium text-gray-900 truncate">{customer.name}</div>
                             <div className="text-xs text-gray-500">{customer.phone}</div>
                           </button>
                         ))}
@@ -441,8 +441,8 @@ export function QuickSalesPOS({
                   </Button>
                 </div>
                 {selectedCustomer && (
-                  <div className="text-sm bg-green-50 p-3 rounded-md border border-green-200">
-                    <div className="font-semibold text-green-900">{selectedCustomer.name}</div>
+                  <div className="text-xs sm:text-sm bg-green-50 p-2 sm:p-3 rounded-md border border-green-200">
+                    <div className="font-semibold text-green-900 truncate">{selectedCustomer.name}</div>
                     <div className="text-xs text-green-700">{selectedCustomer.phone}</div>
                   </div>
                 )}
@@ -450,32 +450,32 @@ export function QuickSalesPOS({
 
               {/* Services Grid */}
               <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="bg-white border-b border-gray-200 p-3">
+                <div className="bg-white border-b border-gray-200 p-2 sm:p-3">
                   <Input
                     placeholder="Search services..."
                     value={serviceSearchQuery}
                     onChange={(e) => setServiceSearchQuery(e.target.value)}
-                    className="text-sm border-gray-300"
+                    className="text-xs sm:text-sm border-gray-300 h-8 sm:h-9"
                     disabled={loading}
                   />
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className="flex-1 overflow-y-auto p-2 sm:p-4 bg-gray-50">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                     {filteredServices.map(service => {
                       const cartItem = cart.find(item => item.serviceId === service.id);
                       return (
                         <button
                           key={service.id}
                           onClick={() => addToCart(service)}
-                          className={`relative bg-white border rounded-lg p-4 transition-all text-left ${
+                          className={`relative bg-white border rounded-lg p-2 sm:p-4 transition-all text-left text-xs sm:text-sm ${
                             cartItem
                               ? 'border-emerald-400 shadow-md bg-emerald-50'
                               : 'border-gray-300 hover:border-emerald-400 hover:shadow-md'
                           } ${loading || !selectedCustomerId ? 'opacity-50 cursor-not-allowed' : 'hover:shadow'}`}
                           disabled={loading || !selectedCustomerId}
                         >
-                          <div className="font-semibold text-sm truncate text-gray-900">{service.name}</div>
-                          <div className="text-xs text-gray-600 mt-2">
+                          <div className="font-semibold truncate text-gray-900">{service.name}</div>
+                          <div className="text-xs text-gray-600 mt-1">
                             Rp {service.price.toLocaleString('id-ID')}
                           </div>
                           {cartItem && (
@@ -489,10 +489,63 @@ export function QuickSalesPOS({
                   </div>
                 </div>
               </div>
+              
+              {/* Mobile Cart Summary - shown below grid on mobile */}
+              <div className="lg:hidden bg-white border-t border-gray-200 p-3 space-y-3">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between font-semibold text-gray-900">
+                    <span>Cart ({cart.length} items)</span>
+                    <span>Rp {subtotal.toLocaleString('id-ID')}</span>
+                  </div>
+                  {taxAmount > 0 && (
+                    <div className="flex justify-between text-gray-600 text-xs">
+                      <span>Tax</span>
+                      <span>Rp {taxAmount.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  <div className="border-t pt-2 flex justify-between font-bold text-emerald-700">
+                    <span>TOTAL</span>
+                    <span>Rp {totalAmount.toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+                
+                {/* Mobile Quick Payment Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={() => handleQuickPayment(SalesPaymentMethod.CASH)}
+                    disabled={!selectedCustomerId || cart.length === 0 || submitting}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 h-auto"
+                  >
+                    💵 Cash
+                  </Button>
+                  <Button
+                    onClick={() => handleQuickPayment(SalesPaymentMethod.QRIS)}
+                    disabled={!selectedCustomerId || cart.length === 0 || submitting}
+                    className="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs py-2 h-auto"
+                  >
+                    📱 QRIS
+                  </Button>
+                  <Button
+                    onClick={() => handleQuickPayment(SalesPaymentMethod.CARD)}
+                    disabled={!selectedCustomerId || cart.length === 0 || submitting}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2 h-auto"
+                  >
+                    💳 Card
+                  </Button>
+                  <Button
+                    onClick={() => setShowPaymentDialog(true)}
+                    disabled={!selectedCustomerId || cart.length === 0 || submitting}
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold text-xs py-2 h-auto"
+                  >
+                    ⚙️ More
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            {/* Right: Cart + Payment */}
-            <div className="w-80 flex flex-col border-l border-gray-200 bg-white overflow-hidden">
+            {/* Right: Cart + Payment (hidden on mobile, fixed width on desktop, shown as modal drawer on mobile) */}
+            <div className="hidden lg:flex lg:w-80 flex flex-col border-l border-gray-200 bg-white overflow-hidden" id="desktop-cart">
               {/* Cart Items */}
               <div className="flex-1 overflow-y-auto border-b border-gray-200 bg-gray-50 pb-4">
                 <div className="p-4 space-y-3">
