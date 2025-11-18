@@ -365,9 +365,14 @@ export class LocationService {
       console.log('[LocationService.calculateTravel] Service area check:', serviceAreaCheck);
 
       // Get travel surcharge settings from Invoice Settings
-      // Note: serviceAreaCheck.surcharge is a base amount, need to add distance-based calculation
+      // IMPORTANT: Always use invoice settings as primary source of truth
+      // Service area is only for coverage checking, not for surcharge calculation
       let surcharge = 0;
-      console.log('[LocationService.calculateTravel] Initial surcharge from service area:', serviceAreaCheck.surcharge);
+      console.log('[LocationService.calculateTravel] Service area check result:', {
+        isWithinArea: serviceAreaCheck.isWithinArea,
+        serviceAreaSurcharge: serviceAreaCheck.surcharge,
+        serviceAreaId: serviceAreaCheck.serviceAreaId
+      });
       
       const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
       console.log('[LocationService.calculateTravel] Invoice settings travel config:', {
@@ -376,6 +381,7 @@ export class LocationService {
         perKmSurcharge: invoiceSettings.travelSurcharge?.perKmSurcharge
       });
       
+      // PRIMARY: Use invoice settings for surcharge calculation
       if (invoiceSettings.travelSurcharge) {
         // Calculate distance-based surcharge (base + distance × per_km)
         const base = invoiceSettings.travelSurcharge.baseTravelSurcharge || 0;
@@ -386,7 +392,7 @@ export class LocationService {
           actualDistance,
           invoiceSettings.travelSurcharge
         );
-        console.log('[LocationService.calculateTravel] Calculated surcharge from invoice settings:', {
+        console.log('[LocationService.calculateTravel] Using invoice settings surcharge:', {
           base,
           perKm,
           distance: actualDistance,
@@ -395,9 +401,9 @@ export class LocationService {
           formula: `${base} + (${actualDistance.toFixed(2)} × ${perKm})`
         });
       } else {
-        // Fallback to service area surcharge if no invoice settings
+        // FALLBACK: Only use service area surcharge if no invoice settings configured
         surcharge = serviceAreaCheck.surcharge || 0;
-        console.log('[LocationService.calculateTravel] Using service area surcharge:', surcharge);
+        console.log('[LocationService.calculateTravel] No invoice settings, using service area surcharge:', surcharge);
       }
 
       // Apply buffer to the duration to account for traffic, stops, and real-world conditions
