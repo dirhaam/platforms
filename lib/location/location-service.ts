@@ -383,10 +383,21 @@ export class LocationService {
       
       // PRIMARY: Use invoice settings for surcharge calculation
       if (invoiceSettings.travelSurcharge) {
-        // Calculate distance-based surcharge (base + distance × per_km)
+        // Calculate distance-based surcharge
         const base = invoiceSettings.travelSurcharge.baseTravelSurcharge || 0;
         const perKm = invoiceSettings.travelSurcharge.perKmSurcharge || 5000;
-        const calculated = base + (actualDistance * perKm);
+        const minDist = invoiceSettings.travelSurcharge.minTravelDistance || 0;
+        
+        let formulaCalculation = base;
+        let formulaDescription = '';
+        
+        if (actualDistance > minDist) {
+          const excessDistance = actualDistance - minDist;
+          formulaCalculation = base + (excessDistance * perKm);
+          formulaDescription = `${base} + ((${actualDistance.toFixed(2)} - ${minDist}) × ${perKm})`;
+        } else {
+          formulaDescription = `${base} (distance ${actualDistance.toFixed(2)}km ≤ min ${minDist}km)`;
+        }
         
         surcharge = this.calculateTravelSurcharge(
           actualDistance,
@@ -395,10 +406,11 @@ export class LocationService {
         console.log('[LocationService.calculateTravel] Using invoice settings surcharge:', {
           base,
           perKm,
+          minTravelDistance: minDist,
           distance: actualDistance,
-          formulaCalculation: calculated,
+          formulaCalculation,
           finalSurcharge: surcharge,
-          formula: `${base} + (${actualDistance.toFixed(2)} × ${perKm})`
+          formula: formulaDescription
         });
       } else {
         // FALLBACK: Only use service area surcharge if no invoice settings configured
@@ -436,16 +448,27 @@ export class LocationService {
     distance: number,
     settings: TravelSurchargeSettings
   ): number {
-    // Check if distance is within allowed range
-    if (settings.minTravelDistance && distance < settings.minTravelDistance) {
-      return 0; // No surcharge if under minimum distance
-    }
+    // Check if distance exceeds maximum allowed
     if (settings.maxTravelDistance && distance > settings.maxTravelDistance) {
       return 0; // Don't allow booking if exceeds max distance
     }
 
-    // Calculate surcharge: base + (distance × per km rate)
-    const calculatedSurcharge = settings.baseTravelSurcharge + (distance * settings.perKmSurcharge);
+    // Calculate surcharge based on distance
+    // Formula: 
+    //   - If distance <= minTravelDistance: charge only base amount
+    //   - If distance > minTravelDistance: base + ((distance - minTravelDistance) × perKm)
+    const base = settings.baseTravelSurcharge || 0;
+    const perKm = settings.perKmSurcharge || 5000;
+    const minDist = settings.minTravelDistance || 0;
+
+    let calculatedSurcharge = base;
+    
+    // If distance exceeds minimum, add per-km charge for excess distance
+    if (distance > minDist) {
+      const excessDistance = distance - minDist;
+      calculatedSurcharge = base + (excessDistance * perKm);
+    }
+
     return Math.ceil(calculatedSurcharge);
   }
 
