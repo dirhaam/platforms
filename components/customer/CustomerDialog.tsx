@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Phone, Mail, MapPin, MessageSquare, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -133,6 +133,9 @@ export function CustomerDialog({
             <User className="h-5 w-5" />
             <span>{title}</span>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {editingCustomer ? 'Edit customer information' : 'Create a new customer'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

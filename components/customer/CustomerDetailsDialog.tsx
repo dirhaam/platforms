@@ -6,7 +6,7 @@ import {
   Calendar, Clock, DollarSign, TrendingUp, History 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -194,8 +194,11 @@ export function CustomerDetailsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <User className="h-5 w-5" />
-            <span>Customer Details</span>
+            <span>{customer?.name || 'Customer Details'}</span>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Detailed information about the customer
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="space-y-4">
