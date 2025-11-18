@@ -122,7 +122,7 @@ export function BookingCalendar({
 
   /* Booking detail yang ditampilkan di kanan */
   const BookingDetailPanel = () => {
-    const displayDate = selectedDate || currentDate;
+    const displayDate = currentDate; // Always use currentDate (dari navigation)
     const bookingsForDate = getBookingsForDate(displayDate);
     
     return (
@@ -161,9 +161,7 @@ export function BookingCalendar({
 
   /* MONTH VIEW */
   const renderMonthView = () => (
-    <div className="flex gap-4 w-full">
-      {/* Calendar di kiri */}
-      <div className="space-y-4 flex-shrink-0">
+    <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <button
@@ -255,8 +253,7 @@ export function BookingCalendar({
         </div>
       </div>
 
-      {/* Booking detail di kanan */}
-      <BookingDetailPanel />
+
     </div>
   );
 
@@ -266,8 +263,7 @@ export function BookingCalendar({
     const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
 
     return (
-      <div className="flex gap-4 w-full">
-        <div className="space-y-4 flex-shrink-0">
+      <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <button
@@ -367,10 +363,6 @@ export function BookingCalendar({
               );
             })}
           </div>
-        </div>
-
-        {/* Booking detail di kanan */}
-        <BookingDetailPanel />
       </div>
     );
   };
@@ -387,8 +379,7 @@ export function BookingCalendar({
     }, {} as Record<number, Booking[]>);
 
     return (
-      <div className="flex gap-4 w-full">
-        <div className="space-y-4 flex-shrink-0">
+      <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <button
@@ -465,19 +456,25 @@ export function BookingCalendar({
               );
             })}
           </div>
-        </div>
-
-        {/* Booking detail di kanan */}
-        <BookingDetailPanel />
       </div>
     );
   };
 
   return (
     <div className={`min-h-fit w-full px-2 py-2 ${className}`}>
-      {viewMode === 'month' && renderMonthView()}
-      {viewMode === 'week' && renderWeekView()}
-      {viewMode === 'day' && renderDayView()}
+      <div className="flex gap-4 w-full">
+        {/* Calendar views */}
+        <div className="flex-shrink-0">
+          {viewMode === 'month' && renderMonthView()}
+          {viewMode === 'week' && renderWeekView()}
+          {viewMode === 'day' && renderDayView()}
+        </div>
+
+        {/* Booking detail panel - single instance */}
+        <div className="w-72 pl-4 border-l border-gray-200">
+          <BookingDetailPanel />
+        </div>
+      </div>
     </div>
   );
 }
