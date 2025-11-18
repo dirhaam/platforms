@@ -211,18 +211,18 @@ export function BookingCalendar({
           </DropdownMenu>
         </div>
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1.5">
           {weekdays.map((day, idx) => (
             <div
               key={day}
-              className={`h-12 w-12 flex items-center justify-center font-semibold text-xs text-center ${idx === 6 ? 'text-red-600' : 'text-gray-600'}`}
+              className={`h-10 w-10 flex items-center justify-center font-semibold text-xs text-center ${idx === 6 ? 'text-red-600' : 'text-gray-600'}`}
             >
               {day}
             </div>
           ))}
         </div>
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1.5">
           {getCalendarDays().map((day, idx) => {
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
             const isToday = day.toDateString() === new Date().toDateString();
@@ -236,7 +236,7 @@ export function BookingCalendar({
                 disabled={!isCurrentMonth}
                 className={`
                   flex items-center justify-center rounded-lg font-semibold text-xs
-                  h-12 w-12 transition-all relative select-none
+                  h-10 w-10 transition-all relative select-none
                   ${isSelected ? 'bg-black text-white shadow' :
                     isCurrentMonth ? (
                       isSunday ? 'bg-gray-50 text-red-600 hover:bg-blue-50' :
@@ -250,9 +250,9 @@ export function BookingCalendar({
               >
                 <span className="relative z-10">{day.getDate()}</span>
                 {dayBookings.length > 0 && isCurrentMonth && (
-                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-1">
+                  <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 flex gap-0.5">
                     {dayBookings.slice(0, 3).map((_, i) => (
-                      <div key={i} className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      <div key={i} className="w-1 h-1 rounded-full bg-blue-500" />
                     ))}
                   </div>
                 )}
@@ -310,15 +310,15 @@ export function BookingCalendar({
             </DropdownMenu>
           </div>
           {/* Day headers */}
-          <div className="flex gap-2 mb-2">
-            <div className="w-12 flex-shrink-0"></div>
-            <div className="flex gap-2">
+          <div className="flex gap-1.5 mb-2 overflow-hidden">
+            <div className="w-10 flex-shrink-0"></div>
+            <div className="flex gap-1.5 flex-shrink-0">
               {days.map(day => {
                 const isToday = day.toDateString() === new Date().toDateString();
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`w-12 h-12 p-1 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-10 h-10 p-0.5 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
                   >
                     <div className="text-xs text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                     <div className="text-xs font-medium">{day.getDate()}</div>
@@ -328,15 +328,15 @@ export function BookingCalendar({
             </div>
           </div>
           {/* Hours grid - fixed width, no scroll */}
-          <div className="flex gap-2">
-            <div className="w-12 space-y-2 flex-shrink-0">
+          <div className="flex gap-1.5 overflow-hidden">
+            <div className="w-10 space-y-1.5 flex-shrink-0">
               {hours.map(hour => (
-                <div key={hour} className="h-12 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
+                <div key={hour} className="h-10 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
                   {hour.toString().padStart(2, '0')}
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-1.5 flex-shrink-0">
               {days.map(day => {
                 const dayBookings = getBookingsForDate(day);
                 const bookingsByHour = dayBookings.reduce((acc, booking) => {
@@ -346,7 +346,7 @@ export function BookingCalendar({
                   return acc;
                 }, {} as Record<number, Booking[]>);
                 return (
-                  <div key={day.toISOString()} className="w-12 space-y-2 flex-shrink-0">
+                  <div key={day.toISOString()} className="w-10 space-y-1.5 flex-shrink-0">
                     {hours.map(hour => {
                       const hasBooking = bookingsByHour[hour];
                       const bookingCount = hasBooking ? bookingsByHour[hour].length : 0;
@@ -354,7 +354,7 @@ export function BookingCalendar({
                       return (
                         <div
                           key={hour}
-                          className={`h-12 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold relative ${
+                          className={`h-10 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold relative ${
                             hasBooking ? 'bg-blue-200 hover:bg-blue-300 text-blue-900' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'
                           }`}
                           onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
@@ -362,7 +362,7 @@ export function BookingCalendar({
                         >
                           {bookingCount > 1 ? bookingCount : initials}
                           {bookingCount > 1 && (
-                            <div className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center transform translate-x-0.5 -translate-y-0.5">
+                            <div className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center transform translate-x-0.5 -translate-y-0.5">
                               {bookingCount}
                             </div>
                           )}
