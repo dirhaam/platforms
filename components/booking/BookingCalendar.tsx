@@ -138,86 +138,96 @@ export function BookingCalendar({
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
+    const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
     return (
-      <div className="space-y-4">
-        {/* Header */}
+      <div className="space-y-6">
+        {/* Header with month/year and navigation */}
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h3>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigateMonth('prev')}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigateMonth('next')}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="w-12 h-12 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors"
+            type="button"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-700" />
+          </button>
+
+          <div className="text-center flex-1">
+            <div className="text-2xl font-bold text-gray-900 tracking-wide">
+              {monthNames[currentDate.getMonth()]}{' '}
+              <span>{currentDate.getFullYear()}</span>
+            </div>
           </div>
+
+          <button
+            onClick={() => navigateMonth('next')}
+            className="w-12 h-12 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors"
+            type="button"
+          >
+            <ChevronRight className="w-6 h-6 text-gray-700" />
+          </button>
         </div>
 
-        {/* Days of week header */}
-        <div className="grid grid-cols-7 gap-1">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {weekdays.map((day, index) => (
+            <div
+              key={day}
+              className={`text-center text-sm font-semibold h-10 flex items-center justify-center ${
+                index === 6 ? 'text-red-600' : 'text-gray-600'
+              }`}
+            >
               {day}
             </div>
           ))}
         </div>
 
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {days.map((day, index) => {
             const dayBookings = getBookingsForDate(day);
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
             const isToday = day.toDateString() === new Date().toDateString();
             const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
+            const isSunday = day.getDay() === 0;
 
             return (
-              <div
+              <button
                 key={index}
+                onClick={() => isCurrentMonth && onDateSelect(day)}
+                disabled={!isCurrentMonth}
                 className={`
-                  min-h-[80px] p-1 border border-gray-200 cursor-pointer hover:bg-gray-50
-                  ${!isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''}
-                  ${isToday ? 'bg-blue-50 border-blue-200' : ''}
-                  ${isSelected ? 'bg-blue-100 border-blue-300' : ''}
+                  h-10 w-10 rounded-xl font-semibold text-sm transition-all
+                  flex items-center justify-center relative group
+                  ${isSelected
+                    ? 'bg-black text-white shadow-md'
+                    : isCurrentMonth
+                    ? isSunday
+                      ? 'bg-gray-50 text-red-600 hover:bg-blue-50'
+                      : 'bg-gray-50 text-gray-900 hover:bg-blue-50'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }
+                  ${isToday ? 'ring-2 ring-blue-400' : ''}
                 `}
-                onClick={() => onDateSelect(day)}
+                type="button"
               >
-                <div className="text-sm font-medium mb-1">
-                  {day.getDate()}
-                </div>
-                <div className="space-y-1">
-                  {dayBookings.slice(0, 2).map(booking => (
-                    <div
-                      key={booking.id}
-                      className={`
-                        text-xs p-1 rounded cursor-pointer truncate
-                        ${getStatusColor(booking.status)}
-                      `}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onBookingClick?.(booking);
-                      }}
-                    >
-                      {formatTime(new Date(booking.scheduledAt))} {booking.customer?.name}
-                    </div>
-                  ))}
-                  {dayBookings.length > 2 && (
-                    <div className="text-xs text-gray-500">
-                      +{dayBookings.length - 2} more
-                    </div>
-                  )}
-                </div>
-              </div>
+                <span className="relative z-10">{day.getDate()}</span>
+                {dayBookings.length > 0 && isCurrentMonth && (
+                  <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 flex gap-0.5">
+                    {dayBookings.slice(0, 3).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1 h-1 rounded-full bg-blue-500"
+                      />
+                    ))}
+                  </div>
+                )}
+                {dayBookings.length > 0 && (
+                  <div className="absolute hidden group-hover:block bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-50">
+                    {dayBookings.length} booking{dayBookings.length > 1 ? 's' : ''}
+                  </div>
+                )}
+              </button>
             );
           })}
         </div>
