@@ -312,13 +312,13 @@ export function BookingCalendar({
           {/* Day headers */}
           <div className="flex gap-2 mb-2">
             <div className="w-12 flex-shrink-0"></div>
-            <div className="flex gap-2 flex-1">
+            <div className="flex gap-2">
               {days.map(day => {
                 const isToday = day.toDateString() === new Date().toDateString();
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`flex-1 h-12 p-1 text-center border rounded text-xs flex flex-col items-center justify-center ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-12 h-12 p-1 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
                   >
                     <div className="text-xs text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                     <div className="text-xs font-medium">{day.getDate()}</div>
@@ -327,8 +327,8 @@ export function BookingCalendar({
               })}
             </div>
           </div>
-          {/* Hours grid - full width */}
-          <div className="flex gap-2 max-h-96 overflow-y-auto pb-2">
+          {/* Hours grid - fixed width */}
+          <div className="flex gap-2 max-h-96 overflow-x-auto pb-2">
             <div className="w-12 space-y-2 flex-shrink-0">
               {hours.map(hour => (
                 <div key={hour} className="h-12 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
@@ -336,7 +336,7 @@ export function BookingCalendar({
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 flex-1 min-w-0">
+            <div className="flex gap-2 flex-shrink-0">
               {days.map(day => {
                 const dayBookings = getBookingsForDate(day);
                 const bookingsByHour = dayBookings.reduce((acc, booking) => {
@@ -346,7 +346,7 @@ export function BookingCalendar({
                   return acc;
                 }, {} as Record<number, Booking[]>);
                 return (
-                  <div key={day.toISOString()} className="flex-1 min-w-0 space-y-2">
+                  <div key={day.toISOString()} className="w-12 space-y-2 flex-shrink-0">
                     {hours.map(hour => {
                       const hasBooking = bookingsByHour[hour];
                       const bookingCount = hasBooking ? bookingsByHour[hour].length : 0;
