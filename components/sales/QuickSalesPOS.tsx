@@ -378,6 +378,7 @@ export function QuickSalesPOS({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[95vw]">
         <DialogTitle className="sr-only">Quick Sales</DialogTitle>
+        <DialogDescription className="sr-only">Fast checkout for in-store sales</DialogDescription>
         <div className="flex flex-col h-full bg-white overflow-hidden">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm flex justify-between items-center gap-2">
