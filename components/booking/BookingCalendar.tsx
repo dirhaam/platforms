@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Booking, BookingStatus } from '@/types/booking';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -12,6 +18,7 @@ interface BookingCalendarProps {
   onBookingClick?: (booking: Booking) => void;
   selectedDate?: Date;
   className?: string;
+  businessHours?: { openTime: number; closeTime: number };
 }
 
 export function BookingCalendar({
@@ -19,7 +26,8 @@ export function BookingCalendar({
   onDateSelect,
   onBookingClick,
   selectedDate,
-  className = ''
+  className = '',
+  businessHours = { openTime: 9, closeTime: 17 }
 }: BookingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
@@ -196,23 +204,36 @@ export function BookingCalendar({
     </div>
   );
 
-  // ============== Week View: Only show hours with bookings ==============
+  // ============== Week View: Show all hours in business hours ==============
   const renderWeekView = () => {
     const days = getWeekDays();
+    const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
+    
     return (
       <div className="space-y-4 max-w-md">
         <div className="flex items-center justify-between">
           <div className="text-lg font-semibold">Week of {days[0].toLocaleDateString()}</div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={() => navigateWeek('prev')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigateWeek('next')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <ChevronDown className="h-4 w-4 mr-1" />
+                  Navigate
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigateWeek('prev')}>
+                  Previous Week
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigateWeek('next')}>
+                  Next Week
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-        <div className="grid grid-cols-8 gap-x-2">
+        {/* Day headers */}
+        <div className="grid grid-cols-8 gap-x-2 gap-y-2">
           <div></div>
           {days.map(day => {
             const isToday = day.toDateString() === new Date().toDateString();
@@ -227,23 +248,14 @@ export function BookingCalendar({
             );
           })}
         </div>
-        {/* Only show hours with bookings */}
-        <div className="grid grid-cols-8 gap-x-2">
-          <div>
-            {/* Only show booked hour labels */}
-            {days.map(day => {
-              const dayBookings = getBookingsForDate(day);
-              const bookedHours = [...new Set(dayBookings.map(b => toDate(b.scheduledAt).getHours()))];
-              return (
-                <div key={day.toISOString()} className="flex flex-col gap-y-2 items-end">
-                  {bookedHours.map(hour => (
-                    <div key={hour} className="text-xs text-gray-500">
-                      {hour.toString().padStart(2, '0')}:00
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+        {/* Hours grid */}
+        <div className="grid grid-cols-8 gap-x-2 gap-y-2 overflow-y-auto max-h-96">
+          <div className="space-y-2">
+            {hours.map(hour => (
+              <div key={hour} className="h-12 text-xs text-gray-500 text-right pr-2 flex items-center justify-end">
+                {hour.toString().padStart(2, '0')}:00
+              </div>
+            ))}
           </div>
           {days.map(day => {
             const dayBookings = getBookingsForDate(day);
@@ -253,21 +265,23 @@ export function BookingCalendar({
               acc[hour].push(booking);
               return acc;
             }, {} as Record<number, Booking[]>);
-            const bookedHours = Object.keys(bookingsByHour).map(Number);
             return (
-              <div key={day.toISOString()} className="flex flex-col gap-y-2">
-                {bookedHours.map(hour => (
-                  <div key={hour} className="border border-gray-200 rounded p-1 cursor-pointer hover:bg-blue-50" onClick={() =>
-                    onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))
-                    }>
-                    {bookingsByHour[hour].map(booking => (
+              <div key={day.toISOString()} className="space-y-2">
+                {hours.map(hour => (
+                  <div
+                    key={hour}
+                    className="h-12 border border-gray-200 rounded p-1 cursor-pointer hover:bg-blue-50 bg-white"
+                    onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
+                  >
+                    {bookingsByHour[hour] && bookingsByHour[hour].map(booking => (
                       <div
                         key={booking.id}
-                        className={`text-xs p-1 rounded truncate ${getStatusColor(booking.status)}`}
+                        className={`text-xs p-0.5 rounded truncate ${getStatusColor(booking.status)}`}
                         onClick={e => {
                           e.stopPropagation();
                           onBookingClick?.(booking);
                         }}
+                        title={booking.customer?.name}
                       >
                         {booking.customer?.name}
                       </div>
@@ -282,10 +296,17 @@ export function BookingCalendar({
     );
   };
 
-  // =============== Day view: show only booked slots ===============
+  // =============== Day view: show all hours in business hours ===============
   const renderDayView = () => {
     const dayBookings = getBookingsForDate(currentDate);
-    const hours = [...new Set(dayBookings.map(b => toDate(b.scheduledAt).getHours()))].sort((a, b) => a - b);
+    const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
+    const bookingsByHour = dayBookings.reduce((acc, booking) => {
+      const hour = toDate(booking.scheduledAt).getHours();
+      if (!acc[hour]) acc[hour] = [];
+      acc[hour].push(booking);
+      return acc;
+    }, {} as Record<number, Booking[]>);
+
     return (
       <div className="space-y-4 max-w-md">
         <div className="flex items-center justify-between">
@@ -293,50 +314,59 @@ export function BookingCalendar({
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
           })}</div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={() => navigateDay('prev')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigateDay('next')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <ChevronDown className="h-4 w-4 mr-1" />
+                  Navigate
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigateDay('prev')}>
+                  Previous Day
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigateDay('next')}>
+                  Next Day
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-        <div className="space-y-2">
-          {hours.length === 0 && (
-            <div className="text-sm text-gray-400 italic">No bookings</div>
-          )}
+        <div className="space-y-2 max-h-96 overflow-y-auto">
           {hours.map(hour => {
-            const hourBookings = dayBookings.filter(
-              booking => toDate(booking.scheduledAt).getHours() === hour
-            );
+            const hourBookings = bookingsByHour[hour] || [];
             return (
-              <div key={hour} className="flex items-center space-x-4 border rounded px-2 py-2 hover:bg-blue-50 cursor-pointer">
-                <div className="w-16 text-sm text-gray-500">
+              <div key={hour} className="flex items-start space-x-4 border rounded px-3 py-2 hover:bg-blue-50 cursor-pointer bg-white">
+                <div className="w-16 text-sm text-gray-500 pt-1 flex-shrink-0">
                   {hour.toString().padStart(2, '0')}:00
                 </div>
                 <div className="flex-1 space-y-2">
-                  {hourBookings.map(booking => (
-                    <div
-                      key={booking.id}
-                      className={`p-2 rounded-lg cursor-pointer border ${getStatusColor(booking.status)}`}
-                      onClick={e => {
-                        e.stopPropagation();
-                        onBookingClick?.(booking);
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{booking.customer?.name}</div>
-                          <div className="text-sm">{booking.service?.name}</div>
-                          <div className="text-xs">
-                            {formatTime(toDate(booking.scheduledAt))} -{' '}
-                            {formatTime(new Date(toDate(booking.scheduledAt).getTime() + booking.duration * 60000))}
+                  {hourBookings.length === 0 ? (
+                    <div className="text-xs text-gray-400">-</div>
+                  ) : (
+                    hourBookings.map(booking => (
+                      <div
+                        key={booking.id}
+                        className={`p-2 rounded-lg cursor-pointer border ${getStatusColor(booking.status)}`}
+                        onClick={e => {
+                          e.stopPropagation();
+                          onBookingClick?.(booking);
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{booking.customer?.name}</div>
+                            <div className="text-xs text-gray-600">{booking.service?.name}</div>
+                            <div className="text-xs">
+                              {formatTime(toDate(booking.scheduledAt))} -{' '}
+                              {formatTime(new Date(toDate(booking.scheduledAt).getTime() + booking.duration * 60000))}
+                            </div>
                           </div>
+                          <Badge variant="outline" className="ml-2 flex-shrink-0">{booking.status}</Badge>
                         </div>
-                        <Badge variant="outline">{booking.status}</Badge>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             );
@@ -350,27 +380,31 @@ export function BookingCalendar({
   return (
     <div className={`min-h-fit w-full ${className}`}>
       {/* Header: Judul dan mode */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2 font-semibold text-lg">
           <Calendar className="h-5 w-5" />
           <span>Booking Calendar</span>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant={viewMode === 'month' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('month')}
-          >Month</Button>
-          <Button
-            variant={viewMode === 'week' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('week')}
-          >Week</Button>
-          <Button
-            variant={viewMode === 'day' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('day')}
-          >Day</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant={viewMode === 'month' ? 'default' : 'outline'} size="sm">
+                {viewMode === 'month' ? 'Month' : viewMode === 'week' ? 'Week' : 'Day'}
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setViewMode('month')}>
+                Month View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('week')}>
+                Week View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('day')}>
+                Day View
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       {/* Main Content */}
