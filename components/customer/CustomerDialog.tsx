@@ -134,7 +134,7 @@ export function CustomerDialog({
             <span>{title}</span>
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {editingCustomer ? 'Edit customer information' : 'Create a new customer'}
+            {initialData ? 'Edit customer information' : 'Create a new customer'}
           </DialogDescription>
         </DialogHeader>
 
