@@ -27,6 +27,7 @@ export function HomeVisitAddressSelector({
   const [error, setError] = useState<string | null>(null);
   const addrTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSearchRef = useRef<string>('');
+  const isUserTypingRef = useRef<boolean>(false);
 
   const performSearch = useCallback(async (searchAddress: string) => {
     // Prevent duplicate searches
@@ -58,17 +59,15 @@ export function HomeVisitAddressSelector({
         }
       });
       setAddrSuggestions(list.slice(0, 5));
-      // Auto-fill coords if empty and we have a primary hit
-      if (list.length > 0 && (!latitude || !longitude)) {
-        onCoordinatesChange(list[0].lat, list[0].lng);
-      }
+      // IMPORTANT: Do NOT auto-fill coordinates during search to avoid ghost typing loop
+      // User must explicitly select from suggestions or manually enter coordinates
     } catch (e) {
       console.error('Error searching address:', e);
       setAddrSuggestions([]);
     } finally {
       setAddrLoading(false);
     }
-  }, [tenantId, latitude, longitude, onCoordinatesChange]);
+  }, [tenantId]);
 
   const handleAddressInput = useCallback((val: string) => {
     onAddressChange(val);
