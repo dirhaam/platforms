@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {
     useLightningcss: false,
+    optimizePackageImports: ["@radix-ui/react-*"],
   },
 
   // Exclude folder Windows yang sering bikin EPERM error
