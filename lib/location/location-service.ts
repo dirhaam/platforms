@@ -365,21 +365,27 @@ export class LocationService {
       console.log('[LocationService.calculateTravel] Service area check:', serviceAreaCheck);
 
       // Get travel surcharge settings from Invoice Settings
-      let surcharge = serviceAreaCheck.surcharge;
-      console.log('[LocationService.calculateTravel] Initial surcharge from service area:', surcharge);
+      // Note: serviceAreaCheck.surcharge is a base amount, need to add distance-based calculation
+      let surcharge = 0;
+      console.log('[LocationService.calculateTravel] Initial surcharge from service area:', serviceAreaCheck.surcharge);
       
-      if (surcharge === 0) {
-        // Use invoice settings travel surcharge if not in service area or no service area defined
-        const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
-        console.log('[LocationService.calculateTravel] Invoice settings travel config:', invoiceSettings.travelSurcharge);
-        
-        if (invoiceSettings.travelSurcharge) {
-          surcharge = this.calculateTravelSurcharge(
-            actualDistance,
-            invoiceSettings.travelSurcharge
-          );
-          console.log('[LocationService.calculateTravel] Calculated surcharge from invoice settings:', surcharge);
-        }
+      const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
+      console.log('[LocationService.calculateTravel] Invoice settings travel config:', invoiceSettings.travelSurcharge);
+      
+      if (invoiceSettings.travelSurcharge) {
+        // Calculate distance-based surcharge (base + distance × per_km)
+        surcharge = this.calculateTravelSurcharge(
+          actualDistance,
+          invoiceSettings.travelSurcharge
+        );
+        console.log('[LocationService.calculateTravel] Calculated surcharge from invoice settings:', {
+          formula: `${invoiceSettings.travelSurcharge.baseTravelSurcharge} + (${actualDistance} × ${invoiceSettings.travelSurcharge.perKmSurcharge})`,
+          result: surcharge
+        });
+      } else {
+        // Fallback to service area surcharge if no invoice settings
+        surcharge = serviceAreaCheck.surcharge || 0;
+        console.log('[LocationService.calculateTravel] Using service area surcharge:', surcharge);
       }
 
       // Apply buffer to the duration to account for traffic, stops, and real-world conditions
