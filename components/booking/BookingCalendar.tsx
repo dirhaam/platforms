@@ -147,12 +147,12 @@ export function BookingCalendar({
           <ChevronRight className="w-6 h-6 text-gray-700" />
         </button>
       </div>
-      {/* Header nama hari */}
-      <div className="grid grid-cols-7 gap-x-2 mb-2">
+      {/* Weekday Header: Updated */}
+      <div className="grid grid-cols-7 gap-x-3 mb-2">
         {weekdays.map((day, index) => (
           <div
             key={day}
-            className={`text-center text-sm font-semibold h-10 flex items-center justify-center
+            className={`h-12 w-12 flex items-center justify-center font-semibold text-sm text-center
               ${index === 6 ? 'text-red-600' : 'text-gray-600'}`}
           >
             {day}
@@ -160,7 +160,7 @@ export function BookingCalendar({
         ))}
       </div>
       {/* Grid tanggal */}
-      <div className="grid grid-cols-7 gap-x-2 gap-y-2">
+      <div className="grid grid-cols-7 gap-x-3 gap-y-3">
         {getCalendarDays().map((day, index) => {
           const isCurrentMonth = day.getMonth() === currentDate.getMonth();
           const isToday = day.toDateString() === new Date().toDateString();
@@ -174,8 +174,7 @@ export function BookingCalendar({
               disabled={!isCurrentMonth}
               className={`
                 flex items-center justify-center rounded-xl font-semibold text-sm
-                h-10 w-10 md:h-12 md:w-12
-                transition-all relative select-none
+                h-12 w-12 transition-all relative select-none
                 ${isSelected ? 'bg-black text-white shadow' : 
                   isCurrentMonth ? 
                     isSunday ? 'bg-gray-50 text-red-600 hover:bg-blue-50' : 'bg-gray-50 text-gray-900 hover:bg-blue-50' :
