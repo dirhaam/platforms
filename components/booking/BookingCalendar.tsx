@@ -251,9 +251,6 @@ export function BookingCalendar({
             );
           })}
         </div>
-      </div>
-
-
     </div>
   );
 
