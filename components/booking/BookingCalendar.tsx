@@ -309,15 +309,15 @@ export function BookingCalendar({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {/* Day headers - fixed width */}
-          <div className="flex gap-1 mb-2">
-            <div className="w-12"></div>
+          {/* Day headers - compact */}
+          <div className="flex gap-0.5 mb-2 overflow-x-auto">
+            <div className="w-10 flex-shrink-0"></div>
             {days.map(day => {
               const isToday = day.toDateString() === new Date().toDateString();
               return (
                 <div
                   key={day.toISOString()}
-                  className={`w-12 h-12 p-1 text-center border rounded text-xs flex flex-col items-center justify-center ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
+                  className={`w-10 h-10 p-0.5 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
                 >
                   <div className="text-xs text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                   <div className="text-xs font-medium">{day.getDate()}</div>
@@ -325,16 +325,16 @@ export function BookingCalendar({
               );
             })}
           </div>
-          {/* Hours grid - simplified */}
-          <div className="flex gap-1 overflow-y-auto max-h-96 pb-2">
-            <div className="w-12 space-y-1 flex-shrink-0">
+          {/* Hours grid - compact */}
+          <div className="flex gap-0.5 overflow-y-auto max-h-96 pb-2">
+            <div className="w-10 space-y-0.5 flex-shrink-0">
               {hours.map(hour => (
-                <div key={hour} className="h-12 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
+                <div key={hour} className="h-10 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
                   {hour.toString().padStart(2, '0')}
                 </div>
               ))}
             </div>
-            <div className="flex gap-1 flex-shrink-0">
+            <div className="flex gap-0.5 flex-shrink-0">
               {days.map(day => {
                 const dayBookings = getBookingsForDate(day);
                 const bookingsByHour = dayBookings.reduce((acc, booking) => {
@@ -344,14 +344,14 @@ export function BookingCalendar({
                   return acc;
                 }, {} as Record<number, Booking[]>);
                 return (
-                  <div key={day.toISOString()} className="w-12 space-y-1">
+                  <div key={day.toISOString()} className="w-10 space-y-0.5">
                     {hours.map(hour => {
                       const hasBooking = bookingsByHour[hour];
                       const initials = hasBooking ? getInitials(bookingsByHour[hour][0].customer?.name || '') : '';
                       return (
                         <div
                           key={hour}
-                          className={`h-12 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold ${
+                          className={`h-10 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold ${
                             hasBooking ? 'bg-blue-200 hover:bg-blue-300 text-blue-900' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'
                           }`}
                           onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
@@ -466,19 +466,17 @@ export function BookingCalendar({
   return (
     <div className={`min-h-fit w-full px-2 py-2 ${className}`}>
       <div className="flex gap-4 w-full">
-        {/* Calendar views */}
-        <div className={`flex-shrink-0 ${viewMode === 'week' ? 'flex-1' : 'w-80'}`}>
+        {/* Calendar views - fixed width */}
+        <div className="w-96 flex-shrink-0">
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
         </div>
 
-        {/* Booking detail panel - single instance */}
-        {viewMode !== 'week' && (
-          <div className="w-72 pl-4 border-l border-gray-200">
-            <BookingDetailPanel />
-          </div>
-        )}
+        {/* Booking detail panel - always visible */}
+        <div className="w-72 pl-4 border-l border-gray-200 flex-shrink-0">
+          <BookingDetailPanel />
+        </div>
       </div>
     </div>
   );
