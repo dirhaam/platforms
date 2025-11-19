@@ -220,10 +220,7 @@ export function UnifiedTransactionTable({
                   {/* Status Column */}
                   <td className="py-3 px-4">
                     <Badge className={getStatusColor(item.status, type)}>
-                      {typeof item.status === 'string' 
-                        ? item.status.charAt(0).toUpperCase() + item.status.slice(1)
-                        : item.status
-                      }
+                      {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
                     </Badge>
                   </td>
 
