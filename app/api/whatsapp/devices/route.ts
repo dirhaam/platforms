@@ -22,12 +22,9 @@ export async function GET(request: NextRequest) {
     // Prefer provider API (no DB dependency)
     try {
       const client = await whatsappService.getWhatsAppClient(tenantId);
-      if (client) {
-        // @ts-expect-error getDevices added to client
-        const devices = await (client as any).getDevices?.();
-        if (Array.isArray(devices) && devices.length >= 0) {
-          return NextResponse.json({ devices });
-        }
+      if (client && typeof (client as any).getDevices === 'function') {
+        const devices = await client.getDevices();
+        return NextResponse.json({ devices });
       }
     } catch (e) {
       console.warn('[WhatsApp] Fallback to cached devices due to provider error');
