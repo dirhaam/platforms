@@ -4,17 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Booking, BookingStatus, PaymentStatus } from '@/types/booking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { BookingDetailsDrawer } from './BookingDetailsDrawer';
-import { BookingCalendar } from './BookingCalendar';
 import { NewBookingPOS } from './NewBookingPOS';
-import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
-import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2, MapPin } from 'lucide-react';
-import { UnifiedTransactionTable } from './UnifiedTransactionTable';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuickSalesPOS } from '@/components/sales/QuickSalesPOS';
 import { SalesTransactionPanel } from '@/components/sales/SalesTransactionPanel';
@@ -22,20 +14,10 @@ import { SalesTransaction, SalesSummary } from '@/types/sales';
 import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SalesSummaryCards } from './SalesSummaryCards';
+import { BookingFilters } from './BookingFilters';
+import { BookingViewsTabs } from './BookingViewsTabs';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -429,12 +411,9 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     }
   };
 
-  // Get bookings for selected date
-  const bookingsForDate = filteredBookings.filter(b => {
-    const bookingDate = new Date(b.scheduledAt).toDateString();
-    const selectedDateString = selectedDate.toDateString();
-    return bookingDate === selectedDateString;
-  });
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchBookings(), fetchSalesTransactions(), fetchSalesSummary()]);
+  }, [resolvedTenantId]);
 
   return (
     <div className="w-full space-y-4">
@@ -444,13 +423,11 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           <h2 className="text-3xl font-bold">Bookings</h2>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={() => setShowNewBookingDialog(true)}
-          >
+          <Button onClick={() => setShowNewBookingDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Booking
           </Button>
-          <Button 
+          <Button
             variant="outline"
             onClick={() => setShowQuickSaleDialog(true)}
             disabled={!resolvedTenantId || invoiceGenerating}
@@ -461,216 +438,42 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         </div>
       </div>
 
-      {salesSummary && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    IDR {salesSummary.totalRevenue.toLocaleString('id-ID')}
-                  </p>
-                </div>
-                <DollarSign className="w-8 h-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
+      {salesSummary && <SalesSummaryCards summary={salesSummary} />}
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Transactions</p>
-                  <p className="text-2xl font-bold text-gray-900">{salesSummary.totalTransactions}</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Paid Amount</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    IDR {salesSummary.totalPaid.toLocaleString('id-ID')}
-                  </p>
-                </div>
-                <CreditCard className="w-8 h-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Amount</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    IDR {salesSummary.totalPending.toLocaleString('id-ID')}
-                  </p>
-                </div>
-                <Users className="w-8 h-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search by name, service..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value={BookingStatus.PENDING}>Pending</SelectItem>
-                <SelectItem value={BookingStatus.CONFIRMED}>Confirmed</SelectItem>
-                <SelectItem value={BookingStatus.COMPLETED}>Completed</SelectItem>
-                <SelectItem value={BookingStatus.CANCELLED}>Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by payment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payments</SelectItem>
-                <SelectItem value={PaymentStatus.PENDING}>Pending</SelectItem>
-                <SelectItem value={PaymentStatus.PAID}>Paid</SelectItem>
-                <SelectItem value={PaymentStatus.REFUNDED}>Refunded</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" onClick={() => fetchBookings()}>
-              <Filter className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
+          <BookingFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+            paymentFilter={paymentFilter}
+            onPaymentChange={setPaymentFilter}
+            onRefresh={fetchBookings}
+          />
         </CardContent>
       </Card>
 
-      {/* View Toggle */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list' | 'sales' | 'home-visits')}>
-        <TabsList>
-          <TabsTrigger value="calendar">
-            <Calendar className="h-4 w-4 mr-2" />
-            Calendar
-          </TabsTrigger>
-          <TabsTrigger value="list">
-            <List className="h-4 w-4 mr-2" />
-            Booking
-          </TabsTrigger>
-          <TabsTrigger value="sales">
-            <DollarSign className="h-4 w-4 mr-2" />
-            Sales
-          </TabsTrigger>
-          <TabsTrigger value="home-visits">
-            <MapPin className="h-4 w-4 mr-2" />
-            Home Visits
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Calendar View */}
-        <TabsContent value="calendar" className="mt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <BookingCalendar
-                bookings={filteredBookings}
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-                onBookingClick={handleBookingClick}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* List View */}
-        <TabsContent value="list" className="mt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <UnifiedTransactionTable
-                data={filteredBookings}
-                type="booking"
-                renderActions={(item) => (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleBookingClick(item as any)}
-                  >
-                    View
-                  </Button>
-                )}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Sales View */}
-        <TabsContent value="sales" className="mt-4">
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Sales Transactions</CardTitle>
-              <Button onClick={() => setShowQuickSaleDialog(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                New Sale
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {loadingSales ? (
-                <p className="text-sm text-gray-600">Loading sales data...</p>
-              ) : (
-                <UnifiedTransactionTable
-                  data={salesTransactions}
-                  type="sales"
-                  renderActions={(transaction) => (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSalesTransaction(transaction as any);
-                        setShowSalesDetailsDialog(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View
-                    </Button>
-                  )}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Home Visits View */}
-        <TabsContent value="home-visits" className="mt-4">
-          {resolvedTenantId && (
-            <HomeVisitBookingManager
-              tenantId={resolvedTenantId}
-              bookings={bookings}
-              services={services}
-              businessLocation={businessLocation}
-              businessCoordinates={businessLocationCoords || undefined}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+      <BookingViewsTabs
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        filteredBookings={filteredBookings}
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+        onBookingClick={handleBookingClick}
+        salesTransactions={salesTransactions}
+        loadingSales={loadingSales}
+        onNewSale={() => setShowQuickSaleDialog(true)}
+        onViewSalesTransaction={(t) => {
+          setSelectedSalesTransaction(t);
+          setShowSalesDetailsDialog(true);
+        }}
+        resolvedTenantId={resolvedTenantId}
+        bookings={bookings}
+        services={services}
+        businessLocation={businessLocation}
+        businessCoordinates={businessLocationCoords || undefined}
+      />
 
       <QuickSalesPOS
         open={showQuickSaleDialog}
