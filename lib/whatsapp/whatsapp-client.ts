@@ -301,6 +301,9 @@ export class WhatsAppClient implements WhatsAppApiClient {
       // Call actual WhatsApp API endpoint: GET /chat/{chat_jid}/messages
       const response = await this.makeRequest(`/chat/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=0`);
 
+      // DEBUG: Log full response to understand provider format
+      console.log('WhatsApp getMessages response:', JSON.stringify(response, null, 2));
+
       const candidates: any[] = [];
       if (Array.isArray(response?.results?.data)) candidates.push(response.results.data);
       if (Array.isArray(response?.data)) candidates.push(response.data);
@@ -314,6 +317,8 @@ export class WhatsAppClient implements WhatsAppApiClient {
       const raw = candidates.find(Array.isArray) || [];
 
       const messages = Array.isArray(raw) ? raw : [];
+      
+      console.log(`Parsed ${messages.length} messages from ${candidates.length} candidates`);
 
       return messages.map((msg: any) => {
         const type = (msg.type || (msg.media_type ? String(msg.media_type).toLowerCase() : 'text')) as WhatsAppMessage['type'];
@@ -463,13 +468,19 @@ export class WhatsAppClient implements WhatsAppApiClient {
   private buildAuthorizationHeader(): string | undefined {
     const apiKey = this.config.apiKey;
     if (!apiKey) {
+      console.warn('No API key configured for WhatsApp client');
       return undefined;
     }
 
+    // If apiKey already has the prefix, return as-is
     if (/^(basic|bearer)\s/i.test(apiKey)) {
+      console.log(`Using provided auth header: ${apiKey.substring(0, 10)}...`);
       return apiKey;
     }
 
-    return `Bearer ${apiKey}`;
+    // Default to Bearer if no prefix provided
+    const authHeader = `Bearer ${apiKey}`;
+    console.log(`Generated Bearer auth header: ${authHeader.substring(0, 10)}...`);
+    return authHeader;
   }
 }

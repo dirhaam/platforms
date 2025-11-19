@@ -47,7 +47,10 @@ export async function GET(
       return NextResponse.json({ messages: [] });
     }
 
+    console.log(`Fetching messages for chatJid: ${chatJid}, tenant: ${tenantId}`);
     const apiMessages = await client.getMessages(chatJid, limit);
+    console.log(`Returned ${apiMessages.length} messages from provider`);
+    
     const messages = apiMessages.map((msg: any) => ({
       id: msg.id,
       type: msg.type,
