@@ -569,7 +569,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           </TabsTrigger>
           <TabsTrigger value="list">
             <List className="h-4 w-4 mr-2" />
-            List
+            Booking
           </TabsTrigger>
           <TabsTrigger value="sales">
             <DollarSign className="h-4 w-4 mr-2" />
