@@ -59,6 +59,12 @@ export async function GET(request: NextRequest) {
 
     const transactions = await salesService.getTransactions(tenantId, filters);
     
+    console.log('[API /sales/transactions GET] Response:', {
+      tenantId,
+      transactionsCount: transactions.length,
+      firstTransaction: transactions[0]
+    });
+    
     return NextResponse.json({
       success: true,
       transactions,

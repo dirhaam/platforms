@@ -257,6 +257,12 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       const data = await response.json();
       const transactions: SalesTransaction[] = data.transactions || [];
 
+      console.log('[BookingDashboard] Fetched sales transactions:', {
+        count: transactions.length,
+        tenantId: resolvedTenantId,
+        firstTransaction: transactions[0]
+      });
+
       setSalesTransactions(transactions);
     } catch (error) {
       console.error('Error fetching sales transactions:', error);

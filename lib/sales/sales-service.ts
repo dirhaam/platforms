@@ -431,8 +431,15 @@ export class SalesService {
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
+      console.log('[SalesService.getTransactions] Query result:', {
+        tenantId,
+        dataLength: data?.length,
+        error: error?.message,
+        firstRecord: data?.[0]
+      });
+
       if (error || !data) {
-        console.error('Database error:', error);
+        console.error('[SalesService.getTransactions] Database error:', error);
         return [];
       }
 
