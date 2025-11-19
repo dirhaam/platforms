@@ -301,19 +301,23 @@ export class WhatsAppClient implements WhatsAppApiClient {
       // Call actual WhatsApp API endpoint: GET /chat/{chat_jid}/messages
       const response = await this.makeRequest(`/chat/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=0`);
 
-      const raw = Array.isArray(response?.results?.data)
-        ? response.results.data
-        : Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response?.messages)
-        ? response.messages
-        : [];
+      const candidates: any[] = [];
+      if (Array.isArray(response?.results?.data)) candidates.push(response.results.data);
+      if (Array.isArray(response?.data)) candidates.push(response.data);
+      if (Array.isArray(response?.messages)) candidates.push(response.messages);
+      if (Array.isArray(response?.results?.messages)) candidates.push(response.results.messages);
+      if (Array.isArray(response?.results?.data?.messages)) candidates.push(response.results.data.messages);
+      if (Array.isArray(response?.data?.messages)) candidates.push(response.data.messages);
+      if (Array.isArray(response?.results?.data?.data)) candidates.push(response.results.data.data);
+      if (Array.isArray(response?.data?.data)) candidates.push(response.data.data);
+
+      const raw = candidates.find(Array.isArray) || [];
 
       const messages = Array.isArray(raw) ? raw : [];
 
       return messages.map((msg: any) => {
         const type = (msg.type || (msg.media_type ? String(msg.media_type).toLowerCase() : 'text')) as WhatsAppMessage['type'];
-        const fromMe = msg.from_me ?? msg.fromMe ?? msg.is_outgoing ?? false;
+        const fromMe = msg.from_me ?? msg.is_from_me ?? msg.fromMe ?? msg.is_outgoing ?? false;
         const timestamp = msg.timestamp ?? msg.sent_at ?? msg.time;
         let tsDate: Date;
         if (typeof timestamp === 'number' && timestamp > 0) {
@@ -332,7 +336,7 @@ export class WhatsAppClient implements WhatsAppApiClient {
           conversationId,
           type,
           content: msg.content || msg.body || msg.text || '',
-          mediaUrl: msg.media_url || msg.mediaUrl,
+          mediaUrl: msg.media_url || msg.mediaUrl || msg.url,
           mediaCaption: msg.media_caption || msg.mediaCaption || msg.caption,
           isFromCustomer: !fromMe,
           customerPhone: msg.from || msg.sender || '',

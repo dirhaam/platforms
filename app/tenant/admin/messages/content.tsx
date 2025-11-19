@@ -610,16 +610,16 @@ export function MessagesContent() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100dvh-140px)] overflow-hidden">
         {/* Conversations List */}
-        <Card className="col-span-1 flex flex-col">
+        <Card className="col-span-1 flex flex-col min-h-0 overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5" />
               Conversations
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col gap-3">
+          <CardContent className="flex-1 flex flex-col gap-3 min-h-0">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
               <Input
@@ -630,7 +630,7 @@ export function MessagesContent() {
               />
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0">
               {loading ? (
                 <div className="flex h-full items-center justify-center text-sm text-gray-500">
                   <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
@@ -689,7 +689,7 @@ export function MessagesContent() {
 
         {/* Message Thread */}
         {selectedConversation ? (
-          <Card className="col-span-1 lg:col-span-2 flex flex-col">
+          <Card className="col-span-1 lg:col-span-2 flex flex-col min-h-0 overflow-hidden">
             <CardHeader className="border-b pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -748,7 +748,7 @@ export function MessagesContent() {
               </div>
             </CardHeader>
 
-            <CardContent className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
+            <CardContent className="flex-1 overflow-hidden flex flex-col gap-4 py-4 min-h-0">
               {messagesLoading && (
                 <div className="flex items-center gap-2 text-sm text-gray-500 px-1">
                   <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
@@ -756,7 +756,7 @@ export function MessagesContent() {
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 {messages.length ? (
                   <div className="space-y-3 pr-4">
                     {messages.map((msg) => (
