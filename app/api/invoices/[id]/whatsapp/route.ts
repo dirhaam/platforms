@@ -37,6 +37,7 @@ export async function POST(
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
+    // Generate PDF with improved formatting
     const pdfGenerator = new InvoicePDFGenerator();
     const pdfData = await pdfGenerator.generateInvoicePDF(invoice);
     const pdfBytes = new Uint8Array(pdfData);
@@ -51,7 +52,9 @@ export async function POST(
       );
     }
 
-    const messageText = body.message?.trim() || `Invoice ${invoice.invoiceNumber}`;
+    const baseMessage = body.message?.trim() || '';
+    const invoiceDetails = `\n\nInvoice Details:\nNo: ${invoice.invoiceNumber}\nTotal: Rp ${invoice.totalAmount.toLocaleString('id-ID')}\nTanggal: ${invoice.issueDate?.toLocaleDateString('id-ID')}`;
+    const fullMessage = baseMessage + invoiceDetails;
 
     const sentMessage = await whatsappService.sendMessage(
       tenant.id,
@@ -59,8 +62,8 @@ export async function POST(
       targetPhone,
       {
         type: 'document',
-        content: messageText,
-        caption: messageText,
+        content: baseMessage || `Invoice ${invoice.invoiceNumber}`,
+        caption: fullMessage,
         filename: `invoice-${invoice.invoiceNumber}.pdf`,
         mimeType: 'application/pdf',
         fileData: pdfBytes,
