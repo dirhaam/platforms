@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Search, Filter } from 'lucide-react';
-import { BookingStatus, PaymentStatus } from '@/types/booking';
+type Option = { value: string; label: string };
 
 interface BookingFiltersProps {
   searchTerm: string;
@@ -14,6 +14,8 @@ interface BookingFiltersProps {
   paymentFilter: string;
   onPaymentChange: (v: string) => void;
   onRefresh: () => void;
+  statusOptions?: Option[];
+  paymentOptions?: Option[];
 }
 
 export function BookingFilters({
@@ -24,7 +26,28 @@ export function BookingFilters({
   paymentFilter,
   onPaymentChange,
   onRefresh,
+  statusOptions,
+  paymentOptions,
 }: BookingFiltersProps) {
+  const defaultStatusOptions: Option[] = [
+    { value: 'all', label: 'All Status' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ];
+
+  const defaultPaymentOptions: Option[] = [
+    { value: 'all', label: 'All Payments' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'partial', label: 'Partial' },
+    { value: 'refunded', label: 'Refunded' },
+  ];
+
+  const _statusOptions = statusOptions || defaultStatusOptions;
+  const _paymentOptions = paymentOptions || defaultPaymentOptions;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div className="relative">
@@ -42,11 +65,9 @@ export function BookingFilters({
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Status</SelectItem>
-          <SelectItem value={BookingStatus.PENDING}>Pending</SelectItem>
-          <SelectItem value={BookingStatus.CONFIRMED}>Confirmed</SelectItem>
-          <SelectItem value={BookingStatus.COMPLETED}>Completed</SelectItem>
-          <SelectItem value={BookingStatus.CANCELLED}>Cancelled</SelectItem>
+          {_statusOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
@@ -55,10 +76,9 @@ export function BookingFilters({
           <SelectValue placeholder="Filter by payment" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Payments</SelectItem>
-          <SelectItem value={PaymentStatus.PENDING}>Pending</SelectItem>
-          <SelectItem value={PaymentStatus.PAID}>Paid</SelectItem>
-          <SelectItem value={PaymentStatus.REFUNDED}>Refunded</SelectItem>
+          {_paymentOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

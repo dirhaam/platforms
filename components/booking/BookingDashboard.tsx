@@ -16,7 +16,6 @@ import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SalesSummaryCards } from './SalesSummaryCards';
-import { BookingFilters } from './BookingFilters';
 import { BookingViewsTabs } from './BookingViewsTabs';
 
 interface BookingDashboardProps {
@@ -98,7 +97,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
     fetchSalesSummary();
   }, [resolvedTenantId]);
 
-  // Apply filters
+  // Apply filters for bookings
   useEffect(() => {
     let filtered = bookings;
 
@@ -123,6 +122,30 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
     setFilteredBookings(filtered);
   }, [bookings, searchTerm, statusFilter, paymentFilter]);
+
+  // Apply filters for sales
+  const filteredSales = React.useMemo(() => {
+    let filtered = salesTransactions;
+
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter((t) =>
+        (t.customer?.name || '').toLowerCase().includes(q) ||
+        (t.serviceName || '').toLowerCase().includes(q) ||
+        (t.transactionNumber || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((t) => String(t.status) === statusFilter);
+    }
+
+    if (paymentFilter !== 'all') {
+      filtered = filtered.filter((t) => String(t.paymentStatus) === paymentFilter);
+    }
+
+    return filtered;
+  }, [salesTransactions, searchTerm, statusFilter, paymentFilter]);
 
   const fetchBookings = async () => {
     if (!resolvedTenantId) return;
@@ -440,20 +463,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
       {salesSummary && <SalesSummaryCards summary={salesSummary} />}
 
-      <Card>
-        <CardContent className="pt-6">
-          <BookingFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
-            paymentFilter={paymentFilter}
-            onPaymentChange={setPaymentFilter}
-            onRefresh={fetchBookings}
-          />
-        </CardContent>
-      </Card>
-
       <BookingViewsTabs
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -461,7 +470,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         selectedDate={selectedDate}
         onDateSelect={setSelectedDate}
         onBookingClick={handleBookingClick}
-        salesTransactions={salesTransactions}
+        salesTransactions={filteredSales}
         loadingSales={loadingSales}
         onNewSale={() => setShowQuickSaleDialog(true)}
         onViewSalesTransaction={(t) => {
@@ -469,10 +478,17 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           setShowSalesDetailsDialog(true);
         }}
         resolvedTenantId={resolvedTenantId}
-        bookings={bookings}
+        bookings={filteredBookings}
         services={services}
         businessLocation={businessLocation}
         businessCoordinates={businessLocationCoords || undefined}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        paymentFilter={paymentFilter}
+        onPaymentChange={setPaymentFilter}
+        onRefreshAll={refreshAll}
       />
 
       <QuickSalesPOS

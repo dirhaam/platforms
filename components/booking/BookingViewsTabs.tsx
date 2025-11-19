@@ -9,6 +9,7 @@ import { BookingCalendar } from './BookingCalendar';
 import { UnifiedTransactionTable } from './UnifiedTransactionTable';
 import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
 import { Button } from '@/components/ui/button';
+import { BookingFilters } from './BookingFilters';
 
 type ViewMode = 'calendar' | 'list' | 'sales' | 'home-visits';
 
@@ -32,6 +33,15 @@ interface BookingViewsTabsProps {
   services: any[];
   businessLocation: string;
   businessCoordinates?: { lat: number; lng: number };
+
+  // Filters
+  searchTerm: string;
+  onSearchChange: (v: string) => void;
+  statusFilter: string;
+  onStatusChange: (v: string) => void;
+  paymentFilter: string;
+  onPaymentChange: (v: string) => void;
+  onRefreshAll: () => void;
 }
 
 export function BookingViewsTabs({
@@ -50,27 +60,83 @@ export function BookingViewsTabs({
   services,
   businessLocation,
   businessCoordinates,
+  searchTerm,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  paymentFilter,
+  onPaymentChange,
+  onRefreshAll,
 }: BookingViewsTabsProps) {
+  const isBookingView = viewMode === 'calendar' || viewMode === 'list' || viewMode === 'home-visits';
+  const statusOptions = isBookingView
+    ? [
+        { value: 'all', label: 'All Status' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'confirmed', label: 'Confirmed' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ]
+    : [
+        { value: 'all', label: 'All Status' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+        { value: 'refunded', label: 'Refunded' },
+      ];
+
+  const paymentOptions = isBookingView
+    ? [
+        { value: 'all', label: 'All Payments' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'paid', label: 'Paid' },
+        { value: 'refunded', label: 'Refunded' },
+      ]
+    : [
+        { value: 'all', label: 'All Payments' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'paid', label: 'Paid' },
+        { value: 'partial', label: 'Partial' },
+        { value: 'refunded', label: 'Refunded' },
+      ];
+
   return (
     <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as ViewMode)}>
-      <TabsList>
-        <TabsTrigger value="calendar">
-          <Calendar className="h-4 w-4 mr-2" />
-          Calendar
-        </TabsTrigger>
-        <TabsTrigger value="list">
-          <List className="h-4 w-4 mr-2" />
-          Booking
-        </TabsTrigger>
-        <TabsTrigger value="sales">
-          <DollarSign className="h-4 w-4 mr-2" />
-          Sales
-        </TabsTrigger>
-        <TabsTrigger value="home-visits">
-          <MapPin className="h-4 w-4 mr-2" />
-          Home Visits
-        </TabsTrigger>
-      </TabsList>
+      <Card>
+        <CardHeader className="pb-2">
+          <TabsList>
+            <TabsTrigger value="calendar">
+              <Calendar className="h-4 w-4 mr-2" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="list">
+              <List className="h-4 w-4 mr-2" />
+              Booking
+            </TabsTrigger>
+            <TabsTrigger value="sales">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Sales
+            </TabsTrigger>
+            <TabsTrigger value="home-visits">
+              <MapPin className="h-4 w-4 mr-2" />
+              Home Visits
+            </TabsTrigger>
+          </TabsList>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <BookingFilters
+            searchTerm={searchTerm}
+            onSearchChange={onSearchChange}
+            statusFilter={statusFilter}
+            onStatusChange={onStatusChange}
+            paymentFilter={paymentFilter}
+            onPaymentChange={onPaymentChange}
+            onRefresh={onRefreshAll}
+            statusOptions={statusOptions}
+            paymentOptions={paymentOptions}
+          />
+        </CardContent>
+      </Card>
 
       {/* Calendar View */}
       <TabsContent value="calendar" className="mt-4">
