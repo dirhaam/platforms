@@ -730,7 +730,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                         <p className="text-xs text-amber-800 font-semibold mb-1">⚠️ Konfigurasi Tidak Lengkap</p>
                         <ul className="text-xs text-amber-700 space-y-1">
                           {form.travelSurcharge.baseTravelSurcharge === 0 && (
-                            <li>• Base Travel Surcharge belum diisi (harus > 0)</li>
+                            <li>• Base Travel Surcharge belum diisi (harus &gt; 0)</li>
                           )}
                           {(form.travelSurcharge.minTravelDistance === undefined || form.travelSurcharge.minTravelDistance === null) && (
                             <li>• Min Distance belum diisi (jarak yang termasuk dalam base charge)</li>
