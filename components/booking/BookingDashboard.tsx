@@ -13,10 +13,10 @@ import { BookingCalendar } from './BookingCalendar';
 import { NewBookingPOS } from './NewBookingPOS';
 import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
 import { Calendar, List, Search, Plus, Filter, DollarSign, TrendingUp, CreditCard, Users, MoreVertical, Eye, Printer, Edit, Trash2, MapPin } from 'lucide-react';
+import { UnifiedTransactionTable } from './UnifiedTransactionTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { QuickSalesPOS } from '@/components/sales/QuickSalesPOS';
-import { SalesTransactionsTable } from '@/components/sales/SalesTransactionsTable';
 import { SalesTransactionPanel } from '@/components/sales/SalesTransactionPanel';
 import { SalesTransaction, SalesSummary } from '@/types/sales';
 import { Invoice } from '@/types/invoice';
@@ -599,68 +599,19 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         <TabsContent value="list" className="mt-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-4 font-medium">Booking</th>
-                      <th className="text-left py-2 px-4 font-medium">Customer</th>
-                      <th className="text-left py-2 px-4 font-medium">Service</th>
-                      <th className="text-left py-2 px-4 font-medium">Date & Time</th>
-                      <th className="text-left py-2 px-4 font-medium">Status</th>
-                      <th className="text-left py-2 px-4 font-medium">Payment</th>
-                      <th className="text-left py-2 px-4 font-medium">Amount</th>
-                      <th className="text-left py-2 px-4 font-medium">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBookings.map(booking => (
-                      <tr key={booking.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">{booking.bookingNumber}</td>
-                        <td className="py-3 px-4">{booking.customer?.name}</td>
-                        <td className="py-3 px-4">{booking.service?.name}</td>
-                        <td className="py-3 px-4">
-                          {new Date(booking.scheduledAt).toLocaleString('id-ID')}
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge className={
-                            booking.status === BookingStatus.CONFIRMED
-                              ? 'bg-green-100 text-green-800'
-                              : booking.status === BookingStatus.PENDING
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : booking.status === BookingStatus.COMPLETED
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }>
-                            {booking.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge className={
-                            booking.paymentStatus === PaymentStatus.PAID
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-orange-100 text-orange-800'
-                          }>
-                            {booking.paymentStatus}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 font-medium">
-                          Rp {booking.totalAmount.toLocaleString('id-ID')}
-                        </td>
-                        <td className="py-3 px-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleBookingClick(booking)}
-                          >
-                            View
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <UnifiedTransactionTable
+                data={filteredBookings}
+                type="booking"
+                renderActions={(item) => (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBookingClick(item as any)}
+                  >
+                    View
+                  </Button>
+                )}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -679,15 +630,15 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
               {loadingSales ? (
                 <p className="text-sm text-gray-600">Loading sales data...</p>
               ) : (
-                <SalesTransactionsTable
-                  transactions={salesTransactions}
-                  emptyMessage="No sales transactions found."
+                <UnifiedTransactionTable
+                  data={salesTransactions}
+                  type="sales"
                   renderActions={(transaction) => (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setSelectedSalesTransaction(transaction);
+                        setSelectedSalesTransaction(transaction as any);
                         setShowSalesDetailsDialog(true);
                       }}
                     >
