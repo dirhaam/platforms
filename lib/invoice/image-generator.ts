@@ -1,5 +1,6 @@
 import { Invoice, PaymentStatus, getPaymentStatus } from '@/types/invoice';
 import { maskPhoneNumberCompact } from '@/lib/utils/phone-masking';
+import { JSDOM } from 'jsdom';
 
 export class InvoiceImageGenerator {
   private formatCurrency = (value: number) => `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
@@ -8,90 +9,35 @@ export class InvoiceImageGenerator {
   async generateInvoiceImage(invoice: Invoice): Promise<Buffer> {
     const html = this.generateInvoiceHTML(invoice);
     
-    // For serverless environment, use headless Chrome if available
-    // Fallback to simple text-based image if not available
     try {
-      // Try puppeteer-based approach first
-      const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      const { default: html2canvas } = await import('html2canvas');
+      const dom = new JSDOM(html, { url: 'http://localhost' });
+      
+      const element = dom.window.document.querySelector('.invoice-container');
+      if (!element) {
+        throw new Error('Invoice container not found');
+      }
+      
+      const canvas = await html2canvas(element as any, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true,
       });
       
-      const page = await browser.newPage();
-      await page.setContent(html);
-      await page.setViewport({ width: 320, height: 800, deviceScaleFactor: 2 });
-      
-      // Wait for images to load (if any)
-      await page.waitForTimeout(1000);
-      
-      const screenshot = await page.screenshot({
-        type: 'png',
-        fullPage: true
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            blob.arrayBuffer().then(ab => resolve(Buffer.from(ab)));
+          } else {
+            reject(new Error('Failed to convert canvas to blob'));
+          }
+        }, 'image/png');
       });
-      
-      await browser.close();
-      return screenshot as Buffer;
-      
     } catch (error) {
-      console.log('Puppeteer not available, using text-based fallback');
-      
-      // Fallback: Simple text-based image representation
-      return this.generateTextImage(invoice);
+      console.error('Failed to generate invoice image:', error);
+      throw new Error('Failed to generate invoice image');
     }
-  }
-
-  private async generateTextImage(invoice: Invoice): Promise<Buffer> {
-    // For fallback, create a simple text representation as image
-    // In practice, this would rarely be used as most serverless environments support puppeteer
-    const branding = invoice?.branding || {};
-    
-    const content = `
-╔══════════════════════════════════════════════╗
-║               ${branding?.headerText?.padEnd(32, ' ').substring(0, 32) || 'INVOICE'}               ║
-╠══════════════════════════════════════════════╣
-║ Invoice: ${invoice.invoiceNumber.padEnd(25, ' ')}║
-║ Tanggal: ${this.formatDate(invoice.issueDate).padEnd(21, ' ')}  ║
-║ Status: ${this.getPaymentStatusLabel(invoice).padEnd(20, '')}     ║
-${invoice.cashierName ? `║ Kasir: ${invoice.cashierName.padEnd(23, '')}      ║` : ''}
-╠══════════════════════════════════════════════╣
-║ Customer: ${invoice.customer?.name?.padEnd(31, ' ')}║
-${invoice.customer?.phone ? `║ Phone: ${maskPhoneNumberCompact(invoice.customer.phone).padEnd(30, '')}  ║` : ''}
-╠══════════════════════════════════════════════╣
-║ Items:                                          ║
-${invoice.items.slice(0, 5).map((item, i) => {
-  const itemPrice = this.formatCurrency(item.totalPrice);
-  const itemDesc = `${item.description}`.padEnd(23, ' ');
-  return `║ ${itemDesc} ${itemPrice.padEnd(12, '')} ║`;
-}).join('')}
-${invoice.items.length > 5 ? `║ ... ${invoice.items.length - 5} more items           ║` : ''}    
-╠══════════════════════════════════════════════╣
-║ Subtotal:   ${this.formatCurrency(invoice.subtotal).padEnd(14, '')}  ║
-${Number(invoice.discountAmount ?? 0) > 0 ? `║ Discount:   -${this.formatCurrency(invoice.discountAmount).padEnd(13, '')} ║` : ''}
-${Number(invoice.serviceChargeAmount ?? 0) > 0 ? `║ Service:   ${this.formatCurrency(invoice.serviceChargeAmount).padEnd(15, '')}  ║` : ''}
-║ Total:     ${this.formatCurrency(invoice.totalAmount).padEnd(14, '')} ║
-╠══════════════════════════════════════════════╣
-║        ${branding?.footerText?.padEnd(38, ' ') || 'Terima kasih atas kunjungan Anda!'.padEnd(38, ' ')}        ║
-╚══════════════════════════════════════════════╝
-    `.trim();
-    
-    // Convert text to image
-    import('canvas').then(({ createCanvas, loadImage }) => {
-      const canvas = createCanvas(400, 500);
-      const ctx = canvas.getContext('2d');
-      
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.fillStyle = '#111827';
-      ctx.font = '12px monospace';
-      ctx.fillText(content, 10, 20);
-      
-      return canvas.toBuffer('image/png');
-    }).catch(() => {
-      // Final fallback - return text buffer (will show as text in WhatsApp)
-      return Buffer.from(content, 'utf8');
-    });
   }
 
   generateInvoiceHTML(invoice: Invoice): string {
