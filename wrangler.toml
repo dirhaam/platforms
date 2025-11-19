@@ -3,7 +3,7 @@ main = ".workers/worker.js"
 compatibility_date = "2024-01-01"
 
 # Enable Node.js compatibility
-node_compat = true
+compatibility_flags = ["nodejs_compat"]
 
 # Set placement mode to smart
 [placement]
