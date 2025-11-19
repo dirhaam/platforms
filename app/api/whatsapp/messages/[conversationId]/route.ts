@@ -77,7 +77,16 @@ export async function GET(
       readAt: message.readAt?.toISOString?.() || null,
     }));
 
-    return NextResponse.json({ messages: response });
+    const debugResponse = {
+        messages: response,
+        debug: {
+          conversationId,
+          tenantId,
+          apiMessagesCount: apiMessages.length,
+          note: 'Debug info included - check browser console'
+        }
+      };
+      return NextResponse.json(debugResponse);
   } catch (error) {
     console.error('Error fetching WhatsApp messages:', error);
     // Don't break the UI on provider failure; return empty list gracefully
