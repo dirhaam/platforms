@@ -37,10 +37,11 @@ export async function POST(
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
-    // Generate PDF with improved formatting
+    // For now, use PDF but send as image type for better display
+    // Future improvement: Implement proper PNG generation
     const pdfGenerator = new InvoicePDFGenerator();
     const pdfData = await pdfGenerator.generateInvoicePDF(invoice);
-    const pdfBytes = new Uint8Array(pdfData);
+    const imageBytes = new Uint8Array(pdfData);
 
     const devices = await whatsappService.getTenantDevices(tenant.id);
     const activeDevice = devices.find((device) => device.status === 'connected') || devices[0];
@@ -53,20 +54,19 @@ export async function POST(
     }
 
     const baseMessage = body.message?.trim() || '';
-    const invoiceDetails = `\n\nInvoice Details:\nNo: ${invoice.invoiceNumber}\nTotal: Rp ${invoice.totalAmount.toLocaleString('id-ID')}\nTanggal: ${invoice.issueDate?.toLocaleDateString('id-ID')}`;
-    const fullMessage = baseMessage + invoiceDetails;
+    const fullMessage = baseMessage;
 
     const sentMessage = await whatsappService.sendMessage(
       tenant.id,
       activeDevice.id,
       targetPhone,
       {
-        type: 'document',
+        type: 'image',
         content: baseMessage || `Invoice ${invoice.invoiceNumber}`,
-        caption: fullMessage,
-        filename: `invoice-${invoice.invoiceNumber}.pdf`,
-        mimeType: 'application/pdf',
-        fileData: pdfBytes,
+        caption: fullMessage + (fullMessage ? '\n\n' : '') + `Invoice: ${invoice.invoiceNumber}\nNo: ${invoice.invoiceNumber}\nTotal: Rp ${invoice.totalAmount.toLocaleString('id-ID')}\nTanggal: ${invoice.issueDate?.toLocaleDateString('id-ID')}`,
+        filename: `invoice-${invoice.invoiceNumber}.png`,
+        mimeType: 'image/png',
+        fileData: imageBytes,
       }
     );
 
