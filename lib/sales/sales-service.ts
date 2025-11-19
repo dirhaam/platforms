@@ -410,8 +410,8 @@ export class SalesService {
       const supabase = getSupabaseClient();
       let query = supabase.from('sales_transactions').select(`
         *,
-        customers!inner(id, name, email, phone),
-        staff!inner(id, name, email)
+        customers(id, name, email, phone),
+        staff(id, name, email)
       `);
 
       query = query.eq('tenant_id', tenantId);
