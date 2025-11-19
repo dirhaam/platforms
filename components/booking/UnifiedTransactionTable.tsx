@@ -112,15 +112,18 @@ export function UnifiedTransactionTable({
             <th className="text-left py-3 px-4 font-semibold">ID</th>
             <th className="text-left py-3 px-4 font-semibold">Date</th>
             <th className="text-left py-3 px-4 font-semibold">Customer</th>
-            {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Staff</th>}
             <th className="text-left py-3 px-4 font-semibold">Service</th>
             <th className="text-left py-3 px-4 font-semibold">Amount</th>
             <th className="text-left py-3 px-4 font-semibold">Paid</th>
             <th className="text-left py-3 px-4 font-semibold">Payment Method</th>
-            <th className="text-left py-3 px-4 font-semibold">Payment Status</th>
-            {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Balance</th>}
+            {type === 'booking' && (
+              <>
+                <th className="text-left py-3 px-4 font-semibold">Payment Status</th>
+                <th className="text-left py-3 px-4 font-semibold">Balance</th>
+                <th className="text-left py-3 px-4 font-semibold">Status</th>
+              </>
+            )}
             {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Source</th>}
-            <th className="text-left py-3 px-4 font-semibold">Status</th>
             {renderActions && <th className="text-right py-3 px-4 font-semibold">Action</th>}
           </tr>
         </thead>
@@ -153,13 +156,6 @@ export function UnifiedTransactionTable({
                     {isBookingItem ? item.customer?.name : item.customer?.name || '-'}
                   </td>
 
-                  {/* Staff Column (Sales only) */}
-                  {type === 'sales' && (
-                    <td className="py-3 px-4">
-                      {isSalesItem ? item.staffName || '-' : '-'}
-                    </td>
-                  )}
-
                   {/* Service Column */}
                   <td className="py-3 px-4">
                     {isBookingItem ? item.service?.name : item.serviceName}
@@ -185,44 +181,50 @@ export function UnifiedTransactionTable({
                     </Badge>
                   </td>
 
-                  {/* Payment Status Column */}
-                  <td className="py-3 px-4">
-                    <Badge className={getPaymentStatusColor(item.paymentStatus || 'pending')}>
-                      {item.paymentStatus ? item.paymentStatus.charAt(0).toUpperCase() + item.paymentStatus.slice(1) : 'Pending'}
-                    </Badge>
-                  </td>
-
-                  {/* Balance Column (Booking only) */}
+                  {/* Booking-only columns */}
                   {type === 'booking' && (
-                    <td className="py-3 px-4">
-                      {isBookingItem 
-                        ? formatCurrency(item.remainingBalance || 0)
-                        : '-'
-                      }
-                    </td>
-                  )}
-
-                  {/* Source Column (Sales only) */}
-                  {type === 'sales' && (
-                    <td className="py-3 px-4">
-                      {isSalesItem && (
-                        <Badge className={
-                          item.source === SalesTransactionSource.ON_THE_SPOT
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-purple-100 text-purple-800'
-                        }>
-                          {item.source === SalesTransactionSource.ON_THE_SPOT ? 'On-the-Spot' : 'From Booking'}
+                    <>
+                      {/* Payment Status Column */}
+                      <td className="py-3 px-4">
+                        <Badge className={getPaymentStatusColor(item.paymentStatus || 'pending')}>
+                          {item.paymentStatus ? item.paymentStatus.charAt(0).toUpperCase() + item.paymentStatus.slice(1) : 'Pending'}
                         </Badge>
-                      )}
-                    </td>
+                      </td>
+
+                      {/* Balance Column */}
+                      <td className="py-3 px-4">
+                        {isBookingItem 
+                          ? formatCurrency(item.remainingBalance || 0)
+                          : '-'
+                        }
+                      </td>
+
+                      {/* Status Column */}
+                      <td className="py-3 px-4">
+                        <Badge className={getStatusColor(item.status, type)}>
+                          {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
+                        </Badge>
+                      </td>
+                    </>
                   )}
 
-                  {/* Status Column */}
-                  <td className="py-3 px-4">
-                    <Badge className={getStatusColor(item.status, type)}>
-                      {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
-                    </Badge>
-                  </td>
+                  {/* Sales-only columns */}
+                  {type === 'sales' && (
+                    <>
+                      {/* Source Column */}
+                      <td className="py-3 px-4">
+                        {isSalesItem && (
+                          <Badge className={
+                            item.source === SalesTransactionSource.ON_THE_SPOT
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
+                          }>
+                            {item.source === SalesTransactionSource.ON_THE_SPOT ? 'On-the-Spot' : 'From Booking'}
+                          </Badge>
+                        )}
+                      </td>
+                    </>
+                  )}
 
                   {/* Action Column */}
                   {renderActions && (
