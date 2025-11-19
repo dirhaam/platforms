@@ -92,14 +92,15 @@ export class InvoiceSettingsService {
           ? {
               baseTravelSurcharge: travelSurchargeData.base_travel_surcharge ?? 0,
               perKmSurcharge: travelSurchargeData.per_km_surcharge ?? 5000,
-              minTravelDistance: travelSurchargeData.min_travel_distance ?? undefined,
+              minTravelDistance: travelSurchargeData.min_travel_distance ?? 0,
               maxTravelDistance: travelSurchargeData.max_travel_distance ?? undefined,
               travelSurchargeRequired: travelSurchargeData.travel_surcharge_required ?? true,
             }
           : {
               baseTravelSurcharge: 0,
               perKmSurcharge: 5000,
-              travelSurchargeRequired: true,
+              minTravelDistance: 0,
+              travelSurchargeRequired: false,
             },
         additionalFees: (feesData || []).map(fee => ({
           id: fee.id,

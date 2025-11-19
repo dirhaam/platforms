@@ -454,16 +454,25 @@ export class LocationService {
     }
 
     // Calculate surcharge based on distance
-    // Formula: 
-    //   - If distance <= minTravelDistance: charge only base amount
-    //   - If distance > minTravelDistance: base + ((distance - minTravelDistance) × perKm)
+    // 
+    // Example: baseTravelSurcharge=25000, perKmSurcharge=5000, minTravelDistance=5km
+    // - 3km: 25000 (base covers up to 5km)
+    // - 5km: 25000 (still within base distance)
+    // - 7km: 25000 + ((7-5)*5000) = 35000 (2km excess × 5000/km)
+    // - 10km: 25000 + ((10-5)*5000) = 50000 (5km excess × 5000/km)
+    //
+    // IMPORTANT: The logic is:
+    //   1. Always charge the base amount first (covers distances up to minTravelDistance)
+    //   2. For distances beyond minTravelDistance, add per-km charges for the excess
+    
     const base = settings.baseTravelSurcharge || 0;
     const perKm = settings.perKmSurcharge || 5000;
     const minDist = settings.minTravelDistance || 0;
 
     let calculatedSurcharge = base;
     
-    // If distance exceeds minimum, add per-km charge for excess distance
+    // If actual distance exceeds the minimum distance covered by base charge,
+    // add per-km rate for the excess distance
     if (distance > minDist) {
       const excessDistance = distance - minDist;
       calculatedSurcharge = base + (excessDistance * perKm);

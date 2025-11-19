@@ -151,6 +151,19 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
     [form, initialForm]
   );
 
+  // Validate travel surcharge settings
+  const isTravelSurchargeValid = useMemo(() => {
+    if (!form.travelSurcharge.travelSurchargeRequired) {
+      return true; // Not required, so always valid
+    }
+    
+    // If required, must have these fields configured
+    const hasBase = form.travelSurcharge.baseTravelSurcharge > 0;
+    const hasMinDistance = form.travelSurcharge.minTravelDistance !== undefined && form.travelSurcharge.minTravelDistance !== null;
+    
+    return hasBase && hasMinDistance;
+  }, [form.travelSurcharge]);
+
   const handleBrandingChange = (field: keyof BrandingSettings) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm(prev => ({
@@ -604,7 +617,16 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
 
                 {/* Travel Surcharge */}
                 <div className="space-y-2 p-4 border rounded bg-blue-50">
-                  <Label className="font-semibold text-blue-900">Travel Surcharge (Home Visit)</Label>
+                  <div className="flex items-start justify-between">
+                    <Label className="font-semibold text-blue-900">Travel Surcharge (Home Visit)</Label>
+                    <span className={`text-xs px-2 py-1 rounded ${form.travelSurcharge.travelSurchargeRequired ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
+                      {form.travelSurcharge.travelSurchargeRequired ? 'Aktif' : 'Nonaktif'}
+                    </span>
+                  </div>
+                  
+                  <p className="text-xs text-blue-800 mb-3">
+                    Ketika diaktifkan, surcharge akan otomatis dihitung untuk semua home visit bookings berdasarkan jarak perjalanan.
+                  </p>
                   
                   <div className="space-y-3">
                     <div>
@@ -647,7 +669,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="min-distance">Min Distance (km) - Optional</Label>
+                        <Label htmlFor="min-distance">Min Distance (km) - Covered by Base</Label>
                         <Input
                           id="min-distance"
                           type="number"
@@ -660,8 +682,11 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                             )
                           }
                           disabled={loading || saving}
-                          placeholder="Contoh: 1.5"
+                          placeholder="Contoh: 5 (jarak yang sudah termasuk dalam base charge)"
                         />
+                        <p className="text-xs text-gray-600 mt-1">
+                          Jarak maksimal yang termasuk dalam Base Travel Surcharge. Contoh: Jika 5km, maka jarak 3km tetap dikenakan Base Surcharge penuh.
+                        </p>
                       </div>
                       <div>
                         <Label htmlFor="max-distance">Max Distance (km) - Optional</Label>
@@ -699,6 +724,20 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                     <p className="text-xs text-gray-600">
                       Jika diaktifkan, surcharge otomatis dihitung untuk semua home visit bookings.
                     </p>
+
+                    {form.travelSurcharge.travelSurchargeRequired && (form.travelSurcharge.baseTravelSurcharge === 0 || form.travelSurcharge.minTravelDistance === undefined || form.travelSurcharge.minTravelDistance === null) && (
+                      <div className="bg-amber-50 border border-amber-300 rounded p-3 mt-3">
+                        <p className="text-xs text-amber-800 font-semibold mb-1">⚠️ Konfigurasi Tidak Lengkap</p>
+                        <ul className="text-xs text-amber-700 space-y-1">
+                          {form.travelSurcharge.baseTravelSurcharge === 0 && (
+                            <li>• Base Travel Surcharge belum diisi (harus > 0)</li>
+                          )}
+                          {(form.travelSurcharge.minTravelDistance === undefined || form.travelSurcharge.minTravelDistance === null) && (
+                            <li>• Min Distance belum diisi (jarak yang termasuk dalam base charge)</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -843,8 +882,20 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                   </div>
                 </div>
 
-                <div className="text-xs text-gray-600 space-y-1 border-t pt-3">
-                  <p>
+                <div className="text-xs text-gray-600 space-y-2 border-t pt-3">
+                  <p className="font-semibold text-gray-700">Travel Surcharge Calculation Example:</p>
+                  {form.travelSurcharge.baseTravelSurcharge > 0 && (
+                    <>
+                      <p>Jika Min Distance = {form.travelSurcharge.minTravelDistance || 0}km, Base = Rp {form.travelSurcharge.baseTravelSurcharge.toLocaleString('id-ID')}, Per KM = Rp {form.travelSurcharge.perKmSurcharge.toLocaleString('id-ID')}:</p>
+                      <ul className="list-disc list-inside space-y-1 ml-2">
+                        <li>3km: Rp {form.travelSurcharge.baseTravelSurcharge.toLocaleString('id-ID')} (dalam base)</li>
+                        <li>5km: Rp {form.travelSurcharge.baseTravelSurcharge.toLocaleString('id-ID')} (masih dalam base)</li>
+                        <li>7km: Rp {(form.travelSurcharge.baseTravelSurcharge + ((7 - (form.travelSurcharge.minTravelDistance || 0)) * form.travelSurcharge.perKmSurcharge)).toLocaleString('id-ID')} (base + 2km excess)</li>
+                        <li>10km: Rp {(form.travelSurcharge.baseTravelSurcharge + ((10 - (form.travelSurcharge.minTravelDistance || 0)) * form.travelSurcharge.perKmSurcharge)).toLocaleString('id-ID')} (base + 5km excess)</li>
+                      </ul>
+                    </>
+                  )}
+                  <p className="border-t pt-2 mt-2">
                     <strong>Include Mode:</strong> Semua biaya ditambah ke total (dibayarkan bersama)
                   </p>
                   <p>
@@ -859,7 +910,8 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
         <div className="flex flex-wrap items-center gap-3 border-t pt-4 mt-6">
           <Button
             onClick={handleSave}
-            disabled={loading || saving || !hasChanges}
+            disabled={loading || saving || !hasChanges || !isTravelSurchargeValid}
+            title={!isTravelSurchargeValid ? 'Silakan lengkapi konfigurasi Travel Surcharge terlebih dahulu' : ''}
           >
             {saving ? 'Menyimpan...' : 'Simpan Pengaturan'}
           </Button>
