@@ -56,7 +56,6 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
         formData.append('file', blob, message.filename || defaultName);
 
-        const response = await this.makeRequest('/send/file', {
         const endpoint =
           message.type === 'image' ? '/send/image' :
           message.type === 'video' ? '/send/video' :
@@ -64,6 +63,7 @@ export class WhatsAppClient implements WhatsAppApiClient {
           '/send/file';
 
         const response = await this.makeRequest(endpoint, {
+          method: 'POST',
           body: formData,
           isFormData: true,
         });
