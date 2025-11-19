@@ -88,8 +88,21 @@ export async function GET(
       };
       return NextResponse.json(debugResponse);
   } catch (error) {
-    console.error('Error fetching WhatsApp messages:', error);
+    console.error('Error fetching WhatsApp messages:', {
+      conversationId: chatJid,
+      tenantId,
+      errorMessage: error instanceof Error ? error.message : error,
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     // Don't break the UI on provider failure; return empty list gracefully
-    return NextResponse.json({ messages: [], error: 'provider_error' });
+    return NextResponse.json({ 
+      messages: [], 
+      error: 'provider_error',
+      debug: {
+        conversationId: chatJid,
+        tenantId,
+        errorMessage: error instanceof Error ? error.message : error
+      }
+    });
   }
 }
