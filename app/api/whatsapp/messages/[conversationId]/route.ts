@@ -88,9 +88,13 @@ export async function GET(
       };
       return NextResponse.json(debugResponse);
   } catch (error) {
+    // Re-define these variables for catch scope type safety
+    const catchConversationId = conversationId;
+    const catchTenantId = tenantId;
+    
     console.error('Error fetching WhatsApp messages:', {
-      conversationId,
-      tenantId,
+      conversationId: catchConversationId,
+      tenantId: catchTenantId,
       errorMessage: error instanceof Error ? error.message : error,
       errorStack: error instanceof Error ? error.stack : undefined
     });
@@ -99,8 +103,8 @@ export async function GET(
       messages: [], 
       error: 'provider_error',
       debug: {
-        conversationId,
-        tenantId,
+        conversationId: catchConversationId,
+        tenantId: catchTenantId,
         errorMessage: error instanceof Error ? error.message : error
       }
     });
