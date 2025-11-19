@@ -232,10 +232,10 @@ export class WhatsAppClient implements WhatsAppApiClient {
       const response = await this.makeRequest(`/chats?limit=50&offset=0`);
 
       // Normalize response shape from different providers
-      const raw = Array.isArray(response?.data)
+      const raw = Array.isArray(response?.results?.data)
+        ? response.results.data
+        : Array.isArray(response?.data)
         ? response.data
-        : Array.isArray(response?.results)
-        ? response.results
         : Array.isArray(response?.data?.chats)
         ? response.data.chats
         : Array.isArray(response?.chats)
@@ -251,10 +251,15 @@ export class WhatsAppClient implements WhatsAppApiClient {
           : chat.phone || chat.number || chatJid || '';
 
         const ts = chat.timestamp ?? chat.last_message_time ?? chat.lastMessageTime;
-        // detect seconds vs milliseconds
-        const dateMs = typeof ts === 'number' && ts > 0
-          ? (ts > 1e12 ? ts : ts * 1000)
-          : Date.now();
+        let dateMs: number;
+        if (typeof ts === 'number' && ts > 0) {
+          dateMs = ts > 1e12 ? ts : ts * 1000;
+        } else if (typeof ts === 'string') {
+          const parsed = Date.parse(ts);
+          dateMs = isNaN(parsed) ? Date.now() : parsed;
+        } else {
+          dateMs = Date.now();
+        }
 
         return {
           id: chatJid || (phone ? `${phone}@s.whatsapp.net` : `chat_${Math.random().toString(36).slice(2)}`),
@@ -287,10 +292,10 @@ export class WhatsAppClient implements WhatsAppApiClient {
       // Call actual WhatsApp API endpoint: GET /chat/{chat_jid}/messages
       const response = await this.makeRequest(`/chat/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=0`);
 
-      const raw = Array.isArray(response?.data)
+      const raw = Array.isArray(response?.results?.data)
+        ? response.results.data
+        : Array.isArray(response?.data)
         ? response.data
-        : Array.isArray(response?.results)
-        ? response.results
         : Array.isArray(response?.messages)
         ? response.messages
         : [];
@@ -301,7 +306,15 @@ export class WhatsAppClient implements WhatsAppApiClient {
         const type = (msg.type || (msg.media_type ? String(msg.media_type).toLowerCase() : 'text')) as WhatsAppMessage['type'];
         const fromMe = msg.from_me ?? msg.fromMe ?? msg.is_outgoing ?? false;
         const timestamp = msg.timestamp ?? msg.sent_at ?? msg.time;
-        const tsDate = typeof timestamp === 'number' && timestamp > 0 ? new Date((timestamp > 1e12 ? timestamp : timestamp * 1000)) : new Date();
+        let tsDate: Date;
+        if (typeof timestamp === 'number' && timestamp > 0) {
+          tsDate = new Date(timestamp > 1e12 ? timestamp : timestamp * 1000);
+        } else if (typeof timestamp === 'string') {
+          const p = Date.parse(timestamp);
+          tsDate = isNaN(p) ? new Date() : new Date(p);
+        } else {
+          tsDate = new Date();
+        }
 
         return {
           id: msg.id || msg.message_id || `msg_${Math.random().toString(36).slice(2)}`,
@@ -318,8 +331,8 @@ export class WhatsAppClient implements WhatsAppApiClient {
           errorMessage: msg.error_message,
           metadata: msg.metadata || { raw: msg },
           sentAt: tsDate,
-          deliveredAt: msg.delivered_at ? new Date((msg.delivered_at > 1e12 ? msg.delivered_at : msg.delivered_at * 1000)) : undefined,
-          readAt: msg.read_at ? new Date((msg.read_at > 1e12 ? msg.read_at : msg.read_at * 1000)) : undefined
+          deliveredAt: msg.delivered_at ? new Date((msg.delivered_at > 1e12 ? msg.delivered_at : msg.delivered_at * 1000)) : (msg.deliveredAt ? new Date(msg.deliveredAt) : undefined),
+          readAt: msg.read_at ? new Date((msg.read_at > 1e12 ? msg.read_at : msg.read_at * 1000)) : (msg.readAt ? new Date(msg.readAt) : undefined)
         } as WhatsAppMessage;
       });
     } catch (error) {
