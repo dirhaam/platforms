@@ -206,6 +206,27 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     setWhatsappLoading(true);
     setWhatsappMessage('');
 
+    // Generate template WhatsApp message
+    const paymentStatus = getPaymentStatus(displayInvoice);
+    const statusLabels = {
+      [PaymentStatus.UNPAID]: 'belum dibayar',
+      [PaymentStatus.PARTIAL_PAID]: 'sebagian dibayar',
+      [PaymentStatus.PAID]: 'sudah lunas',
+      [PaymentStatus.OVERDUE]: 'jatuh tempo'
+    };
+
+    let message = `Halo ${displayInvoice.customer.name}!\n\n` +
+      `Berikut invoice ${displayInvoice.invoiceNumber} Anda:\n` +
+      `• Total: Rp ${displayInvoice.totalAmount.toLocaleString('id-ID')}\n` +
+      `• Status: ${statusLabels[paymentStatus]}\n` +
+      `• Tanggal: ${displayInvoice.issueDate?.toLocaleDateString('id-ID')}\n`;
+
+    if (paymentStatus === PaymentStatus.UNPAID || paymentStatus === PaymentStatus.OVERDUE) {
+      message += `\nMohon segera melakukan pembayaran. Terima kasih! 🙏`;
+    } else if (paymentStatus === PaymentStatus.PARTIAL_PAID) {
+      message += `\nSisa pembayaran: Rp ${displayInvoice.remainingBalance?.toLocaleString('id-ID')}\n\nMohon segera melunasi. Terima kasih! 🙏`;
+    }
+
     try {
       const response = await fetch(`/api/invoices/${displayInvoice.id}/whatsapp`, {
         method: 'POST',
@@ -215,7 +236,7 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
         },
         body: JSON.stringify({
           phoneNumber: displayInvoice.customer.whatsappNumber || displayInvoice.customer.phone,
-          message: `Halo ${displayInvoice.customer.name}, berikut invoice ${displayInvoice.invoiceNumber} sebesar Rp ${displayInvoice.totalAmount.toLocaleString('id-ID')}.`
+          message: message
         })
       });
 
