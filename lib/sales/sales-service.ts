@@ -408,7 +408,11 @@ export class SalesService {
   async getTransactions(tenantId: string, filters?: SalesFilters): Promise<SalesTransaction[]> {
     try {
       const supabase = getSupabaseClient();
-      let query = supabase.from('sales_transactions').select();
+      let query = supabase.from('sales_transactions').select(`
+        *,
+        customers!inner(id, name, email, phone),
+        staff!inner(id, name, email)
+      `);
 
       query = query.eq('tenant_id', tenantId);
 
@@ -475,6 +479,17 @@ export class SalesService {
 
       return data.map(txn => {
         const transaction = mapToSalesTransaction(txn, paymentsMap.get(txn.id) || []);
+        
+        // Add customer data
+        if (txn.customers) {
+          transaction.customer = txn.customers;
+        }
+        
+        // Add staff name if available
+        if (txn.staff && txn.staff.name) {
+          transaction.staffName = txn.staff.name;
+        }
+        
         // Add items to transaction
         const items = itemsMap.get(txn.id) || [];
         if (items.length > 0) {
