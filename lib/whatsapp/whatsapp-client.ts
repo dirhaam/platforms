@@ -142,6 +142,34 @@ export class WhatsAppClient implements WhatsAppApiClient {
     }
   }
 
+  async getDevices(): Promise<WhatsAppDevice[]> {
+    try {
+      const response = await this.makeRequest('/app/devices');
+      const devices = Array.isArray(response?.results) ? response.results : [];
+
+      if (!devices.length) {
+        return [];
+      }
+
+      return devices.map((entry: any, idx: number) => ({
+        id: entry?.id || `device_${idx}`,
+        tenantId: this.tenantId,
+        endpointId: this.endpointId,
+        deviceName: entry?.name || `Device ${idx + 1}`,
+        phoneNumber: entry?.device,
+        status: entry ? 'connected' as const : 'disconnected',
+        lastSeen: new Date(),
+        reconnectAttempts: 0,
+        maxReconnectAttempts: 5,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }));
+    } catch (error) {
+      console.error('Error listing devices:', error);
+      return [];
+    }
+  }
+
   async generateQRCode(deviceId: string): Promise<string> {
     try {
       const response = await this.makeRequest('/app/login');

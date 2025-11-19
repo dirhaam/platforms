@@ -19,9 +19,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const devices = await whatsappService.getTenantDevices(tenantId);
+    // Prefer provider API (no DB dependency)
+    try {
+      const client = await whatsappService.getWhatsAppClient(tenantId);
+      if (client) {
+        // @ts-expect-error getDevices added to client
+        const devices = await (client as any).getDevices?.();
+        if (Array.isArray(devices) && devices.length >= 0) {
+          return NextResponse.json({ devices });
+        }
+      }
+    } catch (e) {
+      console.warn('[WhatsApp] Fallback to cached devices due to provider error');
+    }
 
-    return NextResponse.json({ devices });
+    // Fallback to cached devices (if any)
+    const cached = await whatsappService.getTenantDevices(tenantId);
+    return NextResponse.json({ devices: cached });
   } catch (error) {
     console.error('Error listing WhatsApp devices:', error);
     return NextResponse.json(

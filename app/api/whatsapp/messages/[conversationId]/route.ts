@@ -29,39 +29,29 @@ export async function GET(
       );
     }
 
-    let messages: any[] = [];
-
-    // Try to fetch from WhatsApp API if loadHistory is requested
-    if (loadHistory) {
-      try {
-        const client = await whatsappService.getWhatsAppClient(tenantId);
-        if (client) {
-          // conversationId should be chatJid (e.g., phone@s.whatsapp.net)
-          const apiMessages = await client.getMessages(conversationId, limit);
-          messages = apiMessages.map((msg: any) => ({
-            id: msg.id,
-            type: msg.type,
-            content: msg.content,
-            mediaUrl: msg.mediaUrl,
-            mediaCaption: msg.mediaCaption,
-            isFromCustomer: msg.isFromCustomer,
-            customerPhone: msg.customerPhone,
-            deliveryStatus: msg.deliveryStatus,
-            sentAt: msg.sentAt,
-            deliveredAt: msg.deliveredAt,
-            readAt: msg.readAt,
-          }));
-        }
-      } catch (apiError) {
-        console.error('Error fetching messages from WhatsApp API:', apiError);
-        // Continue with database fetch
-      }
+    const client = await whatsappService.getWhatsAppClient(tenantId);
+    if (!client) {
+      return NextResponse.json(
+        { error: 'WhatsApp endpoint not configured or unavailable for this tenant' },
+        { status: 503 }
+      );
     }
 
-    // If no messages from API, try database
-    if (messages.length === 0) {
-      messages = await whatsappService.getMessages(conversationId, limit, offset);
-    }
+    // Always fetch from provider (API-only mode)
+    const apiMessages = await client.getMessages(conversationId, limit);
+    const messages = apiMessages.map((msg: any) => ({
+      id: msg.id,
+      type: msg.type,
+      content: msg.content,
+      mediaUrl: msg.mediaUrl,
+      mediaCaption: msg.mediaCaption,
+      isFromCustomer: msg.isFromCustomer,
+      customerPhone: msg.customerPhone,
+      deliveryStatus: msg.deliveryStatus,
+      sentAt: msg.sentAt,
+      deliveredAt: msg.deliveredAt,
+      readAt: msg.readAt,
+    }));
 
     const response = messages.map((message) => ({
       id: message.id,

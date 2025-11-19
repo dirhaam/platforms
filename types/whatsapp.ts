@@ -102,6 +102,7 @@ export interface WhatsAppHealthCheck {
 export interface WhatsAppApiClient {
   sendMessage(deviceId: string, to: string, message: WhatsAppMessageData): Promise<WhatsAppMessage>;
   getDeviceStatus(deviceId: string): Promise<WhatsAppDevice>;
+  getDevices(): Promise<WhatsAppDevice[]>;
   generateQRCode(deviceId: string): Promise<string>;
   generatePairingCode(deviceId: string, phone?: string): Promise<string>;
   disconnectDevice(deviceId: string): Promise<void>;

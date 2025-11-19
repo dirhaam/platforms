@@ -136,45 +136,48 @@ export function WhatsAppUnifiedContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">WhatsApp</h1>
-          <p className="text-gray-600 mt-2">Percakapan WhatsApp terpadu</p>
-        </div>
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="flex items-center gap-3 text-base">
-              <Zap className="w-4 h-4" />
-              {endpoint ? (
-                <span className="flex items-center gap-2">
-                  <span>{endpoint.name}</span>
-                  {endpoint.healthStatus === 'healthy' ? (
-                    <span className={`flex items-center gap-1 ${healthColor(endpoint.healthStatus)}`}>
-                      <CheckCircle className="w-4 h-4" /> Healthy
-                    </span>
-                  ) : (
-                    <span className={`flex items-center gap-1 ${healthColor(endpoint.healthStatus)}`}>
-                      <AlertCircle className="w-4 h-4" /> {endpoint.healthStatus === 'unhealthy' ? 'Unhealthy' : 'Unknown'}
-                    </span>
-                  )}
-                  <span className="mx-2">•</span>
-                  <span className="flex items-center gap-1"><Smartphone className="w-4 h-4" /> {connectedCount}/{devices.length} connected</span>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">WhatsApp</h1>
+            <p className="text-gray-600 mt-1">Percakapan WhatsApp terpadu</p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {endpoint ? (
+              <div className="flex items-center gap-2 text-sm">
+                <Zap className="w-4 h-4 text-gray-600" />
+                <span className="font-medium">{endpoint.name}</span>
+                {endpoint.healthStatus === 'healthy' ? (
+                  <span className={`flex items-center gap-1 ${healthColor(endpoint.healthStatus)}`}>
+                    <CheckCircle className="w-4 h-4" /> Healthy
+                  </span>
+                ) : (
+                  <span className={`flex items-center gap-1 ${healthColor(endpoint.healthStatus)}`}>
+                    <AlertCircle className="w-4 h-4" /> {endpoint.healthStatus === 'unhealthy' ? 'Unhealthy' : 'Unknown'}
+                  </span>
+                )}
+                <span className="flex items-center gap-1 text-gray-700">
+                  <Smartphone className="w-4 h-4" /> {connectedCount}/{devices.length} connected
                 </span>
-              ) : (
-                <span className="flex items-center gap-2 text-gray-600">
-                  <AlertCircle className="w-4 h-4" /> Endpoint not configured
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 flex items-center justify-end gap-2">
+                {/* show up to 3 device chips */}
+                {devices.slice(0, 3).map((d) => (
+                  <Badge key={d.id} variant="secondary" className="text-xs">
+                    {d.phoneNumber || d.id.slice(-6)} • {d.status}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <AlertCircle className="w-4 h-4" /> Endpoint not configured
+              </div>
+            )}
             {endpoint && (
               <Button size="sm" onClick={() => setShowAddDevice(true)}>
                 <Plus className="w-4 h-4 mr-1" /> Add Device
               </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {error && (

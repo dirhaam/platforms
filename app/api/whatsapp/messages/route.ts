@@ -35,32 +35,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[WhatsApp] Fetching conversations for tenant: ${tenantId}`);
+    console.log(`[WhatsApp] Fetching conversations (provider-first) for tenant: ${tenantId}`);
 
-    // First try to get from local database (cached conversations)
-    let conversations = await whatsappService.getConversations(tenantId);
-    console.log(`[WhatsApp] Found ${conversations.length} cached conversations in database`);
-
-    // If no conversations in database, fetch from WhatsApp API
-    if (conversations.length === 0) {
-      try {
-        console.log(`[WhatsApp] No cached conversations, fetching from WhatsApp API...`);
-        const client = await whatsappService.getWhatsAppClient(tenantId);
-        
-        if (!client) {
-          console.warn(`[WhatsApp] No WhatsApp client available for tenant ${tenantId}.`);
-          console.warn(`[WhatsApp] Setup required: Configure WHATSAPP_ENDPOINTS env variable with your WhatsApp API server.`);
-          console.warn(`[WhatsApp] Example: WHATSAPP_ENDPOINTS=[{"name":"primary","apiUrl":"http://wa.example.com","username":"admin","password":"pass"}]`);
-        } else {
-          console.log(`[WhatsApp] Client found, calling getConversations...`);
-          conversations = await client.getConversations(tenantId);
-          console.log(`[WhatsApp] Fetched ${conversations.length} conversations from WhatsApp API`);
-        }
-      } catch (apiError) {
-        console.error('[WhatsApp] Error fetching from WhatsApp API:', apiError);
-        // Continue with whatever is in database
-      }
+    const client = await whatsappService.getWhatsAppClient(tenantId);
+    if (!client) {
+      return NextResponse.json(
+        { error: 'WhatsApp endpoint not configured or unavailable for this tenant' },
+        { status: 503 }
+      );
     }
+
+    const conversations = await client.getConversations(tenantId);
 
     const response: ConversationResponse[] = conversations.map((conversation: any) => ({
       id: conversation.id,
