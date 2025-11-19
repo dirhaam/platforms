@@ -185,7 +185,7 @@ export function MessagesContent() {
       const params = new URLSearchParams({
         tenantId: tenant,
         loadHistory: loadHistory.toString(),
-        limit: '200'
+        limit: '100'
       });
 
       const response = await fetch(

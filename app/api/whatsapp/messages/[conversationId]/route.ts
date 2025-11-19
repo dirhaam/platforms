@@ -12,7 +12,7 @@ export async function GET(
   const tenantId = searchParams.get('tenantId');
   
   try {
-    const limit = parseInt(searchParams.get('limit') || '200', 10);
+    const limit = parseInt(searchParams.get('limit') || '100', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
     const loadHistory = searchParams.get('loadHistory') === 'true';
 
