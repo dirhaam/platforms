@@ -37,8 +37,7 @@ export async function POST(
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
-    // For now, use PDF but send as image type for better display
-    // Future improvement: Implement proper PNG generation
+    // Generate high-quality PDF with proper formatting
     const pdfGenerator = new InvoicePDFGenerator();
     const pdfData = await pdfGenerator.generateInvoicePDF(invoice);
     const imageBytes = new Uint8Array(pdfData);
@@ -61,11 +60,11 @@ export async function POST(
       activeDevice.id,
       targetPhone,
       {
-        type: 'image',
+        type: 'document',
         content: baseMessage || `Invoice ${invoice.invoiceNumber}`,
         caption: fullMessage + (fullMessage ? '\n\n' : '') + `Invoice: ${invoice.invoiceNumber}\nNo: ${invoice.invoiceNumber}\nTotal: Rp ${invoice.totalAmount.toLocaleString('id-ID')}\nTanggal: ${invoice.issueDate?.toLocaleDateString('id-ID')}`,
-        filename: `invoice-${invoice.invoiceNumber}.png`,
-        mimeType: 'image/png',
+        filename: `invoice-${invoice.invoiceNumber}.pdf`,
+        mimeType: 'application/pdf',
         fileData: imageBytes,
       }
     );
