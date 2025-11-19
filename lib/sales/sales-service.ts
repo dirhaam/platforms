@@ -408,13 +408,12 @@ export class SalesService {
   async getTransactions(tenantId: string, filters?: SalesFilters): Promise<SalesTransaction[]> {
     try {
       const supabase = getSupabaseClient();
-      let query = supabase.from('sales_transactions').select(`
-        *,
-        customers(id, name, email, phone),
-        staff(id, name, email)
-      `);
+      // Start with simple query to debug
+      let query = supabase.from('sales_transactions').select('*');
 
       query = query.eq('tenant_id', tenantId);
+      
+      console.log('[SalesService.getTransactions] Starting query for tenantId:', tenantId);
 
       if (filters?.customerId) {
         query = query.eq('customer_id', filters.customerId);
@@ -484,17 +483,50 @@ export class SalesService {
         itemsMap.get(txnId)!.push(item);
       });
 
+      // Fetch customer data separately
+      const customerIds = [...new Set(data.map(t => t.customer_id).filter(Boolean))];
+      const customersMap = new Map<string, any>();
+      
+      if (customerIds.length > 0) {
+        const { data: customersData, error: customersError } = await supabase
+          .from('customers')
+          .select('id, name, email, phone')
+          .in('id', customerIds);
+        
+        if (!customersError && customersData) {
+          customersData.forEach(c => customersMap.set(c.id, c));
+        }
+      }
+      
+      // Fetch staff data separately
+      const staffIds = [...new Set(data.map(t => t.staff_id).filter(Boolean))];
+      const staffMap = new Map<string, any>();
+      
+      if (staffIds.length > 0) {
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('id, name, email')
+          .in('id', staffIds);
+        
+        if (!staffError && staffData) {
+          staffData.forEach(s => staffMap.set(s.id, s));
+        }
+      }
+
       return data.map(txn => {
         const transaction = mapToSalesTransaction(txn, paymentsMap.get(txn.id) || []);
         
         // Add customer data
-        if (txn.customers) {
-          transaction.customer = txn.customers;
+        if (txn.customer_id && customersMap.has(txn.customer_id)) {
+          transaction.customer = customersMap.get(txn.customer_id);
         }
         
         // Add staff name if available
-        if (txn.staff && txn.staff.name) {
-          transaction.staffName = txn.staff.name;
+        if (txn.staff_id && staffMap.has(txn.staff_id)) {
+          const staff = staffMap.get(txn.staff_id);
+          if (staff?.name) {
+            transaction.staffName = staff.name;
+          }
         }
         
         // Add items to transaction
