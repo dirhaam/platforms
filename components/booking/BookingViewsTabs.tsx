@@ -104,38 +104,39 @@ export function BookingViewsTabs({
     <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as ViewMode)}>
       <Card>
         <CardHeader className="pb-2">
-          <TabsList>
-            <TabsTrigger value="calendar">
-              <Calendar className="h-4 w-4 mr-2" />
-              Calendar
-            </TabsTrigger>
-            <TabsTrigger value="list">
-              <List className="h-4 w-4 mr-2" />
-              Booking
-            </TabsTrigger>
-            <TabsTrigger value="sales">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Sales
-            </TabsTrigger>
-            <TabsTrigger value="home-visits">
-              <MapPin className="h-4 w-4 mr-2" />
-              Home Visits
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <TabsList>
+              <TabsTrigger value="calendar">
+                <Calendar className="h-4 w-4 mr-2" />
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger value="list">
+                <List className="h-4 w-4 mr-2" />
+                Booking
+              </TabsTrigger>
+              <TabsTrigger value="sales">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Sales
+              </TabsTrigger>
+              <TabsTrigger value="home-visits">
+                <MapPin className="h-4 w-4 mr-2" />
+                Home Visits
+              </TabsTrigger>
+            </TabsList>
+            <BookingFilters
+              layout="inline"
+              searchTerm={searchTerm}
+              onSearchChange={onSearchChange}
+              statusFilter={statusFilter}
+              onStatusChange={onStatusChange}
+              paymentFilter={paymentFilter}
+              onPaymentChange={onPaymentChange}
+              onRefresh={onRefreshAll}
+              statusOptions={statusOptions}
+              paymentOptions={paymentOptions}
+            />
+          </div>
         </CardHeader>
-        <CardContent className="pt-0">
-          <BookingFilters
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-            statusFilter={statusFilter}
-            onStatusChange={onStatusChange}
-            paymentFilter={paymentFilter}
-            onPaymentChange={onPaymentChange}
-            onRefresh={onRefreshAll}
-            statusOptions={statusOptions}
-            paymentOptions={paymentOptions}
-          />
-        </CardContent>
       </Card>
 
       {/* Calendar View */}

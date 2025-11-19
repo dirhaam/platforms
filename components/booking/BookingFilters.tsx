@@ -16,6 +16,8 @@ interface BookingFiltersProps {
   onRefresh: () => void;
   statusOptions?: Option[];
   paymentOptions?: Option[];
+  layout?: 'grid' | 'inline';
+  className?: string;
 }
 
 export function BookingFilters({
@@ -28,6 +30,8 @@ export function BookingFilters({
   onRefresh,
   statusOptions,
   paymentOptions,
+  layout = 'grid',
+  className,
 }: BookingFiltersProps) {
   const defaultStatusOptions: Option[] = [
     { value: 'all', label: 'All Status' },
@@ -48,9 +52,14 @@ export function BookingFilters({
   const _statusOptions = statusOptions || defaultStatusOptions;
   const _paymentOptions = paymentOptions || defaultPaymentOptions;
 
+  const containerClass =
+    layout === 'inline'
+      ? `flex items-center gap-2 flex-wrap ${className || ''}`
+      : `grid grid-cols-1 md:grid-cols-4 gap-4 ${className || ''}`;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div className="relative">
+    <div className={containerClass}>
+      <div className="relative w-full md:w-64">
         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
         <Input
           placeholder="Search by name, service..."
@@ -60,27 +69,31 @@ export function BookingFilters({
         />
       </div>
 
-      <Select value={statusFilter} onValueChange={onStatusChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Filter by status" />
-        </SelectTrigger>
-        <SelectContent>
-          {_statusOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className={layout === 'inline' ? 'w-auto' : ''}>
+        <Select value={statusFilter} onValueChange={onStatusChange}>
+          <SelectTrigger className={layout === 'inline' ? 'w-40' : undefined}>
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            {_statusOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select value={paymentFilter} onValueChange={onPaymentChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Filter by payment" />
-        </SelectTrigger>
-        <SelectContent>
-          {_paymentOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className={layout === 'inline' ? 'w-auto' : ''}>
+        <Select value={paymentFilter} onValueChange={onPaymentChange}>
+          <SelectTrigger className={layout === 'inline' ? 'w-40' : undefined}>
+            <SelectValue placeholder="Filter by payment" />
+          </SelectTrigger>
+          <SelectContent>
+            {_paymentOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <Button variant="outline" onClick={onRefresh}>
         <Filter className="h-4 w-4 mr-2" />
