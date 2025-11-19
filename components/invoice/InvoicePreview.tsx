@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Invoice, InvoiceStatus, PaymentStatus, getPaymentStatus } from '@/types/invoice';
 import jsPDF from 'jspdf';
-import { Download, ImageDown, Printer } from 'lucide-react';
+import { Download, ImageDown, Printer, MessageCircle } from 'lucide-react';
 import { maskPhoneNumberCompact } from '@/lib/utils/phone-masking';
 
 interface InvoicePreviewProps {
@@ -18,6 +18,8 @@ interface InvoicePreviewProps {
 export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [refreshedInvoice, setRefreshedInvoice] = useState<Invoice | null>(invoice || null);
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState('');
 
   // Refetch invoice when preview opens to ensure branding is latest
   useEffect(() => {
@@ -198,6 +200,42 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     window.print();
   };
 
+  const handleSendWhatsApp = async () => {
+    if (!displayInvoice?.id || !displayInvoice?.customer) return;
+    
+    setWhatsappLoading(true);
+    setWhatsappMessage('');
+
+    try {
+      const response = await fetch(`/api/invoices/${displayInvoice.id}/whatsapp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': displayInvoice.tenantId
+        },
+        body: JSON.stringify({
+          phoneNumber: displayInvoice.customer.whatsappNumber || displayInvoice.customer.phone,
+          message: `Halo ${displayInvoice.customer.name}, berikut invoice ${displayInvoice.invoiceNumber} sebesar Rp ${displayInvoice.totalAmount.toLocaleString('id-ID')}.`
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setWhatsappMessage('Invoice berhasil dikirim via WhatsApp!');
+        setTimeout(() => setWhatsappMessage(''), 3000);
+      } else {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to send invoice');
+      }
+    } catch (error) {
+      console.error('Error sending WhatsApp:', error);
+      setWhatsappMessage(error instanceof Error ? error.message : 'Gagal mengirim invoice');
+      setTimeout(() => setWhatsappMessage(''), 5000);
+    } finally {
+      setWhatsappLoading(false);
+    }
+  };
+
   const getPaymentStatusLabel = (invoice: Invoice): string => {
     const paymentStatus = getPaymentStatus(invoice);
     const labels = {
@@ -297,7 +335,25 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
                 <ImageDown className="h-4 w-4 mr-2" />
                 PNG
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSendWhatsApp} 
+                disabled={whatsappLoading || !displayInvoice?.customer?.phone}
+                className="flex-1 sm:flex-none"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                {whatsappLoading ? 'Sending...' : 'WhatsApp'}
+              </Button>
             </div>
+            
+            {whatsappMessage && (
+              <div className={`text-sm px-3 py-2 rounded-lg ${
+                whatsappMessage.includes('berhasil') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {whatsappMessage}
+              </div>
+            )}
           </div>
 
           {/* Invoice Preview */}
