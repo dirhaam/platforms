@@ -89,7 +89,7 @@ export async function GET(
       return NextResponse.json(debugResponse);
   } catch (error) {
     console.error('Error fetching WhatsApp messages:', {
-      conversationId: chatJid,
+      conversationId,
       tenantId,
       errorMessage: error instanceof Error ? error.message : error,
       errorStack: error instanceof Error ? error.stack : undefined
@@ -99,7 +99,7 @@ export async function GET(
       messages: [], 
       error: 'provider_error',
       debug: {
-        conversationId: chatJid,
+        conversationId,
         tenantId,
         errorMessage: error instanceof Error ? error.message : error
       }
