@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 import { InvoiceService } from '@/lib/invoice/invoice-service';
-import { InvoicePDFGenerator } from '@/lib/invoice/pdf-generator';
+import { InvoiceImageGenerator } from '@/lib/invoice/image-generator';
 import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 
 interface SendInvoiceWhatsAppPayload {
@@ -37,10 +37,10 @@ export async function POST(
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
-    // Generate high-quality PDF with proper formatting
-    const pdfGenerator = new InvoicePDFGenerator();
-    const pdfData = await pdfGenerator.generateInvoicePDF(invoice);
-    const imageBytes = new Uint8Array(pdfData);
+    // Generate high-quality image from invoice preview HTML
+    const imageGenerator = new InvoiceImageGenerator();
+    const imageBuffer = await imageGenerator.generateInvoiceImage(invoice);
+    const imageBytes = new Uint8Array(imageBuffer);
 
     const devices = await whatsappService.getTenantDevices(tenant.id);
     const activeDevice = devices.find((device) => device.status === 'connected') || devices[0];
@@ -60,11 +60,11 @@ export async function POST(
       activeDevice.id,
       targetPhone,
       {
-        type: 'document',
+        type: 'image',
         content: baseMessage || `Invoice ${invoice.invoiceNumber}`,
         caption: fullMessage + (fullMessage ? '\n\n' : '') + `Invoice: ${invoice.invoiceNumber}\nNo: ${invoice.invoiceNumber}\nTotal: Rp ${invoice.totalAmount.toLocaleString('id-ID')}\nTanggal: ${invoice.issueDate?.toLocaleDateString('id-ID')}`,
-        filename: `invoice-${invoice.invoiceNumber}.pdf`,
-        mimeType: 'application/pdf',
+        filename: `invoice-${invoice.invoiceNumber}.png`,
+        mimeType: 'image/png',
         fileData: imageBytes,
       }
     );
