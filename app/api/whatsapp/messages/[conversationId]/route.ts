@@ -7,10 +7,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> }
 ) {
+  const { conversationId } = await params;
+  const { searchParams } = new URL(request.url);
+  const tenantId = searchParams.get('tenantId');
+  
   try {
-    const { conversationId } = await params;
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId');
     const limit = parseInt(searchParams.get('limit') || '200', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
     const loadHistory = searchParams.get('loadHistory') === 'true';
@@ -88,13 +89,9 @@ export async function GET(
       };
       return NextResponse.json(debugResponse);
   } catch (error) {
-    // Re-define these variables for catch scope type safety
-    const catchConversationId = conversationId;
-    const catchTenantId = tenantId;
-    
     console.error('Error fetching WhatsApp messages:', {
-      conversationId: catchConversationId,
-      tenantId: catchTenantId,
+      conversationId,
+      tenantId,
       errorMessage: error instanceof Error ? error.message : error,
       errorStack: error instanceof Error ? error.stack : undefined
     });
@@ -103,8 +100,8 @@ export async function GET(
       messages: [], 
       error: 'provider_error',
       debug: {
-        conversationId: catchConversationId,
-        tenantId: catchTenantId,
+        conversationId,
+        tenantId,
         errorMessage: error instanceof Error ? error.message : error
       }
     });
