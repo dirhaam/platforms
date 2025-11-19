@@ -304,8 +304,13 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
   async getMessages(conversationId: string, limit = 50): Promise<WhatsAppMessage[]> {
     try {
+      const endpoint = `/chat/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=0`;
+      console.log(`[WhatsApp] Fetching messages from: ${endpoint}`);
+      
       // Call actual WhatsApp API endpoint: GET /chat/{chat_jid}/messages
-      const response = await this.makeRequest(`/chat/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=0`);
+      const response = await this.makeRequest(endpoint);
+      
+      console.log(`[WhatsApp] Raw response for ${conversationId}:`, JSON.stringify(response, null, 2));
 
       const candidates: any[] = [];
       if (Array.isArray(response?.results?.data)) candidates.push(response.results.data);
@@ -317,9 +322,12 @@ export class WhatsAppClient implements WhatsAppApiClient {
       if (Array.isArray(response?.results?.data?.data)) candidates.push(response.results.data.data);
       if (Array.isArray(response?.data?.data)) candidates.push(response.data.data);
 
+      console.log(`[WhatsApp] Found ${candidates.length} candidate arrays for ${conversationId}`);
+      
       const raw = candidates.find(Array.isArray) || [];
-
       const messages = Array.isArray(raw) ? raw : [];
+      
+      console.log(`[WhatsApp] Parsed ${messages.length} messages for ${conversationId}`);
 
       return messages.map((msg: any) => {
         const type = (msg.type || (msg.media_type ? String(msg.media_type).toLowerCase() : 'text')) as WhatsAppMessage['type'];
@@ -397,7 +405,8 @@ export class WhatsAppClient implements WhatsAppApiClient {
     try {
       const { headers: overrideHeaders, ...restFetchOptions } = fetchOptions;
 
-      const response = await fetch(`${this.config.apiUrl}${endpoint}`, {
+      const url = `${this.config.apiUrl}${endpoint}`;
+      const response = await fetch(url, {
         ...restFetchOptions,
         headers: this.buildHeaders(overrideHeaders, isFormData),
         signal: controller.signal
@@ -405,10 +414,17 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
       clearTimeout(timeoutId);
 
+      console.log(`[WhatsApp] ${endpoint} -> HTTP ${response.status} ${response.statusText}`);
+
       const responseText = await response.text();
 
       if (!response.ok) {
         const trimmed = responseText.trim();
+        console.error(`[WhatsApp] Request failed: ${url}`, {
+          status: response.status,
+          statusText: response.statusText,
+          body: trimmed
+        });
         throw new Error(
           `HTTP ${response.status}: ${response.statusText}${trimmed ? ` - ${trimmed}` : ''}`
         );
