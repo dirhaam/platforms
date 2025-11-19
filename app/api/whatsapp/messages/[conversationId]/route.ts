@@ -38,7 +38,9 @@ export async function GET(
     }
 
     // Always fetch from provider (API-only mode)
-    const apiMessages = await client.getMessages(conversationId, limit);
+    // conversationId should be chat JID (e.g., 62xxxx@s.whatsapp.net or group@g.us)
+    const chatJid = conversationId.includes('@') ? conversationId : `${conversationId}@s.whatsapp.net`;
+    const apiMessages = await client.getMessages(chatJid, limit);
     const messages = apiMessages.map((msg: any) => ({
       id: msg.id,
       type: msg.type,

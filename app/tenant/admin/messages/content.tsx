@@ -469,8 +469,9 @@ export function MessagesContent() {
       return;
     }
 
-    fetchMessages(tenantId, selectedConversation.id);
-  }, [tenantId, selectedConversation?.id, fetchMessages]);
+    const jid = selectedConversation.chatId || selectedConversation.id;
+    fetchMessages(tenantId, jid);
+  }, [tenantId, selectedConversation?.id, selectedConversation?.chatId, fetchMessages]);
 
   const getStatusIcon = (status: Message['status']) => {
     switch (status) {

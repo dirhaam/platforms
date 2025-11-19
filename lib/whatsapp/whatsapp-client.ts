@@ -57,7 +57,13 @@ export class WhatsAppClient implements WhatsAppApiClient {
         formData.append('file', blob, message.filename || defaultName);
 
         const response = await this.makeRequest('/send/file', {
-          method: 'POST',
+        const endpoint =
+          message.type === 'image' ? '/send/image' :
+          message.type === 'video' ? '/send/video' :
+          message.type === 'audio' ? '/send/audio' :
+          '/send/file';
+
+        const response = await this.makeRequest(endpoint, {
           body: formData,
           isFormData: true,
         });
@@ -403,6 +409,8 @@ export class WhatsAppClient implements WhatsAppApiClient {
     if (!isFormData) {
       headers.set('Content-Type', 'application/json');
     }
+    headers.set('Accept', 'application/json');
+    headers.set('X-Requested-With', 'XMLHttpRequest');
 
     if (this.config.headers) {
       Object.entries(this.config.headers).forEach(([key, value]) => {
