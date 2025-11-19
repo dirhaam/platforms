@@ -204,6 +204,8 @@ export function MessagesContent() {
         conversationId,
         debug: data.debug,
         messagesCount: data.messages?.length || 0,
+        hasDebugInfo: !!data.debug,
+        apiResponse: data.debug?.success,
         fullResponse: data
       });
       
