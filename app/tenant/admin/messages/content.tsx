@@ -31,6 +31,7 @@ interface Conversation {
   id: string;
   phone: string;
   chatId?: string;
+  kind: 'p2p' | 'group';
   customerName: string;
   lastMessage: string;
   lastMessageTime: string;
@@ -128,10 +129,18 @@ export function MessagesContent() {
           ? new Date(conversation.lastMessageAt)
           : null;
 
+        // Ensure we use JID consistently for id/chatId
+        const jid = conversation.metadata?.chatId || (conversation.id?.includes('@')
+          ? conversation.id
+          : (conversation.customerPhone ? `${conversation.customerPhone}@s.whatsapp.net` : conversation.id));
+        const lower = (jid || '').toLowerCase();
+        const kind: Conversation['kind'] = lower.endsWith('@g.us') ? 'group' : 'p2p';
+
         return {
-          id: conversation.id,
+          id: jid,
           phone: conversation.customerPhone,
-          chatId: conversation.metadata?.chatId || conversation.customerPhone,
+          chatId: jid,
+          kind,
           customerName: conversation.customerName || conversation.customerPhone,
           lastMessage: conversation.lastMessagePreview || '',
           lastMessageTime: lastMessageAt ? lastMessageAt.toLocaleString() : '',
@@ -180,7 +189,7 @@ export function MessagesContent() {
       });
 
       const response = await fetch(
-        `/api/whatsapp/messages/${conversationId}?${params}`
+        `/api/whatsapp/messages/${encodeURIComponent(conversationId)}?${params}`
       );
 
       if (!response.ok) {
@@ -306,6 +315,7 @@ export function MessagesContent() {
         : (selectedConversation.phone.includes('@')
           ? selectedConversation.phone
           : `${selectedConversation.phone}@s.whatsapp.net`);
+      const kind: Conversation['kind'] = recipientJid.toLowerCase().endsWith('@g.us') ? 'group' : 'p2p';
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.id === recipientJid || c.chatId === recipientJid);
         const nowStr = sentAt.toLocaleString();
@@ -315,6 +325,7 @@ export function MessagesContent() {
             ...copy[idx],
             id: recipientJid,
             chatId: recipientJid,
+            kind,
             lastMessage: newMessage.content,
             lastMessageTime: nowStr,
             unreadCount: 0,
@@ -327,6 +338,7 @@ export function MessagesContent() {
           id: recipientJid,
           phone: selectedConversation.phone,
           chatId: recipientJid,
+          kind,
           customerName: selectedConversation.customerName || selectedConversation.phone,
           lastMessage: newMessage.content,
           lastMessageTime: nowStr,
@@ -343,6 +355,7 @@ export function MessagesContent() {
           id: recipientJid,
           phone: base.phone || selectedConversation.phone,
           chatId: recipientJid,
+          kind,
           customerName: base.customerName || selectedConversation.customerName || selectedConversation.phone,
           lastMessage: newMessage.content,
           lastMessageTime: nowStr,
@@ -476,6 +489,7 @@ export function MessagesContent() {
 
       setShowNewChatDialog(false);
       const jid = newChatPhone.includes('@') ? newChatPhone.trim() : `${newChatPhone.trim()}@s.whatsapp.net`;
+      const kind: Conversation['kind'] = jid.toLowerCase().endsWith('@g.us') ? 'group' : 'p2p';
       // Optimistically add/select the new conversation
       setConversations((prev) => {
         const exists = prev.find((c) => c.id === jid || c.chatId === jid);
@@ -485,6 +499,7 @@ export function MessagesContent() {
           id: jid,
           phone: newChatPhone.trim(),
           chatId: jid,
+          kind,
           customerName: newChatPhone.trim(),
           lastMessage: 'Hello! How can we help you today?',
           lastMessageTime: nowStr,
@@ -498,6 +513,7 @@ export function MessagesContent() {
         id: jid,
         phone: newChatPhone.trim(),
         chatId: jid,
+        kind,
         customerName: newChatPhone.trim(),
         lastMessage: 'Hello! How can we help you today?',
         lastMessageTime: new Date().toLocaleString(),
@@ -594,7 +610,7 @@ export function MessagesContent() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
         {/* Conversations List */}
         <Card className="col-span-1 flex flex-col">
           <CardHeader className="pb-3">
@@ -624,7 +640,13 @@ export function MessagesContent() {
                   {filteredConversations.map((conv) => (
                     <button
                       key={conv.id}
-                      onClick={() => setSelectedConversation(conv)}
+                      onClick={() => {
+                        setSelectedConversation(conv);
+                        const jid = conv.chatId || conv.id;
+                        if (tenantId && jid) {
+                          fetchMessages(tenantId, jid);
+                        }
+                      }}
                       className={`w-full text-left p-3 rounded-lg transition-colors ${
                         selectedConversation?.id === conv.id
                           ? 'bg-blue-50 border border-blue-200'
@@ -635,6 +657,12 @@ export function MessagesContent() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-semibold text-sm">{conv.customerName}</p>
+                            <Badge
+                              variant={conv.kind === 'group' ? 'default' : 'secondary'}
+                              className="text-[10px] px-1.5 py-0.5"
+                            >
+                              {conv.kind === 'group' ? 'Group' : 'P2P'}
+                            </Badge>
                             {conv.unreadCount > 0 && (
                               <Badge variant="destructive" className="text-xs">
                                 {conv.unreadCount}
@@ -665,7 +693,15 @@ export function MessagesContent() {
             <CardHeader className="border-b pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>{selectedConversation.customerName}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{selectedConversation.customerName}</CardTitle>
+                    <Badge
+                      variant={selectedConversation.kind === 'group' ? 'default' : 'secondary'}
+                      className="text-[10px] px-1.5 py-0.5"
+                    >
+                      {selectedConversation.kind === 'group' ? 'Group' : 'P2P'}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
                     <Phone className="w-3 h-3" />
                     {selectedConversation.phone}
