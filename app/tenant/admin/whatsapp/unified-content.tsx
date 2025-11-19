@@ -1,43 +1,14 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  MessageCircle,
-  Smartphone,
-  Settings,
-  MessageSquare,
-  Plus,
-  RefreshCw,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Trash2,
-  Zap,
-  Send,
-  Search,
-  MoreVertical,
-  Phone,
-  CheckCheck,
-  Loader2,
-  FileText,
-  MessageSquarePlus,
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-
-// Import the existing content components
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertCircle, CheckCircle, Plus, Smartphone, Zap } from 'lucide-react';
 import { MessagesContent } from '../messages/content';
-import { WhatsAppContent } from './content';
 
 // Re-use the interfaces from the original components
 interface Conversation {
@@ -84,64 +55,152 @@ interface WhatsAppDevice {
 }
 
 export function WhatsAppUnifiedContent() {
-  const [activeTab, setActiveTab] = useState('messages');
+  const searchParams = useSearchParams();
+  const subdomain = searchParams?.get('subdomain') || '';
+
+  const [tenantId, setTenantId] = useState('');
+  const [endpoint, setEndpoint] = useState<{ id: string; name: string; healthStatus: 'healthy' | 'unhealthy' | 'unknown' } | null>(null);
+  const [devices, setDevices] = useState<Array<{ id: string; status: string; phoneNumber?: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [showAddDevice, setShowAddDevice] = useState(false);
+  const [newDeviceName, setNewDeviceName] = useState('');
+
+  useEffect(() => {
+    if (!subdomain) return;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Resolve tenant id
+        const tenantRes = await fetch(`/api/tenants/${subdomain}`);
+        if (!tenantRes.ok) throw new Error('Tenant not found');
+        const tenant = await tenantRes.json();
+        setTenantId(tenant.id);
+
+        // Load endpoint
+        const epRes = await fetch(`/api/whatsapp/endpoints/${tenant.id}`);
+        if (epRes.ok) {
+          const epData = await epRes.json();
+          setEndpoint(epData.endpoint ? { id: epData.endpoint.id, name: epData.endpoint.name, healthStatus: epData.endpoint.healthStatus } : null);
+        }
+
+        // Load devices
+        const devRes = await fetch(`/api/whatsapp/devices?tenantId=${tenant.id}`);
+        if (devRes.ok) {
+          const dev = await devRes.json();
+          setDevices(dev.devices || []);
+        } else {
+          setDevices([]);
+        }
+      } catch (e) {
+        console.error('Load WhatsApp header failed:', e);
+        setError('Failed to load WhatsApp status');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [subdomain]);
+
+  const connectedCount = devices.filter((d) => d.status === 'connected').length;
+
+  const handleCreateDevice = async () => {
+    if (!tenantId || !endpoint || !newDeviceName.trim()) return;
+    try {
+      const res = await fetch('/api/whatsapp/devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, endpointId: endpoint.id, deviceName: newDeviceName.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to create device');
+      }
+      const dev = await res.json();
+      setDevices((prev) => [...prev, dev]);
+      setShowAddDevice(false);
+      setNewDeviceName('');
+    } catch (e) {
+      console.error('Create device failed:', e);
+      setError(e instanceof Error ? e.message : 'Failed to create device');
+    }
+  };
+
+  const healthColor = (status: string) =>
+    status === 'healthy' ? 'text-green-600' : status === 'unhealthy' ? 'text-red-600' : 'text-gray-600';
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">WhatsApp Integration</h1>
-        <p className="text-gray-600 mt-2">Manage messages, devices, and settings</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">WhatsApp</h1>
+          <p className="text-gray-600 mt-2">Percakapan WhatsApp terpadu</p>
+        </div>
+        <Card>
+          <CardHeader className="py-3">
+            <CardTitle className="flex items-center gap-3 text-base">
+              <Zap className="w-4 h-4" />
+              {endpoint ? (
+                <span className="flex items-center gap-2">
+                  <span>{endpoint.name}</span>
+                  {endpoint.healthStatus === 'healthy' ? (
+                    <span className={`flex items-center gap-1 ${healthColor(endpoint.healthStatus)}`}>
+                      <CheckCircle className="w-4 h-4" /> Healthy
+                    </span>
+                  ) : (
+                    <span className={`flex items-center gap-1 ${healthColor(endpoint.healthStatus)}`}>
+                      <AlertCircle className="w-4 h-4" /> {endpoint.healthStatus === 'unhealthy' ? 'Unhealthy' : 'Unknown'}
+                    </span>
+                  )}
+                  <span className="mx-2">•</span>
+                  <span className="flex items-center gap-1"><Smartphone className="w-4 h-4" /> {connectedCount}/{devices.length} connected</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 text-gray-600">
+                  <AlertCircle className="w-4 h-4" /> Endpoint not configured
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 flex items-center justify-end gap-2">
+            {endpoint && (
+              <Button size="sm" onClick={() => setShowAddDevice(true)}>
+                <Plus className="w-4 h-4 mr-1" /> Add Device
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="messages" className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4" />
-            Messages
-          </TabsTrigger>
-          <TabsTrigger value="devices" className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4" />
-            Devices
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Settings
-          </TabsTrigger>
-        </TabsList>
+      {error && (
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700">{error}</div>
+      )}
 
-        {/* Messages Tab */}
-        <TabsContent value="messages" className="space-y-6">
-          <MessagesContent />
-        </TabsContent>
+      <MessagesContent />
 
-        {/* Devices Tab */}
-        <TabsContent value="devices" className="space-y-6">
-          <WhatsAppContent />
-        </TabsContent>
-
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                WhatsApp Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-center py-8">
-                  <Settings className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600">WhatsApp settings will be available here</p>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Including endpoint configuration, API settings, and preferences
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Dialog open={showAddDevice} onOpenChange={setShowAddDevice}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add WhatsApp Device</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Device name (e.g., Front Desk)"
+              value={newDeviceName}
+              onChange={(e) => setNewDeviceName(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowAddDevice(false)}>Cancel</Button>
+            <Button onClick={handleCreateDevice} disabled={!newDeviceName.trim()}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

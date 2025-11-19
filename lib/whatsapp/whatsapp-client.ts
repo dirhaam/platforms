@@ -21,18 +21,17 @@ export class WhatsAppClient implements WhatsAppApiClient {
 
   async sendMessage(deviceId: string, to: string, message: WhatsAppMessageData): Promise<WhatsAppMessage> {
     try {
-      if (message.type === 'document') {
+      // Media sending (image, video, audio, document)
+      if (message.type !== 'text') {
         if (!message.fileData) {
-          throw new Error('Document message requires file data');
+          throw new Error(`${message.type} message requires file data`);
         }
 
         const formData = new FormData();
         formData.append('phone', to);
 
         const caption = message.caption ?? message.content;
-        if (caption) {
-          formData.append('caption', caption);
-        }
+        if (caption) formData.append('caption', caption);
 
         const uint8 = message.fileData instanceof Uint8Array
           ? message.fileData
@@ -41,11 +40,21 @@ export class WhatsAppClient implements WhatsAppApiClient {
         const normalizedData = new Uint8Array(uint8.byteLength);
         normalizedData.set(uint8);
 
+        const defaultName =
+          message.type === 'image' ? 'image.jpg' :
+          message.type === 'video' ? 'video.mp4' :
+          message.type === 'audio' ? 'audio.m4a' : 'document.pdf';
+
+        const defaultMime =
+          message.type === 'image' ? 'image/jpeg' :
+          message.type === 'video' ? 'video/mp4' :
+          message.type === 'audio' ? 'audio/mpeg' : 'application/pdf';
+
         const blob = new Blob([normalizedData.buffer.slice(0)], {
-          type: message.mimeType || 'application/pdf',
+          type: message.mimeType || defaultMime,
         });
 
-        formData.append('file', blob, message.filename || 'document.pdf');
+        formData.append('file', blob, message.filename || defaultName);
 
         const response = await this.makeRequest('/send/file', {
           method: 'POST',
@@ -54,7 +63,7 @@ export class WhatsAppClient implements WhatsAppApiClient {
         });
 
         if (response.code !== 'SUCCESS') {
-          throw new Error(response.message || 'Failed to send document');
+          throw new Error(response.message || `Failed to send ${message.type}`);
         }
 
         return {

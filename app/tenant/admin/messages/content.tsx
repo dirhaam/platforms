@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,6 +87,9 @@ export function MessagesContent() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [tenantId, setTenantId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -229,25 +232,52 @@ export function MessagesContent() {
   }, []);
 
   const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedConversation || !tenantId) return;
+    if (!selectedConversation || !tenantId) return;
+
+    // Determine if sending text or attachment
+    const isTextOnly = !attachment;
+    if (isTextOnly && !messageInput.trim()) return;
 
     try {
       setSending(true);
       setError(null);
 
-      const payload = {
-        tenantId,
-        customerPhone: selectedConversation.chatId || selectedConversation.phone,
-        message: messageInput.trim(),
-      };
+      let response: Response;
+      if (attachment) {
+        const form = new FormData();
+        form.append('tenantId', tenantId);
+        form.append('customerPhone', selectedConversation.chatId || selectedConversation.phone);
+        const mime = attachment.type || '';
+        const type = mime.startsWith('image/')
+          ? 'image'
+          : mime.startsWith('video/')
+          ? 'video'
+          : mime.startsWith('audio/')
+          ? 'audio'
+          : 'document';
+        form.append('type', type);
+        if (messageInput.trim()) form.append('caption', messageInput.trim());
+        form.append('filename', attachment.name);
+        form.append('mimeType', attachment.type);
+        form.append('file', attachment);
 
-      const response = await fetch('/api/whatsapp/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        response = await fetch('/api/whatsapp/messages', {
+          method: 'POST',
+          body: form,
+        });
+      } else {
+        const payload = {
+          tenantId,
+          customerPhone: selectedConversation.chatId || selectedConversation.phone,
+          message: messageInput.trim(),
+          type: 'text' as const,
+        };
+        response = await fetch('/api/whatsapp/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -260,7 +290,7 @@ export function MessagesContent() {
 
       const newMessage: Message = {
         id: message.id,
-        content: message.content || payload.message,
+        content: message.content || messageInput.trim() || `[${message.type}]`,
         timestamp: sentAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isFromMe: !message.isFromCustomer,
         status: (message.deliveryStatus as Message['status']) || 'sent',
@@ -271,12 +301,30 @@ export function MessagesContent() {
 
       setMessages((previous) => [...previous, newMessage]);
       setMessageInput('');
+      if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+      setAttachment(null);
+      setAttachmentPreview(null);
       await fetchConversations(tenantId, { silent: true });
     } catch (error) {
       console.error('Error sending message:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message.');
     } finally {
       setSending(false);
+    }
+  };
+
+  const onPickAttachment: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachment(file);
+    try {
+      if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    } catch {}
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setAttachmentPreview(url);
+    } else {
+      setAttachmentPreview(null);
     }
   };
 
@@ -639,29 +687,54 @@ export function MessagesContent() {
 
               <div className="space-y-3 border-t pt-3">
                 <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Type your message..."
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    className="resize-none h-20"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!messageInput.trim() || sending}
-                    className="gap-2"
-                  >
-                    {sending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
+                  <div className="flex-1 space-y-2">
+                    <Textarea
+                      placeholder={attachment ? 'Add a caption (optional)...' : 'Type your message...'}
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      className="resize-none h-20"
+                    />
+                    {attachment && (
+                      <div className="flex items-center gap-3 border rounded p-2 bg-gray-50">
+                        {attachmentPreview ? (
+                          <img src={attachmentPreview} alt="preview" className="w-12 h-12 object-cover rounded" />
+                        ) : (
+                          <FileText className="w-6 h-6 text-gray-500" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{attachment.name}</p>
+                          <p className="text-xs text-gray-500">{attachment.type || 'file'} • {(attachment.size/1024/1024).toFixed(2)} MB</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => { setAttachment(null); if (attachmentPreview) URL.revokeObjectURL(attachmentPreview); setAttachmentPreview(null); }}>Remove</Button>
+                      </div>
                     )}
-                  </Button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="inline-flex">
+                      <input ref={fileInputRef} type="file" className="hidden" onChange={onPickAttachment} accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                      <Button type="button" variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
+                        <MessageSquarePlus className="w-4 h-4" />
+                        Attach
+                      </Button>
+                    </label>
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={(!!attachment ? false : !messageInput.trim()) || sending}
+                      className="gap-2"
+                    >
+                      {sending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">

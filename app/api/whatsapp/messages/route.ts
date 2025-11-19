@@ -16,9 +16,12 @@ interface ConversationResponse {
 
 interface SendMessageBody {
   tenantId?: string;
-  customerPhone?: string;
-  message?: string;
+  customerPhone?: string; // can be MSISDN or chatJid
+  message?: string; // text content or caption
   deviceId?: string;
+  type?: 'text' | 'image' | 'audio' | 'video' | 'document';
+  filename?: string;
+  mimeType?: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -83,19 +86,59 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SendMessageBody = await request.json();
-    const tenantId = body.tenantId?.trim();
-    const customerPhone = body.customerPhone?.trim();
-    const messageContent = body.message?.trim();
+    const contentType = request.headers.get('content-type') || '';
+    let tenantId: string | undefined;
+    let customerPhone: string | undefined;
+    let deviceId: string | undefined;
+    let type: SendMessageBody['type'] = 'text';
+    let messageContent = '';
+    let filename: string | undefined;
+    let mimeType: string | undefined;
+    let fileData: Uint8Array | undefined;
 
-    if (!tenantId || !customerPhone || !messageContent) {
+    if (contentType.includes('multipart/form-data')) {
+      const form = await request.formData();
+      tenantId = String(form.get('tenantId') || '').trim();
+      customerPhone = String(form.get('customerPhone') || '').trim();
+      deviceId = String(form.get('deviceId') || '').trim() || undefined;
+      type = (String(form.get('type') || 'text') as SendMessageBody['type']) || 'text';
+      messageContent = String(form.get('message') || form.get('caption') || '').trim();
+      filename = String(form.get('filename') || '').trim() || undefined;
+      mimeType = String(form.get('mimeType') || '').trim() || undefined;
+
+      const file = form.get('file');
+      if (file && typeof file === 'object' && 'arrayBuffer' in file) {
+        const buf = await file.arrayBuffer();
+        fileData = new Uint8Array(buf);
+        filename = filename || (file as File).name;
+        mimeType = mimeType || (file as File).type;
+      }
+    } else {
+      const body: SendMessageBody = await request.json();
+      tenantId = body.tenantId?.trim();
+      customerPhone = body.customerPhone?.trim();
+      messageContent = body.message?.trim() || '';
+      deviceId = body.deviceId?.trim() || undefined;
+      type = body.type || 'text';
+      filename = body.filename;
+      mimeType = body.mimeType;
+      // Note: for JSON uploads, fileData is not supported here for safety
+    }
+
+    if (!tenantId || !customerPhone || (type === 'text' && !messageContent)) {
       return NextResponse.json(
-        { error: 'tenantId, customerPhone, and message are required' },
+        { error: 'tenantId, customerPhone, and message (for text) are required' },
         { status: 400 }
       );
     }
 
-    let deviceId = body.deviceId?.trim();
+    if (type !== 'text' && !fileData) {
+      return NextResponse.json(
+        { error: 'Attachment (file) is required for non-text messages' },
+        { status: 400 }
+      );
+    }
+
     if (!deviceId) {
       const devices = await whatsappService.getTenantDevices(tenantId);
       const connectedDevice = devices.find((device) => device.status === 'connected');
@@ -116,8 +159,11 @@ export async function POST(request: NextRequest) {
       : `${customerPhone}@s.whatsapp.net`;
 
     const message = await whatsappService.sendMessage(tenantId, deviceId, recipient, {
-      type: 'text',
+      type: type || 'text',
       content: messageContent,
+      filename,
+      mimeType,
+      fileData,
     });
 
     const responseMessage = {
