@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
       const client = await whatsappService.getWhatsAppClient(tenantId);
       if (client && typeof (client as any).getDevices === 'function') {
         const devices = await client.getDevices();
-        return NextResponse.json({ devices });
+        if (Array.isArray(devices) && devices.length > 0) {
+          return NextResponse.json({ devices });
+        }
       }
     } catch (e) {
       console.warn('[WhatsApp] Fallback to cached devices due to provider error');

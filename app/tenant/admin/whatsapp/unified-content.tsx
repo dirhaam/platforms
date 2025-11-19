@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertCircle, CheckCircle, Plus, Smartphone, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle, Plus, Smartphone, Zap, RefreshCw, QrCode } from 'lucide-react';
 import { MessagesContent } from '../messages/content';
 
 // Re-use the interfaces from the original components
@@ -66,6 +66,9 @@ export function WhatsAppUnifiedContent() {
 
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [newDeviceName, setNewDeviceName] = useState('');
+  const [showManageDevices, setShowManageDevices] = useState(false);
+  const [connectingDeviceId, setConnectingDeviceId] = useState<string | null>(null);
+  const [qrForDevice, setQrForDevice] = useState<{ id: string; url?: string; pairing?: string } | null>(null);
 
   useEffect(() => {
     if (!subdomain) return;
@@ -176,6 +179,11 @@ export function WhatsAppUnifiedContent() {
                 <Plus className="w-4 h-4 mr-1" /> Add Device
               </Button>
             )}
+            {devices.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setShowManageDevices(true)}>
+                Manage Devices
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -185,6 +193,99 @@ export function WhatsAppUnifiedContent() {
       )}
 
       <MessagesContent />
+
+      {/* Manage Devices Dialog */}
+      <Dialog open={showManageDevices} onOpenChange={setShowManageDevices}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>Manage Devices</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {devices.length === 0 ? (
+              <div className="text-sm text-gray-600">No devices yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {devices.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between border rounded p-2">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4" />
+                      <div>
+                        <div className="text-sm font-medium">{d.phoneNumber || d.id}</div>
+                        <div className="text-xs text-gray-600">{d.status}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          setConnectingDeviceId(d.id);
+                          try {
+                            const res = await fetch(`/api/whatsapp/devices/${d.id}?action=refresh-status`, { method: 'POST' });
+                            if (res.ok) {
+                              const updated = await res.json();
+                              setDevices((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                            }
+                          } finally {
+                            setConnectingDeviceId(null);
+                          }
+                        }}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          setConnectingDeviceId(d.id);
+                          try {
+                            const res = await fetch(`/api/whatsapp/devices/${d.id}?action=connect`, { method: 'POST' });
+                            const payload = await res.json().catch(() => ({}));
+                            if (payload?.success && payload?.result) {
+                              const { result, device } = payload;
+                              if (device) setDevices((prev) => prev.map((x) => (x.id === device.id ? device : x)));
+                              setQrForDevice({ id: d.id, url: result.qrCode, pairing: result.pairingCode });
+                            } else if (payload?.device) {
+                              setDevices((prev) => prev.map((x) => (x.id === payload.device.id ? payload.device : x)));
+                              if (payload?.result?.qrCode || payload?.result?.pairingCode) {
+                                setQrForDevice({ id: d.id, url: payload.result.qrCode, pairing: payload.result.pairingCode });
+                              }
+                            }
+                          } finally {
+                            setConnectingDeviceId(null);
+                          }
+                        }}
+                        disabled={connectingDeviceId === d.id}
+                        className="gap-1"
+                      >
+                        <QrCode className="w-4 h-4" /> Connect
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {qrForDevice && (
+              <div className="mt-2 border rounded p-3 bg-gray-50">
+                <div className="text-sm font-medium mb-2">Scan QR / Pairing Code</div>
+                {qrForDevice.url ? (
+                  <img
+                    src={`/api/whatsapp/qr/${qrForDevice.id}`}
+                    alt="QR Code"
+                    className="w-56 h-56 border rounded"
+                  />
+                ) : qrForDevice.pairing ? (
+                  <div className="text-lg font-mono">{qrForDevice.pairing}</div>
+                ) : (
+                  <div className="text-sm text-gray-600">No QR/Pairing code available yet.</div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManageDevices(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showAddDevice} onOpenChange={setShowAddDevice}>
         <DialogContent>
