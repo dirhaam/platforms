@@ -223,32 +223,53 @@ export class WhatsAppClient implements WhatsAppApiClient {
   async getConversations(tenantId: string): Promise<WhatsAppConversation[]> {
     try {
       // Call actual WhatsApp API endpoint: GET /chats
-      const response = await this.makeRequest(`/chats?limit=25&offset=0`);
-      
-      if (response.code !== 'SUCCESS' && !response.data) {
-        throw new Error(response.message || 'Failed to get conversations');
-      }
+      const response = await this.makeRequest(`/chats?limit=50&offset=0`);
 
-      const chats = Array.isArray(response.data) ? response.data : [];
+      // Normalize response shape from different providers
+      const raw = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.results)
+        ? response.results
+        : Array.isArray(response?.data?.chats)
+        ? response.data.chats
+        : Array.isArray(response?.chats)
+        ? response.chats
+        : [];
       
-      return chats.map((chat: any) => ({
-        id: chat.chat_jid || chat.id,
-        tenantId,
-        customerPhone: chat.chat_jid?.replace('@s.whatsapp.net', '') || '',
-        customerName: chat.name || 'Unknown',
-        lastMessageAt: chat.timestamp ? new Date(chat.timestamp * 1000) : new Date(),
-        lastMessagePreview: chat.last_message || '',
-        unreadCount: chat.unread_count || 0,
-        status: 'active' as const,
-        tags: [],
-        metadata: {
-          chatJid: chat.chat_jid,
-          isGroup: chat.is_group,
-          isBroadcast: chat.is_broadcast,
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+      const chats = Array.isArray(raw) ? raw : [];
+
+      return chats.map((chat: any) => {
+        const chatJid = chat.chat_jid || chat.chatJid || chat.jid || chat.id || '';
+        const phone = typeof chatJid === 'string' && chatJid.includes('@')
+          ? chatJid.replace(/@.+$/, '')
+          : chat.phone || chat.number || chatJid || '';
+
+        const ts = chat.timestamp ?? chat.last_message_time ?? chat.lastMessageTime;
+        // detect seconds vs milliseconds
+        const dateMs = typeof ts === 'number' && ts > 0
+          ? (ts > 1e12 ? ts : ts * 1000)
+          : Date.now();
+
+        return {
+          id: chatJid || (phone ? `${phone}@s.whatsapp.net` : `chat_${Math.random().toString(36).slice(2)}`),
+          tenantId,
+          customerPhone: phone,
+          customerName: chat.name || chat.display_name || phone || 'Unknown',
+          lastMessageAt: new Date(dateMs),
+          lastMessagePreview: chat.last_message || chat.lastMessage || chat.preview || '',
+          unreadCount: chat.unread_count || chat.unreadCount || 0,
+          status: 'active' as const,
+          tags: [],
+          metadata: {
+            chatJid,
+            isGroup: chat.is_group ?? chat.isGroup,
+            isBroadcast: chat.is_broadcast ?? chat.isBroadcast,
+            raw: chat,
+          },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as WhatsAppConversation;
+      });
     } catch (error) {
       console.error('Error getting conversations:', error);
       throw error;
@@ -259,31 +280,42 @@ export class WhatsAppClient implements WhatsAppApiClient {
     try {
       // Call actual WhatsApp API endpoint: GET /chat/{chat_jid}/messages
       const response = await this.makeRequest(`/chat/${encodeURIComponent(conversationId)}/messages?limit=${limit}&offset=0`);
-      
-      if (response.code !== 'SUCCESS' && !response.data) {
-        throw new Error(response.message || 'Failed to get messages');
-      }
 
-      const messages = Array.isArray(response.data) ? response.data : [];
+      const raw = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.results)
+        ? response.results
+        : Array.isArray(response?.messages)
+        ? response.messages
+        : [];
 
-      return messages.map((msg: any) => ({
-        id: msg.id || msg.message_id,
-        tenantId: this.tenantId,
-        deviceId: '',
-        conversationId,
-        type: (msg.type || 'text') as WhatsAppMessage['type'],
-        content: msg.content || msg.body,
-        mediaUrl: msg.media_url || msg.mediaUrl,
-        mediaCaption: msg.media_caption || msg.mediaCaption,
-        isFromCustomer: !msg.from_me,
-        customerPhone: msg.from || '',
-        deliveryStatus: (msg.delivery_status || 'sent') as WhatsAppMessage['deliveryStatus'],
-        errorMessage: msg.error_message,
-        metadata: msg.metadata || {},
-        sentAt: msg.timestamp ? new Date(msg.timestamp * 1000) : new Date(),
-        deliveredAt: msg.delivered_at ? new Date(msg.delivered_at * 1000) : undefined,
-        readAt: msg.read_at ? new Date(msg.read_at * 1000) : undefined
-      }));
+      const messages = Array.isArray(raw) ? raw : [];
+
+      return messages.map((msg: any) => {
+        const type = (msg.type || (msg.media_type ? String(msg.media_type).toLowerCase() : 'text')) as WhatsAppMessage['type'];
+        const fromMe = msg.from_me ?? msg.fromMe ?? msg.is_outgoing ?? false;
+        const timestamp = msg.timestamp ?? msg.sent_at ?? msg.time;
+        const tsDate = typeof timestamp === 'number' && timestamp > 0 ? new Date((timestamp > 1e12 ? timestamp : timestamp * 1000)) : new Date();
+
+        return {
+          id: msg.id || msg.message_id || `msg_${Math.random().toString(36).slice(2)}`,
+          tenantId: this.tenantId,
+          deviceId: '',
+          conversationId,
+          type,
+          content: msg.content || msg.body || msg.text || '',
+          mediaUrl: msg.media_url || msg.mediaUrl,
+          mediaCaption: msg.media_caption || msg.mediaCaption || msg.caption,
+          isFromCustomer: !fromMe,
+          customerPhone: msg.from || msg.sender || '',
+          deliveryStatus: (msg.delivery_status || msg.status || 'sent') as WhatsAppMessage['deliveryStatus'],
+          errorMessage: msg.error_message,
+          metadata: msg.metadata || { raw: msg },
+          sentAt: tsDate,
+          deliveredAt: msg.delivered_at ? new Date((msg.delivered_at > 1e12 ? msg.delivered_at : msg.delivered_at * 1000)) : undefined,
+          readAt: msg.read_at ? new Date((msg.read_at > 1e12 ? msg.read_at : msg.read_at * 1000)) : undefined
+        } as WhatsAppMessage;
+      });
     } catch (error) {
       console.error('Error getting messages:', error);
       throw error;

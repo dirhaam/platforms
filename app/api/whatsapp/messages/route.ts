@@ -47,16 +47,21 @@ export async function GET(request: NextRequest) {
 
     const conversations = await client.getConversations(tenantId);
 
-    const response: ConversationResponse[] = conversations.map((conversation: any) => ({
-      id: conversation.id,
-      customerPhone: conversation.customerPhone,
-      customerName: conversation.customerName,
-      lastMessagePreview: conversation.lastMessagePreview,
-      lastMessageAt: conversation.lastMessageAt?.toISOString?.() || new Date().toISOString(),
-      unreadCount: conversation.unreadCount || 0,
-      status: conversation.status || 'active',
-      metadata: conversation.metadata,
-    }));
+    const response: ConversationResponse[] = conversations.map((conversation: any) => {
+      const meta = conversation.metadata || {};
+      const chatJid = meta.chatJid || conversation.id || '';
+      const chatId = chatJid || (conversation.customerPhone ? `${conversation.customerPhone}@s.whatsapp.net` : undefined);
+      return {
+        id: conversation.id,
+        customerPhone: conversation.customerPhone,
+        customerName: conversation.customerName,
+        lastMessagePreview: conversation.lastMessagePreview,
+        lastMessageAt: conversation.lastMessageAt?.toISOString?.() || new Date().toISOString(),
+        unreadCount: conversation.unreadCount || 0,
+        status: conversation.status || 'active',
+        metadata: { ...meta, chatId },
+      } as ConversationResponse;
+    });
 
     console.log(`[WhatsApp] Returning ${response.length} conversations to client`);
     return NextResponse.json({ conversations: response });
