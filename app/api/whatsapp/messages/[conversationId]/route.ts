@@ -40,6 +40,13 @@ export async function GET(
     // Always fetch from provider (API-only mode)
     // conversationId should be chat JID (e.g., 62xxxx@s.whatsapp.net or group@g.us)
     const chatJid = conversationId.includes('@') ? conversationId : `${conversationId}@s.whatsapp.net`;
+
+    // Exclude unsupported JID categories to avoid 500s from provider
+    const lower = chatJid.toLowerCase();
+    if (lower.endsWith('@broadcast') || lower.endsWith('@newsletter')) {
+      return NextResponse.json({ messages: [] });
+    }
+
     const apiMessages = await client.getMessages(chatJid, limit);
     const messages = apiMessages.map((msg: any) => ({
       id: msg.id,
@@ -72,9 +79,7 @@ export async function GET(
     return NextResponse.json({ messages: response });
   } catch (error) {
     console.error('Error fetching WhatsApp messages:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch messages' },
-      { status: 500 }
-    );
+    // Don't break the UI on provider failure; return empty list gracefully
+    return NextResponse.json({ messages: [], error: 'provider_error' });
   }
 }

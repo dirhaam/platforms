@@ -204,7 +204,7 @@ export function MessagesContent() {
         };
       });
 
-      setMessages(mapped);
+      setMessages((prev) => (mapped.length > 0 ? mapped : prev));
       setConversations((previous) =>
         previous.map((conversation) =>
           conversation.id === conversationId
@@ -300,11 +300,64 @@ export function MessagesContent() {
       };
 
       setMessages((previous) => [...previous, newMessage]);
+      // Ensure this chat exists in the left list and is selected
+      const recipientJid = selectedConversation.chatId
+        ? selectedConversation.chatId
+        : (selectedConversation.phone.includes('@')
+          ? selectedConversation.phone
+          : `${selectedConversation.phone}@s.whatsapp.net`);
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => c.id === recipientJid || c.chatId === recipientJid);
+        const nowStr = sentAt.toLocaleString();
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = {
+            ...copy[idx],
+            id: recipientJid,
+            chatId: recipientJid,
+            lastMessage: newMessage.content,
+            lastMessageTime: nowStr,
+            unreadCount: 0,
+            status: 'active',
+            metadata: { ...(copy[idx].metadata || {}), chatId: recipientJid },
+          };
+          return copy;
+        }
+        const newConv: Conversation = {
+          id: recipientJid,
+          phone: selectedConversation.phone,
+          chatId: recipientJid,
+          customerName: selectedConversation.customerName || selectedConversation.phone,
+          lastMessage: newMessage.content,
+          lastMessageTime: nowStr,
+          unreadCount: 0,
+          status: 'active',
+          metadata: { chatId: recipientJid },
+        };
+        return [newConv, ...prev];
+      });
+      setSelectedConversation((prev) => {
+        const nowStr = sentAt.toLocaleString();
+        const base = prev || ({} as Conversation);
+        return {
+          id: recipientJid,
+          phone: base.phone || selectedConversation.phone,
+          chatId: recipientJid,
+          customerName: base.customerName || selectedConversation.customerName || selectedConversation.phone,
+          lastMessage: newMessage.content,
+          lastMessageTime: nowStr,
+          unreadCount: 0,
+          status: 'active',
+          metadata: { ...(base.metadata || {}), chatId: recipientJid },
+        };
+      });
       setMessageInput('');
       if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
       setAttachment(null);
       setAttachmentPreview(null);
-      await fetchConversations(tenantId, { silent: true });
+      // Refresh list silently and fetch thread to reflect server state
+      fetchConversations(tenantId, { silent: true });
+      fetchMessages(tenantId, recipientJid);
     } catch (error) {
       console.error('Error sending message:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message.');
@@ -422,8 +475,39 @@ export function MessagesContent() {
       }
 
       setShowNewChatDialog(false);
+      const jid = newChatPhone.includes('@') ? newChatPhone.trim() : `${newChatPhone.trim()}@s.whatsapp.net`;
+      // Optimistically add/select the new conversation
+      setConversations((prev) => {
+        const exists = prev.find((c) => c.id === jid || c.chatId === jid);
+        if (exists) return prev;
+        const nowStr = new Date().toLocaleString();
+        const newConv: Conversation = {
+          id: jid,
+          phone: newChatPhone.trim(),
+          chatId: jid,
+          customerName: newChatPhone.trim(),
+          lastMessage: 'Hello! How can we help you today?',
+          lastMessageTime: nowStr,
+          unreadCount: 0,
+          status: 'active',
+          metadata: { chatId: jid },
+        };
+        return [newConv, ...prev];
+      });
+      setSelectedConversation({
+        id: jid,
+        phone: newChatPhone.trim(),
+        chatId: jid,
+        customerName: newChatPhone.trim(),
+        lastMessage: 'Hello! How can we help you today?',
+        lastMessageTime: new Date().toLocaleString(),
+        unreadCount: 0,
+        status: 'active',
+        metadata: { chatId: jid },
+      });
       setNewChatPhone('');
-      await fetchConversations(tenantId, { silent: true });
+      fetchConversations(tenantId, { silent: true });
+      fetchMessages(tenantId, jid);
     } catch (error) {
       console.error('Error starting new chat:', error);
       setError(error instanceof Error ? error.message : 'Failed to start new chat.');

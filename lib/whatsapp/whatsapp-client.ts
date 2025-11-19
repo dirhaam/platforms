@@ -76,7 +76,7 @@ export class WhatsAppClient implements WhatsAppApiClient {
           id: response.results?.message_id || randomUUID(),
           tenantId: this.tenantId,
           deviceId,
-          conversationId: response.results?.conversation_id || '',
+          conversationId: response.results?.conversation_id || to,
           type: message.type,
           content: message.content,
           mediaUrl: response.results?.media_url || message.mediaUrl,
@@ -85,6 +85,7 @@ export class WhatsAppClient implements WhatsAppApiClient {
           customerPhone: to,
           deliveryStatus: 'sent',
           sentAt: new Date(),
+          metadata: { chatJid: to },
         };
       }
 
@@ -106,7 +107,7 @@ export class WhatsAppClient implements WhatsAppApiClient {
         id: response.results?.message_id || randomUUID(),
         tenantId: this.tenantId,
         deviceId,
-        conversationId: response.results?.conversation_id || '',
+        conversationId: response.results?.conversation_id || to,
         type: message.type,
         content: message.content,
         mediaUrl: message.mediaUrl,
@@ -114,7 +115,8 @@ export class WhatsAppClient implements WhatsAppApiClient {
         isFromCustomer: false,
         customerPhone: to,
         deliveryStatus: 'sent',
-        sentAt: new Date()
+        sentAt: new Date(),
+        metadata: { chatJid: to },
       };
     } catch (error) {
       console.error('Error sending WhatsApp message:', error);
@@ -242,7 +244,14 @@ export class WhatsAppClient implements WhatsAppApiClient {
         ? response.chats
         : [];
       
-      const chats = Array.isArray(raw) ? raw : [];
+      const chats = (Array.isArray(raw) ? raw : []).filter((item: any) => {
+        const jid = item?.jid || item?.chat_jid || item?.chatJid;
+        if (typeof jid !== 'string' || jid.length <= 3 || !jid.includes('@')) return false;
+        const lower = jid.toLowerCase();
+        if (lower.endsWith('@broadcast')) return false; // exclude status broadcast chat
+        if (lower.endsWith('@newsletter')) return false; // exclude newsletter (not supported in UI)
+        return true;
+      });
 
       return chats.map((chat: any) => {
         const chatJid = chat.chat_jid || chat.chatJid || chat.jid || chat.id || '';

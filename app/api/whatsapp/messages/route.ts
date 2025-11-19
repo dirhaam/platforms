@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     const responseMessage = {
       id: message.id,
-      conversationId: message.conversationId,
+      conversationId: message.conversationId || recipient,
       tenantId: message.tenantId,
       deviceId: message.deviceId,
       type: message.type,
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       sentAt: message.sentAt.toISOString(),
       deliveredAt: message.deliveredAt ? message.deliveredAt.toISOString() : null,
       readAt: message.readAt ? message.readAt.toISOString() : null,
-      metadata: message.metadata || {},
+      metadata: { ...(message.metadata || {}), chatId: recipient, chatJid: recipient },
     };
 
     return NextResponse.json({ message: responseMessage }, { status: 201 });
