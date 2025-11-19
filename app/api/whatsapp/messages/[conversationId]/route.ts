@@ -78,32 +78,10 @@ export async function GET(
       readAt: message.readAt?.toISOString?.() || null,
     }));
 
-    const debugResponse = {
-        messages: response,
-        debug: {
-          conversationId,
-          tenantId,
-          apiMessagesCount: apiMessages.length,
-          note: 'Debug info included - check browser console'
-        }
-      };
-      return NextResponse.json(debugResponse);
+    return NextResponse.json({ messages: response });
   } catch (error) {
-    console.error('Error fetching WhatsApp messages:', {
-      conversationId,
-      tenantId,
-      errorMessage: error instanceof Error ? error.message : error,
-      errorStack: error instanceof Error ? error.stack : undefined
-    });
+    console.error('Error fetching WhatsApp messages:', error);
     // Don't break the UI on provider failure; return empty list gracefully
-    return NextResponse.json({ 
-      messages: [], 
-      error: 'provider_error',
-      debug: {
-        conversationId,
-        tenantId,
-        errorMessage: error instanceof Error ? error.message : error
-      }
-    });
+    return NextResponse.json({ messages: [], error: 'provider_error' });
   }
 }

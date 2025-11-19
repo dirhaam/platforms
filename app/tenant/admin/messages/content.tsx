@@ -199,16 +199,6 @@ export function MessagesContent() {
 
       const data = await response.json();
       
-      // Debug: Log response to browser console
-      console.log('WhatsApp Messages API Response:', {
-        conversationId,
-        debug: data.debug,
-        messagesCount: data.messages?.length || 0,
-        hasDebugInfo: !!data.debug,
-        apiResponse: data.debug?.success,
-        fullResponse: data
-      });
-      
       const mapped: Message[] = (data.messages || []).map((message: any) => {
         const sentAt = message.sentAt ? new Date(message.sentAt) : new Date();
 
