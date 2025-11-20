@@ -13,7 +13,7 @@ const getSupabaseClient = () => {
 // POST /api/services/[id]/home-visit-config - Update home visit configuration
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -23,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const serviceId = params.id;
+    const { id: serviceId } = await params;
     const body = await request.json();
 
     // Validate input
@@ -79,7 +79,7 @@ export async function POST(
 // GET /api/services/[id]/home-visit-config - Get home visit configuration
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -89,7 +89,7 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const serviceId = params.id;
+    const { id: serviceId } = await params;
 
     // Get service with home visit config
     const { data, error } = await supabase

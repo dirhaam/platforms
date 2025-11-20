@@ -13,7 +13,7 @@ const getSupabaseClient = () => {
 // GET /api/services/[id]/staff - Get staff members who can perform this service
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -23,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const serviceId = params.id;
+    const { id: serviceId } = await params;
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('includeInactive') === 'true';
 
@@ -88,7 +88,7 @@ export async function GET(
 // POST /api/services/[id]/staff - Assign staff to service
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -98,7 +98,7 @@ export async function POST(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const serviceId = params.id;
+    const { id: serviceId } = await params;
     const body = await request.json();
     const {
       staffId,

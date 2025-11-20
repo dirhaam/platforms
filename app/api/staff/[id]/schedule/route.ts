@@ -13,7 +13,7 @@ const getSupabaseClient = () => {
 // GET /api/staff/[id]/schedule - Get staff working hours schedule
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -23,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const staffId = params.id;
+    const { id: staffId } = await params;
 
     // Verify staff exists
     const { data: staff, error: staffError } = await supabase
@@ -76,7 +76,7 @@ export async function GET(
 // POST /api/staff/[id]/schedule - Set staff working hours
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -86,7 +86,7 @@ export async function POST(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const staffId = params.id;
+    const { id: staffId } = await params;
     const body = await request.json();
     const {
       dayOfWeek,

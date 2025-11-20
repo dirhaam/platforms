@@ -13,7 +13,7 @@ const getSupabaseClient = () => {
 // GET /api/staff/[id]/leave - Get staff leave/vacation records
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -23,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const staffId = params.id;
+    const { id: staffId } = await params;
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('activeOnly') === 'true';
 
@@ -84,7 +84,7 @@ export async function GET(
 // POST /api/staff/[id]/leave - Create staff leave record
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -94,7 +94,7 @@ export async function POST(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const staffId = params.id;
+    const { id: staffId } = await params;
     const body = await request.json();
     const {
       dateStart,
@@ -196,7 +196,7 @@ export async function POST(
 // DELETE /api/staff/[id]/leave/[leaveId] - Delete staff leave record
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -206,7 +206,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    const staffId = params.id;
+    const { id: staffId } = await params;
     const { searchParams } = new URL(request.url);
     const leaveId = searchParams.get('leaveId');
 
