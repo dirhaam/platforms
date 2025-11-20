@@ -19,17 +19,28 @@ export class StaffAvailabilityService {
       const { data, error } = await supabase
         .from('staff_services')
         .select(`
-          staff_id,
-          staff:staff_id(id, tenant_id, name, email, phone, role, is_active)
+          id,
+          can_perform,
+          staff!inner(id, tenant_id, name, email, phone, role, is_active, created_at, updated_at)
         `)
-        .eq('staff:staff_id.tenant_id', tenantId)
         .eq('service_id', serviceId)
         .eq('can_perform', true)
-        .eq('staff:staff_id.is_active', true);
+        .eq('staff.tenant_id', tenantId)
+        .eq('staff.is_active', true);
       
       if (error) throw error;
       
-      return data?.map(record => record.staff) || [];
+      return data?.map((record: any) => ({
+        id: record.staff.id,
+        tenantId: record.staff.tenant_id,
+        name: record.staff.name,
+        email: record.staff.email,
+        phone: record.staff.phone,
+        role: record.staff.role,
+        isActive: record.staff.is_active,
+        createdAt: new Date(record.staff.created_at),
+        updatedAt: new Date(record.staff.updated_at)
+      })) || [];
     } catch (error) {
       console.error('Error fetching staff for service:', error);
       return [];

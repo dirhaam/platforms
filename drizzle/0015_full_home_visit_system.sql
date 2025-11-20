@@ -79,8 +79,8 @@ COMMENT ON COLUMN bookings.travel_time_minutes_after IS 'Travel/buffer time need
 
 -- 6. Create indexes for improved query performance
 CREATE INDEX IF NOT EXISTS idx_bookings_staff_id_scheduled ON bookings(staff_id, scheduled_at);
-CREATE INDEX IF NOT EXISTS idx_bookings_tenant_service_date ON bookings(tenant_id, service_id, DATE(scheduled_at));
-CREATE INDEX IF NOT EXISTS idx_bookings_staff_date ON bookings(staff_id, DATE(scheduled_at), status);
+CREATE INDEX IF NOT EXISTS idx_bookings_tenant_service_scheduled ON bookings(tenant_id, service_id, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_bookings_staff_scheduled_status ON bookings(staff_id, scheduled_at, status);
 
 -- 7. Add trigger to auto-update updated_at on staff_services
 CREATE OR REPLACE FUNCTION update_staff_services_updated_at()

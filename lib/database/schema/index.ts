@@ -93,6 +93,7 @@ export const bookings = pgTable('bookings', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
   serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
+  staffId: uuid('staff_id').references(() => staff.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('pending'),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   duration: integer('duration').notNull(),
@@ -225,8 +226,8 @@ export const staffSchedule = pgTable('staff_schedule', {
 export const staffLeave = pgTable('staff_leave', {
   id: uuid('id').defaultRandom().primaryKey(),
   staffId: uuid('staff_id').notNull().references(() => staff.id, { onDelete: 'cascade' }),
-  dateStart: date('date_start').notNull(),
-  dateEnd: date('date_end').notNull(),
+  dateStart: text('date_start').notNull(), // DATE as text (YYYY-MM-DD)
+  dateEnd: text('date_end').notNull(), // DATE as text (YYYY-MM-DD)
   reason: text('reason').notNull(),
   isPaid: boolean('is_paid').default(true),
   approverId: uuid('approver_id').references(() => staff.id, { onDelete: 'set null' }),

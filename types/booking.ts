@@ -152,6 +152,9 @@ export interface CreateBookingRequest {
   travelDuration?: number;
   travelSurchargeAmount?: number;
   travelRoute?: Array<{ lat: number; lng: number }>;
+  // Staff assignment
+  staffId?: string; // Optional: specific staff assignment
+  autoAssignStaff?: boolean; // If true, auto-assign available staff
 }
 
 // Update booking request
@@ -384,8 +387,8 @@ export interface StaffSchedule {
 export interface StaffLeave {
   id: string;
   staffId: string;
-  dateStart: Date;
-  dateEnd: Date;
+  dateStart: string | Date; // Date in YYYY-MM-DD format or Date object
+  dateEnd: string | Date; // Date in YYYY-MM-DD format or Date object
   reason: string;
   isPaid: boolean;
   approverId?: string;
