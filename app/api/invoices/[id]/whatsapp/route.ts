@@ -29,17 +29,45 @@ export async function POST(
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    const body: SendInvoiceWhatsAppPayload = await request.json().catch(() => ({}));
+    const contentType = request.headers.get('content-type') || '';
+    let targetPhone: string | undefined;
+    let messageText: string | undefined;
+    let pdfBytes: Uint8Array | undefined;
 
-    const targetPhone = body.phoneNumber?.trim() || invoice.customer?.whatsappNumber || invoice.customer?.phone;
+    if (contentType.includes('multipart/form-data')) {
+      // Client-side generated PDF (from canvas capture)
+      const formData = await request.formData();
+      const pdfFile = formData.get('pdfFile') as File | null;
+      targetPhone = (formData.get('phoneNumber') as string)?.trim();
+      messageText = (formData.get('message') as string)?.trim();
+
+      if (pdfFile) {
+        const arrayBuffer = await pdfFile.arrayBuffer();
+        pdfBytes = new Uint8Array(arrayBuffer);
+      }
+    } else {
+      // Fallback to server-side PDF generation for backward compatibility
+      const body: SendInvoiceWhatsAppPayload = await request.json().catch(() => ({}));
+      targetPhone = body.phoneNumber?.trim();
+      messageText = body.message?.trim();
+
+      // Generate PDF server-side as fallback
+      const pdfGenerator = new InvoicePDFGenerator();
+      const pdfData = await pdfGenerator.generateInvoicePDF(invoice);
+      pdfBytes = new Uint8Array(pdfData);
+    }
+
+    if (!targetPhone) {
+      targetPhone = invoice.customer?.whatsappNumber || invoice.customer?.phone;
+    }
 
     if (!targetPhone) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
-    const pdfGenerator = new InvoicePDFGenerator();
-    const pdfData = await pdfGenerator.generateInvoicePDF(invoice);
-    const pdfBytes = new Uint8Array(pdfData);
+    if (!pdfBytes) {
+      return NextResponse.json({ error: 'PDF file is required' }, { status: 400 });
+    }
 
     const devices = await whatsappService.getTenantDevices(tenant.id);
     const activeDevice = devices.find((device) => device.status === 'connected') || devices[0];
@@ -51,7 +79,9 @@ export async function POST(
       );
     }
 
-    const messageText = body.message?.trim() || `Invoice ${invoice.invoiceNumber}`;
+    if (!messageText) {
+      messageText = `Invoice ${invoice.invoiceNumber}`;
+    }
 
     const sentMessage = await whatsappService.sendMessage(
       tenant.id,

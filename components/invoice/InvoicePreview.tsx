@@ -207,16 +207,40 @@ export function InvoicePreview({ open, onOpenChange, invoice }: InvoicePreviewPr
     setWhatsappMessage('');
 
     try {
+      // Capture canvas from preview
+      const canvas = await captureReceiptCanvas();
+      if (!canvas) {
+        throw new Error('Failed to capture invoice preview');
+      }
+
+      // Convert canvas to PDF with proper dimensions
+      const jsPDF = (await import('jspdf')).default;
+      const imgData = canvas.toDataURL('image/png', 0.95);
+      const pdfWidth = 80; // mm - receipt width
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      const pdf = new jsPDF({ 
+        unit: 'mm', 
+        format: [pdfWidth, pdfHeight], 
+        orientation: 'portrait' 
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      
+      // Get PDF as blob
+      const pdfBlob = pdf.output('blob');
+      
+      // Create FormData and send
+      const formData = new FormData();
+      formData.append('pdfFile', pdfBlob, `invoice-${displayInvoice.invoiceNumber}.pdf`);
+      formData.append('phoneNumber', displayInvoice.customer.whatsappNumber || displayInvoice.customer.phone);
+      formData.append('message', `Halo ${displayInvoice.customer.name}, berikut invoice ${displayInvoice.invoiceNumber} sebesar Rp ${displayInvoice.totalAmount.toLocaleString('id-ID')}.`);
+      
       const response = await fetch(`/api/invoices/${displayInvoice.id}/whatsapp`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'x-tenant-id': displayInvoice.tenantId
         },
-        body: JSON.stringify({
-          phoneNumber: displayInvoice.customer.whatsappNumber || displayInvoice.customer.phone,
-          message: `Halo ${displayInvoice.customer.name}, berikut invoice ${displayInvoice.invoiceNumber} sebesar Rp ${displayInvoice.totalAmount.toLocaleString('id-ID')}.`
-        })
+        body: formData
       });
 
       if (response.ok) {
