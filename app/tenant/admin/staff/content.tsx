@@ -86,7 +86,14 @@ export default function StaffPageContent() {
                 <tbody>
                   {staff.map((member) => (
                     <tr key={member.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">{member.name}</td>
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => router.push(`/tenant/admin/staff/${member.id}?subdomain=${subdomain}`)}
+                          className="text-blue-600 hover:underline font-medium"
+                        >
+                          {member.name}
+                        </button>
+                      </td>
                       <td className="py-3 px-4">{member.email}</td>
                       <td className="py-3 px-4">
                         <Badge variant="secondary">{member.role || 'staff'}</Badge>
@@ -98,7 +105,12 @@ export default function StaffPageContent() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => router.push(`/tenant/admin/staff/${member.id}?subdomain=${subdomain}`)}
+                            title="View Details"
+                          >
                             <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="sm" className="text-red-600">

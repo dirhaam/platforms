@@ -11,6 +11,8 @@ import { ArrowLeft, AlertCircle, Check } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Service } from '@/types/booking';
+import { HomeVisitConfig } from '@/components/services/home-visit-config';
+import { StaffAssignment } from '@/components/services/staff-assignment';
 
 interface ServiceEditContentProps {
   serviceId: string;
@@ -340,6 +342,22 @@ export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
           </form>
         </CardContent>
       </Card>
+
+      {/* Home Visit Configuration Section */}
+      {service && (
+        <>
+          <HomeVisitConfig
+            serviceId={serviceId}
+            tenantId={subdomain || ''}
+          />
+
+          {/* Staff Assignment Section */}
+          <StaffAssignment
+            serviceId={serviceId}
+            tenantId={subdomain || ''}
+          />
+        </>
+      )}
     </div>
   );
 }
