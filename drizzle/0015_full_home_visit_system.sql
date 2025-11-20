@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS staff_leave (
 CREATE INDEX IF NOT EXISTS idx_staff_leave_staff_id ON staff_leave(staff_id);
 CREATE INDEX IF NOT EXISTS idx_staff_leave_date_range ON staff_leave(date_start, date_end);
 
--- 5. Update bookings table - add travel time tracking
+-- 5. Update bookings table - add travel time tracking and staff reference
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS staff_id UUID REFERENCES staff(id) ON DELETE SET NULL;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS travel_time_minutes_before INTEGER DEFAULT 0;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS travel_time_minutes_after INTEGER DEFAULT 0;
 
