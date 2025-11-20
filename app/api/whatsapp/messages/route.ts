@@ -124,16 +124,15 @@ export async function POST(request: NextRequest) {
     if (!deviceId) {
       const devices = await whatsappService.getTenantDevices(tenantId);
       const connectedDevice = devices.find((device) => device.status === 'connected');
-      const fallbackDevice = devices[0];
 
-      if (!connectedDevice && !fallbackDevice) {
+      if (!connectedDevice) {
         return NextResponse.json(
-          { error: 'No WhatsApp devices available for this tenant' },
+          { error: 'No connected WhatsApp devices available for this tenant. Please connect a device first.' },
           { status: 503 }
         );
       }
 
-      deviceId = (connectedDevice ?? fallbackDevice).id;
+      deviceId = connectedDevice.id;
     }
 
     const recipient = customerPhone.includes('@')
