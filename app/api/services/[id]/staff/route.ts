@@ -27,52 +27,67 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('includeInactive') === 'true';
 
-    // Get staff members who can perform this service
-    const query = supabase
+    // Get staff services mapping for this service
+    const { data: staffServices, error: servicesError } = await supabase
       .from('staff_services')
-      .select(`
-        id,
-        staff_id,
-        can_perform,
-        is_specialist,
-        notes,
-        staff:staff_id(
-          id,
-          tenant_id,
-          name,
-          email,
-          phone,
-          role,
-          is_active,
-          created_at
-        )
-      `)
+      .select('id, staff_id, can_perform, is_specialist, notes')
       .eq('service_id', serviceId)
-      .eq('staff:staff_id.tenant_id', tenantId)
       .eq('can_perform', true);
 
-    if (!includeInactive) {
-      query.eq('staff:staff_id.is_active', true);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching service staff:', error);
+    if (servicesError) {
+      console.error('Error fetching staff services:', servicesError);
       return NextResponse.json(
         { error: 'Failed to fetch staff' },
         { status: 500 }
       );
     }
 
-    // Format response
-    const staff = (data || []).map(record => ({
-      ...record.staff,
-      staffServiceId: record.id,
-      canPerform: record.can_perform,
-      isSpecialist: record.is_specialist,
-      notes: record.notes
-    }));
+    if (!staffServices || staffServices.length === 0) {
+      return NextResponse.json({
+        serviceId,
+        staff: [],
+        total: 0
+      });
+    }
+
+    // Get staff details for these staff members
+    const staffIds = (staffServices || []).map((ss: any) => ss.staff_id);
+    
+    let staffQuery = supabase
+      .from('staff')
+      .select('id, tenant_id, name, email, phone, role, is_active, created_at')
+      .eq('tenant_id', tenantId)
+      .in('id', staffIds);
+
+    if (!includeInactive) {
+      staffQuery = staffQuery.eq('is_active', true);
+    }
+
+    const { data: staffList, error: staffError } = await staffQuery;
+
+    if (staffError) {
+      console.error('Error fetching staff:', staffError);
+      return NextResponse.json(
+        { error: 'Failed to fetch staff details' },
+        { status: 500 }
+      );
+    }
+
+    // Merge staff details with service mapping
+    const staffMap = new Map((staffList || []).map((s: any) => [s.id, s]));
+    const staff = (staffServices || [])
+      .map((ss: any) => {
+        const staffMember = staffMap.get(ss.staff_id);
+        if (!staffMember) return null;
+        return {
+          ...staffMember,
+          staffServiceId: ss.id,
+          canPerform: ss.can_perform,
+          isSpecialist: ss.is_specialist,
+          notes: ss.notes
+        };
+      })
+      .filter((s: any) => s !== null);
 
     return NextResponse.json({
       serviceId,
