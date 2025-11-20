@@ -17,7 +17,7 @@ export async function GET(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id');
+    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
@@ -88,7 +88,7 @@ export async function POST(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id');
+    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
@@ -200,7 +200,7 @@ export async function DELETE(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id');
+    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
