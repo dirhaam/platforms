@@ -35,17 +35,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[WhatsApp] Fetching conversations (provider-first) for tenant: ${tenantId}`);
+    console.log(`[WhatsApp] Fetching conversations for tenant: ${tenantId}`);
 
-    const client = await whatsappService.getWhatsAppClient(tenantId);
-    if (!client) {
-      return NextResponse.json(
-        { error: 'WhatsApp endpoint not configured or unavailable for this tenant' },
-        { status: 503 }
-      );
-    }
-
-    const conversations = await client.getConversations(tenantId);
+    const conversations = await whatsappService.getConversations(tenantId);
 
     const response: ConversationResponse[] = conversations.map((conversation: any) => {
       const meta = conversation.metadata || {};
