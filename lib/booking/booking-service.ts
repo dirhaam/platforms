@@ -239,6 +239,42 @@ export class BookingService {
         paymentStatus = 'partial';
       }
 
+      // Validate home visit availability and get staff assignment
+      let staffIdToAssign: string | null = null;
+      let travelTimeBeforeMinutes = 0;
+      let travelTimeAfterMinutes = 0;
+      
+      // Check if service requires staff assignment or is home visit
+      if ((service.requiresStaffAssignment || service.serviceType === 'home_visit') && data.isHomeVisit) {
+        // Validate service supports home visits
+        if (!service.homeVisitAvailable && service.serviceType === 'on_premise') {
+          return { error: 'This service does not support home visit bookings' };
+        }
+        
+        // Auto-assign staff if requested or required
+        if (data.autoAssignStaff !== false) {
+          const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
+          
+          const bestStaff = await StaffAvailabilityService.findBestAvailableStaff(
+            tenantId,
+            data.serviceId,
+            scheduledAt,
+            scheduledAt,
+            new Date(scheduledAt.getTime() + service.duration * 60000)
+          );
+          
+          if (!bestStaff) {
+            return { error: 'No available staff for this booking time' };
+          }
+          
+          staffIdToAssign = bestStaff.id;
+          
+          // Apply travel time buffers for home visits
+          travelTimeBeforeMinutes = service.homeVisitMinBufferMinutes || 0;
+          travelTimeAfterMinutes = service.homeVisitMinBufferMinutes || 0;
+        }
+      }
+
       // Create the booking
       const bookingId = randomUUID();
       const now = new Date();
@@ -252,6 +288,7 @@ export class BookingService {
           tenant_id: tenantId,
           customer_id: data.customerId,
           service_id: data.serviceId,
+          staff_id: staffIdToAssign,
           scheduled_at: scheduledAt.toISOString(),
           duration: service.duration,
           is_home_visit: data.isHomeVisit || false,
@@ -265,6 +302,8 @@ export class BookingService {
           travel_surcharge_amount: travelSurcharge,
           travel_distance: travelDistance,
           travel_duration: travelDuration,
+          travel_time_minutes_before: travelTimeBeforeMinutes,
+          travel_time_minutes_after: travelTimeAfterMinutes,
           status: BookingStatus.PENDING,
           payment_status: paymentStatus,
           reminders_sent: [],
