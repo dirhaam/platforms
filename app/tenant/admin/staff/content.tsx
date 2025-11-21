@@ -28,10 +28,21 @@ export default function StaffPageContent() {
       console.log('[StaffPage] Fetching staff for subdomain:', subdomain);
       
       const response = await fetch('/api/admin/staff', {
-        headers: { 'x-tenant-id': subdomain! }
+        credentials: 'include',
+        headers: { 
+          'x-tenant-id': subdomain!,
+          'Content-Type': 'application/json'
+        }
       });
       
       console.log('[StaffPage] Response status:', response.status);
+      
+      // Handle 401 - redirect to login
+      if (response.status === 401) {
+        console.log('[StaffPage] Unauthorized - redirecting to login');
+        router.push(`/tenant/login?subdomain=${subdomain}&redirect=/tenant/admin/staff`);
+        return;
+      }
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
