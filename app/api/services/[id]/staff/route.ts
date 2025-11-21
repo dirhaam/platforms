@@ -18,7 +18,7 @@ export async function GET(
   try {
     const supabase = getSupabaseClient();
     const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
-    
+
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
@@ -52,7 +52,7 @@ export async function GET(
 
     // Get staff details for these staff members
     const staffIds = (staffServices || []).map((ss: any) => ss.staff_id);
-    
+
     let staffQuery = supabase
       .from('staff')
       .select('id, tenant_id, name, email, phone, role, is_active, created_at')
@@ -108,7 +108,7 @@ export async function POST(
   try {
     const supabase = getSupabaseClient();
     const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
-    
+
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
@@ -154,21 +154,51 @@ export async function POST(
     }
 
     // Create or update staff-service mapping
-    const { data, error } = await supabase
+    // Check if mapping already exists
+    const { data: existingMapping } = await supabase
       .from('staff_services')
-      .upsert({
-        staff_id: staffId,
-        service_id: serviceId,
-        can_perform: canPerform,
-        is_specialist: isSpecialist,
-        notes: notes || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'staff_id,service_id'
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('staff_id', staffId)
+      .eq('service_id', serviceId)
+      .maybeSingle();
+
+    let data, error;
+
+    if (existingMapping) {
+      // Update existing mapping
+      const result = await supabase
+        .from('staff_services')
+        .update({
+          can_perform: canPerform,
+          is_specialist: isSpecialist,
+          notes: notes || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingMapping.id)
+        .select()
+        .single();
+
+      data = result.data;
+      error = result.error;
+    } else {
+      // Create new mapping
+      const result = await supabase
+        .from('staff_services')
+        .insert({
+          staff_id: staffId,
+          service_id: serviceId,
+          can_perform: canPerform,
+          is_specialist: isSpecialist,
+          notes: notes || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) {
       console.error('Error assigning staff to service:', error);
