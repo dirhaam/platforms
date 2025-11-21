@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 import { InvoiceService } from '@/lib/invoice/invoice-service';
-import { InvoiceImageGenerator } from '@/lib/invoice/image-generator';
+import { InvoicePDFGenerator } from '@/lib/invoice/pdf-generator';
 import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
 
 interface SendInvoiceWhatsAppPayload {
