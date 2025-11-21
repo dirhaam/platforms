@@ -259,6 +259,7 @@ export interface AvailabilityResponse {
     isOpen: boolean;
     openTime?: string;
     closeTime?: string;
+    isBlocked?: boolean;
   };
 }
 
