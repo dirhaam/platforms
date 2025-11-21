@@ -25,15 +25,24 @@ export default function StaffPageContent() {
   const fetchStaff = async () => {
     try {
       setLoading(true);
+      console.log('[StaffPage] Fetching staff for subdomain:', subdomain);
+      
       const response = await fetch('/api/admin/staff', {
         headers: { 'x-tenant-id': subdomain! }
       });
-      if (response.ok) {
-        const data = await response.json();
-        setStaff(data.staff || []);
+      
+      console.log('[StaffPage] Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${response.status}`);
       }
+      
+      const data = await response.json();
+      console.log('[StaffPage] Staff data received:', data);
+      setStaff(data.staff || []);
     } catch (error) {
-      console.error('Error fetching staff:', error);
+      console.error('[StaffPage] Error fetching staff:', error);
     } finally {
       setLoading(false);
     }
