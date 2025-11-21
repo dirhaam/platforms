@@ -35,17 +35,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[WhatsApp] Fetching conversations (provider-first) for tenant: ${tenantId}`);
+    console.log(`[WhatsApp] Fetching conversations for tenant: ${tenantId}`);
 
-    const client = await whatsappService.getWhatsAppClient(tenantId);
-    if (!client) {
-      return NextResponse.json(
-        { error: 'WhatsApp endpoint not configured or unavailable for this tenant' },
-        { status: 503 }
-      );
-    }
-
-    const conversations = await client.getConversations(tenantId);
+    const conversations = await whatsappService.getConversations(tenantId);
 
     const response: ConversationResponse[] = conversations.map((conversation: any) => {
       const meta = conversation.metadata || {};
@@ -130,18 +122,31 @@ export async function POST(request: NextRequest) {
     }
 
     if (!deviceId) {
-      const devices = await whatsappService.getTenantDevices(tenantId);
-      const connectedDevice = devices.find((device) => device.status === 'connected');
-      const fallbackDevice = devices[0];
+      let devices = await whatsappService.getTenantDevices(tenantId);
+      console.log(`[WhatsApp] POST - Looking for connected devices. Found ${devices.length} devices:`, devices.map(d => ({ id: d.id, status: d.status, name: d.deviceName })));
+      
+      let connectedDevice = devices.find((device) => device.status === 'connected');
 
-      if (!connectedDevice && !fallbackDevice) {
+      // If no connected device found and we have other devices, try refreshing their status
+      if (!connectedDevice && devices.length > 0) {
+        console.log(`[WhatsApp] POST - No connected device found, refreshing device statuses...`);
+        const refreshPromises = devices.map((device) => whatsappService.refreshDeviceStatus(device.id).catch(() => device));
+        const refreshedDevices = await Promise.all(refreshPromises);
+        devices = refreshedDevices as typeof devices;
+        connectedDevice = devices.find((device) => device.status === 'connected');
+        console.log(`[WhatsApp] POST - After refresh:`, devices.map(d => `${d.deviceName}(${d.id}): ${d.status}`).join(', '));
+      }
+
+      if (!connectedDevice) {
+        console.log(`[WhatsApp] POST - No connected devices found. Device statuses:`, devices.map(d => `${d.deviceName}(${d.id}): ${d.status}`).join(', '));
         return NextResponse.json(
-          { error: 'No WhatsApp devices available for this tenant' },
+          { error: `No connected WhatsApp devices available for this tenant. Please connect a device first. (Found ${devices.length} devices with statuses: ${devices.map(d => d.status).join(', ')})` },
           { status: 503 }
         );
       }
 
-      deviceId = (connectedDevice ?? fallbackDevice).id;
+      deviceId = connectedDevice.id;
+      console.log(`[WhatsApp] POST - Using device: ${connectedDevice.deviceName} (${deviceId})`);
     }
 
     const recipient = customerPhone.includes('@')

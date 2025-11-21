@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertCircle, CheckCircle, Plus, Smartphone, Zap, RefreshCw, QrCode } from 'lucide-react';
+import { AlertCircle, CheckCircle, Plus, Smartphone, Zap, RefreshCw, QrCode, Trash2 } from 'lucide-react';
 import { MessagesContent } from '../messages/content';
 
 // Re-use the interfaces from the original components
@@ -111,6 +111,24 @@ export function WhatsAppUnifiedContent() {
   }, [subdomain]);
 
   const connectedCount = devices.filter((d) => d.status === 'connected').length;
+
+  const handleDeleteDevice = async (deviceId: string) => {
+    if (!confirm('Are you sure you want to delete this device? This action cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/whatsapp/devices/${deviceId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to delete device');
+      }
+      setDevices((prev) => prev.filter((d) => d.id !== deviceId));
+      setError(null);
+    } catch (e) {
+      console.error('Delete device failed:', e);
+      setError(e instanceof Error ? e.message : 'Failed to delete device');
+    }
+  };
 
   const handleCreateDevice = async () => {
     if (!tenantId || !endpoint || !newDeviceName.trim()) return;
@@ -258,6 +276,14 @@ export function WhatsAppUnifiedContent() {
                         className="gap-1"
                       >
                         <QrCode className="w-4 h-4" /> Connect
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteDevice(d.id)}
+                        title="Delete device"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>

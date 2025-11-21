@@ -58,6 +58,14 @@ export const services = pgTable('services', {
   
   images: jsonb('images').$type<string[] | null>(),
   requirements: jsonb('requirements').$type<string[] | null>(),
+  
+  // Home visit configuration
+  serviceType: text('service_type').notNull().default('on_premise'), // 'on_premise', 'home_visit', 'both'
+  homeVisitFullDayBooking: boolean('home_visit_full_day_booking').default(false), // If true, only 1 booking per day
+  homeVisitMinBufferMinutes: integer('home_visit_min_buffer_minutes').default(30), // Travel buffer between appointments
+  dailyQuotaPerStaff: integer('daily_quota_per_staff'), // Max bookings per staff per day (NULL = unlimited)
+  requiresStaffAssignment: boolean('requires_staff_assignment').default(false),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -85,6 +93,7 @@ export const bookings = pgTable('bookings', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
   serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
+  staffId: uuid('staff_id').references(() => staff.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('pending'),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   duration: integer('duration').notNull(),
@@ -99,6 +108,8 @@ export const bookings = pgTable('bookings', {
   travelDistance: real('travel_distance').default(0),
   travelDuration: integer('travel_duration').default(0),
   travelSurchargeAmount: real('travel_surcharge_amount').default(0),
+  travelTimeMinutesBefore: integer('travel_time_minutes_before').default(0),
+  travelTimeMinutesAfter: integer('travel_time_minutes_after').default(0),
   // Additional pricing fields
   taxPercentage: real('tax_percentage'),
   serviceChargeAmount: real('service_charge_amount'),
@@ -182,6 +193,45 @@ export const messageTemplates = pgTable('message_templates', {
   variables: jsonb('variables').$type<string[] | null>(),
   category: text('category').notNull().default('reminder'),
   isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Staff Services table (many-to-many mapping)
+export const staffServices = pgTable('staff_services', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  staffId: uuid('staff_id').notNull().references(() => staff.id, { onDelete: 'cascade' }),
+  serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
+  canPerform: boolean('can_perform').notNull().default(true),
+  isSpecialist: boolean('is_specialist').notNull().default(false),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Staff Schedule table (per-staff working hours override)
+export const staffSchedule = pgTable('staff_schedule', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  staffId: uuid('staff_id').notNull().references(() => staff.id, { onDelete: 'cascade' }),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 6=Saturday
+  startTime: text('start_time').notNull(), // "08:00"
+  endTime: text('end_time').notNull(), // "18:00"
+  isAvailable: boolean('is_available').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Staff Leave table (vacation/sick leave)
+export const staffLeave = pgTable('staff_leave', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  staffId: uuid('staff_id').notNull().references(() => staff.id, { onDelete: 'cascade' }),
+  dateStart: text('date_start').notNull(), // DATE as text (YYYY-MM-DD)
+  dateEnd: text('date_end').notNull(), // DATE as text (YYYY-MM-DD)
+  reason: text('reason').notNull(),
+  isPaid: boolean('is_paid').default(true),
+  approverId: uuid('approver_id').references(() => staff.id, { onDelete: 'set null' }),
+  notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -389,6 +439,7 @@ export const serviceRelations = relations(services, ({ one, many }) => ({
   bookings: many(bookings),
   invoiceItems: many(invoiceItems),
   salesTransactions: many(salesTransactions),
+  staffServices: many(staffServices),
 }));
 
 export const customerRelations = relations(customers, ({ one, many }) => ({
@@ -403,6 +454,7 @@ export const bookingRelations = relations(bookings, ({ one, many }) => ({
   tenant: one(tenants, { fields: [bookings.tenantId], references: [tenants.id] }),
   customer: one(customers, { fields: [bookings.customerId], references: [customers.id] }),
   service: one(services, { fields: [bookings.serviceId], references: [services.id] }),
+  staffMember: one(staff, { fields: [bookings.staffId], references: [staff.id] }),
   invoices: many(invoices),
   salesTransactions: many(salesTransactions),
 }));
@@ -410,6 +462,28 @@ export const bookingRelations = relations(bookings, ({ one, many }) => ({
 export const staffRelations = relations(staff, ({ one, many }) => ({
   tenant: one(tenants, { fields: [staff.tenantId], references: [tenants.id] }),
   assignedConversations: many(conversations),
+  services: many(staffServices),
+  schedule: many(staffSchedule),
+  leaves: many(staffLeave),
+  approvedLeaves: many(staffLeave, { relationName: 'approvedLeaves' }),
+}));
+
+export const staffServicesRelations = relations(staffServices, ({ one }) => ({
+  staff: one(staff, { fields: [staffServices.staffId], references: [staff.id] }),
+  service: one(services, { fields: [staffServices.serviceId], references: [services.id] }),
+}));
+
+export const staffScheduleRelations = relations(staffSchedule, ({ one }) => ({
+  staff: one(staff, { fields: [staffSchedule.staffId], references: [staff.id] }),
+}));
+
+export const staffLeaveRelations = relations(staffLeave, ({ one }) => ({
+  staff: one(staff, { fields: [staffLeave.staffId], references: [staff.id] }),
+  approver: one(staff, { 
+    fields: [staffLeave.approverId], 
+    references: [staff.id],
+    relationName: 'approvedLeaves'
+  }),
 }));
 
 export const conversationRelations = relations(conversations, ({ one, many }) => ({

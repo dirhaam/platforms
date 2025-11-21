@@ -239,6 +239,42 @@ export class BookingService {
         paymentStatus = 'partial';
       }
 
+      // Validate home visit availability and get staff assignment
+      let staffIdToAssign: string | null = null;
+      let travelTimeBeforeMinutes = 0;
+      let travelTimeAfterMinutes = 0;
+      
+      // Check if service requires staff assignment or is home visit
+      if ((service.requiresStaffAssignment || service.serviceType === 'home_visit') && data.isHomeVisit) {
+        // Validate service supports home visits
+        if (!service.homeVisitAvailable && service.serviceType === 'on_premise') {
+          return { error: 'This service does not support home visit bookings' };
+        }
+        
+        // Auto-assign staff if requested or required
+        if (data.autoAssignStaff !== false) {
+          const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
+          
+          const bestStaff = await StaffAvailabilityService.findBestAvailableStaff(
+            tenantId,
+            data.serviceId,
+            scheduledAt,
+            scheduledAt,
+            new Date(scheduledAt.getTime() + service.duration * 60000)
+          );
+          
+          if (!bestStaff) {
+            return { error: 'No available staff for this booking time' };
+          }
+          
+          staffIdToAssign = bestStaff.id;
+          
+          // Apply travel time buffers for home visits
+          travelTimeBeforeMinutes = service.homeVisitMinBufferMinutes || 0;
+          travelTimeAfterMinutes = service.homeVisitMinBufferMinutes || 0;
+        }
+      }
+
       // Create the booking
       const bookingId = randomUUID();
       const now = new Date();
@@ -252,6 +288,7 @@ export class BookingService {
           tenant_id: tenantId,
           customer_id: data.customerId,
           service_id: data.serviceId,
+          staff_id: staffIdToAssign,
           scheduled_at: scheduledAt.toISOString(),
           duration: service.duration,
           is_home_visit: data.isHomeVisit || false,
@@ -265,6 +302,8 @@ export class BookingService {
           travel_surcharge_amount: travelSurcharge,
           travel_distance: travelDistance,
           travel_duration: travelDuration,
+          travel_time_minutes_before: travelTimeBeforeMinutes,
+          travel_time_minutes_after: travelTimeAfterMinutes,
           status: BookingStatus.PENDING,
           payment_status: paymentStatus,
           reminders_sent: [],
@@ -965,6 +1004,273 @@ export class BookingService {
     } catch (error) {
       console.error('Error recording payment:', error);
       return { error: error instanceof Error ? error.message : 'Failed to record payment' };
+    }
+  }
+
+  /**
+   * Enhanced getAvailability with home visit and staff support
+   * Handles:
+   * - Service type filtering (on_premise vs home_visit vs both)
+   * - Staff filtering and assignment
+   * - Full day booking limits (1 booking per day)
+   * - Daily quota per staff
+   * - Travel time blocking between appointments
+   * - Staff leave/vacation checking
+   */
+  static async getAvailabilityWithStaff(
+    tenantId: string,
+    serviceId: string,
+    date: string,
+    staffId?: string
+  ): Promise<AvailabilityResponse | null> {
+    try {
+      const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
+      
+      const supabase = getSupabaseClient();
+      
+      const service = await this.getService(tenantId, serviceId);
+      if (!service) {
+        return null;
+      }
+      
+      // Get business hours
+      const { data: businessHoursData } = await supabase
+        .from('business_hours')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .single();
+      
+      // Parse date
+      const [year, month, day] = date.split('-').map(Number);
+      const bookingDate = new Date(year, month - 1, day);
+      bookingDate.setHours(0, 0, 0, 0);
+      
+      const dayOfWeek = bookingDate.getDay();
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayKey = dayNames[dayOfWeek];
+      
+      const schedule = businessHoursData?.schedule || {};
+      let dayHours = schedule[dayKey] || schedule[dayKey.charAt(0).toUpperCase() + dayKey.slice(1)];
+      
+      if (!dayHours) {
+        const matchKey = Object.keys(schedule).find(key => key.toLowerCase() === dayKey.toLowerCase());
+        dayHours = matchKey ? schedule[matchKey] : null;
+      }
+      
+      if (!dayHours) {
+        dayHours = { isOpen: true, openTime: '08:00', closeTime: '17:00' };
+      }
+      
+      if (!dayHours.isOpen) {
+        return {
+          date,
+          slots: [],
+          businessHours: { isOpen: false }
+        };
+      }
+      
+      // Determine which staff to check
+      let staffToCheck: string[] = [];
+      
+      if (staffId) {
+        // Specific staff requested
+        const isAvailable = await StaffAvailabilityService.isStaffAvailableOnDate(staffId, bookingDate);
+        if (!isAvailable) {
+          return { date, slots: [], businessHours: { isOpen: true } };
+        }
+        staffToCheck = [staffId];
+      } else if (service.requiresStaffAssignment || service.serviceType === 'home_visit') {
+        // Get qualified staff
+        const qualifiedStaff = await StaffAvailabilityService.getStaffForService(tenantId, serviceId);
+        
+        // Filter available staff
+        const availableStaff: string[] = [];
+        for (const staff of qualifiedStaff) {
+          const isAvailable = await StaffAvailabilityService.isStaffAvailableOnDate(staff.id, bookingDate);
+          if (isAvailable) {
+            availableStaff.push(staff.id);
+          }
+        }
+        
+        if (availableStaff.length === 0) {
+          return { date, slots: [], businessHours: { isOpen: true } };
+        }
+        
+        staffToCheck = availableStaff;
+      }
+      
+      const [startHourStr, startMinStr] = dayHours.openTime.split(':').map(Number);
+      const [endHourStr, endMinStr] = dayHours.closeTime.split(':').map(Number);
+      
+      const startOfDay = new Date(bookingDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(bookingDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const timezone = businessHoursData?.timezone || 'Asia/Jakarta';
+      const timezoneOffsets: Record<string, number> = {
+        'Asia/Jakarta': 7,
+        'Asia/Bangkok': 7,
+        'Asia/Ho_Chi_Minh': 7,
+        'UTC': 0,
+        'America/New_York': -5,
+        'America/Chicago': -6,
+        'America/Los_Angeles': -8,
+        'Europe/London': 0,
+        'Europe/Paris': 1,
+      };
+      
+      const tzOffset = timezoneOffsets[timezone] || 7;
+      
+      const startDate = new Date(bookingDate);
+      startDate.setHours(startHourStr, startMinStr, 0, 0);
+      startDate.setHours(startDate.getHours() - tzOffset);
+      
+      const endDate = new Date(bookingDate);
+      endDate.setHours(endHourStr, endMinStr, 0, 0);
+      endDate.setHours(endDate.getHours() - tzOffset);
+      
+      // Get service duration and configuration
+      const serviceDuration = service.duration;
+      const slotDurationMinutes = service.slotDurationMinutes || 30;
+      const isFullDayBooking = service.homeVisitFullDayBooking || false;
+      const bufferMinutes = service.homeVisitMinBufferMinutes || 0;
+      const dailyQuota = service.dailyQuotaPerStaff;
+      
+      const slots: TimeSlot[] = [];
+      
+      // If full day booking, only return 1 slot per day per staff
+      if (isFullDayBooking) {
+        // Check if any staff already has a booking for this day
+        let hasBooking = false;
+        
+        if (staffId) {
+          const bookingCount = await StaffAvailabilityService.getStaffBookingCountOnDate(
+            tenantId,
+            staffId,
+            bookingDate
+          );
+          hasBooking = bookingCount > 0;
+        } else {
+          // Check any available staff
+          for (const stfId of staffToCheck) {
+            const bookingCount = await StaffAvailabilityService.getStaffBookingCountOnDate(
+              tenantId,
+              stfId,
+              bookingDate
+            );
+            if (bookingCount > 0) {
+              hasBooking = true;
+              break;
+            }
+          }
+        }
+        
+        if (!hasBooking) {
+          // Return one slot starting at business open time
+          slots.push({
+            start: new Date(startDate),
+            end: new Date(startDate.getTime() + serviceDuration * 60000),
+            available: true
+          });
+        }
+        
+        return {
+          date,
+          slots,
+          businessHours: { isOpen: true, openTime: dayHours.openTime, closeTime: dayHours.closeTime }
+        };
+      }
+      
+      // Multiple bookings per day - generate slots with travel time blocking
+      const staffBookings: Map<string, any[]> = new Map();
+      
+      // Fetch all confirmed bookings for this service on this date for each staff
+      if (staffId) {
+        const bookings = await StaffAvailabilityService.getStaffBookingsOnDate(
+          tenantId,
+          staffId,
+          bookingDate
+        );
+        staffBookings.set(staffId, bookings);
+      } else {
+        for (const stfId of staffToCheck) {
+          const bookings = await StaffAvailabilityService.getStaffBookingsOnDate(
+            tenantId,
+            stfId,
+            bookingDate
+          );
+          staffBookings.set(stfId, bookings);
+        }
+      }
+      
+      // Generate slots
+      let currentTime = new Date(startDate);
+      
+      while (currentTime < endDate) {
+        const slotStart = new Date(currentTime);
+        const slotEnd = new Date(slotStart.getTime() + serviceDuration * 60000);
+        
+        // Check if slot would go past business hours
+        if (slotEnd > endDate) {
+          break;
+        }
+        
+        // Check availability for the first available staff (or specific staff if provided)
+        let isAvailable = false;
+        
+        const staffToCheck1 = staffId ? [staffId] : Array.from(staffBookings.keys());
+        
+        for (const stfId of staffToCheck1) {
+          const bookings = staffBookings.get(stfId) || [];
+          
+          // Check daily quota
+          if (dailyQuota && bookings.length >= dailyQuota) {
+            continue; // This staff reached quota, try next
+          }
+          
+          // Check time conflicts with travel buffer
+          let hasConflict = false;
+          
+          for (const booking of bookings) {
+            const bookingStart = new Date(booking.scheduled_at);
+            const bookingEnd = new Date(bookingStart.getTime() + booking.duration * 60000);
+            
+            // Apply travel buffer to existing booking
+            const bookingStartWithBuffer = new Date(bookingStart.getTime() - bufferMinutes * 60000);
+            const bookingEndWithBuffer = new Date(bookingEnd.getTime() + bufferMinutes * 60000);
+            
+            // Check overlap
+            if (slotStart < bookingEndWithBuffer && slotEnd > bookingStartWithBuffer) {
+              hasConflict = true;
+              break;
+            }
+          }
+          
+          if (!hasConflict) {
+            isAvailable = true;
+            break; // Found available slot for this or any staff
+          }
+        }
+        
+        slots.push({
+          start: slotStart,
+          end: slotEnd,
+          available: isAvailable
+        });
+        
+        // Move to next slot
+        currentTime = new Date(currentTime.getTime() + slotDurationMinutes * 60000);
+      }
+      
+      return {
+        date,
+        slots,
+        businessHours: { isOpen: true, openTime: dayHours.openTime, closeTime: dayHours.closeTime }
+      };
+    } catch (error) {
+      console.error('Error in getAvailabilityWithStaff:', error);
+      return null;
     }
   }
 }

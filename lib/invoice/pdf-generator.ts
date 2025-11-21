@@ -40,9 +40,19 @@ export class InvoicePDFGenerator {
     return this.margin;
   }
 
-  private drawDivider(y: number): void {
+  private drawDivider(y: number, style: 'solid' | 'dashed' = 'solid'): void {
     this.pdf.setDrawColor(200, 200, 200);
-    this.pdf.line(this.margin, y, this.pageWidth - this.margin, y);
+    if (style === 'dashed') {
+      const dashLength = 1;
+      const gapLength = 1;
+      const startX = this.margin;
+      const endX = this.pageWidth - this.margin;
+      for (let x = startX; x < endX; x += dashLength + gapLength) {
+        this.pdf.line(x, y, Math.min(x + dashLength, endX), y);
+      }
+    } else {
+      this.pdf.line(this.margin, y, this.pageWidth - this.margin, y);
+    }
     this.pdf.setDrawColor(0, 0, 0);
   }
 
@@ -143,7 +153,7 @@ export class InvoicePDFGenerator {
     this.pdf.text('INVOICE', this.pageWidth / 2, currentY + 4, { align: 'center' });
     currentY += 8;
 
-    this.drawDivider(currentY);
+    this.drawDivider(currentY, 'dashed');
     return currentY + 3;
   }
 
@@ -202,7 +212,7 @@ export class InvoicePDFGenerator {
     }
 
     currentY += 1;
-    this.drawDivider(currentY);
+    this.drawDivider(currentY, 'dashed');
     return currentY + 3;
   }
 
@@ -225,17 +235,22 @@ export class InvoicePDFGenerator {
       this.pdf.text(descLines, this.margin, currentY);
       currentY += descLines.length * 4;
 
+      // Show quantity x price = total on next line (more compact)
+      this.pdf.setFontSize(8);
+      this.pdf.setTextColor(150, 150, 150);
       const detailLine = `${item.quantity} x ${this.formatCurrency(item.unitPrice)} = ${this.formatCurrency(item.totalPrice)}`;
       this.pdf.text(detailLine, this.margin, currentY);
+      this.pdf.setTextColor(0, 0, 0);
+      this.pdf.setFontSize(9);
       currentY += 5;
 
       if (index !== invoice.items.length - 1) {
-        this.drawDivider(currentY - 2);
+        this.drawDivider(currentY - 2, 'dashed');
       }
     });
 
     currentY += 2;
-    this.drawDivider(currentY);
+    this.drawDivider(currentY, 'dashed');
     return currentY + 3;
   }
 
@@ -296,7 +311,7 @@ export class InvoicePDFGenerator {
     }
 
     currentY += 2;
-    this.drawDivider(currentY);
+    this.drawDivider(currentY, 'dashed');
     return currentY + 3;
   }
 
@@ -326,7 +341,7 @@ export class InvoicePDFGenerator {
       this.pdf.text('Scan untuk membayar', this.pageWidth / 2, currentY, { align: 'center' });
 
       currentY += 3;
-      this.drawDivider(currentY);
+      this.drawDivider(currentY, 'dashed');
       return currentY + 3;
     } catch (error) {
       console.error('Error generating QR code:', error);
@@ -335,23 +350,77 @@ export class InvoicePDFGenerator {
   }
 
   /**
+   * Add payment history section
+   */
+  private addPaymentHistory(invoice: Invoice, yPosition: number): number {
+    if (!invoice.paymentHistory || invoice.paymentHistory.length === 0) {
+      return yPosition;
+    }
+
+    let currentY = this.ensureSpace(yPosition, 20);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.setFontSize(10);
+    this.pdf.text('Riwayat Pembayaran', this.pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(8);
+
+    invoice.paymentHistory.forEach((payment, index) => {
+      currentY = this.ensureSpace(currentY, 8);
+      const paymentMethodDisplay = payment.paymentMethod.replace('_', ' ').toUpperCase();
+      this.pdf.setFont('helvetica', 'bold');
+      currentY = this.drawKeyValue(paymentMethodDisplay, this.formatCurrency(payment.paymentAmount), currentY);
+
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.setFontSize(7);
+      const paidDate = payment.paidAt instanceof Date ? payment.paidAt : new Date(payment.paidAt);
+      const dateStr = paidDate.toLocaleDateString('id-ID');
+      const refStr = payment.paymentReference ? `Ref: ${payment.paymentReference}` : '';
+      const infoLine = `${dateStr}${refStr ? ' | ' + refStr : ''}`;
+      this.pdf.text(infoLine, this.margin, currentY);
+      currentY += 3;
+
+      if (index !== (invoice.paymentHistory?.length ?? 0) - 1) {
+        this.drawDivider(currentY - 1, 'dashed');
+        currentY += 1;
+      }
+      this.pdf.setFontSize(8);
+    });
+
+    currentY += 2;
+    this.drawDivider(currentY, 'dashed');
+    currentY += 3;
+
+    // Total paid and remaining
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.setFontSize(9);
+    currentY = this.drawKeyValue('Total Dibayar', this.formatCurrency(invoice.paidAmount || 0), currentY);
+
+    if (invoice.remainingBalance && invoice.remainingBalance > 0) {
+      this.pdf.setFont('helvetica', 'bold');
+      this.pdf.setFontSize(8);
+      this.pdf.setTextColor(255, 140, 0); // Orange color for remaining balance
+      currentY = this.drawKeyValue('Sisa', this.formatCurrency(invoice.remainingBalance), currentY);
+      this.pdf.setTextColor(0, 0, 0);
+    }
+
+    return currentY;
+  }
+
+  /**
    * Add footer with terms and notes
    */
   private addFooter(invoice: Invoice, yPosition: number): void {
     let currentY = this.ensureSpace(yPosition, 10);
+    
+    // Add payment history if available
+    if (invoice.paymentHistory && invoice.paymentHistory.length > 0) {
+      currentY = this.addPaymentHistory(invoice, currentY);
+    }
+
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(8);
-
-    if (invoice.notes) {
-      this.pdf.setFont('helvetica', 'bold');
-      this.pdf.text('Catatan', this.margin, currentY);
-      currentY += 4;
-
-      this.pdf.setFont('helvetica', 'normal');
-      const noteLines = this.pdf.splitTextToSize(invoice.notes, this.pageWidth - 2 * this.margin);
-      this.pdf.text(noteLines, this.margin, currentY);
-      currentY += noteLines.length * 4 + 2;
-    }
 
     if (invoice.terms) {
       this.pdf.setFont('helvetica', 'bold');
@@ -367,7 +436,8 @@ export class InvoicePDFGenerator {
     const footerText = invoice.branding?.footerText?.trim() || 'Terima kasih atas kunjungan Anda!';
     const footerLines = this.pdf.splitTextToSize(footerText, this.pageWidth - 2 * this.margin);
     const footerY = Math.max(currentY, this.pageHeight - this.margin - footerLines.length * 4);
-    this.pdf.setFont('helvetica', 'italic');
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(8);
     this.pdf.text(footerLines, this.pageWidth / 2, footerY, { align: 'center' });
   }
 

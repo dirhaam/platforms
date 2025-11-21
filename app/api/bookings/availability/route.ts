@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
     const serviceId = searchParams.get('serviceId');
     const date = searchParams.get('date');
     const duration = searchParams.get('duration') ? parseInt(searchParams.get('duration')!) : undefined;
+    const staffId = searchParams.get('staffId'); // Optional: filter by specific staff
+    const useStaffFiltering = searchParams.get('useStaffFiltering') === 'true'; // Optional: enable new staff-aware logic
 
     if (!serviceId || !date) {
       return NextResponse.json(
@@ -52,12 +54,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get availability using BookingService
-    const availability = await BookingService.getAvailability(resolvedTenantId, {
-      serviceId,
-      date,
-      duration
-    });
+    // Get availability
+    let availability;
+    if (useStaffFiltering || staffId) {
+      // Use new staff-aware availability logic
+      availability = await BookingService.getAvailabilityWithStaff(
+        resolvedTenantId,
+        serviceId,
+        date,
+        staffId || undefined
+      );
+    } else {
+      // Use legacy availability logic
+      availability = await BookingService.getAvailability(resolvedTenantId, {
+        serviceId,
+        date,
+        duration
+      });
+    }
 
     if (!availability) {
       return NextResponse.json({ error: 'Service not found' }, { status: 404 });
