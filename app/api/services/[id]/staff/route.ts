@@ -2,148 +2,93 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { TenantAuth, getTenantSession } from '@/lib/auth/tenant-auth';
+import { TenantAuth } from '@/lib/auth/tenant-auth';
 import { RBAC } from '@/lib/auth/rbac';
 
-const getSupabaseClient = () => {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-};
-
-// GET /api/services/[id]/staff - Get staff members who can perform this service
+// GET /api/services/[id]/staff - Get staff assigned to service
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const { id } = params;
+    const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
 
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
-    }
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    const { id: serviceId } = await params;
-    const { searchParams } = new URL(request.url);
-    const includeInactive = searchParams.get('includeInactive') === 'true';
-
-    // Get staff services mapping for this service
-    const { data: staffServices, error: servicesError } = await supabase
+    // Get staff assigned to this service
+    const { data: staffServices, error } = await supabase
       .from('staff_services')
-      .select('id, staff_id, can_perform, is_specialist, notes')
-      .eq('service_id', serviceId)
-      .eq('can_perform', true);
+      .select(`
+        id,
+        staff_id,
+        can_perform,
+        staff!inner(
+          id,
+          tenant_id,
+          name,
+          email,
+          phone,
+          role,
+          is_active
+        )
+      `)
+      .eq('service_id', id)
+      .eq('staff.tenant_id', headerTenantId);
 
-    if (servicesError) {
-      console.error('Error fetching staff services:', servicesError);
-      return NextResponse.json(
-        { error: 'Failed to fetch staff' },
-        { status: 500 }
-      );
+    if (error) {
+      console.error('Error fetching service staff:', error);
+      return NextResponse.json({ error: 'Failed to fetch service staff' }, { status: 500 });
     }
-
-    if (!staffServices || staffServices.length === 0) {
-      return NextResponse.json({
-        serviceId,
-        staff: [],
-        total: 0
-      });
-    }
-
-    // Get staff details for these staff members
-    const staffIds = (staffServices || []).map((ss: any) => ss.staff_id);
-
-    let staffQuery = supabase
-      .from('staff')
-      .select('id, tenant_id, name, email, phone, role, is_active, created_at')
-      .eq('tenant_id', tenantId)
-      .in('id', staffIds);
-
-    if (!includeInactive) {
-      staffQuery = staffQuery.eq('is_active', true);
-    }
-
-    const { data: staffList, error: staffError } = await staffQuery;
-
-    if (staffError) {
-      console.error('Error fetching staff:', staffError);
-      return NextResponse.json(
-        { error: 'Failed to fetch staff details' },
-        { status: 500 }
-      );
-    }
-
-    // Merge staff details with service mapping
-    const staffMap = new Map((staffList || []).map((s: any) => [s.id, s]));
-    const staff = (staffServices || [])
-      .map((ss: any) => {
-        const staffMember = staffMap.get(ss.staff_id);
-        if (!staffMember) return null;
-        return {
-          ...staffMember,
-          staffServiceId: ss.id,
-          canPerform: ss.can_perform,
-          isSpecialist: ss.is_specialist,
-          notes: ss.notes
-        };
-      })
-      .filter((s: any) => s !== null);
 
     return NextResponse.json({
-      serviceId,
-      staff,
-      total: staff.length
+      staff: staffServices?.map((ss: any) => ({
+        ...ss.staff,
+        canPerform: ss.can_perform,
+        staffServiceId: ss.id
+      })) || []
     });
   } catch (error) {
-    console.error('Error in service staff endpoint:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error fetching service staff:', error);
+    return NextResponse.json({ error: 'Failed to fetch service staff' }, { status: 500 });
   }
 }
 
-// POST /api/services/[id]/staff - Assign staff to service
+// POST /api/services/[id]/staff - Add staff to service
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const { id } = params;
+    const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const body = await request.json();
+    const { staffId, canPerform = true } = body;
 
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    // Verify session and permission
+    const session = await TenantAuth.getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get session to check permissions
-    const session = await getTenantSession(request);
-
-    if (!session || !RBAC.hasPermission(session, 'manage_staff')) {
+    if (!RBAC.hasPermission(session, 'manage_staff')) {
       return NextResponse.json({ error: 'Forbidden - insufficient permissions' }, { status: 403 });
     }
 
-    const { id: serviceId } = await params;
-    const body = await request.json();
-    const {
-      staffId,
-      canPerform = true,
-      isSpecialist = false,
-      notes
-    } = body;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    if (!staffId) {
-      return NextResponse.json(
-        { error: 'staffId is required' },
-        { status: 400 }
-      );
-    }
-
-    // Verify service exists and belongs to tenant
+    // Verify service exists
     const { data: service, error: serviceError } = await supabase
       .from('services')
       .select('id')
-      .eq('id', serviceId)
-      .eq('tenant_id', tenantId)
+      .eq('id', id)
+      .eq('tenant_id', headerTenantId)
       .single();
 
     if (serviceError || !service) {
@@ -153,151 +98,123 @@ export async function POST(
     // Verify staff exists and belongs to tenant
     const { data: staff, error: staffError } = await supabase
       .from('staff')
-      .select('id')
+      .select('id, is_active')
       .eq('id', staffId)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', headerTenantId)
       .single();
 
     if (staffError || !staff) {
-      return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Staff not found' }, { status: 404 });
     }
 
-    // Create or update staff-service mapping
-    // Check if mapping already exists
-    const { data: existingMapping } = await supabase
+    if (!staff.is_active) {
+      return NextResponse.json({ error: 'Staff member is inactive' }, { status: 400 });
+    }
+
+    // Check if already assigned
+    const { data: existing } = await supabase
       .from('staff_services')
       .select('id')
       .eq('staff_id', staffId)
-      .eq('service_id', serviceId)
-      .maybeSingle();
+      .eq('service_id', id)
+      .single();
 
-    let data, error;
-
-    if (existingMapping) {
-      // Update existing mapping
-      const result = await supabase
-        .from('staff_services')
-        .update({
-          can_perform: canPerform,
-          is_specialist: isSpecialist,
-          notes: notes || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingMapping.id)
-        .select()
-        .single();
-
-      data = result.data;
-      error = result.error;
-    } else {
-      // Create new mapping
-      const result = await supabase
-        .from('staff_services')
-        .insert({
-          staff_id: staffId,
-          service_id: serviceId,
-          can_perform: canPerform,
-          is_specialist: isSpecialist,
-          notes: notes || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      data = result.data;
-      error = result.error;
+    if (existing) {
+      return NextResponse.json({ error: 'Staff already assigned to this service' }, { status: 400 });
     }
 
-    if (error) {
-      console.error('Error assigning staff to service:', error);
-      return NextResponse.json(
-        { error: 'Failed to assign staff to service' },
-        { status: 500 }
-      );
+    // Add staff to service
+    const { data: staffService, error: insertError } = await supabase
+      .from('staff_services')
+      .insert({
+        staff_id: staffId,
+        service_id: id,
+        can_perform: canPerform
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error adding staff to service:', insertError);
+      return NextResponse.json({ error: 'Failed to add staff to service' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      staffService: data
-    });
+    return NextResponse.json(staffService, { status: 201 });
   } catch (error) {
-    console.error('Error in assign staff endpoint:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error adding staff to service:', error);
+    return NextResponse.json({ error: 'Failed to add staff to service' }, { status: 500 });
   }
 }
 
 // DELETE /api/services/[id]/staff/[staffId] - Remove staff from service
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; staffId: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
-    
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    const { id } = params;
+    const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const { searchParams } = new URL(request.url);
+    const staffId = searchParams.get('staffId');
+
+    if (!staffId) {
+      return NextResponse.json({ error: 'Staff ID required' }, { status: 400 });
     }
 
-    // Get session to check permissions
-    const session = await getTenantSession(request);
-
-    if (!session || !RBAC.hasPermission(session, 'manage_staff')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Verify session and permission
+    const session = await TenantAuth.getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: serviceId, staffId } = await params;
-
-    if (!serviceId || !staffId) {
-      return NextResponse.json({ error: 'Service ID and Staff ID required' }, { status: 400 });
+    if (!RBAC.hasPermission(session, 'manage_staff')) {
+      return NextResponse.json({ error: 'Forbidden - insufficient permissions' }, { status: 403 });
     }
 
-    // Verify service exists and belongs to tenant
-    const { data: service, error: serviceError } = await supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Verify service exists
+    const { data: service } = await supabase
       .from('services')
       .select('id')
-      .eq('id', serviceId)
-      .eq('tenant_id', tenantId)
+      .eq('id', id)
+      .eq('tenant_id', headerTenantId)
       .single();
 
-    if (serviceError || !service) {
+    if (!service) {
       return NextResponse.json({ error: 'Service not found' }, { status: 404 });
     }
 
-    // Verify staff exists and belongs to tenant
-    const { data: staff, error: staffError } = await supabase
+    // Verify staff exists
+    const { data: staff } = await supabase
       .from('staff')
       .select('id')
       .eq('id', staffId)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', headerTenantId)
       .single();
 
-    if (staffError || !staff) {
-      return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
+    if (!staff) {
+      return NextResponse.json({ error: 'Staff not found' }, { status: 404 });
     }
 
-    // Delete the staff-service mapping
+    // Remove staff from service
     const { error: deleteError } = await supabase
       .from('staff_services')
       .delete()
       .eq('staff_id', staffId)
-      .eq('service_id', serviceId);
+      .eq('service_id', id);
 
     if (deleteError) {
       console.error('Error removing staff from service:', deleteError);
-      return NextResponse.json(
-        { error: 'Failed to remove staff from service' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to remove staff from service' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `Staff member removed from service`
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in DELETE /api/services/[id]/staff:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error removing staff from service:', error);
+    return NextResponse.json({ error: 'Failed to remove staff from service' }, { status: 500 });
   }
 }
