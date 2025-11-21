@@ -241,33 +241,86 @@ export class BookingService {
       }
 
       // Validate home visit availability and get staff assignment
-      let staffIdToAssign: string | null = null;
+      let staffIdToAssign: string | null = data.assignedStaffId || null;
       let travelTimeBeforeMinutes = 0;
       let travelTimeAfterMinutes = 0;
 
       // Check if service requires staff assignment or is home visit
-      if ((service.requiresStaffAssignment || service.serviceType === 'home_visit') && data.isHomeVisit) {
+      if ((service.requiresStaffAssignment || service.serviceType === 'home_visit' || service.serviceType === 'both') && data.isHomeVisit) {
         // Validate service supports home visits
-        if (!service.homeVisitAvailable && service.serviceType === 'on_premise') {
+        if (service.serviceType === 'on_premise') {
           return { error: 'This service does not support home visit bookings' };
         }
 
-        // Auto-assign staff if requested or required
-        if (data.autoAssignStaff !== false) {
+        // Apply travel time buffers for home visits
+        travelTimeBeforeMinutes = service.homeVisitMinBufferMinutes || 30;
+        travelTimeAfterMinutes = service.homeVisitMinBufferMinutes || 30;
+
+        // If staff is pre-assigned, validate they can perform this service
+        if (staffIdToAssign) {
+          const { data: staffMember } = await supabase
+            .from('staff')
+            .select('id, is_active')
+            .eq('id', staffIdToAssign)
+            .eq('tenant_id', tenantId)
+            .single();
+
+          if (!staffMember || !staffMember.is_active) {
+            return { error: 'Assigned staff member not found or inactive' };
+          }
+
+          // Verify staff is assigned to this service
+          const { data: staffService } = await supabase
+            .from('staff_services')
+            .select('id, can_perform')
+            .eq('staff_id', staffIdToAssign)
+            .eq('service_id', data.serviceId)
+            .single();
+
+          if (!staffService || !staffService.can_perform) {
+            return { error: 'Selected staff member cannot perform this service' };
+          }
+
+          // Check if assigned staff is available considering travel time
           const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
+          const bookingStartWithBuffer = new Date(scheduledAt.getTime() - travelTimeBeforeMinutes * 60000);
+          const bookingEndWithBuffer = new Date(scheduledAt.getTime() + (service.duration + travelTimeAfterMinutes) * 60000);
 
-          // Apply travel time buffers for home visits
-          travelTimeBeforeMinutes = service.homeVisitMinBufferMinutes || 0;
-          travelTimeAfterMinutes = service.homeVisitMinBufferMinutes || 0;
-
-          const bestStaff = await StaffAvailabilityService.findBestAvailableStaff(
-            tenantId,
-            data.serviceId,
-            scheduledAt,
-            scheduledAt,
-            new Date(scheduledAt.getTime() + service.duration * 60000),
-            travelTimeBeforeMinutes // Pass buffer for travel time check
+          const isAvailable = await StaffAvailabilityService.isStaffAvailableForTimeSlot(
+            staffIdToAssign,
+            bookingStartWithBuffer,
+            bookingEndWithBuffer
           );
+
+          if (!isAvailable) {
+            return { error: 'Selected staff member is not available for this time slot (including travel time)' };
+          }
+        } else if (service.requiresStaffAssignment) {
+          // Staff assignment is required but none provided
+          return { error: 'This service requires staff assignment. Please assign a staff member.' };
+        } else if (data.autoAssignStaff !== false) {
+          // Auto-assign staff if requested
+          try {
+            const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
+
+            const bookingStartWithBuffer = new Date(scheduledAt.getTime() - travelTimeBeforeMinutes * 60000);
+            const bookingEndWithBuffer = new Date(scheduledAt.getTime() + (service.duration + travelTimeAfterMinutes) * 60000);
+
+            const bestStaff = await StaffAvailabilityService.findBestAvailableStaff(
+              tenantId,
+              data.serviceId,
+              bookingStartWithBuffer,
+              bookingEndWithBuffer
+            );
+
+            if (bestStaff) {
+              staffIdToAssign = bestStaff.id;
+              console.log('[BookingService] Auto-assigned staff:', { staffId: staffIdToAssign, staffName: bestStaff.name });
+            }
+          } catch (error) {
+            console.warn('[BookingService] Auto-assignment failed:', error);
+            // Continue without auto-assignment if it fails
+          }
         }
       }
 
@@ -284,7 +337,7 @@ export class BookingService {
           tenant_id: tenantId,
           customer_id: data.customerId,
           service_id: data.serviceId,
-          staff_id: staffIdToAssign,
+          assigned_staff_id: staffIdToAssign,
           scheduled_at: scheduledAt.toISOString(),
           duration: service.duration,
           is_home_visit: data.isHomeVisit || false,
