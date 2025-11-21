@@ -241,7 +241,7 @@ export class BookingService {
       }
 
       // Validate home visit availability and get staff assignment
-      let staffIdToAssign: string | null = data.assignedStaffId || null;
+      let staffIdToAssign: string | null = data.staffId || null;
       let travelTimeBeforeMinutes = 0;
       let travelTimeAfterMinutes = 0;
 
