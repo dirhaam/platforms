@@ -6,10 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 // GET /api/services/[id] - Get service details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
 
     const supabase = createClient(
@@ -38,10 +38,10 @@ export async function GET(
 // PUT /api/services/[id] - Update service
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     const body = await request.json();
 
@@ -72,10 +72,10 @@ export async function PUT(
 // DELETE /api/services/[id] - Delete service
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
 
     const supabase = createClient(

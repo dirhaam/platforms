@@ -8,10 +8,10 @@ import { RBAC } from '@/lib/auth/rbac';
 // GET /api/services/[id]/staff - Get staff assigned to service
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
 
     const supabase = createClient(
@@ -60,10 +60,10 @@ export async function GET(
 // POST /api/services/[id]/staff - Add staff to service
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     const body = await request.json();
     const { staffId, canPerform = true } = body;
@@ -149,10 +149,10 @@ export async function POST(
 // DELETE /api/services/[id]/staff/[staffId] - Remove staff from service
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     const { searchParams } = new URL(request.url);
     const staffId = searchParams.get('staffId');
