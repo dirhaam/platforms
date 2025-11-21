@@ -63,8 +63,8 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/tenant')) {
     // Check if trying to access protected /tenant/admin routes
     if (pathname.startsWith('/tenant/admin')) {
-      // Get session from cookie
-      const tenantSessionCookie = request.cookies.get('tenant_session');
+      // Get session from cookie (correct name: tenant-auth)
+      const tenantSessionCookie = request.cookies.get('tenant-auth');
       const hasSession = !!tenantSessionCookie;
 
       if (!hasSession) {
