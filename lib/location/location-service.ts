@@ -1,8 +1,8 @@
-import { 
-  Address, 
-  Coordinates, 
-  AddressValidation, 
-  TravelCalculation, 
+import {
+  Address,
+  Coordinates,
+  AddressValidation,
+  TravelCalculation,
   RouteOptimization,
   ValidateAddressRequest,
   CalculateTravelRequest,
@@ -36,7 +36,7 @@ export class LocationService {
   static async validateAddress(request: ValidateAddressRequest): Promise<AddressValidation> {
     try {
       const cacheKey = `address_validation:${request.tenantId}:${request.address}`;
-      
+
       // Check cache first
       if (this.config.cacheEnabled) {
         const cached = await CacheService.get<AddressValidation>(cacheKey);
@@ -44,7 +44,7 @@ export class LocationService {
       }
 
       const result = await this.geocodeAddress(request.address);
-      
+
       // Cache the result
       if (this.config.cacheEnabled && result.isValid) {
         await CacheService.set(cacheKey, result, { ttl: this.config.cacheTtl });
@@ -68,7 +68,7 @@ export class LocationService {
         destination: request.destination,
         tenantId: request.tenantId
       });
-      
+
       const origin = await this.resolveLocation(request.origin);
       const destination = await this.resolveLocation(request.destination);
 
@@ -84,7 +84,7 @@ export class LocationService {
       }
 
       const cacheKey = `travel_calc:${origin.lat},${origin.lng}:${destination.lat},${destination.lng}`;
-      
+
       // Check cache first
       if (this.config.cacheEnabled) {
         const cached = await CacheService.get<TravelCalculation>(cacheKey);
@@ -92,7 +92,7 @@ export class LocationService {
       }
 
       const result = await this.calculateRoute(origin, destination, request.tenantId, request.serviceId);
-      
+
       // Cache the result
       if (this.config.cacheEnabled) {
         await CacheService.set(cacheKey, result, { ttl: this.config.cacheTtl });
@@ -143,7 +143,7 @@ export class LocationService {
 
       // Simple nearest neighbor optimization (can be enhanced with more sophisticated algorithms)
       const optimizedRoute = await this.nearestNeighborOptimization(startCoords, validBookings, request.tenantId);
-      
+
       return optimizedRoute;
     } catch (error) {
       console.error('Error optimizing route:', error);
@@ -181,9 +181,9 @@ export class LocationService {
 
       const encodedAddress = encodeURIComponent(address.trim());
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&countrycodes=${this.config.defaultCountry}&limit=5&addressdetails=1`;
-      
+
       console.log('[LocationService.geocodeWithNominatim] Geocoding:', { address, url });
-      
+
       // Add timeout to avoid hanging requests
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -221,7 +221,7 @@ export class LocationService {
       }
 
       const result = data[0];
-      
+
       // Validate result has required fields
       if (!result.lat || !result.lon || !result.display_name) {
         console.error('[LocationService.geocodeWithNominatim] Invalid result format:', result);
@@ -313,7 +313,7 @@ export class LocationService {
         address,
         error
       });
-      
+
       // Provide more specific error messages
       if (errorMessage.includes('aborted') || errorMessage.includes('timeout')) {
         return {
@@ -321,7 +321,7 @@ export class LocationService {
           error: 'Geocoding service request timeout. Please try again.'
         };
       }
-      
+
       return {
         isValid: false,
         error: 'Geocoding service unavailable. Please try again later.'
@@ -342,26 +342,26 @@ export class LocationService {
   }
 
   private static async calculateRoute(
-    origin: Coordinates, 
-    destination: Coordinates, 
-    tenantId: string, 
+    origin: Coordinates,
+    destination: Coordinates,
+    tenantId: string,
     serviceId?: string
   ): Promise<TravelCalculation> {
     try {
       // Calculate straight-line distance first
       const straightLineDistance = this.calculateHaversineDistance(origin, destination);
-      
+
       // Get routing information
       const routeInfo = await this.getRouteInfo(origin, destination);
       const actualDistance = routeInfo?.distance || straightLineDistance;
-      
+
       // Check service area coverage
       const serviceAreaCheck = await this.checkServiceAreaCoverage(
-        destination, 
-        tenantId, 
+        destination,
+        tenantId,
         serviceId
       );
-      
+
       console.log('[LocationService.calculateTravel] Service area check:', serviceAreaCheck);
 
       // Get travel surcharge settings from Invoice Settings
@@ -373,24 +373,24 @@ export class LocationService {
         serviceAreaSurcharge: serviceAreaCheck.surcharge,
         serviceAreaId: serviceAreaCheck.serviceAreaId
       });
-      
+
       const invoiceSettings = await InvoiceSettingsService.getSettings(tenantId);
       console.log('[LocationService.calculateTravel] Invoice settings travel config:', {
         travelSurcharge: invoiceSettings.travelSurcharge,
         baseTravelSurcharge: invoiceSettings.travelSurcharge?.baseTravelSurcharge,
         perKmSurcharge: invoiceSettings.travelSurcharge?.perKmSurcharge
       });
-      
+
       // PRIMARY: Use invoice settings for surcharge calculation
       if (invoiceSettings.travelSurcharge) {
         // Calculate distance-based surcharge
         const base = invoiceSettings.travelSurcharge.baseTravelSurcharge || 0;
         const perKm = invoiceSettings.travelSurcharge.perKmSurcharge || 5000;
         const minDist = invoiceSettings.travelSurcharge.minTravelDistance || 0;
-        
+
         let formulaCalculation = base;
         let formulaDescription = '';
-        
+
         if (actualDistance > minDist) {
           const excessDistance = actualDistance - minDist;
           formulaCalculation = base + (excessDistance * perKm);
@@ -398,7 +398,7 @@ export class LocationService {
         } else {
           formulaDescription = `${base} (distance ${actualDistance.toFixed(2)}km ≤ min ${minDist}km)`;
         }
-        
+
         surcharge = this.calculateTravelSurcharge(
           actualDistance,
           invoiceSettings.travelSurcharge
@@ -419,7 +419,7 @@ export class LocationService {
       }
 
       // Apply buffer to the duration to account for traffic, stops, and real-world conditions
-      const bufferedDuration = routeInfo?.duration 
+      const bufferedDuration = routeInfo?.duration
         ? Math.ceil(routeInfo.duration * 1.2) // Add 20% buffer to OSRM time
         : Math.ceil(straightLineDistance * 2); // Fallback: 2 min per km
 
@@ -464,13 +464,13 @@ export class LocationService {
     // IMPORTANT: The logic is:
     //   1. Always charge the base amount first (covers distances up to minTravelDistance)
     //   2. For distances beyond minTravelDistance, add per-km charges for the excess
-    
+
     const base = settings.baseTravelSurcharge || 0;
     const perKm = settings.perKmSurcharge || 5000;
     const minDist = settings.minTravelDistance || 0;
 
     let calculatedSurcharge = base;
-    
+
     // If actual distance exceeds the minimum distance covered by base charge,
     // add per-km rate for the excess distance
     if (distance > minDist) {
@@ -496,16 +496,16 @@ export class LocationService {
   private static async getRouteWithOSRM(origin: Coordinates, destination: Coordinates) {
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
-      
+
       console.log('[LocationService] Calling OSRM route:', { origin, destination, url });
-      
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`OSRM API error: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (!data.routes || data.routes.length === 0) {
         throw new Error('No route found');
       }
@@ -515,13 +515,13 @@ export class LocationService {
         lat: coord[1],
         lng: coord[0]
       })) || [];
-      
+
       console.log('[LocationService] OSRM route success:', {
         distance: route.distance / 1000,
         duration: Math.ceil(route.duration / 60),
         polylinePoints: polylineCoordinates.length
       });
-      
+
       return {
         distance: route.distance / 1000, // Convert to kilometers
         duration: Math.ceil(route.duration / 60), // Convert to minutes
@@ -544,8 +544,8 @@ export class LocationService {
   }
 
   private static async checkServiceAreaCoverage(
-    coordinates: Coordinates, 
-    tenantId: string, 
+    coordinates: Coordinates,
+    tenantId: string,
     serviceId?: string
   ) {
     // This checks against the service areas in the database
@@ -580,7 +580,7 @@ export class LocationService {
         if (area.boundaries && this.isPointInPolygon(coordinates, area.boundaries.coordinates)) {
           // Customer is within this area
           let surcharge = area.base_travel_surcharge || 0;
-          
+
           // If serviceId is provided, check if this area restricts available services
           if (serviceId && area.available_services && Array.isArray(area.available_services) && area.available_services.length > 0) {
             // Check if service is available in this area
@@ -594,7 +594,7 @@ export class LocationService {
               };
             }
           }
-          
+
           return {
             isWithinArea: true,
             surcharge: surcharge,
@@ -605,61 +605,42 @@ export class LocationService {
 
       // If no areas matched, customer is outside all service areas
       // Return the minimum surcharge of all areas as a default, or 0 if none defined
-      const minSurcharge = allAreas.reduce((min, area) => 
-        Math.min(min, area.base_travel_surcharge || 0), 
+      const minSurcharge = allAreas.reduce((min, area) =>
+        Math.min(min, area.base_travel_surcharge || 0),
         Infinity
       );
 
-      return {
-        isWithinArea: false,
-        surcharge: isFinite(minSurcharge) ? minSurcharge : 0,
-        serviceAreaId: undefined
-      };
-    } catch (error) {
-      console.error('Error checking service area coverage:', error);
-      // On error, return safe defaults - assume within area with no surcharge
-      return {
-        isWithinArea: true,
-        surcharge: 0,
-        serviceAreaId: undefined
-      };
+      if (!polygon || (!Array.isArray(polygon) && (!polygon.coordinates || !Array.isArray(polygon.coordinates)))) {
+        return false;
+      }
+
+      // Handle different possible formats for polygon data
+      let coordinatesArray: { lat: number, lng: number }[] = [];
+
+      if (Array.isArray(polygon)) {
+        // Direct array of coordinates
+        coordinatesArray = polygon;
+      } else if (polygon.coordinates && Array.isArray(polygon.coordinates)) {
+        // Nested in coordinates property
+        coordinatesArray = polygon.coordinates;
+      } else {
+        return false;
+      }
+
+      // Ray-casting algorithm to check if point is within polygon
+      const x = point.lat, y = point.lng;
+      let inside = false;
+
+      for (let i = 0, j = coordinatesArray.length - 1; i < coordinatesArray.length; j = i++) {
+        const xi = coordinatesArray[i].lat, yi = coordinatesArray[i].lng;
+        const xj = coordinatesArray[j].lat, yj = coordinatesArray[j].lng;
+
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
     }
-  }
-
-  // Helper function to determine if a point is within a polygon
-  private static isPointInPolygon(point: Coordinates, polygon: any): boolean {
-    // Check if polygon is in the expected format
-    if (!polygon || (!Array.isArray(polygon) && (!polygon.coordinates || !Array.isArray(polygon.coordinates)))) {
-      return false;
-    }
-
-    // Handle different possible formats for polygon data
-    let coordinatesArray: {lat: number, lng: number}[] = [];
-    
-    if (Array.isArray(polygon)) {
-      // Direct array of coordinates
-      coordinatesArray = polygon;
-    } else if (polygon.coordinates && Array.isArray(polygon.coordinates)) {
-      // Nested in coordinates property
-      coordinatesArray = polygon.coordinates;
-    } else {
-      return false;
-    }
-
-    // Ray-casting algorithm to check if point is within polygon
-    const x = point.lat, y = point.lng;
-    let inside = false;
-
-    for (let i = 0, j = coordinatesArray.length - 1; i < coordinatesArray.length; j = i++) {
-      const xi = coordinatesArray[i].lat, yi = coordinatesArray[i].lng;
-      const xj = coordinatesArray[j].lat, yj = coordinatesArray[j].lng;
-
-      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-      if (intersect) inside = !inside;
-    }
-
-    return inside;
-  }
 
   // Helper function to validate if coordinates are within Indonesia boundaries
   private static isValidIndonesiaCoordinate(coords: Coordinates): boolean {
@@ -669,21 +650,21 @@ export class LocationService {
     const MIN_LNG = 95;    // Westernmost point of Indonesia
     const MAX_LNG = 141;   // Easternmost point of Indonesia
 
-    return coords.lat >= MIN_LAT && 
-           coords.lat <= MAX_LAT && 
-           coords.lng >= MIN_LNG && 
-           coords.lng <= MAX_LNG;
+    return coords.lat >= MIN_LAT &&
+      coords.lat <= MAX_LAT &&
+      coords.lng >= MIN_LNG &&
+      coords.lng <= MAX_LNG;
   }
 
   private static calculateHaversineDistance(coord1: Coordinates, coord2: Coordinates): number {
     const R = 6371; // Earth's radius in kilometers
     const dLat = this.toRadians(coord2.lat - coord1.lat);
     const dLng = this.toRadians(coord2.lng - coord1.lng);
-    
+
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(this.toRadians(coord1.lat)) * Math.cos(this.toRadians(coord2.lat)) *
-              Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    
+      Math.cos(this.toRadians(coord1.lat)) * Math.cos(this.toRadians(coord2.lat)) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -697,7 +678,7 @@ export class LocationService {
       console.log('[LocationService.resolveLocation] Already coordinates:', location);
       return location;
     }
-    
+
     if (typeof location === 'string') {
       console.log('[LocationService.resolveLocation] Geocoding address:', location);
       const validation = await this.geocodeAddress(location);
@@ -708,7 +689,7 @@ export class LocationService {
       }
       return coords;
     }
-    
+
     console.warn('[LocationService.resolveLocation] Invalid location type:', typeof location, location);
     return null;
   }
@@ -786,7 +767,7 @@ export class LocationService {
       // Update totals
       totalDistance += nearestDistance;
       totalDuration += travelTime + nearestBooking.serviceTime;
-      
+
       // Calculate surcharge using settings: base + (distance × per km rate)
       const bookingSurcharge = this.calculateTravelSurcharge(nearestDistance, travelSettings);
       totalSurcharge += bookingSurcharge;

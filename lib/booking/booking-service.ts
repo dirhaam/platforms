@@ -649,6 +649,17 @@ export class BookingService {
 
       return { success: true };
     } catch (error) {
+      console.error('Error in deleteBooking:', error);
+      return { success: false, error: 'Internal server error' };
+    }
+  }
+
+  static async getAvailability(
+    tenantId: string,
+    request: AvailabilityRequest
+  ): Promise<AvailabilityResponse | null> {
+    try {
+      const supabase = getSupabaseClient();
 
       const service = await this.getService(tenantId, request.serviceId);
       if (!service) {
@@ -736,38 +747,22 @@ export class BookingService {
       const slotDurationMinutes = service.slotDurationMinutes || 30;
       const hourlyQuota = service.hourlyQuota || 10;
       const serviceDuration = request.duration || service.duration;
-
       const slots: TimeSlot[] = [];
 
       // Get timezone offset from database
       const timezone = businessHoursData?.timezone || 'Asia/Jakarta';
 
-      // Calculate timezone offset in hours
-      // For now, using a simple mapping for common timezones
-      // In production, use a library like date-fns-tz or moment-timezone
-      const timezoneOffsets: Record<string, number> = {
-        'Asia/Jakarta': 7,
-        'Asia/Bangkok': 7,
-        'Asia/Ho_Chi_Minh': 7,
-        'UTC': 0,
-        'America/New_York': -5, // EST
-        'America/Chicago': -6,
-        'America/Los_Angeles': -8,
-        'Europe/London': 0,
-        'Europe/Paris': 1,
-      };
+      // Use date-fns-tz to handle timezone conversions accurately
+      const { fromZonedTime } = await import('date-fns-tz');
 
-      const tzOffset = timezoneOffsets[timezone] || 7;
+      // Create start/end dates in the target timezone
+      const dateStr = request.date; // YYYY-MM-DD
+      const startIsoStr = `${dateStr}T${operatingHours.startTime}:00`;
+      const endIsoStr = `${dateStr}T${operatingHours.endTime}:00`;
 
-      // Generate slots based on operating hours
-      // Business hours are in LOCAL time, so we need to adjust to UTC
-      const startDate = new Date(bookingDate);
-      startDate.setHours(startHourStr, startMinStr, 0, 0);
-      startDate.setHours(startDate.getHours() - tzOffset);
-
-      const endDate = new Date(bookingDate);
-      endDate.setHours(endHourStr, endMinStr, 0, 0);
-      endDate.setHours(endDate.getHours() - tzOffset);
+      // Convert to UTC dates for comparison/storage
+      const startDate = fromZonedTime(startIsoStr, timezone);
+      const endDate = fromZonedTime(endIsoStr, timezone);
 
       // Count bookings per hour to enforce hourly quota
       const bookingsPerHour = new Map<string, number>();
@@ -1194,21 +1189,7 @@ export class BookingService {
         }
       }
 
-      // Check if date is blocked
-      const isBlocked = await BlockedDatesService.isDateBlocked(tenantId, bookingDate);
 
-      if (isBlocked) {
-        return {
-          date: request.date,
-          slots: [],
-          businessHours: {
-            isOpen: true,
-            openTime: operatingHours.startTime,
-            closeTime: operatingHours.endTime,
-            isBlocked: true
-          }
-        };
-      }
 
       // Generate slots
       let currentTime = new Date(startDate);
