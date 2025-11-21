@@ -11,13 +11,29 @@ export async function GET(request: NextRequest) {
     // Get and verify session first
     const session = await TenantAuth.getSessionFromRequest(request);
     
+    console.log('[GET /api/admin/staff] Session check:', {
+      hasSession: !!session,
+      userId: session?.userId,
+      role: session?.role,
+      tenantId: session?.tenantId,
+      permissions: session?.permissions
+    });
+    
     if (!session) {
       console.log('[GET /api/admin/staff] No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check permission
-    if (!RBAC.hasPermission(session, 'manage_staff')) {
+    const hasPermission = RBAC.hasPermission(session, 'manage_staff');
+    console.log('[GET /api/admin/staff] Permission check:', {
+      hasPermission,
+      userId: session.userId,
+      role: session.role,
+      permissions: session.permissions
+    });
+    
+    if (!hasPermission) {
       console.log('[GET /api/admin/staff] Forbidden - insufficient permissions', {
         userId: session.userId,
         role: session.role,
