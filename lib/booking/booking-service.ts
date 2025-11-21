@@ -287,9 +287,12 @@ export class BookingService {
           const bookingEndWithBuffer = new Date(scheduledAt.getTime() + (service.duration + travelTimeAfterMinutes) * 60000);
 
           const isAvailable = await StaffAvailabilityService.isStaffAvailableForSlot(
+            tenantId,
             staffIdToAssign,
+            scheduledAt,
             bookingStartWithBuffer,
-            bookingEndWithBuffer
+            bookingEndWithBuffer,
+            0
           );
 
           if (!isAvailable) {
@@ -309,8 +312,10 @@ export class BookingService {
             const bestStaff = await StaffAvailabilityService.findBestAvailableStaff(
               tenantId,
               data.serviceId,
+              scheduledAt,
               bookingStartWithBuffer,
-              bookingEndWithBuffer
+              bookingEndWithBuffer,
+              0
             );
 
             if (bestStaff) {
