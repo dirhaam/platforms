@@ -1,15 +1,16 @@
+import { BlockedDatesService } from '@/lib/bookings/blocked-dates-service';
 import { createClient } from '@supabase/supabase-js';
-import { 
-  Booking, 
-  Service, 
-  Customer, 
-  CreateBookingRequest, 
+import {
+  Booking,
+  Service,
+  Customer,
+  CreateBookingRequest,
   UpdateBookingRequest,
   BookingConflict,
   TimeSlot,
   AvailabilityRequest,
   AvailabilityResponse,
-  BookingStatus 
+  BookingStatus
 } from '@/types/booking';
 import { validateBookingTime, validateBusinessHours } from '@/lib/validation/booking-validation';
 import { BookingHistoryService } from '@/lib/booking/booking-history-service';
@@ -48,7 +49,7 @@ const mapToBooking = (dbData: any): Booking => {
   const paidAmount = dbData.paid_amount || 0;
   const totalAmount = dbData.total_amount || 0;
   const remainingBalance = totalAmount - paidAmount;
-  
+
   return {
     id: dbData.id,
     bookingNumber: dbData.booking_number || `BK-${Date.now()}`,
@@ -84,12 +85,12 @@ const mapToBooking = (dbData: any): Booking => {
 export class BookingService {
   // Create a new booking - THIS METHOD IS WORKING
   static async createBooking(
-    tenantId: string, 
+    tenantId: string,
     data: CreateBookingRequest
   ): Promise<{ booking?: Booking; error?: string }> {
     try {
       const supabase = getSupabaseClient();
-      
+
       // Validate the service exists and belongs to tenant
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
@@ -98,13 +99,13 @@ export class BookingService {
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .single();
-      
+
       if (serviceError || !serviceData) {
         return { error: 'Service not found or inactive' };
       }
-      
+
       const service = serviceData;
-      
+
       // Validate the customer exists and belongs to tenant
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
@@ -112,48 +113,48 @@ export class BookingService {
         .eq('id', data.customerId)
         .eq('tenant_id', tenantId)
         .single();
-      
+
       if (customerError || !customerData) {
         return { error: 'Customer not found' };
       }
-      
+
       const customer = customerData;
-      
+
       const scheduledAt = new Date(data.scheduledAt);
-      
+
       // Validate booking time
       const timeValidation = validateBookingTime(scheduledAt);
       if (!timeValidation.valid) {
         return { error: timeValidation.message };
       }
-      
+
       // Get business hours for validation
       const { data: businessHoursData, error: businessHoursError } = await supabase
         .from('businessHours')
         .select('*')
         .eq('tenant_id', tenantId)
         .single();
-      
+
       const businessHoursRecord = businessHoursError ? null : businessHoursData;
-      
+
       // Validate against business hours
       const hoursValidation = validateBusinessHours(scheduledAt, businessHoursRecord);
       if (!hoursValidation.valid) {
         return { error: hoursValidation.message };
       }
-      
+
       // Step 1: Start with base service price
       const basePrice = Number(service.price);
-      
+
       // Step 2: Calculate travel surcharge for home visits if address is provided
       // Step 2: Use pre-calculated travel data from frontend, or recalculate if not provided
       const hasFrontendTravelData = 'travelSurchargeAmount' in data || 'travelDistance' in data || 'travelDuration' in data;
       let travelSurcharge = data.travelSurchargeAmount ?? 0;
       let travelDistance = data.travelDistance ?? 0;
       let travelDuration = data.travelDuration ?? 0;
-      
+
       console.log('[BookingService] Travel data check:', { hasFrontendTravelData, travelSurcharge, travelDistance, travelDuration });
-      
+
       // Only recalculate if frontend didn't provide travel data
       if (data.isHomeVisit && data.homeVisitAddress && !hasFrontendTravelData) {
         try {
@@ -164,11 +165,11 @@ export class BookingService {
             .select('address, business_location')
             .eq('id', tenantId)
             .single();
-          
+
           if (tenantData && !tenantError) {
             // Use business location if available, otherwise try address
             const businessLocation = tenantData.business_location || tenantData.address;
-            
+
             if (businessLocation) {
               console.log('[BookingService] Calculating travel from:', { businessLocation, destination: data.homeVisitAddress });
               const travelCalc = await LocationService.calculateTravel({
@@ -177,7 +178,7 @@ export class BookingService {
                 tenantId,
                 serviceId: data.serviceId
               });
-              
+
               if (travelCalc) {
                 travelSurcharge = travelCalc.surcharge || 0;
                 travelDistance = travelCalc.distance || 0;
@@ -193,17 +194,17 @@ export class BookingService {
       } else if (data.isHomeVisit) {
         console.log('[BookingService] Using frontend-provided travel data:', { travelSurcharge, travelDistance, travelDuration });
       }
-      
+
       // Step 3: Calculate subtotal = base price + travel surcharge
       const subtotal = basePrice + travelSurcharge;
 
       // Step 4: Fetch invoice settings (tax, service charge, additional fees)
       const settings = await InvoiceSettingsService.getSettings(tenantId);
-      
+
       // Step 5: Calculate tax on subtotal
       const taxPercentage = settings?.taxServiceCharge?.taxPercentage || 0;
       const taxAmount = subtotal * (taxPercentage / 100);
-      
+
       // Step 6: Calculate service charge on subtotal
       let serviceChargeAmount = 0;
       if (settings?.taxServiceCharge?.serviceChargeRequired) {
@@ -213,7 +214,7 @@ export class BookingService {
           serviceChargeAmount = subtotal * ((settings.taxServiceCharge.serviceChargeValue || 0) / 100);
         }
       }
-      
+
       // Step 7: Calculate additional fees on subtotal
       let additionalFeesAmount = 0;
       (settings?.additionalFees || []).forEach(fee => {
@@ -226,7 +227,7 @@ export class BookingService {
 
       // Step 8: Calculate total = subtotal + all taxes/fees
       const totalAmount = subtotal + taxAmount + serviceChargeAmount + additionalFeesAmount;
-      
+
       // Prepare DP payment data
       const dpAmount = data.dpAmount || 0;
       const paidAmount = dpAmount > 0 ? dpAmount : 0;
@@ -243,35 +244,30 @@ export class BookingService {
       let staffIdToAssign: string | null = null;
       let travelTimeBeforeMinutes = 0;
       let travelTimeAfterMinutes = 0;
-      
+
       // Check if service requires staff assignment or is home visit
       if ((service.requiresStaffAssignment || service.serviceType === 'home_visit') && data.isHomeVisit) {
         // Validate service supports home visits
         if (!service.homeVisitAvailable && service.serviceType === 'on_premise') {
           return { error: 'This service does not support home visit bookings' };
         }
-        
+
         // Auto-assign staff if requested or required
         if (data.autoAssignStaff !== false) {
           const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
-          
+
+          // Apply travel time buffers for home visits
+          travelTimeBeforeMinutes = service.homeVisitMinBufferMinutes || 0;
+          travelTimeAfterMinutes = service.homeVisitMinBufferMinutes || 0;
+
           const bestStaff = await StaffAvailabilityService.findBestAvailableStaff(
             tenantId,
             data.serviceId,
             scheduledAt,
             scheduledAt,
-            new Date(scheduledAt.getTime() + service.duration * 60000)
+            new Date(scheduledAt.getTime() + service.duration * 60000),
+            travelTimeBeforeMinutes // Pass buffer for travel time check
           );
-          
-          if (!bestStaff) {
-            return { error: 'No available staff for this booking time' };
-          }
-          
-          staffIdToAssign = bestStaff.id;
-          
-          // Apply travel time buffers for home visits
-          travelTimeBeforeMinutes = service.homeVisitMinBufferMinutes || 0;
-          travelTimeAfterMinutes = service.homeVisitMinBufferMinutes || 0;
         }
       }
 
@@ -279,7 +275,7 @@ export class BookingService {
       const bookingId = randomUUID();
       const now = new Date();
       const bookingNumber = `BK-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      
+
       const { data: newBooking, error: insertError } = await supabase
         .from('bookings')
         .insert({
@@ -316,7 +312,7 @@ export class BookingService {
         })
         .select()
         .single();
-      
+
       // Record initial DP payment if provided
       if (dpAmount > 0 && data.paymentMethod) {
         const paymentId = randomUUID();
@@ -347,7 +343,7 @@ export class BookingService {
           .insert([dpPaymentRecord])
           .select()
           .single();
-        
+
         if (paymentError) {
           console.error('[BookingService.createBooking] ❌ Failed to record DP payment:', {
             error: paymentError.message,
@@ -368,7 +364,7 @@ export class BookingService {
           });
         }
       }
-      
+
       if (insertError || !newBooking) {
         console.error('[BookingService.createBooking] Insert failed:', {
           insertError,
@@ -379,55 +375,55 @@ export class BookingService {
         });
         return { error: `Failed to create booking: ${insertError?.message || 'Unknown error'}` };
       }
-      
+
       // Get the created booking with customer and service data
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .select('*')
         .eq('id', newBooking.id)
         .single();
-      
+
       if (bookingError || !bookingData) {
         return { error: 'Failed to retrieve created booking' };
       }
-      
+
       // Get customer data
       const { data: customerDataResult, error: customerFetchError } = await supabase
         .from('customers')
         .select('*')
         .eq('id', bookingData.customer_id)
         .single();
-      
+
       if (customerFetchError || !customerDataResult) {
         console.error('[BookingService.createBooking] Failed to fetch customer:', { customerId: bookingData.customer_id, error: customerFetchError });
         return { error: 'Failed to retrieve customer data' };
       }
-      
+
       // Get service data
       const { data: serviceDataResult, error: serviceFetchError } = await supabase
         .from('services')
         .select('*')
         .eq('id', bookingData.service_id)
         .single();
-      
+
       if (serviceFetchError || !serviceDataResult) {
         console.error('[BookingService.createBooking] Failed to fetch service:', { serviceId: bookingData.service_id, error: serviceFetchError });
         return { error: 'Failed to retrieve service data' };
       }
-      
+
       const booking = {
         ...bookingData,
         customer: customerDataResult,
         service: serviceDataResult
       };
-      
+
       // Update customer's total bookings count
       const { data: currentCustomer } = await supabase
         .from('customers')
         .select('total_bookings')
         .eq('id', data.customerId)
         .single();
-      
+
       if (currentCustomer) {
         await supabase
           .from('customers')
@@ -437,7 +433,7 @@ export class BookingService {
           })
           .eq('id', data.customerId);
       }
-      
+
       // Log booking created event
       if (bookingId) {
         await BookingHistoryService.logBookingCreated(tenantId, bookingId, {
@@ -448,154 +444,154 @@ export class BookingService {
           paymentMethod: data.paymentMethod
         });
       }
-      
+
       return { booking: mapToBooking(booking) };
     } catch (error) {
       console.error('Error creating booking:', error);
       return { error: 'Failed to create booking' };
     }
   }
-  
+
   static async getBookings(tenantId: string, options: any = {}): Promise<Booking[]> {
     try {
       const supabase = getSupabaseClient();
-      
+
       let query = supabase
         .from('bookings')
         .select('*')
         .eq('tenant_id', tenantId);
-      
+
       if (options.status) {
         query = query.eq('status', options.status);
       }
-      
+
       if (options.customerId) {
         query = query.eq('customer_id', options.customerId);
       }
-      
+
       if (options.serviceId) {
         query = query.eq('service_id', options.serviceId);
       }
-      
+
       if (options.startDate) {
         query = query.gte('scheduled_at', options.startDate.toISOString());
       }
-      
+
       if (options.endDate) {
         query = query.lte('scheduled_at', options.endDate.toISOString());
       }
-      
+
       query = query.order('scheduled_at', { ascending: false });
-      
+
       if (options.limit) {
         query = query.limit(options.limit);
       }
-      
+
       if (options.offset) {
         query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
       }
-      
+
       const { data: bookings, error } = await query;
-      
+
       if (error || !bookings) {
         console.error('Error fetching bookings:', error);
         return [];
       }
-      
+
       return bookings.map(mapToBooking);
     } catch (error) {
       console.error('Error in getBookings:', error);
       return [];
     }
   }
-  
+
   static async getBooking(tenantId: string, bookingId: string): Promise<Booking | null> {
     try {
       const supabase = getSupabaseClient();
-      
+
       const { data: booking, error } = await supabase
         .from('bookings')
         .select('*')
         .eq('id', bookingId)
         .eq('tenant_id', tenantId)
         .single();
-      
+
       if (error || !booking) {
         return null;
       }
-      
+
       return mapToBooking(booking);
     } catch (error) {
       console.error('Error in getBooking:', error);
       return null;
     }
   }
-  
+
   static async updateBooking(tenantId: string, bookingId: string, data: UpdateBookingRequest): Promise<{ booking?: Booking; error?: string }> {
     try {
       const supabase = getSupabaseClient();
-      
+
       const booking = await this.getBooking(tenantId, bookingId);
       if (!booking) {
         return { error: 'Booking not found' };
       }
-      
+
       const updateData: any = {
         updated_at: new Date().toISOString()
       };
-      
+
       // Update all provided fields
       if (data.customerId !== undefined) {
         updateData.customer_id = data.customerId;
       }
-      
+
       if (data.serviceId !== undefined) {
         updateData.service_id = data.serviceId;
       }
-      
+
       if (data.status !== undefined) {
         updateData.status = data.status;
       }
-      
+
       if (data.paymentStatus !== undefined) {
         updateData.payment_status = data.paymentStatus;
       }
-      
+
       if (data.scheduledAt !== undefined) {
         const scheduledDate = data.scheduledAt instanceof Date ? data.scheduledAt : new Date(data.scheduledAt as string);
         updateData.scheduled_at = scheduledDate.toISOString();
       }
-      
+
       if (data.duration !== undefined) {
         updateData.duration = data.duration;
       }
-      
+
       if (data.totalAmount !== undefined) {
         updateData.total_amount = data.totalAmount;
       }
-      
+
       if (data.notes !== undefined) {
         updateData.notes = data.notes;
       }
-      
+
       if (data.isHomeVisit !== undefined) {
         updateData.is_home_visit = data.isHomeVisit;
       }
-      
+
       if (data.homeVisitAddress !== undefined) {
         updateData.home_visit_address = data.homeVisitAddress;
       }
-      
+
       if (data.homeVisitCoordinates !== undefined) {
         updateData.home_visit_coordinates = data.homeVisitCoordinates;
       }
-      
+
       // Store payment method in notes if provided
       if ((data as any).paymentMethod !== undefined) {
         const methodNote = `Payment method: ${(data as any).paymentMethod}`;
         updateData.notes = updateData.notes ? `${updateData.notes}\n${methodNote}` : methodNote;
       }
-      
+
       const { data: updatedBooking, error } = await supabase
         .from('bookings')
         .update(updateData)
@@ -603,16 +599,16 @@ export class BookingService {
         .eq('tenant_id', tenantId)
         .select()
         .single();
-      
+
       if (error || !updatedBooking) {
         return { error: 'Failed to update booking' };
       }
-      
+
       // Log status change if status was updated
       if (data.status !== undefined && booking.status !== data.status) {
         await BookingHistoryService.logStatusChanged(tenantId, bookingId, booking.status, data.status);
       }
-      
+
       // Log payment status change if updated
       if (data.paymentStatus !== undefined && booking.paymentStatus !== data.paymentStatus) {
         await BookingHistoryService.logEvent({
@@ -624,57 +620,41 @@ export class BookingService {
           newValues: { paymentStatus: data.paymentStatus }
         });
       }
-      
+
       return { booking: mapToBooking(updatedBooking) };
     } catch (error) {
       console.error('Error in updateBooking:', error);
       return { error: 'Internal server error' };
     }
   }
-  
+
   static async deleteBooking(tenantId: string, bookingId: string): Promise<{ success: boolean; error?: string }> {
     try {
       const supabase = getSupabaseClient();
-      
+
       const booking = await this.getBooking(tenantId, bookingId);
       if (!booking) {
         return { success: false, error: 'Booking not found' };
       }
-      
+
       const { error } = await supabase
         .from('bookings')
         .delete()
         .eq('id', bookingId)
         .eq('tenant_id', tenantId);
-      
+
       if (error) {
         return { success: false, error: 'Failed to delete booking' };
       }
-      
+
       return { success: true };
     } catch (error) {
-      console.error('Error in deleteBooking:', error);
-      return { success: false, error: 'Internal server error' };
-    }
-  }
-  
-  static async checkBookingConflicts(): Promise<BookingConflict> {
-    return {
-      hasConflict: false,
-      conflictingBookings: [],
-      message: 'Conflict checking temporarily disabled during migration'
-    };
-  }
-  
-  static async getAvailability(tenantId: string, request: AvailabilityRequest): Promise<AvailabilityResponse | null> {
-    try {
-      const supabase = getSupabaseClient();
-      
+
       const service = await this.getService(tenantId, request.serviceId);
       if (!service) {
         return null;
       }
-      
+
       // Get global business hours for the tenant
       const { data: businessHoursData } = await supabase
         .from('business_hours')
@@ -687,13 +667,13 @@ export class BookingService {
       const [year, month, day] = request.date.split('-').map(Number);
       const bookingDate = new Date(year, month - 1, day);
       bookingDate.setHours(0, 0, 0, 0); // Set to midnight local time
-      
+
       const dayOfWeek = bookingDate.getDay();
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const dayKey = dayNames[dayOfWeek];
-      
+
       const schedule = businessHoursData?.schedule || {};
-      
+
       // Try exact key, then try with capitalized, then case-insensitive
       let dayHours = schedule[dayKey];
       if (!dayHours) {
@@ -705,7 +685,7 @@ export class BookingService {
         const matchKey = Object.keys(schedule).find(key => key.toLowerCase() === dayKey.toLowerCase());
         dayHours = matchKey ? schedule[matchKey] : null;
       }
-      
+
       // Fallback to default if not found
       if (!dayHours) {
         dayHours = { isOpen: true, openTime: '08:00', closeTime: '17:00' };
@@ -719,20 +699,20 @@ export class BookingService {
           businessHours: { isOpen: false }
         };
       }
-      
+
       const operatingHours = {
         startTime: dayHours.openTime,
         endTime: dayHours.closeTime
       };
-      
+
       const [startHourStr, startMinStr] = operatingHours.startTime.split(':').map(Number);
       const [endHourStr, endMinStr] = operatingHours.endTime.split(':').map(Number);
-      
+
       const startOfDay = new Date(bookingDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(bookingDate);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       // Fetch all confirmed bookings for this service on this date
       const { data: bookings, error } = await supabase
         .from('bookings')
@@ -742,7 +722,7 @@ export class BookingService {
         .eq('status', BookingStatus.CONFIRMED)
         .gte('scheduled_at', startOfDay.toISOString())
         .lte('scheduled_at', endOfDay.toISOString());
-      
+
       if (error) {
         console.error('Error fetching bookings for availability:', error);
         return {
@@ -751,17 +731,17 @@ export class BookingService {
           businessHours: { isOpen: false }
         };
       }
-      
+
       // Get slot duration and quota from service
       const slotDurationMinutes = service.slotDurationMinutes || 30;
       const hourlyQuota = service.hourlyQuota || 10;
       const serviceDuration = request.duration || service.duration;
-      
+
       const slots: TimeSlot[] = [];
-      
+
       // Get timezone offset from database
       const timezone = businessHoursData?.timezone || 'Asia/Jakarta';
-      
+
       // Calculate timezone offset in hours
       // For now, using a simple mapping for common timezones
       // In production, use a library like date-fns-tz or moment-timezone
@@ -776,47 +756,47 @@ export class BookingService {
         'Europe/London': 0,
         'Europe/Paris': 1,
       };
-      
+
       const tzOffset = timezoneOffsets[timezone] || 7;
-      
+
       // Generate slots based on operating hours
       // Business hours are in LOCAL time, so we need to adjust to UTC
       const startDate = new Date(bookingDate);
       startDate.setHours(startHourStr, startMinStr, 0, 0);
       startDate.setHours(startDate.getHours() - tzOffset);
-      
+
       const endDate = new Date(bookingDate);
       endDate.setHours(endHourStr, endMinStr, 0, 0);
       endDate.setHours(endDate.getHours() - tzOffset);
-      
+
       // Count bookings per hour to enforce hourly quota
       const bookingsPerHour = new Map<string, number>();
-      
+
       (bookings || []).forEach(booking => {
         const bookingTime = new Date(booking.scheduled_at);
         const hourKey = `${bookingTime.getHours()}:00`;
         bookingsPerHour.set(hourKey, (bookingsPerHour.get(hourKey) || 0) + 1);
       });
-      
+
       let currentTime = new Date(startDate);
-      
+
       while (currentTime < endDate) {
         const slotStart = new Date(currentTime);
         // FIXED: Slot length should be serviceDuration, not slotDurationMinutes
         const slotEnd = new Date(slotStart.getTime() + serviceDuration * 60000);
-        
+
         // Check if slot would go past business hours
         if (slotEnd > endDate) {
           break;
         }
-        
+
         // Get hour slot key for quota check
         const hourKey = `${slotStart.getHours()}:00`;
         const bookingsInThisHour = bookingsPerHour.get(hourKey) || 0;
-        
+
         // Check if slot is available
         let isAvailable = false;
-        
+
         // First check: don't exceed hourly quota
         if (bookingsInThisHour < hourlyQuota) {
           // Second check: ensure no time conflicts with existing bookings
@@ -826,28 +806,28 @@ export class BookingService {
             // Check for overlap: slot conflicts if it overlaps with existing booking
             return slotStart < bookingEnd && slotEnd > bookingStart;
           });
-          
+
           isAvailable = !conflictingBooking;
         }
-        
+
         slots.push({
           start: slotStart,
           end: slotEnd,
           available: isAvailable
         });
-        
+
         // FIXED: Move to next slot using slotDurationMinutes (allows overlapping display)
         // This lets users see available slots at every slotDuration interval
         currentTime = new Date(currentTime.getTime() + slotDurationMinutes * 60000);
       }
-      
+
       return {
         date: request.date,
         slots,
-        businessHours: { 
-          isOpen: true, 
-          openTime: operatingHours.startTime, 
-          closeTime: operatingHours.endTime 
+        businessHours: {
+          isOpen: true,
+          openTime: operatingHours.startTime,
+          closeTime: operatingHours.endTime
         }
       };
     } catch (error) {
@@ -855,22 +835,22 @@ export class BookingService {
       return null;
     }
   }
-  
+
   static async getService(tenantId: string, serviceId: string): Promise<Service | null> {
     try {
       const supabase = getSupabaseClient();
-      
+
       const { data: service, error } = await supabase
         .from('services')
         .select('*')
         .eq('id', serviceId)
         .eq('tenant_id', tenantId)
         .single();
-      
+
       if (error || !service) {
         return null;
       }
-      
+
       return service as Service;
     } catch (error) {
       console.error('Error in getService:', error);
@@ -1025,42 +1005,42 @@ export class BookingService {
   ): Promise<AvailabilityResponse | null> {
     try {
       const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
-      
+
       const supabase = getSupabaseClient();
-      
+
       const service = await this.getService(tenantId, serviceId);
       if (!service) {
         return null;
       }
-      
+
       // Get business hours
       const { data: businessHoursData } = await supabase
         .from('business_hours')
         .select('*')
         .eq('tenant_id', tenantId)
         .single();
-      
+
       // Parse date
       const [year, month, day] = date.split('-').map(Number);
       const bookingDate = new Date(year, month - 1, day);
       bookingDate.setHours(0, 0, 0, 0);
-      
+
       const dayOfWeek = bookingDate.getDay();
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const dayKey = dayNames[dayOfWeek];
-      
+
       const schedule = businessHoursData?.schedule || {};
       let dayHours = schedule[dayKey] || schedule[dayKey.charAt(0).toUpperCase() + dayKey.slice(1)];
-      
+
       if (!dayHours) {
         const matchKey = Object.keys(schedule).find(key => key.toLowerCase() === dayKey.toLowerCase());
         dayHours = matchKey ? schedule[matchKey] : null;
       }
-      
+
       if (!dayHours) {
         dayHours = { isOpen: true, openTime: '08:00', closeTime: '17:00' };
       }
-      
+
       if (!dayHours.isOpen) {
         return {
           date,
@@ -1068,10 +1048,20 @@ export class BookingService {
           businessHours: { isOpen: false }
         };
       }
-      
+
+      // Check if date is blocked
+      const isBlocked = await BlockedDatesService.isDateBlocked(tenantId, bookingDate);
+      if (isBlocked) {
+        return {
+          date,
+          slots: [],
+          businessHours: { isOpen: true, isBlocked: true }
+        };
+      }
+
       // Determine which staff to check
       let staffToCheck: string[] = [];
-      
+
       if (staffId) {
         // Specific staff requested
         const isAvailable = await StaffAvailabilityService.isStaffAvailableOnDate(staffId, bookingDate);
@@ -1082,7 +1072,7 @@ export class BookingService {
       } else if (service.requiresStaffAssignment || service.serviceType === 'home_visit') {
         // Get qualified staff
         const qualifiedStaff = await StaffAvailabilityService.getStaffForService(tenantId, serviceId);
-        
+
         // Filter available staff
         const availableStaff: string[] = [];
         for (const staff of qualifiedStaff) {
@@ -1091,22 +1081,22 @@ export class BookingService {
             availableStaff.push(staff.id);
           }
         }
-        
+
         if (availableStaff.length === 0) {
           return { date, slots: [], businessHours: { isOpen: true } };
         }
-        
+
         staffToCheck = availableStaff;
       }
-      
+
       const [startHourStr, startMinStr] = dayHours.openTime.split(':').map(Number);
       const [endHourStr, endMinStr] = dayHours.closeTime.split(':').map(Number);
-      
+
       const startOfDay = new Date(bookingDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(bookingDate);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       const timezone = businessHoursData?.timezone || 'Asia/Jakarta';
       const timezoneOffsets: Record<string, number> = {
         'Asia/Jakarta': 7,
@@ -1119,31 +1109,31 @@ export class BookingService {
         'Europe/London': 0,
         'Europe/Paris': 1,
       };
-      
+
       const tzOffset = timezoneOffsets[timezone] || 7;
-      
+
       const startDate = new Date(bookingDate);
       startDate.setHours(startHourStr, startMinStr, 0, 0);
       startDate.setHours(startDate.getHours() - tzOffset);
-      
+
       const endDate = new Date(bookingDate);
       endDate.setHours(endHourStr, endMinStr, 0, 0);
       endDate.setHours(endDate.getHours() - tzOffset);
-      
+
       // Get service duration and configuration
       const serviceDuration = service.duration;
       const slotDurationMinutes = service.slotDurationMinutes || 30;
       const isFullDayBooking = service.homeVisitFullDayBooking || false;
       const bufferMinutes = service.homeVisitMinBufferMinutes || 0;
       const dailyQuota = service.dailyQuotaPerStaff;
-      
+
       const slots: TimeSlot[] = [];
-      
+
       // If full day booking, only return 1 slot per day per staff
       if (isFullDayBooking) {
         // Check if any staff already has a booking for this day
         let hasBooking = false;
-        
+
         if (staffId) {
           const bookingCount = await StaffAvailabilityService.getStaffBookingCountOnDate(
             tenantId,
@@ -1165,7 +1155,7 @@ export class BookingService {
             }
           }
         }
-        
+
         if (!hasBooking) {
           // Return one slot starting at business open time
           slots.push({
@@ -1174,17 +1164,17 @@ export class BookingService {
             available: true
           });
         }
-        
+
         return {
           date,
           slots,
           businessHours: { isOpen: true, openTime: dayHours.openTime, closeTime: dayHours.closeTime }
         };
       }
-      
+
       // Multiple bookings per day - generate slots with travel time blocking
       const staffBookings: Map<string, any[]> = new Map();
-      
+
       // Fetch all confirmed bookings for this service on this date for each staff
       if (staffId) {
         const bookings = await StaffAvailabilityService.getStaffBookingsOnDate(
@@ -1203,66 +1193,82 @@ export class BookingService {
           staffBookings.set(stfId, bookings);
         }
       }
-      
+
+      // Check if date is blocked
+      const isBlocked = await BlockedDatesService.isDateBlocked(tenantId, bookingDate);
+
+      if (isBlocked) {
+        return {
+          date: request.date,
+          slots: [],
+          businessHours: {
+            isOpen: true,
+            openTime: operatingHours.startTime,
+            closeTime: operatingHours.endTime,
+            isBlocked: true
+          }
+        };
+      }
+
       // Generate slots
       let currentTime = new Date(startDate);
-      
+
       while (currentTime < endDate) {
         const slotStart = new Date(currentTime);
         const slotEnd = new Date(slotStart.getTime() + serviceDuration * 60000);
-        
+
         // Check if slot would go past business hours
         if (slotEnd > endDate) {
           break;
         }
-        
+
         // Check availability for the first available staff (or specific staff if provided)
         let isAvailable = false;
-        
+
         const staffToCheck1 = staffId ? [staffId] : Array.from(staffBookings.keys());
-        
+
         for (const stfId of staffToCheck1) {
           const bookings = staffBookings.get(stfId) || [];
-          
+
           // Check daily quota
           if (dailyQuota && bookings.length >= dailyQuota) {
             continue; // This staff reached quota, try next
           }
-          
+
           // Check time conflicts with travel buffer
           let hasConflict = false;
-          
+
           for (const booking of bookings) {
             const bookingStart = new Date(booking.scheduled_at);
             const bookingEnd = new Date(bookingStart.getTime() + booking.duration * 60000);
-            
+
             // Apply travel buffer to existing booking
             const bookingStartWithBuffer = new Date(bookingStart.getTime() - bufferMinutes * 60000);
             const bookingEndWithBuffer = new Date(bookingEnd.getTime() + bufferMinutes * 60000);
-            
+
             // Check overlap
             if (slotStart < bookingEndWithBuffer && slotEnd > bookingStartWithBuffer) {
               hasConflict = true;
               break;
             }
           }
-          
+
           if (!hasConflict) {
             isAvailable = true;
             break; // Found available slot for this or any staff
           }
         }
-        
+
         slots.push({
           start: slotStart,
           end: slotEnd,
           available: isAvailable
         });
-        
+
         // Move to next slot
         currentTime = new Date(currentTime.getTime() + slotDurationMinutes * 60000);
       }
-      
+
       return {
         date,
         slots,
