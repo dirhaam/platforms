@@ -604,43 +604,58 @@ export class LocationService {
       }
 
       // If no areas matched, customer is outside all service areas
-      // Return the minimum surcharge of all areas as a default, or 0 if none defined
       const minSurcharge = allAreas.reduce((min, area) =>
         Math.min(min, area.base_travel_surcharge || 0),
         Infinity
       );
 
-      if (!polygon || (!Array.isArray(polygon) && (!polygon.coordinates || !Array.isArray(polygon.coordinates)))) {
-        return false;
-      }
-
-      // Handle different possible formats for polygon data
-      let coordinatesArray: { lat: number, lng: number }[] = [];
-
-      if (Array.isArray(polygon)) {
-        // Direct array of coordinates
-        coordinatesArray = polygon;
-      } else if (polygon.coordinates && Array.isArray(polygon.coordinates)) {
-        // Nested in coordinates property
-        coordinatesArray = polygon.coordinates;
-      } else {
-        return false;
-      }
-
-      // Ray-casting algorithm to check if point is within polygon
-      const x = point.lat, y = point.lng;
-      let inside = false;
-
-      for (let i = 0, j = coordinatesArray.length - 1; i < coordinatesArray.length; j = i++) {
-        const xi = coordinatesArray[i].lat, yi = coordinatesArray[i].lng;
-        const xj = coordinatesArray[j].lat, yj = coordinatesArray[j].lng;
-
-        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
-      }
-
-      return inside;
+      return {
+        isWithinArea: false,
+        surcharge: minSurcharge === Infinity ? 0 : minSurcharge,
+        serviceAreaId: undefined
+      };
+    } catch (error) {
+      console.error('[LocationService] Error checking service area coverage:', error);
+      return {
+        isWithinArea: true,
+        surcharge: 0,
+        serviceAreaId: undefined
+      };
     }
+  }
+
+  private static isPointInPolygon(point: Coordinates, polygon: any): boolean {
+    if (!polygon || (!Array.isArray(polygon) && (!polygon.coordinates || !Array.isArray(polygon.coordinates)))) {
+      return false;
+    }
+
+    // Handle different possible formats for polygon data
+    let coordinatesArray: { lat: number, lng: number }[] = [];
+
+    if (Array.isArray(polygon)) {
+      // Direct array of coordinates
+      coordinatesArray = polygon;
+    } else if (polygon.coordinates && Array.isArray(polygon.coordinates)) {
+      // Nested in coordinates property
+      coordinatesArray = polygon.coordinates;
+    } else {
+      return false;
+    }
+
+    // Ray-casting algorithm to check if point is within polygon
+    const x = point.lat, y = point.lng;
+    let inside = false;
+
+    for (let i = 0, j = coordinatesArray.length - 1; i < coordinatesArray.length; j = i++) {
+      const xi = coordinatesArray[i].lat, yi = coordinatesArray[i].lng;
+      const xj = coordinatesArray[j].lat, yj = coordinatesArray[j].lng;
+
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+
+    return inside;
+  }
 
   // Helper function to validate if coordinates are within Indonesia boundaries
   private static isValidIndonesiaCoordinate(coords: Coordinates): boolean {
