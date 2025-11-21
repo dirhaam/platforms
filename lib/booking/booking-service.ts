@@ -286,7 +286,7 @@ export class BookingService {
           const bookingStartWithBuffer = new Date(scheduledAt.getTime() - travelTimeBeforeMinutes * 60000);
           const bookingEndWithBuffer = new Date(scheduledAt.getTime() + (service.duration + travelTimeAfterMinutes) * 60000);
 
-          const isAvailable = await StaffAvailabilityService.isStaffAvailableForTimeSlot(
+          const isAvailable = await StaffAvailabilityService.isStaffAvailableForSlot(
             staffIdToAssign,
             bookingStartWithBuffer,
             bookingEndWithBuffer
