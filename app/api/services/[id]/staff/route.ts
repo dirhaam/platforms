@@ -2,6 +2,8 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TenantAuth, getTenantSession } from '@/lib/auth/tenant-auth';
+import { RBAC } from '@/lib/auth/rbac';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -113,6 +115,13 @@ export async function POST(
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
+    // Get session to check permissions
+    const session = await getTenantSession(request);
+
+    if (!session || !RBAC.hasPermission(session, 'manage_staff')) {
+      return NextResponse.json({ error: 'Forbidden - insufficient permissions' }, { status: 403 });
+    }
+
     const { id: serviceId } = await params;
     const body = await request.json();
     const {
@@ -214,6 +223,81 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error in assign staff endpoint:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// DELETE /api/services/[id]/staff/[staffId] - Remove staff from service
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; staffId: string }> }
+) {
+  try {
+    const supabase = getSupabaseClient();
+    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
+    // Get session to check permissions
+    const session = await getTenantSession(request);
+
+    if (!session || !RBAC.hasPermission(session, 'manage_staff')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { id: serviceId, staffId } = await params;
+
+    if (!serviceId || !staffId) {
+      return NextResponse.json({ error: 'Service ID and Staff ID required' }, { status: 400 });
+    }
+
+    // Verify service exists and belongs to tenant
+    const { data: service, error: serviceError } = await supabase
+      .from('services')
+      .select('id')
+      .eq('id', serviceId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (serviceError || !service) {
+      return NextResponse.json({ error: 'Service not found' }, { status: 404 });
+    }
+
+    // Verify staff exists and belongs to tenant
+    const { data: staff, error: staffError } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('id', staffId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (staffError || !staff) {
+      return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
+    }
+
+    // Delete the staff-service mapping
+    const { error: deleteError } = await supabase
+      .from('staff_services')
+      .delete()
+      .eq('staff_id', staffId)
+      .eq('service_id', serviceId);
+
+    if (deleteError) {
+      console.error('Error removing staff from service:', deleteError);
+      return NextResponse.json(
+        { error: 'Failed to remove staff from service' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Staff member removed from service`
+    });
+  } catch (error) {
+    console.error('Error in DELETE /api/services/[id]/staff:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
