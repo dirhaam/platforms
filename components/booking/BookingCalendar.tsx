@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Booking, BookingStatus } from '@/types/booking';
@@ -93,12 +92,12 @@ export function BookingCalendar({
 
   const getStatusColor = (status: BookingStatus): string => {
     switch (status) {
-      case BookingStatus.PENDING: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case BookingStatus.CONFIRMED: return 'bg-blue-100 text-blue-800 border-blue-200';
-      case BookingStatus.COMPLETED: return 'bg-green-100 text-green-800 border-green-200';
-      case BookingStatus.CANCELLED: return 'bg-red-100 text-red-800 border-red-200';
-      case BookingStatus.NO_SHOW: return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case BookingStatus.PENDING: return 'bg-yellow-100 text-warning border-yellow-200';
+      case BookingStatus.CONFIRMED: return 'bg-primary-light text-primary border-primary-light';
+      case BookingStatus.COMPLETED: return 'bg-green-100 text-success border-green-200';
+      case BookingStatus.CANCELLED: return 'bg-red-100 text-danger border-red-200';
+      case BookingStatus.NO_SHOW: return 'bg-gray-100 text-secondary border-gray-200';
+      default: return 'bg-gray-100 text-secondary border-gray-200';
     }
   };
 
@@ -131,34 +130,39 @@ export function BookingCalendar({
 
   /* Booking detail yang ditampilkan di kanan */
   const BookingDetailPanel = () => {
-    const displayDate = currentDate; // Always use currentDate (dari navigation)
+    const displayDate = currentDate;
     const bookingsForDate = getBookingsForDate(displayDate);
     
     return (
       <div className="flex-1 pl-4 border-l border-gray-200">
-        <h3 className="font-semibold text-sm mb-3">
+        <h3 className="font-semibold text-sm mb-4 text-txt-primary flex items-center gap-2">
+          <i className='bx bx-calendar-event text-primary'></i>
           {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </h3>
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
           {bookingsForDate.length === 0 ? (
-            <p className="text-xs text-gray-400">No bookings for this date</p>
+            <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+               <i className='bx bx-coffee text-2xl text-txt-muted mb-2'></i>
+               <p className="text-xs text-txt-secondary">No bookings for this date</p>
+            </div>
           ) : (
             bookingsForDate.map(booking => (
               <div
                 key={booking.id}
-                className={`p-2 rounded border cursor-pointer hover:shadow-sm transition ${getStatusColor(booking.status)}`}
+                className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all duration-200 ${getStatusColor(booking.status)}`}
                 onClick={() => onBookingClick?.(booking)}
               >
-                <div className="flex items-start justify-between gap-1">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-xs">{booking.customer?.name}</div>
-                    <div className="text-xs">{booking.service?.name}</div>
-                    <div className="text-xs">
+                    <div className="font-semibold text-sm mb-1 truncate">{booking.customer?.name}</div>
+                    <div className="text-xs opacity-90 mb-1">{booking.service?.name}</div>
+                    <div className="text-xs font-mono flex items-center gap-1 opacity-80">
+                      <i className='bx bx-time'></i>
                       {formatTime(toDate(booking.scheduledAt))} -{' '}
                       {formatTime(new Date(toDate(booking.scheduledAt).getTime() + booking.duration * 60000))}
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs px-1 flex-shrink-0">{booking.status}</Badge>
+                  <Badge variant="outline" className="text-[10px] px-1.5 h-5 bg-white/50 border-0 shadow-sm flex-shrink-0">{booking.status}</Badge>
                 </div>
               </div>
             ))
@@ -172,32 +176,32 @@ export function BookingCalendar({
   const renderMonthView = () => (
     <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-4">
           <button
             onClick={() => navigateMonth('prev')}
-            className="rounded-full bg-gray-100 hover:bg-gray-200 p-1 flex items-center transition"
+            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
             type="button"
           >
-            <ChevronLeft className="h-5 w-5 text-gray-700" />
+            <i className='bx bx-chevron-left text-xl'></i>
           </button>
-          <span className="text-xl font-bold text-gray-900 whitespace-nowrap">
+          <span className="text-lg font-bold text-txt-primary whitespace-nowrap">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </span>
           <button
             onClick={() => navigateMonth('next')}
-            className="rounded-full bg-gray-100 hover:bg-gray-200 p-1 flex items-center transition"
+            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
             type="button"
           >
-            <ChevronRight className="h-5 w-5 text-gray-700" />
+            <i className='bx bx-chevron-right text-xl'></i>
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs px-2">
+              <Button variant="outline" size="sm" className="text-xs px-3 h-8 border-gray-200 text-txt-secondary">
                 {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-                <ChevronDown className="h-3 w-3 ml-1" />
+                <i className='bx bx-chevron-down ml-1 text-base'></i>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-32">
               <DropdownMenuItem onClick={() => setViewMode('month')}>
                 Month View
               </DropdownMenuItem>
@@ -211,18 +215,18 @@ export function BookingCalendar({
           </DropdownMenu>
         </div>
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-2">
           {weekdays.map((day, idx) => (
             <div
               key={day}
-              className={`h-10 w-10 flex items-center justify-center font-semibold text-xs text-center ${idx === 6 ? 'text-red-600' : 'text-gray-600'}`}
+              className={`h-8 flex items-center justify-center font-semibold text-xs uppercase tracking-wider text-center ${idx === 6 ? 'text-danger' : 'text-txt-muted'}`}
             >
               {day}
             </div>
           ))}
         </div>
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-2">
           {getCalendarDays().map((day, idx) => {
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
             const isToday = day.toDateString() === new Date().toDateString();
@@ -235,24 +239,23 @@ export function BookingCalendar({
                 onClick={() => isCurrentMonth && onDateSelect(day)}
                 disabled={!isCurrentMonth}
                 className={`
-                  flex items-center justify-center rounded-lg font-semibold text-xs
-                  h-10 w-10 transition-all relative select-none
-                  ${isSelected ? 'bg-black text-white shadow' :
-                    isCurrentMonth ? (
-                      isSunday ? 'bg-gray-50 text-red-600 hover:bg-blue-50' :
-                        'bg-gray-50 text-gray-900 hover:bg-blue-50'
-                    )
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
-                  ${isToday ? 'ring-2 ring-blue-400' : ''}
+                  flex flex-col items-center justify-center rounded-lg font-semibold text-sm
+                  h-10 w-full transition-all relative select-none
+                  ${isSelected 
+                     ? 'bg-primary text-white shadow-lg shadow-primary/40' 
+                     : isCurrentMonth 
+                        ? (isSunday ? 'text-danger hover:bg-red-50' : 'text-txt-primary hover:bg-primary-light/50 hover:text-primary')
+                        : 'text-gray-300 cursor-not-allowed'}
+                  ${isToday && !isSelected ? 'ring-1 ring-primary text-primary bg-white' : ''}
                   group
                 `}
                 type="button"
               >
                 <span className="relative z-10">{day.getDate()}</span>
                 {dayBookings.length > 0 && isCurrentMonth && (
-                  <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 flex gap-0.5">
+                  <div className="flex gap-0.5 mt-0.5">
                     {dayBookings.slice(0, 3).map((_, i) => (
-                      <div key={i} className="w-1 h-1 rounded-full bg-blue-500" />
+                      <div key={i} className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-primary'}`} />
                     ))}
                   </div>
                 )}
@@ -271,32 +274,32 @@ export function BookingCalendar({
     return (
       <div className="space-y-4">
           {/* Header */}
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center justify-between gap-2 mb-4">
             <button
               onClick={() => navigateWeek('prev')}
-              className="rounded-full bg-gray-100 hover:bg-gray-200 p-1 flex items-center transition"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
+               <i className='bx bx-chevron-left text-xl'></i>
             </button>
-            <span className="text-xl font-bold text-gray-900 whitespace-nowrap">
+            <span className="text-lg font-bold text-txt-primary whitespace-nowrap">
               Week {Math.ceil((days[0].getDate() / 7))}
             </span>
             <button
               onClick={() => navigateWeek('next')}
-              className="rounded-full bg-gray-100 hover:bg-gray-200 p-1 flex items-center transition"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-              <ChevronRight className="h-5 w-5 text-gray-700" />
+               <i className='bx bx-chevron-right text-xl'></i>
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs px-2">
+                <Button variant="outline" size="sm" className="text-xs px-3 h-8 border-gray-200 text-txt-secondary">
                   {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  <i className='bx bx-chevron-down ml-1 text-base'></i>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-32">
                 <DropdownMenuItem onClick={() => setViewMode('month')}>
                   Month View
                 </DropdownMenuItem>
@@ -310,69 +313,64 @@ export function BookingCalendar({
             </DropdownMenu>
           </div>
           {/* Day headers */}
-          <div className="flex gap-1.5 mb-2 overflow-hidden">
-            <div className="w-10 flex-shrink-0"></div>
-            <div className="flex gap-1.5 flex-shrink-0">
-              {days.map(day => {
-                const isToday = day.toDateString() === new Date().toDateString();
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={`w-10 h-10 p-0.5 text-center border rounded text-xs flex flex-col items-center justify-center flex-shrink-0 ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
-                  >
-                    <div className="text-xs text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                    <div className="text-xs font-medium">{day.getDate()}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {/* Hours grid - fixed width, no scroll */}
-          <div className="flex gap-1.5 overflow-hidden">
-            <div className="w-10 space-y-1.5 flex-shrink-0">
-              {hours.map(hour => (
-                <div key={hour} className="h-10 text-xs text-gray-500 text-right pr-1 flex items-center justify-end">
-                  {hour.toString().padStart(2, '0')}
+          <div className="flex gap-2 mb-2 overflow-hidden pl-12">
+            {days.map(day => {
+              const isToday = day.toDateString() === new Date().toDateString();
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`flex-1 p-1 text-center rounded-md text-xs flex flex-col items-center justify-center
+                     ${isToday ? 'bg-primary-light text-primary font-bold' : 'bg-gray-50 text-txt-secondary'}
+                  `}
+                >
+                  <div className="text-[10px] opacity-70 uppercase">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                  <div className="text-sm">{day.getDate()}</div>
                 </div>
-              ))}
-            </div>
-            <div className="flex gap-1.5 flex-shrink-0">
-              {days.map(day => {
-                const dayBookings = getBookingsForDate(day);
-                const bookingsByHour = dayBookings.reduce((acc, booking) => {
-                  const hour = toDate(booking.scheduledAt).getHours();
-                  if (!acc[hour]) acc[hour] = [];
-                  acc[hour].push(booking);
-                  return acc;
-                }, {} as Record<number, Booking[]>);
-                return (
-                  <div key={day.toISOString()} className="w-10 space-y-1.5 flex-shrink-0">
-                    {hours.map(hour => {
-                      const hasBooking = bookingsByHour[hour];
-                      const bookingCount = hasBooking ? bookingsByHour[hour].length : 0;
-                      const initials = hasBooking ? getInitials(bookingsByHour[hour][0].customer?.name || '') : '';
-                      return (
-                        <div
-                          key={hour}
-                          className={`h-10 rounded cursor-pointer transition flex items-center justify-center text-xs font-semibold relative ${
-                            hasBooking ? 'bg-blue-200 hover:bg-blue-300 text-blue-900' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'
-                          }`}
-                          onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
-                          title={hasBooking ? `${bookingCount} booking(s)` : 'No bookings'}
-                        >
-                          {bookingCount > 1 ? bookingCount : initials}
-                          {bookingCount > 1 && (
-                            <div className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center transform translate-x-0.5 -translate-y-0.5">
-                              {bookingCount}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+              );
+            })}
+          </div>
+          {/* Hours grid */}
+          <div className="relative h-[400px] overflow-y-auto custom-scrollbar">
+             {/* Time sidebar */}
+             <div className="absolute left-0 top-0 w-10 space-y-2 pt-2">
+                {hours.map(hour => (
+                   <div key={hour} className="h-12 text-[10px] text-txt-muted text-right pr-2 font-medium relative top-[-6px]">
+                      {hour.toString().padStart(2, '0')}:00
+                   </div>
+                ))}
+             </div>
+             
+             {/* Grid */}
+             <div className="ml-10 grid grid-cols-7 gap-2 pt-2">
+                {days.map(day => {
+                   return (
+                      <div key={day.toISOString()} className="space-y-2">
+                         {hours.map(hour => {
+                             const dayBookings = getBookingsForDate(day);
+                             const bookingsInHour = dayBookings.filter(b => toDate(b.scheduledAt).getHours() === hour);
+                             const hasBooking = bookingsInHour.length > 0;
+                             
+                             return (
+                                <div
+                                  key={hour}
+                                  onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
+                                  className={`
+                                     h-12 rounded border border-transparent hover:border-primary/30 transition-all cursor-pointer relative
+                                     ${hasBooking ? 'bg-primary-light/50 border-primary/20' : 'bg-gray-50/50 hover:bg-gray-100'}
+                                  `}
+                                >
+                                   {hasBooking && (
+                                      <div className="absolute inset-0.5 bg-primary rounded-sm text-[10px] text-white flex items-center justify-center font-bold shadow-sm">
+                                         {bookingsInHour.length > 1 ? `${bookingsInHour.length}` : getInitials(bookingsInHour[0].customer?.name || '')}
+                                      </div>
+                                   )}
+                                </div>
+                             )
+                         })}
+                      </div>
+                   )
+                })}
+             </div>
           </div>
       </div>
     );
@@ -392,32 +390,32 @@ export function BookingCalendar({
     return (
       <div className="space-y-4">
           {/* Header */}
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center justify-between gap-2 mb-4">
             <button
               onClick={() => navigateDay('prev')}
-              className="rounded-full bg-gray-100 hover:bg-gray-200 p-1 flex items-center transition"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
+               <i className='bx bx-chevron-left text-xl'></i>
             </button>
-            <span className="text-xl font-bold text-gray-900 whitespace-nowrap">
+            <span className="text-lg font-bold text-txt-primary whitespace-nowrap">
               {currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
             <button
               onClick={() => navigateDay('next')}
-              className="rounded-full bg-gray-100 hover:bg-gray-200 p-1 flex items-center transition"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-              <ChevronRight className="h-5 w-5 text-gray-700" />
+               <i className='bx bx-chevron-right text-xl'></i>
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs px-2">
+                <Button variant="outline" size="sm" className="text-xs px-3 h-8 border-gray-200 text-txt-secondary">
                   {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  <i className='bx bx-chevron-down ml-1 text-base'></i>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-32">
                 <DropdownMenuItem onClick={() => setViewMode('month')}>
                   Month View
                 </DropdownMenuItem>
@@ -431,33 +429,33 @@ export function BookingCalendar({
             </DropdownMenu>
           </div>
           {/* Hours list */}
-          <div className="space-y-1 max-h-96 overflow-y-auto">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
             {hours.map(hour => {
               const hourBookings = bookingsByHour[hour] || [];
               return (
-                <div key={hour} className="flex items-start gap-2 p-1 border rounded hover:bg-blue-50 cursor-pointer bg-white text-xs">
-                  <div className="w-12 text-gray-500 flex-shrink-0 pt-1">
+                <div key={hour} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                  <div className="w-14 pt-2 text-xs font-semibold text-txt-muted text-right">
                     {hour.toString().padStart(2, '0')}:00
                   </div>
-                  <div className="flex-1 space-y-1">
+                  <div className="flex-1 space-y-2 pt-1">
                     {hourBookings.length === 0 ? (
-                      <div className="text-gray-400">-</div>
+                      <div className="h-8 border-b border-gray-100 group-hover:border-dashed group-hover:border-gray-300 w-full"></div>
                     ) : (
                       hourBookings.map(booking => (
                         <div
                           key={booking.id}
-                          className={`p-1 rounded cursor-pointer border ${getStatusColor(booking.status)}`}
+                          className={`p-3 rounded-md border cursor-pointer shadow-sm hover:shadow-md transition-all ${getStatusColor(booking.status)}`}
                           onClick={e => {
                             e.stopPropagation();
                             onBookingClick?.(booking);
                           }}
                         >
-                          <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center justify-between gap-3">
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-xs">{booking.customer?.name}</div>
-                              <div className="text-xs text-gray-600">{booking.service?.name}</div>
+                              <div className="font-bold text-sm">{booking.customer?.name}</div>
+                              <div className="text-xs opacity-90">{booking.service?.name}</div>
                             </div>
-                            <Badge variant="outline" className="text-xs px-1 flex-shrink-0">{booking.status}</Badge>
+                            <Badge variant="outline" className="text-[10px] bg-white/60 border-0 px-1.5">{booking.status}</Badge>
                           </div>
                         </div>
                       ))
@@ -472,18 +470,18 @@ export function BookingCalendar({
   };
 
   return (
-    <div className={`min-h-fit w-full px-2 py-2 ${className}`}>
+    <div className={`w-full ${className}`}>
       {/* 2-column layout for all views */}
-      <div className="flex gap-4 w-full">
-        {/* Calendar views - fixed width w-96 */}
-        <div className="w-96 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* Calendar views - fluid width on small screens, fixed on large */}
+        <div className="flex-1 min-w-[300px]">
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
         </div>
 
-        {/* Booking detail panel - fixed width w-72 */}
-        <div className="w-72 pl-4 border-l border-gray-200 flex-shrink-0">
+        {/* Booking detail panel - side panel on large screens */}
+        <div className="w-full lg:w-72 flex-shrink-0 lg:h-auto">
           <BookingDetailPanel />
         </div>
       </div>

@@ -1,14 +1,12 @@
-"use client";
+'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, List, DollarSign, MapPin, Plus, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Booking } from '@/types/booking';
 import { SalesTransaction } from '@/types/sales';
 import { BookingCalendar } from './BookingCalendar';
 import { UnifiedTransactionTable } from './UnifiedTransactionTable';
 import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
-import { Button } from '@/components/ui/button';
 import { BookingFilters } from './BookingFilters';
 
 type ViewMode = 'calendar' | 'list' | 'sales' | 'home-visits';
@@ -101,28 +99,42 @@ export function BookingViewsTabs({
       ];
 
   return (
-    <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as ViewMode)}>
-      <Card className="border-none shadow-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <TabsList>
-              <TabsTrigger value="calendar">
-                <Calendar className="h-4 w-4 mr-2" />
-                Calendar
-              </TabsTrigger>
-              <TabsTrigger value="list">
-                <List className="h-4 w-4 mr-2" />
-                Booking
-              </TabsTrigger>
-              <TabsTrigger value="sales">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Sales
-              </TabsTrigger>
-              <TabsTrigger value="home-visits">
-                <MapPin className="h-4 w-4 mr-2" />
-                Home Visits
-              </TabsTrigger>
-            </TabsList>
+    <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as ViewMode)} className="space-y-6">
+      {/* Controls Header */}
+      <div className="bg-white rounded-card shadow-card p-4">
+        <div className="flex flex-col lg:flex-row justify-between gap-4 items-center">
+          <TabsList className="bg-transparent p-0 gap-2 h-auto flex-wrap justify-center lg:justify-start w-full lg:w-auto">
+            <TabsTrigger 
+              value="calendar" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md px-4 py-2 h-auto rounded-md border border-transparent hover:text-primary hover:bg-primary-light/50 transition-all text-txt-secondary gap-2"
+            >
+              <i className='bx bx-calendar text-lg'></i>
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger 
+              value="list" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md px-4 py-2 h-auto rounded-md border border-transparent hover:text-primary hover:bg-primary-light/50 transition-all text-txt-secondary gap-2"
+            >
+              <i className='bx bx-list-ul text-lg'></i>
+              List
+            </TabsTrigger>
+            <TabsTrigger 
+              value="sales" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md px-4 py-2 h-auto rounded-md border border-transparent hover:text-primary hover:bg-primary-light/50 transition-all text-txt-secondary gap-2"
+            >
+              <i className='bx bx-dollar-circle text-lg'></i>
+              Sales
+            </TabsTrigger>
+            <TabsTrigger 
+              value="home-visits" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md px-4 py-2 h-auto rounded-md border border-transparent hover:text-primary hover:bg-primary-light/50 transition-all text-txt-secondary gap-2"
+            >
+              <i className='bx bx-map-pin text-lg'></i>
+              Home Visits
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="w-full lg:w-auto">
             <BookingFilters
               layout="inline"
               searchTerm={searchTerm}
@@ -136,57 +148,65 @@ export function BookingViewsTabs({
               paymentOptions={paymentOptions}
             />
           </div>
-        </CardHeader>
-      </Card>
+        </div>
+      </div>
 
       {/* Calendar View */}
-      <TabsContent value="calendar" className="mt-4">
-        <Card className="border-none shadow-sm">
-          <CardContent className="pt-6">
+      <TabsContent value="calendar" className="mt-0">
+        <div className="bg-white rounded-card shadow-card p-6">
             <BookingCalendar
               bookings={filteredBookings}
               selectedDate={selectedDate}
               onDateSelect={onDateSelect}
               onBookingClick={onBookingClick}
             />
-          </CardContent>
-        </Card>
+        </div>
       </TabsContent>
 
       {/* List View */}
-      <TabsContent value="list" className="mt-4">
-        <Card className="border-none shadow-sm">
-          <CardContent className="pt-6">
-            <UnifiedTransactionTable
-              data={filteredBookings}
-              type="booking"
-              renderActions={(item) => (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onBookingClick(item as Booking)}
-                >
-                  View
-                </Button>
-              )}
-            />
-          </CardContent>
-        </Card>
+      <TabsContent value="list" className="mt-0">
+        <div className="bg-white rounded-card shadow-card overflow-hidden">
+            <div className="p-5 border-b border-gray-100">
+                <h5 className="font-semibold text-lg text-txt-primary">Booking List</h5>
+            </div>
+            <div className="p-6 pt-2">
+                <UnifiedTransactionTable
+                data={filteredBookings}
+                type="booking"
+                renderActions={(item) => (
+                    <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-200 text-txt-secondary hover:text-primary hover:border-primary hover:bg-primary-light/10"
+                    onClick={() => onBookingClick(item as Booking)}
+                    >
+                      <i className='bx bx-show text-lg mr-1'></i> View
+                    </Button>
+                )}
+                />
+            </div>
+        </div>
       </TabsContent>
 
       {/* Sales View */}
-      <TabsContent value="sales" className="mt-4">
-        <Card className="border-none shadow-sm">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle>Sales Transactions</CardTitle>
-            <Button onClick={onNewSale} className="gap-2">
-              <Plus className="w-4 h-4" />
+      <TabsContent value="sales" className="mt-0">
+        <div className="bg-white rounded-card shadow-card overflow-hidden">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
+            <h5 className="font-semibold text-lg text-txt-primary">Sales Transactions</h5>
+            <Button 
+                onClick={onNewSale} 
+                className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30"
+            >
+              <i className='bx bx-plus text-lg mr-1'></i>
               New Sale
             </Button>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-6 pt-2">
             {loadingSales ? (
-              <p className="text-sm text-gray-600">Loading sales data...</p>
+              <div className="text-center py-12 text-txt-muted">
+                  <i className='bx bx-loader-alt bx-spin text-3xl mb-2'></i>
+                  <p>Loading sales data...</p>
+              </div>
             ) : (
               <UnifiedTransactionTable
                 data={salesTransactions}
@@ -195,29 +215,32 @@ export function BookingViewsTabs({
                   <Button
                     variant="outline"
                     size="sm"
+                    className="border-gray-200 text-txt-secondary hover:text-primary hover:border-primary hover:bg-primary-light/10"
                     onClick={() => onViewSalesTransaction(transaction as SalesTransaction)}
                   >
-                    <Eye className="w-4 h-4 mr-2" />
+                    <i className='bx bx-show text-lg mr-1'></i>
                     View
                   </Button>
                 )}
               />
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </TabsContent>
 
       {/* Home Visits View */}
-      <TabsContent value="home-visits" className="mt-4">
-        {resolvedTenantId && (
-          <HomeVisitBookingManager
-            tenantId={resolvedTenantId}
-            bookings={bookings}
-            services={services}
-            businessLocation={businessLocation}
-            businessCoordinates={businessCoordinates || undefined}
-          />
-        )}
+      <TabsContent value="home-visits" className="mt-0">
+        <div className="bg-white rounded-card shadow-card overflow-hidden">
+            {resolvedTenantId && (
+            <HomeVisitBookingManager
+                tenantId={resolvedTenantId}
+                bookings={bookings}
+                services={services}
+                businessLocation={businessLocation}
+                businessCoordinates={businessCoordinates || undefined}
+            />
+            )}
+        </div>
       </TabsContent>
     </Tabs>
   );
