@@ -303,15 +303,23 @@ export function QuickSalesPOS({
     setSubmitting(true);
     try {
         const payload = {
+            tenantId: tenantId,
+            type: 'on_the_spot',
             customerId: selectedCustomerId,
             items: cart.map(item => ({
                 serviceId: item.serviceId,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice
             })),
-            payments,
-            notes
+            totalAmount: totalAmount,
+            paymentAmount: totalPayment,
+            payments: payments,
+            notes: notes || undefined,
+            taxRate: invoiceSettings?.taxServiceCharge?.taxPercentage || 0,
+            discountAmount: 0
         };
+
+        console.log('[QuickSalesPOS] Sending payload:', payload);
 
         const response = await fetch('/api/sales/transactions', {
             method: 'POST',
@@ -322,15 +330,18 @@ export function QuickSalesPOS({
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error('Failed to create sale');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create sale');
+        }
         
-        const transaction = await response.json();
+        const data = await response.json();
         toast.success('Sale completed successfully');
         onOpenChange(false);
-        if (onCreated) onCreated(transaction);
+        if (onCreated) onCreated(data.transaction);
     } catch (error) {
-        console.error(error);
-        toast.error('Failed to process sale');
+        console.error('[QuickSalesPOS] Error:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to process sale');
     } finally {
         setSubmitting(false);
     }
