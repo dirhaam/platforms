@@ -7,12 +7,6 @@ process.env.TAILWIND_DISABLE_LIGHTNING =
 const nextConfig: NextConfig = {
   output: 'standalone',
 
-  // Enable Turbopack compatibility to silence conflict with webpack config
-  experimental: {
-    turbo: {
-    },
-  },
-
   // Exclude folder Windows yang sering bikin EPERM error
   outputFileTracingExcludes: {
     "*": [
