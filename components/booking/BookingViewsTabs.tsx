@@ -8,6 +8,7 @@ import { BookingCalendar } from './BookingCalendar';
 import { UnifiedTransactionTable } from './UnifiedTransactionTable';
 import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
 import { BookingFilters } from './BookingFilters';
+import { SalesSummaryCards } from './SalesSummaryCards';
 
 type ViewMode = 'calendar' | 'list' | 'sales' | 'home-visits';
 
@@ -98,6 +99,14 @@ export function BookingViewsTabs({
         { value: 'refunded', label: 'Refunded' },
       ];
 
+  // Calculate Sales Summary
+  const salesSummary = {
+    totalRevenue: salesTransactions.reduce((sum, t) => sum + t.totalAmount, 0),
+    totalTransactions: salesTransactions.length,
+    totalPaid: salesTransactions.reduce((sum, t) => sum + (t.paidAmount || 0), 0),
+    totalPending: salesTransactions.reduce((sum, t) => sum + (t.totalAmount - (t.paidAmount || 0)), 0)
+  };
+
   return (
     <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as ViewMode)} className="space-y-6">
       {/* Controls Header */}
@@ -152,7 +161,7 @@ export function BookingViewsTabs({
       </div>
 
       {/* Calendar View */}
-      <TabsContent value="calendar" className="mt-0">
+      <TabsContent value="calendar" className="space-y-4">
         <div className="bg-white rounded-card shadow-card p-6">
             <BookingCalendar
               bookings={filteredBookings}
@@ -164,12 +173,12 @@ export function BookingViewsTabs({
       </TabsContent>
 
       {/* List View */}
-      <TabsContent value="list" className="mt-0">
-        <div className="bg-white rounded-card shadow-card overflow-hidden">
+      <TabsContent value="list" className="space-y-4">
+        <div className="bg-white rounded-card shadow-card overflow-hidden border border-gray-100">
             <div className="p-5 border-b border-gray-100">
                 <h5 className="font-semibold text-lg text-txt-primary">Booking List</h5>
             </div>
-            <div className="p-6 pt-2">
+            <div className="p-6">
                 <UnifiedTransactionTable
                 data={filteredBookings}
                 type="booking"
@@ -189,8 +198,12 @@ export function BookingViewsTabs({
       </TabsContent>
 
       {/* Sales View */}
-      <TabsContent value="sales" className="mt-0">
-        <div className="bg-white rounded-card shadow-card overflow-hidden">
+      <TabsContent value="sales" className="space-y-6">
+        {/* Summary Cards */}
+        <SalesSummaryCards summary={salesSummary} />
+        
+        {/* Transactions Table */}
+        <div className="bg-white rounded-card shadow-card overflow-hidden border border-gray-100">
           <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
             <h5 className="font-semibold text-lg text-txt-primary">Sales Transactions</h5>
             <Button 
@@ -201,7 +214,7 @@ export function BookingViewsTabs({
               New Sale
             </Button>
           </div>
-          <div className="p-6 pt-2">
+          <div className="p-6">
             {loadingSales ? (
               <div className="text-center py-12 text-txt-muted">
                   <i className='bx bx-loader-alt bx-spin text-3xl mb-2'></i>
@@ -229,8 +242,8 @@ export function BookingViewsTabs({
       </TabsContent>
 
       {/* Home Visits View */}
-      <TabsContent value="home-visits" className="mt-0">
-        <div className="bg-white rounded-card shadow-card overflow-hidden">
+      <TabsContent value="home-visits" className="space-y-4">
+        <div className="bg-white rounded-card shadow-card overflow-hidden border border-gray-100">
             {resolvedTenantId && (
             <HomeVisitBookingManager
                 tenantId={resolvedTenantId}

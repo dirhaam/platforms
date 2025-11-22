@@ -1,10 +1,16 @@
 'use client';
 
 import React from 'react';
-import { SalesSummary } from '@/types/sales';
+
+interface SalesSummaryData {
+  totalRevenue: number;
+  totalTransactions: number;
+  totalPaid: number;
+  totalPending: number;
+}
 
 interface SalesSummaryCardsProps {
-  summary: SalesSummary;
+  summary: SalesSummaryData;
 }
 
 export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
