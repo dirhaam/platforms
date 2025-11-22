@@ -3,6 +3,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { BlockingDateCalendar } from '@/components/booking/BlockingDateCalendar';
@@ -69,6 +70,7 @@ export function DateTimeModal({
     }}>
       <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden rounded-card shadow-lg border-0">
         <DialogTitle className="sr-only">{currentStep === 'date' ? 'Select Date' : 'Select Time'}</DialogTitle>
+        <DialogDescription className="sr-only">Choose your preferred appointment {currentStep === 'date' ? 'date' : 'time slot'}</DialogDescription>
         
         <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
           <div>

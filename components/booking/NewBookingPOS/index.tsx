@@ -156,23 +156,44 @@ export function NewBookingPOS({
     try {
       const scheduledAt = booking.selectedTimeSlot.start.toISOString();
 
-      const requestBody = {
+      const requestBody: any = {
         customerId: booking.customerId,
         serviceId: booking.serviceId,
         scheduledAt,
         isHomeVisit: booking.isHomeVisit,
-        homeVisitAddress: booking.homeVisitAddress,
-        homeVisitCoordinates: booking.isHomeVisit && isFinite(Number(booking.homeVisitLat)) && isFinite(Number(booking.homeVisitLng))
-          ? { lat: Number(booking.homeVisitLat), lng: Number(booking.homeVisitLng) }
-          : undefined,
-        travelDistance: booking.travelCalculation?.distance,
-        travelDuration: booking.travelCalculation?.duration,
-        travelRoute: booking.travelCalculation?.route,
-        travelSurchargeAmount: booking.travelCalculation?.surcharge,
         paymentMethod: booking.paymentMethod,
         dpAmount: booking.dpAmount,
-        notes: booking.notes
       };
+
+      // Only add optional fields if they have values
+      if (booking.notes) {
+        requestBody.notes = booking.notes;
+      }
+
+      if (booking.isHomeVisit) {
+        if (booking.homeVisitAddress) {
+          requestBody.homeVisitAddress = booking.homeVisitAddress;
+        }
+        if (isFinite(Number(booking.homeVisitLat)) && isFinite(Number(booking.homeVisitLng))) {
+          requestBody.homeVisitCoordinates = {
+            lat: Number(booking.homeVisitLat),
+            lng: Number(booking.homeVisitLng)
+          };
+        }
+        if (booking.travelCalculation) {
+          if (isFinite(booking.travelCalculation.distance)) {
+            requestBody.travelDistance = booking.travelCalculation.distance;
+          }
+          if (isFinite(booking.travelCalculation.duration)) {
+            requestBody.travelDuration = booking.travelCalculation.duration;
+          }
+          if (isFinite(booking.travelCalculation.surcharge)) {
+            requestBody.travelSurchargeAmount = booking.travelCalculation.surcharge;
+          }
+        }
+      }
+
+      console.log('[NewBookingPOS] Sending request:', requestBody);
 
       const response = await fetch('/api/bookings', {
         method: 'POST',

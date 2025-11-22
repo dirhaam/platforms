@@ -313,7 +313,7 @@ export function QuickSalesPOS({
             notes
         };
 
-        const response = await fetch('/api/sales', {
+        const response = await fetch('/api/sales/transactions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
