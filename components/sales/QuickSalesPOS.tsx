@@ -66,6 +66,11 @@ export function QuickSalesPOS({
   const [payments, setPayments] = useState<PaymentEntry[]>([]);
   const [notes, setNotes] = useState('');
 
+  // New Customer State
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
   // Load data when dialog opens
   useEffect(() => {
     if (open) {
@@ -131,6 +136,8 @@ export function QuickSalesPOS({
     setCart([]);
     setPayments([]);
     setNotes('');
+    setShowNewCustomerForm(false);
+    setNewCustomer({ name: '', phone: '', email: '' });
   };
 
   // Filtered Data
@@ -148,6 +155,42 @@ export function QuickSalesPOS({
       s.name.toLowerCase().includes(query)
     ).sort((a, b) => a.name.localeCompare(b.name));
   }, [services, serviceSearchQuery]);
+
+  // Create Customer Handler
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.phone) {
+      toast.error('Name and phone are required');
+      return;
+    }
+
+    setIsCreatingCustomer(true);
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify(newCustomer)
+      });
+
+      if (!response.ok) throw new Error('Failed to create customer');
+
+      const data = await response.json();
+      const createdCustomer = data.customer;
+
+      setCustomers(prev => [...prev, createdCustomer]);
+      setSelectedCustomerId(createdCustomer.id);
+      setShowNewCustomerForm(false);
+      setNewCustomer({ name: '', phone: '', email: '' });
+      toast.success('Customer created successfully');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to create customer');
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
 
   // Cart Operations
   const addToCart = useCallback((service: Service) => {
@@ -386,63 +429,125 @@ export function QuickSalesPOS({
             <div className="lg:w-5/12 flex flex-col bg-white h-full shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] z-10">
                 
                 {/* Customer Select */}
-                <div className="p-4 border-b border-gray-100">
-                    <div className="relative">
-                        <i className='bx bx-user absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted'></i>
-                        <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                            <SelectTrigger className="w-full pl-9 bg-gray-50 border-transparent focus:ring-primary/20">
-                                <SelectValue placeholder="Select Customer *" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <div className="p-2 sticky top-0 bg-white border-b z-10">
-                                    <Input 
-                                        placeholder="Search customer..." 
-                                        value={customerSearchQuery}
-                                        onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                                        className="h-8 text-xs"
-                                    />
-                                </div>
-                                {filteredCustomers.map(c => (
-                                    <SelectItem key={c.id} value={c.id}>{c.name} - {c.phone}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                <div className="p-4 border-b border-gray-100 bg-gray-50/30">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-txt-muted uppercase tracking-wider">Customer</span>
+                        {!showNewCustomerForm && (
+                            <button 
+                                onClick={() => setShowNewCustomerForm(true)}
+                                className="text-primary text-xs font-medium hover:underline flex items-center gap-1"
+                            >
+                                <i className='bx bx-plus'></i> New Customer
+                            </button>
+                        )}
                     </div>
+
+                    {showNewCustomerForm ? (
+                        <div className="space-y-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm animate-in fade-in slide-in-from-top-2">
+                            <Input 
+                                placeholder="Full Name *" 
+                                value={newCustomer.name}
+                                onChange={e => setNewCustomer({...newCustomer, name: e.target.value})}
+                                className="bg-gray-50 h-9 text-sm focus:bg-white"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <Input 
+                                    placeholder="Phone *" 
+                                    value={newCustomer.phone}
+                                    onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})}
+                                    className="bg-gray-50 h-9 text-sm focus:bg-white"
+                                />
+                                <Input 
+                                    placeholder="Email" 
+                                    value={newCustomer.email}
+                                    onChange={e => setNewCustomer({...newCustomer, email: e.target.value})}
+                                    className="bg-gray-50 h-9 text-sm focus:bg-white"
+                                />
+                            </div>
+                            <div className="flex gap-2 mt-2">
+                                <Button 
+                                    size="sm" 
+                                    onClick={handleCreateCustomer} 
+                                    disabled={isCreatingCustomer}
+                                    className="h-8 bg-primary hover:bg-primary-dark text-white text-xs flex-1"
+                                >
+                                    {isCreatingCustomer ? <i className='bx bx-loader-alt bx-spin'></i> : 'Save Customer'}
+                                </Button>
+                                <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => setShowNewCustomerForm(false)}
+                                    className="h-8 text-xs"
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="relative">
+                            <i className='bx bx-user absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted z-10'></i>
+                            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                                <SelectTrigger className="w-full pl-9 bg-white border-gray-200 focus:ring-primary/20">
+                                    <SelectValue placeholder="Select Customer *" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <div className="p-2 sticky top-0 bg-white border-b z-10">
+                                        <Input 
+                                            placeholder="Search customer..." 
+                                            value={customerSearchQuery}
+                                            onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                                            className="h-8 text-xs"
+                                        />
+                                    </div>
+                                    {filteredCustomers.length === 0 ? (
+                                        <div className="p-3 text-sm text-txt-muted text-center">No customers found</div>
+                                    ) : (
+                                        filteredCustomers.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name} - {c.phone}</SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
 
                 {/* Cart Items */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-white">
                     {cart.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-txt-muted opacity-60">
-                            <i className='bx bx-cart-alt text-4xl mb-2'></i>
-                            <p>Cart is empty</p>
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                                <i className='bx bx-cart-alt text-3xl text-gray-400'></i>
+                            </div>
+                            <p className="text-sm font-medium">Cart is empty</p>
+                            <p className="text-xs text-txt-secondary">Select services to add to cart</p>
                         </div>
                     ) : (
                         cart.map(item => (
-                            <div key={item.serviceId} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
+                            <div key={item.serviceId} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-transparent hover:border-gray-200 transition-colors group">
                                 <div className="flex-1 min-w-0 mr-3">
                                     <div className="font-medium text-sm text-txt-primary truncate">{item.serviceName}</div>
                                     <div className="text-xs text-txt-muted">IDR {item.unitPrice.toLocaleString('id-ID')}</div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="flex items-center bg-white rounded border border-gray-200">
+                                    <div className="flex items-center bg-white rounded border border-gray-200 shadow-sm">
                                         <button 
                                             onClick={() => updateCartQuantity(item.serviceId, item.quantity - 1)}
-                                            className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-txt-secondary"
+                                            className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-txt-secondary transition-colors"
                                         >
                                             <i className='bx bx-minus text-xs'></i>
                                         </button>
-                                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                                        <span className="w-8 text-center text-sm font-medium text-txt-primary">{item.quantity}</span>
                                         <button 
                                             onClick={() => updateCartQuantity(item.serviceId, item.quantity + 1)}
-                                            className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-txt-secondary"
+                                            className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-txt-secondary transition-colors"
                                         >
                                             <i className='bx bx-plus text-xs'></i>
                                         </button>
                                     </div>
                                     <button 
                                         onClick={() => removeFromCart(item.serviceId)}
-                                        className="text-txt-muted hover:text-danger transition-colors"
+                                        className="w-7 h-7 rounded flex items-center justify-center text-txt-muted hover:text-danger hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
                                     >
                                         <i className='bx bx-trash'></i>
                                     </button>
@@ -453,24 +558,24 @@ export function QuickSalesPOS({
                 </div>
 
                 {/* Summary & Payment */}
-                <div className="p-5 bg-gray-50 border-t border-gray-200">
+                <div className="p-5 bg-gray-50/80 border-t border-gray-200 backdrop-blur-sm">
                     
                     {/* Payment Methods */}
                     <div className="mb-4">
                         <div className="flex justify-between items-center mb-2">
-                            <label className="text-xs font-semibold text-txt-secondary uppercase">Payment Method</label>
-                            <button onClick={addPaymentEntry} className="text-xs text-primary hover:underline flex items-center gap-1">
+                            <label className="text-xs font-bold text-txt-secondary uppercase tracking-wider">Payment Method</label>
+                            <button onClick={addPaymentEntry} className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
                                 <i className='bx bx-plus'></i> Split Payment
                             </button>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
                             {payments.map((payment, idx) => (
-                                <div key={idx} className="flex gap-2">
+                                <div key={idx} className="flex gap-2 items-center">
                                     <Select 
                                         value={payment.method} 
                                         onValueChange={(v) => updatePaymentEntry(idx, 'method', v)}
                                     >
-                                        <SelectTrigger className="w-[110px] bg-white h-9">
+                                        <SelectTrigger className="w-[110px] bg-white h-9 border-gray-200 shadow-sm">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -481,18 +586,18 @@ export function QuickSalesPOS({
                                         </SelectContent>
                                     </Select>
                                     <div className="relative flex-1">
-                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-txt-muted">IDR</span>
+                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-txt-muted font-medium">IDR</span>
                                         <Input 
                                             type="number"
                                             value={payment.amount || ''}
                                             onChange={(e) => updatePaymentEntry(idx, 'amount', parseFloat(e.target.value) || 0)}
-                                            className="pl-8 bg-white h-9"
+                                            className="pl-9 bg-white h-9 border-gray-200 shadow-sm focus:border-primary"
                                             placeholder="Amount"
                                         />
                                     </div>
                                     {payments.length > 1 && (
                                         <button onClick={() => removePaymentEntry(idx)} className="text-txt-muted hover:text-danger px-1">
-                                            <i className='bx bx-x'></i>
+                                            <i className='bx bx-x text-lg'></i>
                                         </button>
                                     )}
                                 </div>
@@ -501,34 +606,38 @@ export function QuickSalesPOS({
                     </div>
 
                     {/* Totals */}
-                    <div className="space-y-1 text-sm text-txt-secondary mb-4 pb-4 border-b border-dashed border-gray-300">
+                    <div className="space-y-1.5 text-sm text-txt-secondary mb-4 pb-4 border-b border-dashed border-gray-300">
                         <div className="flex justify-between">
                             <span>Subtotal</span>
-                            <span>{subtotal.toLocaleString('id-ID')}</span>
+                            <span className="font-medium">{subtotal.toLocaleString('id-ID')}</span>
                         </div>
                         {taxAmount > 0 && (
-                            <div className="flex justify-between">
+                            <div className="flex justify-between text-xs">
                                 <span>Tax ({invoiceSettings?.taxServiceCharge?.taxPercentage}%)</span>
                                 <span>{taxAmount.toLocaleString('id-ID')}</span>
                             </div>
                         )}
                         {serviceChargeAmount > 0 && (
-                            <div className="flex justify-between">
+                            <div className="flex justify-between text-xs">
                                 <span>Service Charge</span>
                                 <span>{serviceChargeAmount.toLocaleString('id-ID')}</span>
                             </div>
                         )}
                         {additionalFeesAmount > 0 && (
-                            <div className="flex justify-between">
+                            <div className="flex justify-between text-xs">
                                 <span>Fees</span>
                                 <span>{additionalFeesAmount.toLocaleString('id-ID')}</span>
                             </div>
                         )}
-                        <div className="flex justify-between font-bold text-lg text-txt-primary pt-2">
+                        <div className="flex justify-between font-bold text-lg text-txt-primary pt-2 mt-2 border-t border-gray-200">
                             <span>Total</span>
-                            <span>IDR {totalAmount.toLocaleString('id-ID')}</span>
+                            <span className="text-primary">IDR {totalAmount.toLocaleString('id-ID')}</span>
                         </div>
-                        <div className={`flex justify-between text-xs font-medium ${remainingAmount > 0 ? 'text-danger' : remainingAmount < 0 ? 'text-warning' : 'text-success'}`}>
+                        <div className={`flex justify-between text-xs font-semibold px-2 py-1 rounded ${
+                            remainingAmount > 0 ? 'bg-red-50 text-danger' : 
+                            remainingAmount < 0 ? 'bg-yellow-50 text-warning' : 
+                            'bg-green-50 text-success'
+                        }`}>
                             <span>Remaining</span>
                             <span>{remainingAmount.toLocaleString('id-ID')}</span>
                         </div>
@@ -538,7 +647,7 @@ export function QuickSalesPOS({
                     <Button 
                         onClick={handleSubmit}
                         disabled={submitting || remainingAmount > 100}
-                        className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/30"
+                        className="w-full h-11 text-base font-bold bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5"
                     >
                         {submitting ? (
                             <><i className='bx bx-loader-alt bx-spin mr-2'></i> Processing</>
