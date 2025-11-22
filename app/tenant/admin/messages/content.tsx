@@ -614,7 +614,7 @@ export function MessagesContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100dvh-140px)] overflow-hidden">
         {/* Conversations List */}
-        <Card className="col-span-1 flex flex-col min-h-0 overflow-hidden">
+        <Card className="col-span-1 flex flex-col min-h-0 overflow-hidden border-none shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5" />
@@ -690,7 +690,7 @@ export function MessagesContent() {
 
         {/* Message Thread */}
         {selectedConversation ? (
-          <Card className="col-span-1 lg:col-span-2 flex flex-col min-h-0 overflow-hidden">
+          <Card className="col-span-1 lg:col-span-2 flex flex-col min-h-0 overflow-hidden border-none shadow-sm">
             <CardHeader className="border-b pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -873,7 +873,7 @@ export function MessagesContent() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="col-span-1 lg:col-span-2 flex items-center justify-center">
+          <Card className="col-span-1 lg:col-span-2 flex items-center justify-center border-none shadow-sm">
             <CardContent className="text-center">
               <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-600">Select a conversation to start messaging</p>

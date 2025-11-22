@@ -148,7 +148,7 @@ export default function ServicesPageContent() {
         }
       />
 
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardHeader>
           <CardTitle>Services List</CardTitle>
         </CardHeader>

@@ -80,7 +80,7 @@ export default function StaffPageContent() {
         }
       />
 
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />

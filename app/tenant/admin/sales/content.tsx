@@ -278,7 +278,7 @@ export function SalesContent() {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="Sales" />
-        <Card>
+        <Card className="border-none shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-600">
               <AlertCircle className="w-5 h-5" />
@@ -300,7 +300,7 @@ export function SalesContent() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -314,7 +314,7 @@ export function SalesContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -326,7 +326,7 @@ export function SalesContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -340,7 +340,7 @@ export function SalesContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -528,7 +528,7 @@ export function SalesContent() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="space-y-6">
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardHeader>
               <CardTitle>Recent Transactions</CardTitle>
             </CardHeader>
@@ -556,7 +556,7 @@ export function SalesContent() {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardHeader>
               <CardTitle>Sales Analytics</CardTitle>
             </CardHeader>
