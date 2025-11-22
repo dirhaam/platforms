@@ -439,26 +439,22 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   }, [resolvedTenantId]);
 
   return (
-    <div className="w-full space-y-4">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold">Bookings</h2>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowNewBookingDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Booking
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowQuickSaleDialog(true)}
-            disabled={!resolvedTenantId || invoiceGenerating}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Quick Sale
-          </Button>
-        </div>
+    <div className="w-full space-y-6">
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3">
+        <Button onClick={() => setShowNewBookingDialog(true)} className="bg-primary hover:bg-primary-dark text-white">
+          <Plus className="h-4 w-4 mr-2" />
+          New Booking
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setShowQuickSaleDialog(true)}
+          disabled={!resolvedTenantId || invoiceGenerating}
+          className="border-gray-300 text-txt-secondary hover:text-primary hover:border-primary"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Quick Sale
+        </Button>
       </div>
 
       {salesSummary && <SalesSummaryCards summary={salesSummary} />}
