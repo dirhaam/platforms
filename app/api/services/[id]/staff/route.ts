@@ -5,6 +5,23 @@ import { createClient } from '@supabase/supabase-js';
 import { TenantAuth } from '@/lib/auth/tenant-auth';
 import { RBAC } from '@/lib/auth/rbac';
 
+// Helper function to resolve tenant ID
+async function resolveTenantId(tenantIdentifier: string, supabase: any): Promise<string | null> {
+  const isUUID = tenantIdentifier.length === 36;
+  
+  if (isUUID) {
+    return tenantIdentifier;
+  }
+  
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('subdomain', tenantIdentifier)
+    .single();
+  
+  return tenant?.id || null;
+}
+
 // GET /api/services/[id]/staff - Get staff assigned to service
 export async function GET(
   request: NextRequest,
@@ -14,10 +31,19 @@ export async function GET(
     const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
 
+    if (!headerTenantId) {
+      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
+    const resolvedTenantId = await resolveTenantId(headerTenantId, supabase);
+    if (!resolvedTenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    }
 
     // Get staff assigned to this service
     const { data: staffServices, error } = await supabase
@@ -37,7 +63,7 @@ export async function GET(
         )
       `)
       .eq('service_id', id)
-      .eq('staff.tenant_id', headerTenantId);
+      .eq('staff.tenant_id', resolvedTenantId);
 
     if (error) {
       console.error('Error fetching service staff:', error);
@@ -65,6 +91,11 @@ export async function POST(
   try {
     const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    
+    if (!headerTenantId) {
+      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
     const body = await request.json();
     const { staffId, canPerform = true } = body;
 
@@ -83,12 +114,17 @@ export async function POST(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    const resolvedTenantId = await resolveTenantId(headerTenantId, supabase);
+    if (!resolvedTenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    }
+
     // Verify service exists
     const { data: service, error: serviceError } = await supabase
       .from('services')
       .select('id')
       .eq('id', id)
-      .eq('tenant_id', headerTenantId)
+      .eq('tenant_id', resolvedTenantId)
       .single();
 
     if (serviceError || !service) {
@@ -100,7 +136,7 @@ export async function POST(
       .from('staff')
       .select('id, is_active')
       .eq('id', staffId)
-      .eq('tenant_id', headerTenantId)
+      .eq('tenant_id', resolvedTenantId)
       .single();
 
     if (staffError || !staff) {
@@ -154,6 +190,11 @@ export async function DELETE(
   try {
     const { id } = await params;
     const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    
+    if (!headerTenantId) {
+      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
     const { searchParams } = new URL(request.url);
     const staffId = searchParams.get('staffId');
 
@@ -176,12 +217,17 @@ export async function DELETE(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    const resolvedTenantId = await resolveTenantId(headerTenantId, supabase);
+    if (!resolvedTenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    }
+
     // Verify service exists
     const { data: service } = await supabase
       .from('services')
       .select('id')
       .eq('id', id)
-      .eq('tenant_id', headerTenantId)
+      .eq('tenant_id', resolvedTenantId)
       .single();
 
     if (!service) {
@@ -193,7 +239,7 @@ export async function DELETE(
       .from('staff')
       .select('id')
       .eq('id', staffId)
-      .eq('tenant_id', headerTenantId)
+      .eq('tenant_id', resolvedTenantId)
       .single();
 
     if (!staff) {

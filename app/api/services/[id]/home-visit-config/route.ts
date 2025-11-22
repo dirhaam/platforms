@@ -10,6 +10,23 @@ const getSupabaseClient = () => {
   );
 };
 
+// Helper function to resolve tenant ID
+async function resolveTenantId(tenantIdentifier: string, supabase: any): Promise<string | null> {
+  const isUUID = tenantIdentifier.length === 36;
+  
+  if (isUUID) {
+    return tenantIdentifier;
+  }
+  
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('subdomain', tenantIdentifier)
+    .single();
+  
+  return tenant?.id || null;
+}
+
 // POST /api/services/[id]/home-visit-config - Update home visit configuration
 export async function POST(
   request: NextRequest,
@@ -17,10 +34,15 @@ export async function POST(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     
-    if (!tenantId) {
+    if (!headerTenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
+    const resolvedTenantId = await resolveTenantId(headerTenantId, supabase);
+    if (!resolvedTenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
     }
 
     const { id: serviceId } = await params;
@@ -54,7 +76,7 @@ export async function POST(
         updated_at: new Date().toISOString()
       })
       .eq('id', serviceId)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', resolvedTenantId)
       .select()
       .single();
 
@@ -83,10 +105,15 @@ export async function GET(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const headerTenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     
-    if (!tenantId) {
+    if (!headerTenantId) {
       return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
+    const resolvedTenantId = await resolveTenantId(headerTenantId, supabase);
+    if (!resolvedTenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
     }
 
     const { id: serviceId } = await params;
@@ -96,7 +123,7 @@ export async function GET(
       .from('services')
       .select('*')
       .eq('id', serviceId)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', resolvedTenantId)
       .single();
 
     if (error || !data) {
