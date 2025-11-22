@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Plus, Edit2, Trash2 } from 'lucide-react';
@@ -26,29 +27,29 @@ export default function StaffPageContent() {
     try {
       setLoading(true);
       console.log('[StaffPage] Fetching staff for subdomain:', subdomain);
-      
+
       const response = await fetch('/api/admin/staff', {
         credentials: 'include',
-        headers: { 
+        headers: {
           'x-tenant-id': subdomain!,
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('[StaffPage] Response status:', response.status);
-      
+
       // Handle 401 - redirect to login
       if (response.status === 401) {
         console.log('[StaffPage] Unauthorized - redirecting to login');
         router.push(`/tenant/login?subdomain=${subdomain}&redirect=/tenant/admin/staff`);
         return;
       }
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log('[StaffPage] Staff data received:', data);
       setStaff(data.staff || []);
@@ -65,19 +66,19 @@ export default function StaffPageContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Staff</h1>
-          <p className="text-gray-600 mt-2">Manage team members and permissions</p>
-        </div>
-        <Button 
-          className="gap-2"
-          onClick={() => router.push(`/tenant/admin/staff/create?subdomain=${subdomain}`)}
-        >
-          <Plus className="w-4 h-4" />
-          Add Staff
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Staff"
+        description="Manage team members and permissions"
+        action={
+          <Button
+            className="gap-2"
+            onClick={() => router.push(`/tenant/admin/staff/create?subdomain=${subdomain}`)}
+          >
+            <Plus className="w-4 h-4" />
+            Add Staff
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -125,8 +126,8 @@ export default function StaffPageContent() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => router.push(`/tenant/admin/staff/${member.id}?subdomain=${subdomain}`)}
                             title="View Details"

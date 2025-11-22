@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +42,7 @@ interface WhatsAppDevice {
 export function WhatsAppContent() {
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain') || '';
-  
+
   const [endpoint, setEndpoint] = useState<WhatsAppEndpoint | null>(null);
   const [devices, setDevices] = useState<WhatsAppDevice[]>([]);
   const [tenantId, setTenantId] = useState('');
@@ -121,7 +122,7 @@ export function WhatsAppContent() {
     try {
       const response = await fetch(`/api/whatsapp/devices`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -235,10 +236,10 @@ export function WhatsAppContent() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">WhatsApp Integration</h1>
-          <p className="text-gray-600 mt-2">Loading...</p>
-        </div>
+        <AdminPageHeader
+          title="WhatsApp Integration"
+          description="Loading..."
+        />
       </div>
     );
   }
@@ -246,9 +247,7 @@ export function WhatsAppContent() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">WhatsApp Integration</h1>
-        </div>
+        <AdminPageHeader title="WhatsApp Integration" />
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-600">
@@ -263,10 +262,10 @@ export function WhatsAppContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">WhatsApp Integration</h1>
-        <p className="text-gray-600 mt-2">Manage WhatsApp endpoint and devices</p>
-      </div>
+      <AdminPageHeader
+        title="WhatsApp Integration"
+        description="Manage WhatsApp endpoint and devices"
+      />
 
       {/* Endpoint Status */}
       <Card>

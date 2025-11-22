@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -265,10 +266,10 @@ export function SalesContent() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sales</h1>
-          <p className="text-gray-600 mt-2">Loading sales data...</p>
-        </div>
+        <AdminPageHeader
+          title="Sales"
+          description="Loading sales data..."
+        />
       </div>
     );
   }
@@ -276,9 +277,7 @@ export function SalesContent() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sales</h1>
-        </div>
+        <AdminPageHeader title="Sales" />
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-600">
@@ -293,10 +292,10 @@ export function SalesContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Sales</h1>
-        <p className="text-gray-600 mt-2">Manage transactions and track revenue</p>
-      </div>
+      <AdminPageHeader
+        title="Sales"
+        description="Manage transactions and track revenue"
+      />
 
       {/* Summary Cards */}
       {summary && (

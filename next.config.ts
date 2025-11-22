@@ -6,10 +6,6 @@ process.env.TAILWIND_DISABLE_LIGHTNING =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  experimental: {
-    useLightningcss: false,
-    optimizePackageImports: ["@radix-ui/react-*"],
-  },
 
   // Exclude folder Windows yang sering bikin EPERM error
   outputFileTracingExcludes: {
@@ -43,21 +39,6 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
-
-  // Jika butuh header vercel speed-insights
-  // headers: async () => {
-  //   return [
-  //     {
-  //       source: '/_vercel/speed-insights/script.js',
-  //       headers: [
-  //         {
-  //           key: 'Cache-Control',
-  //           value: 'public, max-age=31536000, immutable',
-  //         },
-  //       ],
-  //     },
-  //   ];
-  // },
 
   // Suppress static generation errors for special routes
   onDemandEntries: {

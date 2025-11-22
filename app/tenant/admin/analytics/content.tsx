@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { TenantAnalyticsDashboard } from '@/components/analytics/TenantAnalyticsDashboard';
 
 export default function AnalyticsPageContent() {
@@ -21,10 +22,10 @@ export default function AnalyticsPageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-        <p className="text-gray-600 mt-2">View your business performance and insights</p>
-      </div>
+      <AdminPageHeader
+        title="Analytics"
+        description="View your business performance and insights"
+      />
 
       <TenantAnalyticsDashboard tenantId={subdomain} />
     </div>

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { InvoiceManagement } from '@/components/invoice/InvoiceManagement';
 
 export default function InvoicePageContent() {
@@ -22,14 +23,16 @@ export default function InvoicePageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Invoices</h1>
-        <p className="text-gray-600 mt-2">
-          Generate invoices, download PDFs, and send them directly via WhatsApp
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Invoices"
+        description="Generate invoices, download PDFs, and send them directly via WhatsApp"
+      />
 
-      <InvoiceManagement tenantId={subdomain} />
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-6">
+          <InvoiceManagement tenantId={subdomain} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

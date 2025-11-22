@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CustomerManagement } from '@/components/customer/CustomerManagement';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function CustomersPageContent() {
   const router = useRouter();
@@ -21,23 +23,27 @@ export default function CustomersPageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
-        <p className="text-gray-600 mt-2">Manage customer database and information</p>
-      </div>
-
-      <CustomerManagement
-        tenantId={subdomain}
-        onCustomerCreate={(customer) => {
-          console.log('Customer created:', customer);
-        }}
-        onCustomerUpdate={(customerId, updates) => {
-          console.log('Customer updated:', customerId, updates);
-        }}
-        onCustomerDelete={(customerId) => {
-          console.log('Customer deleted:', customerId);
-        }}
+      <AdminPageHeader
+        title="Customers"
+        description="Manage customer database and information"
       />
+
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-6">
+          <CustomerManagement
+            tenantId={subdomain}
+            onCustomerCreate={(customer) => {
+              console.log('Customer created:', customer);
+            }}
+            onCustomerUpdate={(customerId, updates) => {
+              console.log('Customer updated:', customerId, updates);
+            }}
+            onCustomerDelete={(customerId) => {
+              console.log('Customer deleted:', customerId);
+            }}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

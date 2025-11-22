@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sneat Admin Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Boxicons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- Public Sans Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Public Sans', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                DEFAULT: '#696cff',
+                light: '#e7e7ff', // Light purple background for active states
+                dark: '#5f61e6',
+              },
+              secondary: '#8592a3',
+              success: '#71dd37',
+              danger: '#ff3e1d',
+              warning: '#ffab00',
+              info: '#03c3ec',
+              dark: '#233446',
+              body: '#f5f5f9', // Main background
+              paper: '#ffffff',
+              txt: {
+                primary: '#566a7f', // Headings
+                secondary: '#697a8d', // Body text
+                muted: '#a1acb8',
+              }
+            },
+            boxShadow: {
+              'card': '0 2px 6px 0 rgba(67, 89, 113, 0.12)',
+              'nav': '0 0.375rem 1rem 0 rgba(161, 172, 184, 0.15)',
+            },
+            borderRadius: {
+              'card': '0.5rem', // Standard card radius
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #f5f5f9;
+        color: #697a8d;
+      }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #c2c9d2; 
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a1acb8; 
+      }
+      
+      /* Boxicons alignment helper */
+      .bx {
+        vertical-align: middle;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

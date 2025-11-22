@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { Button } from '@/components/ui/button';
 import { Plus, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,7 @@ export default function ServicesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain');
-  
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,10 +118,10 @@ export default function ServicesPageContent() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Services</h1>
-          <p className="text-gray-600 mt-2">Manage your business services and pricing</p>
-        </div>
+        <AdminPageHeader
+          title="Services"
+          description="Manage your business services and pricing"
+        />
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
@@ -131,21 +132,21 @@ export default function ServicesPageContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Services</h1>
-          <p className="text-gray-600 mt-2">Manage your business services and pricing</p>
-        </div>
-        <Button 
-          className="gap-2"
-          onClick={() => {
-            router.push(`/tenant/admin/services/create?subdomain=${subdomain}`);
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          Add Service
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Services"
+        description="Manage your business services and pricing"
+        action={
+          <Button
+            className="gap-2"
+            onClick={() => {
+              router.push(`/tenant/admin/services/create?subdomain=${subdomain}`);
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Add Service
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -183,7 +184,7 @@ export default function ServicesPageContent() {
                       <td className="py-3 px-4">{service.duration} min</td>
                       <td className="py-3 px-4">IDR {service.price.toLocaleString('id-ID')}</td>
                       <td className="py-3 px-4">
-                        <Badge 
+                        <Badge
                           variant={service.isActive ? 'default' : 'outline'}
                           className="cursor-pointer hover:opacity-80"
                           onClick={() => handleToggleStatus(service)}

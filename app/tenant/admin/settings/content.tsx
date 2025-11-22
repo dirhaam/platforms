@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Calendar, FileText, Palette, Image, Clock } from 'lucide-react';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
 import BusinessHoursGlobalSettings from '@/components/settings/BusinessHoursGlobalSettings';
@@ -88,14 +89,10 @@ export default function SettingsPageContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 p-4">
-      {/* Header */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <Settings className="w-6 h-6 text-gray-900" />
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        </div>
-        <p className="text-sm text-gray-600 mt-1">Manage business configuration and preferences</p>
-      </div>
+      <AdminPageHeader
+        title="Settings"
+        description="Manage business configuration and preferences"
+      />
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
@@ -138,7 +135,7 @@ export default function SettingsPageContent() {
           <TabsContent value="media" className="mt-0">
             <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
               {tenantId && (
-                <LandingPageMediaSettings 
+                <LandingPageMediaSettings
                   tenantId={tenantId}
                   initialData={landingPageMedia}
                 />

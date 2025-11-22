@@ -2,6 +2,8 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BookingDashboard } from '@/components/booking/BookingDashboard';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function BookingsPageContent() {
   const router = useRouter();
@@ -15,12 +17,16 @@ export default function BookingsPageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Bookings</h1>
-        <p className="text-gray-600 mt-2">Manage customer bookings with unified panel</p>
-      </div>
+      <AdminPageHeader
+        title="Bookings"
+        description="Manage customer bookings with unified panel"
+      />
 
-      <BookingDashboard tenantId={subdomain} />
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-0">
+          <BookingDashboard tenantId={subdomain} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
