@@ -441,8 +441,8 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   return (
     <div className="w-full space-y-6">
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3">
-        <Button onClick={() => setShowNewBookingDialog(true)} className="bg-primary hover:bg-primary-dark text-white">
+      <div className="flex justify-end gap-3 px-1">
+        <Button onClick={() => setShowNewBookingDialog(true)} className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30">
           <Plus className="h-4 w-4 mr-2" />
           New Booking
         </Button>
@@ -450,16 +450,23 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           variant="outline"
           onClick={() => setShowQuickSaleDialog(true)}
           disabled={!resolvedTenantId || invoiceGenerating}
-          className="border-gray-300 text-txt-secondary hover:text-primary hover:border-primary"
+          className="border-gray-300 text-txt-secondary hover:text-primary hover:border-primary hover:bg-gray-50 transition-all"
         >
           <Plus className="h-4 w-4 mr-2" />
           Quick Sale
         </Button>
       </div>
 
-      {salesSummary && <SalesSummaryCards summary={salesSummary} />}
+      {/* Sales Summary Cards */}
+      {salesSummary && (
+        <div className="mb-6">
+          <SalesSummaryCards summary={salesSummary} />
+        </div>
+      )}
 
-      <BookingViewsTabs
+      {/* Booking Views */}
+      <div className="mt-6">
+        <BookingViewsTabs
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         filteredBookings={filteredBookings}
@@ -485,7 +492,8 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         paymentFilter={paymentFilter}
         onPaymentChange={setPaymentFilter}
         onRefreshAll={refreshAll}
-      />
+        />
+      </div>
 
       <QuickSalesPOS
         open={showQuickSaleDialog}
