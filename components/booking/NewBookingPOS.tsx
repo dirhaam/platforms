@@ -11,14 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, MapPin, Calendar as CalendarIcon, Search, X } from 'lucide-react';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
-import { TimeSlotPicker } from '@/components/booking/TimeSlotPicker';
 import { BlockingDateCalendar } from '@/components/booking/BlockingDateCalendar';
 import { TravelCalculation } from '@/types/location';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -98,7 +95,6 @@ export function NewBookingPOS({
   const [loading, setLoading] = useState(true);
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [currentStep, setCurrentStep] = useState<'main' | 'date' | 'time' | 'homevisit'>('main');
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
@@ -378,179 +374,221 @@ export function NewBookingPOS({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[95vw]">
+      <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[95vw] bg-body rounded-lg shadow-lg border-0">
         <DialogTitle className="sr-only">New Booking</DialogTitle>
         <DialogDescription className="sr-only">Schedule service for customer</DialogDescription>
-        <div className="flex flex-col h-full bg-white overflow-hidden">
+        
+        <div className="flex flex-col h-full bg-white overflow-hidden rounded-lg">
           {/* Header */}
-          <div className="bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm flex justify-between items-center gap-2">
+          <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <div className="min-w-0">
-              <h1 className="text-gray-900 text-lg sm:text-2xl font-bold truncate">New Booking</h1>
-              <p className="text-gray-600 text-xs sm:text-sm mt-1 hidden sm:block">Schedule service for customer</p>
+              <h4 className="text-xl font-bold text-txt-primary">New Booking</h4>
+              <p className="text-txt-secondary text-sm hidden sm:block">Create a new appointment</p>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="text-gray-600 hover:bg-gray-100 flex-shrink-0"
+              className="text-txt-muted hover:bg-gray-100 hover:text-txt-primary rounded-full"
             >
-              <X className="h-4 sm:h-5 w-4 sm:w-5" />
+              <i className='bx bx-x text-2xl'></i>
             </Button>
           </div>
 
           {/* Main Content */}
           <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden gap-0">
-            {/* Left Panel - Selection (40% on desktop, full on mobile) */}
-            <div className="flex-1 lg:flex-none lg:w-2/5 flex flex-col overflow-hidden border-r-0 lg:border-r border-gray-200 bg-gray-50">
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            
+            {/* Left Panel - Selection Inputs */}
+            <div className="flex-1 lg:flex-none lg:w-5/12 flex flex-col overflow-hidden border-r border-gray-100 bg-white">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                 {loading ? (
-                  <p className="text-gray-600 text-center py-8">Loading...</p>
+                   <div className="flex flex-col items-center justify-center h-full text-txt-muted">
+                     <i className='bx bx-loader-alt bx-spin text-3xl mb-2'></i>
+                     <span className="text-sm">Loading resources...</span>
+                   </div>
                 ) : (
                   <>
                     {/* Customer Selection */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm font-semibold">Customer *</Label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowNewCustomerForm(!showNewCustomerForm)}
-                          className="text-xs h-7"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          New
-                        </Button>
+                        <Label className="text-sm font-semibold text-txt-primary uppercase tracking-wide text-xs">Customer</Label>
+                        {!showNewCustomerForm && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowNewCustomerForm(true)}
+                            className="text-primary hover:bg-primary-light h-7 px-2 text-xs font-medium"
+                          >
+                            <i className='bx bx-plus mr-1'></i> New
+                          </Button>
+                        )}
                       </div>
 
                       {showNewCustomerForm ? (
-                        <form onSubmit={handleCreateCustomer} className="space-y-2 p-3 bg-white rounded border">
+                        <form onSubmit={handleCreateCustomer} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3 animate-in fade-in zoom-in-95 duration-200">
                           {error && !creatingCustomer && (
-                            <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                            <div className="text-xs text-danger bg-red-50 p-2 rounded border border-red-100">
                               {error}
                             </div>
                           )}
                           <Input
-                            placeholder="Name *"
+                            placeholder="Full Name *"
                             value={newCustomer.name}
                             onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                            className="h-8 text-xs"
+                            className="bg-white border-gray-200 text-sm h-9 focus:border-primary focus:ring-primary/20"
                             required
                           />
                           <Input
-                            placeholder="Phone *"
+                            placeholder="Phone Number *"
                             value={newCustomer.phone}
                             onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                            className="h-8 text-xs"
+                            className="bg-white border-gray-200 text-sm h-9 focus:border-primary focus:ring-primary/20"
                             required
                           />
                           <Input
-                            placeholder="Email"
+                            placeholder="Email Address"
                             type="email"
                             value={newCustomer.email}
                             onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                            className="h-8 text-xs"
+                            className="bg-white border-gray-200 text-sm h-9 focus:border-primary focus:ring-primary/20"
                           />
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 pt-1">
                             <Button
                               type="submit"
                               disabled={creatingCustomer || !newCustomer.name.trim() || !newCustomer.phone.trim()}
-                              className="h-8 text-xs flex-1 bg-emerald-600 hover:bg-emerald-700"
+                              className="h-9 flex-1 bg-primary hover:bg-primary-dark text-white shadow-sm"
                             >
-                              {creatingCustomer ? 'Creating...' : 'Create'}
+                              {creatingCustomer ? <i className='bx bx-loader-alt bx-spin'></i> : 'Save Customer'}
                             </Button>
                             <Button
                               type="button"
                               variant="outline"
-                              size="sm"
                               onClick={() => setShowNewCustomerForm(false)}
-                              className="h-8 text-xs"
+                              className="h-9 bg-white text-txt-secondary hover:bg-gray-50"
                             >
                               Cancel
                             </Button>
                           </div>
                         </form>
                       ) : (
-                        <>
-                          <div className="relative">
-                            <Search className="absolute left-2 top-2 h-4 w-4 text-gray-400" />
-                            <Input
-                              placeholder="Search customer..."
-                              value={customerSearch}
-                              onChange={(e) => setCustomerSearch(e.target.value)}
-                              className="h-8 text-xs pl-8"
-                            />
-                          </div>
-                          <Select value={booking.customerId} onValueChange={(value) => setBooking({ ...booking, customerId: value })}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select customer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredCustomers.length === 0 ? (
-                                <div className="p-2 text-xs text-gray-600">No customers found</div>
-                              ) : (
-                                filteredCustomers.map(customer => (
-                                  <SelectItem key={customer.id} value={customer.id}>
-                                    {customer.name} • {customer.phone}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </>
+                        <div className="relative group">
+                          <i className='bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted text-lg group-focus-within:text-primary transition-colors'></i>
+                          <Input
+                            placeholder="Search by name or phone..."
+                            value={customerSearch}
+                            onChange={(e) => setCustomerSearch(e.target.value)}
+                            className="pl-10 h-10 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-primary focus:ring-primary/20 transition-all text-sm"
+                          />
+                          
+                          {/* Dropdown simulation with Select */}
+                           <div className="mt-2">
+                              <Select value={booking.customerId} onValueChange={(value) => setBooking({ ...booking, customerId: value })}>
+                              <SelectTrigger className="w-full h-10 border-gray-200 text-txt-secondary focus:border-primary focus:ring-primary/20">
+                                <SelectValue placeholder="Select a customer" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {filteredCustomers.length === 0 ? (
+                                  <div className="p-3 text-sm text-txt-muted text-center">No customers found</div>
+                                ) : (
+                                  filteredCustomers.map(customer => (
+                                    <SelectItem key={customer.id} value={customer.id}>
+                                      <div className="flex flex-col text-left">
+                                        <span className="font-medium text-txt-primary">{customer.name}</span>
+                                        <span className="text-xs text-txt-muted">{customer.phone}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                           </div>
+                        </div>
                       )}
 
-                      {selectedCustomer && (
-                        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-xs">
-                          <div className="font-semibold text-emerald-900">{selectedCustomer.name}</div>
-                          <div className="text-emerald-700">{selectedCustomer.phone}</div>
+                      {selectedCustomer && !showNewCustomerForm && (
+                        <div className="flex items-start gap-3 p-3 bg-primary-light/30 border border-primary-light rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <i className='bx bx-user'></i>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-primary text-sm">{selectedCustomer.name}</div>
+                            <div className="text-txt-secondary text-xs">{selectedCustomer.phone}</div>
+                          </div>
                         </div>
                       )}
                     </div>
 
                     {/* Service Selection */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Service *</Label>
-                      <div className="space-y-2">
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold text-txt-primary uppercase tracking-wide text-xs">Service</Label>
+                      <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
                         {services.map(service => (
                           <div
                             key={service.id}
                             onClick={() => setBooking({ ...booking, serviceId: service.id })}
-                            className={`p-3 rounded border-2 cursor-pointer transition ${
-                              booking.serviceId === service.id
-                                ? 'border-emerald-500 bg-emerald-50'
-                                : 'border-gray-200 bg-white hover:border-emerald-200'
-                            }`}
+                            className={`
+                              relative p-3 rounded-lg border cursor-pointer transition-all duration-200 flex justify-between items-center group
+                              ${booking.serviceId === service.id
+                                ? 'border-primary bg-primary-light shadow-sm'
+                                : 'border-gray-200 bg-white hover:border-primary/50 hover:bg-gray-50'}
+                            `}
                           >
-                            <div className="font-semibold text-sm text-gray-900">{service.name}</div>
-                            <div className="text-xs text-gray-600 mt-1">
-                              {service.duration} min • IDR {service.price.toLocaleString('id-ID')}
+                            <div>
+                              <div className={`text-sm font-semibold ${booking.serviceId === service.id ? 'text-primary' : 'text-txt-primary'}`}>
+                                {service.name}
+                              </div>
+                              <div className={`text-xs mt-1 ${booking.serviceId === service.id ? 'text-primary/80' : 'text-txt-muted'}`}>
+                                <i className='bx bx-time-five inline-block mr-1'></i>{service.duration} min
+                              </div>
                             </div>
+                            <div className={`text-sm font-bold ${booking.serviceId === service.id ? 'text-primary' : 'text-txt-primary'}`}>
+                              IDR {service.price.toLocaleString('id-ID')}
+                            </div>
+                            
+                            {booking.serviceId === service.id && (
+                                <div className="absolute right-2 top-2 w-2 h-2 rounded-full bg-primary"></div>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Date & Time Selection */}
-                    <div className="space-y-2 p-3 bg-white rounded border">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Date & Time *</Label>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-left h-8 text-xs"
+                    {/* Date & Time Trigger */}
+                    <div className="space-y-3">
+                       <Label className="text-sm font-semibold text-txt-primary uppercase tracking-wide text-xs">Schedule</Label>
+                       <button
+                          type="button"
                           onClick={() => setCurrentStep('date')}
-                        >
-                          <CalendarIcon className="mr-2 h-3 w-3" />
-                          {booking.scheduledAt 
-                            ? `${new Date(booking.scheduledAt + 'T00:00').toLocaleDateString()} ${booking.selectedTimeSlot ? formatTime(booking.selectedTimeSlot.start) : '(Pick time)'}`
-                            : 'Select date & time'}
-                        </Button>
-                      </div>
+                          className={`
+                             w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left
+                             ${booking.scheduledAt 
+                                ? 'border-primary/50 bg-white text-txt-primary shadow-sm' 
+                                : 'border-dashed border-gray-300 bg-gray-50 text-txt-muted hover:bg-white hover:border-primary/30'}
+                          `}
+                       >
+                          <div className="flex items-center gap-3">
+                             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${booking.scheduledAt ? 'bg-primary/10 text-primary' : 'bg-gray-200 text-txt-muted'}`}>
+                                <i className='bx bx-calendar'></i>
+                             </div>
+                             <div>
+                                <div className="text-sm font-medium">
+                                   {booking.scheduledAt 
+                                      ? new Date(booking.scheduledAt + 'T00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) 
+                                      : 'Select Date'}
+                                </div>
+                                <div className="text-xs text-txt-secondary">
+                                   {booking.selectedTimeSlot ? formatTime(booking.selectedTimeSlot.start) : 'Select Time'}
+                                </div>
+                             </div>
+                          </div>
+                          <i className='bx bx-chevron-right text-xl text-txt-muted'></i>
+                       </button>
                     </div>
 
-                    {/* Home Visit */}
-                    <div className="space-y-2 p-3 bg-white rounded border">
-                      <div className="flex items-center gap-2">
+                    {/* Home Visit Toggle */}
+                    <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-3">
                         <Checkbox
                           id="homeVisit"
                           checked={booking.isHomeVisit}
@@ -560,26 +598,32 @@ export function NewBookingPOS({
                               setCurrentStep('homevisit');
                             }
                           }}
+                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <Label htmlFor="homeVisit" className="cursor-pointer text-sm font-semibold flex items-center">
-                          <MapPin className="inline w-3 h-3 mr-1" />
-                          Home Visit
+                        <Label htmlFor="homeVisit" className="cursor-pointer text-sm font-medium text-txt-primary select-none flex items-center gap-2">
+                          <i className='bx bx-map-pin text-lg text-txt-secondary'></i>
+                          Home Visit Service
                         </Label>
                       </div>
 
                       {booking.isHomeVisit && booking.homeVisitAddress && (
-                        <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                          <div className="font-semibold text-blue-900">{booking.homeVisitAddress}</div>
-                          <div className="text-blue-700 text-xs">
-                            {booking.homeVisitLat?.toFixed(4)}, {booking.homeVisitLng?.toFixed(4)}
+                        <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm animate-in slide-in-from-top-2">
+                          <div className="flex gap-2 items-start">
+                             <i className='bx bx-check-circle text-success mt-0.5'></i>
+                             <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-txt-primary truncate">{booking.homeVisitAddress}</p>
+                                <p className="text-xs text-txt-muted font-mono mt-0.5">
+                                   {booking.homeVisitLat?.toFixed(4)}, {booking.homeVisitLng?.toFixed(4)}
+                                </p>
+                             </div>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setCurrentStep('homevisit')}
-                            className="w-full mt-2 h-7 text-xs"
+                            className="w-full mt-2 h-7 text-xs text-primary hover:text-primary-dark hover:bg-primary-light"
                           >
-                            Edit Address
+                            Change Location
                           </Button>
                         </div>
                       )}
@@ -589,158 +633,159 @@ export function NewBookingPOS({
               </div>
             </div>
 
-            {/* Right Panel - Summary & Payment (60% on desktop, full on mobile) */}
-            <div className="flex-1 lg:flex-none lg:w-3/5 flex flex-col overflow-hidden bg-white border-l-0 lg:border-l border-gray-200 border-t lg:border-t-0 border-gray-200">
-              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 pb-4">
-                {/* Amount Breakdown */}
-                {selectedService && (
-                  <div className="space-y-3 p-3 sm:p-4 bg-gray-50 rounded-lg border">
-                    <h3 className="font-semibold text-xs sm:text-sm">Amount Breakdown</h3>
-                    
-                    {(() => {
-                      const basePrice = Number(selectedService.price);
-                      const travelSurcharge = booking.travelCalculation?.surcharge || 0;
-                      const subtotal = basePrice + travelSurcharge;
-                      const tax = subtotal * ((invoiceSettings?.taxServiceCharge?.taxPercentage || 0) / 100);
-                      
-                      return (
-                        <div className="space-y-2 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Service</span>
-                            <span>IDR {basePrice.toLocaleString('id-ID')}</span>
-                          </div>
-                          
-                          {booking.isHomeVisit && travelSurcharge > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Travel ({booking.travelCalculation?.distance.toFixed(1)}km)</span>
-                              <span>IDR {Number(travelSurcharge).toLocaleString('id-ID')}</span>
-                            </div>
-                          )}
+            {/* Right Panel - Summary & Actions */}
+            <div className="flex-1 lg:flex-none lg:w-7/12 flex flex-col overflow-hidden bg-body">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                
+                {/* Order Summary Card */}
+                <div className="bg-white rounded-card shadow-card p-5 border border-gray-100">
+                   <h5 className="text-sm font-bold text-txt-primary uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Order Summary</h5>
+                   
+                   {!selectedService ? (
+                      <div className="text-center py-8 text-txt-muted bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                         <i className='bx bx-cart-alt text-3xl mb-2 opacity-50'></i>
+                         <p className="text-sm">Select a service to view breakdown</p>
+                      </div>
+                   ) : (
+                      <div className="space-y-3">
+                          {(() => {
+                            const basePrice = Number(selectedService.price);
+                            const travelSurcharge = booking.travelCalculation?.surcharge || 0;
+                            const subtotal = basePrice + travelSurcharge;
+                            const tax = subtotal * ((invoiceSettings?.taxServiceCharge?.taxPercentage || 0) / 100);
+                            
+                            return (
+                              <div className="text-sm space-y-3">
+                                <div className="flex justify-between items-center text-txt-secondary">
+                                  <span>Service Fee</span>
+                                  <span className="font-medium text-txt-primary">IDR {basePrice.toLocaleString('id-ID')}</span>
+                                </div>
+                                
+                                {booking.isHomeVisit && travelSurcharge > 0 && (
+                                  <div className="flex justify-between items-center text-txt-secondary">
+                                    <span className="flex items-center gap-1">
+                                       <i className='bx bx-trip'></i> Travel ({booking.travelCalculation?.distance.toFixed(1)}km)
+                                    </span>
+                                    <span className="font-medium text-txt-primary">IDR {Number(travelSurcharge).toLocaleString('id-ID')}</span>
+                                  </div>
+                                )}
 
-                          {tax > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Tax ({invoiceSettings?.taxServiceCharge?.taxPercentage.toFixed(1)}%)</span>
-                              <span>IDR {tax.toLocaleString('id-ID')}</span>
-                            </div>
-                          )}
+                                {tax > 0 && (
+                                  <div className="flex justify-between items-center text-txt-secondary">
+                                    <span>Tax ({invoiceSettings?.taxServiceCharge?.taxPercentage.toFixed(1)}%)</span>
+                                    <span className="font-medium text-txt-primary">IDR {tax.toLocaleString('id-ID')}</span>
+                                  </div>
+                                )}
 
-                          {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Service Charge</span>
-                              <span>
-                                {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
-                                  ? `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`
-                                  : `IDR ${(subtotal * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
-                              </span>
-                            </div>
-                          )}
+                                {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue && (
+                                  <div className="flex justify-between items-center text-txt-secondary">
+                                    <span>Service Charge</span>
+                                    <span className="font-medium text-txt-primary">
+                                      {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
+                                        ? `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`
+                                        : `IDR ${(subtotal * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
+                                    </span>
+                                  </div>
+                                )}
 
-                          {invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0 && (
-                            invoiceSettings.additionalFees.map(fee => (
-                              <div key={fee.id} className="flex justify-between">
-                                <span className="text-gray-600">{fee.name}</span>
-                                <span>
-                                  {fee.type === 'fixed'
-                                    ? `IDR ${fee.value.toLocaleString('id-ID')}`
-                                    : `IDR ${(subtotal * (fee.value / 100)).toLocaleString('id-ID')}`}
-                                </span>
+                                {invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0 && (
+                                  invoiceSettings.additionalFees.map(fee => (
+                                    <div key={fee.id} className="flex justify-between items-center text-txt-secondary">
+                                      <span>{fee.name}</span>
+                                      <span className="font-medium text-txt-primary">
+                                        {fee.type === 'fixed'
+                                          ? `IDR ${fee.value.toLocaleString('id-ID')}`
+                                          : `IDR ${(subtotal * (fee.value / 100)).toLocaleString('id-ID')}`}
+                                      </span>
+                                    </div>
+                                  ))
+                                )}
+
+                                <div className="border-t border-dashed border-gray-200 pt-3 mt-2 flex justify-between items-center">
+                                  <span className="font-bold text-lg text-txt-primary">Total Amount</span>
+                                  <span className="font-bold text-lg text-primary">IDR {calculateTotal().toLocaleString('id-ID')}</span>
+                                </div>
                               </div>
-                            ))
-                          )}
+                            );
+                          })()}
+                      </div>
+                   )}
+                </div>
 
-                          <div className="border-t pt-2 flex justify-between font-bold text-base text-emerald-700">
-                            <span>TOTAL</span>
-                            <span>IDR {calculateTotal().toLocaleString('id-ID')}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* Payment Information */}
-                <div className="space-y-3 p-3 sm:p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <h3 className="font-semibold text-xs sm:text-sm">Payment</h3>
+                {/* Payment Method */}
+                <div className="bg-white rounded-card shadow-card p-5 border border-gray-100">
+                  <h5 className="text-sm font-bold text-txt-primary uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Payment Method</h5>
                   
-                  {/* Payment Method Quick Buttons */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant={booking.paymentMethod === 'cash' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setBooking({ ...booking, paymentMethod: 'cash' })}
-                      className={`text-xs ${booking.paymentMethod === 'cash' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
-                    >
-                      💵 Cash
-                    </Button>
-                    <Button
-                      variant={booking.paymentMethod === 'card' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setBooking({ ...booking, paymentMethod: 'card' })}
-                      className={`text-xs ${booking.paymentMethod === 'card' ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-                    >
-                      💳 Card
-                    </Button>
-                    <Button
-                      variant={booking.paymentMethod === 'qris' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setBooking({ ...booking, paymentMethod: 'qris' })}
-                      className={`text-xs ${booking.paymentMethod === 'qris' ? 'bg-sky-600 hover:bg-sky-700' : ''}`}
-                    >
-                      📱 QRIS
-                    </Button>
-                    <Button
-                      variant={booking.paymentMethod === 'transfer' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setBooking({ ...booking, paymentMethod: 'transfer' })}
-                      className={`text-xs ${booking.paymentMethod === 'transfer' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
-                    >
-                      🏦 Transfer
-                    </Button>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                     {[
+                        { id: 'cash', label: 'Cash', icon: 'bx-money' },
+                        { id: 'card', label: 'Card', icon: 'bx-credit-card' },
+                        { id: 'qris', label: 'QRIS', icon: 'bx-qr-scan' },
+                        { id: 'transfer', label: 'Transfer', icon: 'bx-transfer' }
+                     ].map(method => (
+                        <button
+                           key={method.id}
+                           type="button"
+                           onClick={() => setBooking({ ...booking, paymentMethod: method.id })}
+                           className={`
+                              flex items-center gap-2 justify-center py-2.5 px-3 rounded-md border text-sm font-medium transition-all
+                              ${booking.paymentMethod === method.id 
+                                 ? 'bg-primary text-white border-primary shadow-md shadow-primary/30' 
+                                 : 'bg-white text-txt-secondary border-gray-200 hover:bg-gray-50 hover:border-primary/50'}
+                           `}
+                        >
+                           <i className={`bx ${method.icon} text-lg`}></i>
+                           {method.label}
+                        </button>
+                     ))}
                   </div>
 
-                  {/* Down Payment */}
-                  <div className="space-y-1">
-                    <Label htmlFor="dpAmount" className="text-xs">Down Payment (Optional)</Label>
-                    <Input
-                      id="dpAmount"
-                      type="number"
-                      min="0"
-                      placeholder="DP amount (IDR)"
-                      value={booking.dpAmount || 0}
-                      onChange={(e) => setBooking({ ...booking, dpAmount: parseInt(e.target.value) || 0 })}
-                      className="h-8 text-xs"
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="dpAmount" className="text-xs font-semibold text-txt-secondary">Down Payment (Optional)</Label>
+                    <div className="relative">
+                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted text-xs">IDR</span>
+                       <Input
+                         id="dpAmount"
+                         type="number"
+                         min="0"
+                         placeholder="0"
+                         value={booking.dpAmount || ''}
+                         onChange={(e) => setBooking({ ...booking, dpAmount: parseInt(e.target.value) || 0 })}
+                         className="pl-9 h-9 text-sm bg-gray-50 border-transparent focus:bg-white focus:border-primary focus:ring-primary/20"
+                       />
+                    </div>
                   </div>
                 </div>
 
                 {/* Notes */}
-                <div className="space-y-1 hidden sm:block">
-                  <Label htmlFor="notes" className="text-xs font-semibold">Notes (Optional)</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-xs font-semibold text-txt-secondary uppercase">Notes</Label>
                   <Textarea
                     id="notes"
-                    placeholder="Additional booking notes"
+                    placeholder="Add special requests or notes here..."
                     value={booking.notes}
                     onChange={(e) => setBooking({ ...booking, notes: e.target.value })}
-                    rows={2}
-                    className="text-xs"
+                    rows={3}
+                    className="text-sm bg-white border-gray-200 focus:border-primary focus:ring-primary/20 resize-none shadow-sm"
                   />
                 </div>
 
-                {/* Error Message */}
+                {/* Error Display */}
                 {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-xs">
-                    {error}
+                  <div className="bg-red-50 border border-red-200 text-danger px-4 py-3 rounded-lg flex items-start gap-3">
+                     <i className='bx bx-error-circle text-xl mt-0.5'></i>
+                     <p className="text-sm">{error}</p>
                   </div>
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="border-t border-gray-200 p-3 sm:p-4 flex gap-2 justify-end bg-gray-50 flex-shrink-0">
+              {/* Footer Actions */}
+              <div className="bg-white border-t border-gray-100 p-4 flex gap-3 justify-end shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] z-10">
                 <Button
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                   disabled={submitting}
-                  className="text-xs sm:text-sm"
+                  className="text-txt-secondary border-gray-300 hover:bg-gray-50 hover:text-txt-primary"
                 >
                   Cancel
                 </Button>
@@ -750,9 +795,13 @@ export function NewBookingPOS({
                     handleSubmit(e as any);
                   }}
                   disabled={submitting || !booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.selectedTimeSlot}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm px-3 sm:px-6"
+                  className="bg-primary hover:bg-primary-dark text-white font-semibold shadow-lg shadow-primary/30 min-w-[150px]"
                 >
-                  {submitting ? 'Creating...' : 'Create Booking'}
+                  {submitting ? (
+                     <><i className='bx bx-loader-alt bx-spin mr-2'></i> Processing</>
+                  ) : (
+                     <><i className='bx bx-check mr-2'></i> Create Booking</>
+                  )}
                 </Button>
               </div>
             </div>
@@ -763,30 +812,31 @@ export function NewBookingPOS({
 
     {/* Date & Time Step Modal */}
       <Dialog open={currentStep !== 'main'} onOpenChange={(open) => !open && setCurrentStep('main')}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden rounded-card shadow-lg border-0">
           <DialogTitle className="sr-only">{currentStep === 'date' ? 'Select Date' : 'Select Time'}</DialogTitle>
-          <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+          
+          <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h4 className="text-lg font-bold text-txt-primary">
                 {currentStep === 'date' ? 'Select Date' : 'Select Time'}
-              </h2>
-              <p className="text-xs text-gray-600 mt-1">
-                {currentStep === 'date' ? 'Choose your preferred date' : 'Choose your preferred time'}
+              </h4>
+              <p className="text-xs text-txt-secondary mt-0.5">
+                {currentStep === 'date' ? 'Choose your preferred appointment date' : 'Available slots for the selected date'}
               </p>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setCurrentStep('main')}
-              className="text-gray-600 hover:bg-gray-100"
+              className="text-txt-muted hover:bg-gray-100 hover:text-txt-primary rounded-full"
             >
-              <X className="h-5 w-5" />
+              <i className='bx bx-x text-2xl'></i>
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 bg-white">
             {currentStep === 'date' && (
-              <div className="space-y-4">
+              <div className="flex justify-center">
                 <BlockingDateCalendar
                   selected={booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00') : undefined}
                   onSelect={(date) => {
@@ -825,17 +875,20 @@ export function NewBookingPOS({
             )}
 
             {currentStep === 'time' && booking.scheduledAt && (
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-gray-700">
-                  Selected Date: {new Date(booking.scheduledAt + 'T00:00').toLocaleDateString()}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 text-sm font-medium text-primary bg-primary-light/30 p-3 rounded-md border border-primary-light">
+                  <i className='bx bx-calendar-check text-lg'></i>
+                  Selected Date: {new Date(booking.scheduledAt + 'T00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
                 
                 {availableSlots.length === 0 ? (
-                  <div className="text-center text-sm text-gray-600 py-8">
-                    No available time slots for this date
+                  <div className="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                    <i className='bx bx-time-five text-4xl text-txt-muted mb-3'></i>
+                    <p className="text-sm text-txt-secondary">No available time slots for this date.</p>
+                    <Button variant="link" onClick={() => setCurrentStep('date')} className="text-primary mt-2">Pick another date</Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {(() => {
                       const { morning, afternoon, evening } = groupSlotsByPeriod(availableSlots);
                       
@@ -843,21 +896,26 @@ export function NewBookingPOS({
                         <>
                           {morning.length > 0 && (
                             <div>
-                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Morning (6AM - 12PM)</h4>
-                              <div className="grid grid-cols-4 gap-2">
+                              <h4 className="text-xs font-bold text-txt-muted uppercase tracking-wider mb-3 flex items-center gap-2">
+                                 <i className='bx bx-sun'></i> Morning
+                              </h4>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                 {morning.map((slot, idx) => (
-                                  <Button
+                                  <button
                                     key={idx}
-                                    variant={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'default' : 'outline'}
-                                    size="sm"
                                     onClick={() => {
                                       setBooking({ ...booking, selectedTimeSlot: slot });
                                       setCurrentStep('main');
                                     }}
-                                    className={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                    className={`
+                                       py-2 px-1 rounded-md text-sm font-medium border transition-all
+                                       ${booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() 
+                                          ? 'bg-primary text-white border-primary shadow-md' 
+                                          : 'bg-white text-txt-primary border-gray-200 hover:border-primary hover:text-primary'}
+                                    `}
                                   >
                                     {formatTime(slot.start)}
-                                  </Button>
+                                  </button>
                                 ))}
                               </div>
                             </div>
@@ -865,21 +923,26 @@ export function NewBookingPOS({
 
                           {afternoon.length > 0 && (
                             <div>
-                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Afternoon (12PM - 5PM)</h4>
-                              <div className="grid grid-cols-4 gap-2">
+                               <h4 className="text-xs font-bold text-txt-muted uppercase tracking-wider mb-3 flex items-center gap-2">
+                                 <i className='bx bx-sun text-warning'></i> Afternoon
+                              </h4>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                 {afternoon.map((slot, idx) => (
-                                  <Button
+                                  <button
                                     key={idx}
-                                    variant={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'default' : 'outline'}
-                                    size="sm"
                                     onClick={() => {
                                       setBooking({ ...booking, selectedTimeSlot: slot });
                                       setCurrentStep('main');
                                     }}
-                                    className={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                    className={`
+                                       py-2 px-1 rounded-md text-sm font-medium border transition-all
+                                       ${booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() 
+                                          ? 'bg-primary text-white border-primary shadow-md' 
+                                          : 'bg-white text-txt-primary border-gray-200 hover:border-primary hover:text-primary'}
+                                    `}
                                   >
                                     {formatTime(slot.start)}
-                                  </Button>
+                                  </button>
                                 ))}
                               </div>
                             </div>
@@ -887,21 +950,26 @@ export function NewBookingPOS({
 
                           {evening.length > 0 && (
                             <div>
-                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Evening (5PM - 10PM)</h4>
-                              <div className="grid grid-cols-4 gap-2">
+                               <h4 className="text-xs font-bold text-txt-muted uppercase tracking-wider mb-3 flex items-center gap-2">
+                                 <i className='bx bx-moon text-primary-dark'></i> Evening
+                              </h4>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                 {evening.map((slot, idx) => (
-                                  <Button
+                                  <button
                                     key={idx}
-                                    variant={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'default' : 'outline'}
-                                    size="sm"
                                     onClick={() => {
                                       setBooking({ ...booking, selectedTimeSlot: slot });
                                       setCurrentStep('main');
                                     }}
-                                    className={booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                    className={`
+                                       py-2 px-1 rounded-md text-sm font-medium border transition-all
+                                       ${booking.selectedTimeSlot?.start.getTime() === slot.start.getTime() 
+                                          ? 'bg-primary text-white border-primary shadow-md' 
+                                          : 'bg-white text-txt-primary border-gray-200 hover:border-primary hover:text-primary'}
+                                    `}
                                   >
                                     {formatTime(slot.start)}
-                                  </Button>
+                                  </button>
                                 ))}
                               </div>
                             </div>
@@ -912,19 +980,20 @@ export function NewBookingPOS({
                   </div>
                 )}
 
-                <div className="flex gap-2 justify-between pt-4 border-t">
+                <div className="flex gap-3 justify-between pt-6 border-t border-gray-100 mt-4">
                   <Button
                     variant="outline"
                     onClick={() => setCurrentStep('date')}
-                    className="text-sm"
+                    className="text-txt-secondary"
                   >
-                    Back to Date
+                    <i className='bx bx-arrow-back mr-1'></i> Back to Date
                   </Button>
                   <Button
+                    variant="ghost"
                     onClick={() => setCurrentStep('main')}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+                    className="text-txt-muted"
                   >
-                    Done
+                    Cancel
                   </Button>
                 </div>
               </div>
@@ -935,24 +1004,25 @@ export function NewBookingPOS({
 
     {/* Home Visit Modal */}
     <Dialog open={currentStep === 'homevisit'} onOpenChange={(open) => !open && setCurrentStep('main')}>
-      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden rounded-card shadow-lg border-0">
         <DialogTitle className="sr-only">Home Visit Address</DialogTitle>
-        <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+        
+        <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Home Visit Address</h2>
-            <p className="text-xs text-gray-600 mt-1">Enter address and coordinates</p>
+            <h4 className="text-lg font-bold text-txt-primary">Home Visit Address</h4>
+            <p className="text-xs text-txt-secondary mt-0.5">Enter customer location for travel calculation</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCurrentStep('main')}
-            className="text-gray-600 hover:bg-gray-100"
+            className="text-txt-muted hover:bg-gray-100 hover:text-txt-primary rounded-full"
           >
-            <X className="h-5 w-5" />
+             <i className='bx bx-x text-2xl'></i>
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
           <HomeVisitAddressSelector
             address={booking.homeVisitAddress}
             latitude={booking.homeVisitLat}
@@ -963,43 +1033,45 @@ export function NewBookingPOS({
           />
 
           {booking.homeVisitAddress && typeof booking.homeVisitLat === 'number' && typeof booking.homeVisitLng === 'number' && businessCoordinates && (
-            <div className="mt-4 space-y-3">
-              <h3 className="font-semibold text-sm">Travel Estimate</h3>
-              <TravelEstimateCard
-                tenantId={subdomain}
-                origin={businessCoordinates}
-                destination={booking.homeVisitAddress}
-                destinationCoordinates={{
-                  lat: booking.homeVisitLat,
-                  lng: booking.homeVisitLng
-                }}
-                serviceId={booking.serviceId}
-                onCalculationComplete={(calc) => {
-                  setBooking({ ...booking, travelCalculation: calc });
-                }}
-                onConfirm={(calc) => {
-                  setBooking({ ...booking, travelCalculation: calc });
-                }}
-                autoCalculate={true}
-              />
+            <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-bottom-4">
+              <h3 className="font-bold text-sm text-txt-primary">Travel Estimate</h3>
+              <div className="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                 <TravelEstimateCard
+                   tenantId={subdomain}
+                   origin={businessCoordinates}
+                   destination={booking.homeVisitAddress}
+                   destinationCoordinates={{
+                     lat: booking.homeVisitLat,
+                     lng: booking.homeVisitLng
+                   }}
+                   serviceId={booking.serviceId}
+                   onCalculationComplete={(calc) => {
+                     setBooking({ ...booking, travelCalculation: calc });
+                   }}
+                   onConfirm={(calc) => {
+                     setBooking({ ...booking, travelCalculation: calc });
+                   }}
+                   autoCalculate={true}
+                 />
+              </div>
             </div>
           )}
         </div>
 
-        <div className="border-t border-gray-200 p-4 flex gap-2 justify-end bg-gray-50">
+        <div className="border-t border-gray-100 p-4 flex gap-3 justify-end bg-gray-50">
           <Button
             variant="outline"
             onClick={() => setCurrentStep('main')}
-            className="text-sm"
+            className="text-txt-secondary bg-white border-gray-300"
           >
             Cancel
           </Button>
           <Button
             onClick={() => setCurrentStep('main')}
             disabled={booking.isHomeVisit && !booking.homeVisitAddress}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+            className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30"
           >
-            Done
+            Confirm Location
           </Button>
         </div>
       </DialogContent>

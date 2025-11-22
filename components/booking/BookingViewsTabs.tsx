@@ -102,7 +102,7 @@ export function BookingViewsTabs({
 
   return (
     <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as ViewMode)}>
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <TabsList>
@@ -141,7 +141,7 @@ export function BookingViewsTabs({
 
       {/* Calendar View */}
       <TabsContent value="calendar" className="mt-4">
-        <Card>
+        <Card className="border-none shadow-sm">
           <CardContent className="pt-6">
             <BookingCalendar
               bookings={filteredBookings}
@@ -155,7 +155,7 @@ export function BookingViewsTabs({
 
       {/* List View */}
       <TabsContent value="list" className="mt-4">
-        <Card>
+        <Card className="border-none shadow-sm">
           <CardContent className="pt-6">
             <UnifiedTransactionTable
               data={filteredBookings}
@@ -176,7 +176,7 @@ export function BookingViewsTabs({
 
       {/* Sales View */}
       <TabsContent value="sales" className="mt-4">
-        <Card>
+        <Card className="border-none shadow-sm">
           <CardHeader className="flex items-center justify-between">
             <CardTitle>Sales Transactions</CardTitle>
             <Button onClick={onNewSale} className="gap-2">

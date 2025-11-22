@@ -11,7 +11,7 @@ interface SalesSummaryCardsProps {
 export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -25,7 +25,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -37,7 +37,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -51,7 +51,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
