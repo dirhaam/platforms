@@ -91,6 +91,21 @@ const getPaymentMethodColor = (method: string) => {
   }
 };
 
+const getPaymentMethodEmoji = (method: string) => {
+  switch (method?.toLowerCase()) {
+    case 'cash':
+      return '💵';
+    case 'card':
+      return '💳';
+    case 'transfer':
+      return '🏦';
+    case 'qris':
+      return '📱';
+    default:
+      return '💰';
+  }
+};
+
 const isBooking = (item: Booking | SalesTransaction): item is Booking => {
   return 'bookingNumber' in item;
 };
@@ -190,9 +205,19 @@ export function UnifiedTransactionTable({
 
                   {/* Payment Method Column */}
                   <td className="py-3 px-4">
-                    <Badge className={getPaymentMethodColor(item.paymentMethod || '')}>
-                      {item.paymentMethod ? item.paymentMethod.toUpperCase() : 'N/A'}
-                    </Badge>
+                    {isSalesItem && item.payments && item.payments.length > 1 ? (
+                      <div className="flex gap-2 text-lg">
+                        {item.payments.map((payment, idx) => (
+                          <span key={idx} title={payment.paymentMethod}>
+                            {getPaymentMethodEmoji(payment.paymentMethod)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-lg" title={item.paymentMethod}>
+                        {getPaymentMethodEmoji(item.paymentMethod || '')}
+                      </span>
+                    )}
                   </td>
 
                   {/* Sales: Payment Status Card */}
