@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Booking, BookingStatus, PaymentStatus } from '@/types/booking';
-import { SalesTransaction, SalesTransactionSource, SalesPaymentMethod, SalesTransactionStatus } from '@/types/sales';
+import { SalesTransaction, SalesPaymentMethod, SalesTransactionStatus } from '@/types/sales';
 
 interface UnifiedTableProps {
   data: (Booking | SalesTransaction)[];
@@ -112,10 +112,12 @@ export function UnifiedTransactionTable({
             <th className="text-left py-3 px-4 font-semibold">ID</th>
             <th className="text-left py-3 px-4 font-semibold">Date</th>
             <th className="text-left py-3 px-4 font-semibold">Customer</th>
-            <th className="text-left py-3 px-4 font-semibold">Service</th>
-            <th className="text-left py-3 px-4 font-semibold">Amount</th>
-            <th className="text-left py-3 px-4 font-semibold">Paid</th>
+            {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Service</th>}
+            {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Amount</th>}
+            {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Paid</th>}
+            {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Total</th>}
             <th className="text-left py-3 px-4 font-semibold">Payment Method</th>
+            {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Status</th>}
             {type === 'booking' && (
               <>
                 <th className="text-left py-3 px-4 font-semibold">Payment Status</th>
@@ -123,14 +125,13 @@ export function UnifiedTransactionTable({
                 <th className="text-left py-3 px-4 font-semibold">Status</th>
               </>
             )}
-            {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Source</th>}
             {renderActions && <th className="text-right py-3 px-4 font-semibold">Action</th>}
           </tr>
         </thead>
         <tbody>
           {data.length === 0 ? (
             <tr>
-              <td colSpan={renderActions ? 13 : 12} className="text-center py-8 text-gray-500">
+              <td colSpan={type === 'booking' ? (renderActions ? 11 : 10) : (renderActions ? 6 : 5)} className="text-center py-8 text-gray-500">
                 {type === 'booking' ? 'No bookings found' : 'No sales found'}
               </td>
             </tr>
@@ -156,23 +157,36 @@ export function UnifiedTransactionTable({
                     {isBookingItem ? item.customer?.name : item.customer?.name || '-'}
                   </td>
 
-                  {/* Service Column */}
-                  <td className="py-3 px-4">
-                    {isBookingItem ? item.service?.name : item.serviceName}
-                  </td>
+                  {/* Service Column - Only for Booking */}
+                  {type === 'booking' && (
+                    <td className="py-3 px-4">
+                      {isBookingItem ? item.service?.name : item.serviceName}
+                    </td>
+                  )}
 
-                  {/* Amount Column */}
-                  <td className="py-3 px-4 font-medium">
-                    {formatCurrency(item.totalAmount)}
-                  </td>
+                  {/* Booking: Amount Column */}
+                  {type === 'booking' && (
+                    <td className="py-3 px-4 font-medium">
+                      {formatCurrency(item.totalAmount)}
+                    </td>
+                  )}
 
-                  {/* Paid Amount Column */}
-                  <td className="py-3 px-4">
-                    {isBookingItem 
-                      ? formatCurrency(item.paidAmount || 0)
-                      : formatCurrency(item.paidAmount || 0)
-                    }
-                  </td>
+                  {/* Booking: Paid Amount Column */}
+                  {type === 'booking' && (
+                    <td className="py-3 px-4">
+                      {isBookingItem 
+                        ? formatCurrency(item.paidAmount || 0)
+                        : formatCurrency(item.paidAmount || 0)
+                      }
+                    </td>
+                  )}
+
+                  {/* Sales: Total Column */}
+                  {type === 'sales' && (
+                    <td className="py-3 px-4 font-medium">
+                      {formatCurrency(item.totalAmount)}
+                    </td>
+                  )}
 
                   {/* Payment Method Column */}
                   <td className="py-3 px-4">
@@ -180,6 +194,21 @@ export function UnifiedTransactionTable({
                       {item.paymentMethod ? item.paymentMethod.toUpperCase() : 'N/A'}
                     </Badge>
                   </td>
+
+                  {/* Sales: Payment Status Card */}
+                  {type === 'sales' && (
+                    <td className="py-3 px-4">
+                      {isSalesItem && (
+                        <div className={`px-3 py-2 rounded-md text-sm font-medium text-center ${
+                          (item.paidAmount || 0) >= item.totalAmount
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {(item.paidAmount || 0) >= item.totalAmount ? 'Lunas' : 'Kurang Bayar'}
+                        </div>
+                      )}
+                    </td>
+                  )}
 
                   {/* Booking-only columns */}
                   {type === 'booking' && (
@@ -204,24 +233,6 @@ export function UnifiedTransactionTable({
                         <Badge className={getStatusColor(item.status, type)}>
                           {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
                         </Badge>
-                      </td>
-                    </>
-                  )}
-
-                  {/* Sales-only columns */}
-                  {type === 'sales' && (
-                    <>
-                      {/* Source Column */}
-                      <td className="py-3 px-4">
-                        {isSalesItem && (
-                          <Badge className={
-                            item.source === SalesTransactionSource.ON_THE_SPOT
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
-                          }>
-                            {item.source === SalesTransactionSource.ON_THE_SPOT ? 'On-the-Spot' : 'From Booking'}
-                          </Badge>
-                        )}
                       </td>
                     </>
                   )}
