@@ -15,7 +15,6 @@ import { Invoice } from '@/types/invoice';
 import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { SalesSummaryCards } from './SalesSummaryCards';
 import { BookingViewsTabs } from './BookingViewsTabs';
 
 interface BookingDashboardProps {
@@ -456,13 +455,6 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
           Quick Sale
         </Button>
       </div>
-
-      {/* Sales Summary Cards */}
-      {salesSummary && (
-        <div className="mb-6">
-          <SalesSummaryCards summary={salesSummary} />
-        </div>
-      )}
 
       {/* Booking Views */}
       <div className="mt-6">
