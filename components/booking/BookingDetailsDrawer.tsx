@@ -31,13 +31,13 @@ export function BookingDetailsDrawer({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-0 sm:rounded-card bg-body border-0">
-        <DialogHeader className="sticky top-0 bg-white z-10 border-b border-gray-100 px-6 py-4 rounded-t-card">
+        <div className="bg-white px-6 py-5 rounded-t-card border-b border-gray-50">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="text-xl font-bold text-txt-primary">Booking Details</DialogTitle>
-              <DialogDescription className="text-txt-secondary text-sm">
+              <h2 className="text-lg font-bold text-txt-primary">Booking Details</h2>
+              <p className="text-txt-secondary text-sm mt-1">
                 View and manage booking information with unified panel
-              </DialogDescription>
+              </p>
             </div>
             <Button
               variant="ghost"
@@ -48,7 +48,7 @@ export function BookingDetailsDrawer({
               <X className="h-4 w-4" />
             </Button>
           </div>
-        </DialogHeader>
+        </div>
         <div className="p-6">
           <UnifiedBookingPanel
             booking={booking}
