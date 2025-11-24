@@ -235,9 +235,9 @@
 /* Boxicons Font */
 @font-face {
   font-family: "boxicons";
-  src: url("/icon/fonts/basic/boxicons.ttf") format("truetype"),
-       url("/icon/fonts/basic/boxicons.woff") format("woff"),
-       url("/icon/fonts/basic/boxicons.woff2") format("woff2");
+  src: url("/fonts/basic/boxicons.ttf") format("truetype"),
+       url("/fonts/basic/boxicons.woff") format("woff"),
+       url("/fonts/basic/boxicons.woff2") format("woff2");
   font-weight: normal;
 }
 
