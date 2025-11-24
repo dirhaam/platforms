@@ -66,24 +66,7 @@ export function UnifiedBookingPanel({
   const displayCustomer = booking.customer || customerDetails || {};
   const displayService = booking.service || serviceDetails || {};
 
-  // Helper: Get Recommended Action
-  const getRecommendedAction = () => {
-    if (booking.status === BookingStatus.PENDING) {
-      return { label: 'Confirm Booking', icon: 'bx-check-circle', color: 'text-warning', bg: 'bg-yellow-50', border: 'border-yellow-200', action: () => handleUpdateStatus(BookingStatus.CONFIRMED) };
-    }
-    if (booking.status === BookingStatus.CONFIRMED && booking.paymentStatus !== PaymentStatus.PAID) {
-      return { label: 'Record Payment', icon: 'bx-dollar-circle', color: 'text-info', bg: 'bg-cyan-50', border: 'border-cyan-200', action: () => setShowPaymentDialog(true) };
-    }
-    if (booking.status === BookingStatus.CONFIRMED && booking.paymentStatus === PaymentStatus.PAID && invoices.length === 0) {
-      return { label: 'Generate Invoice', icon: 'bx-file', color: 'text-primary', bg: 'bg-primary-light/30', border: 'border-primary-light', action: handleGenerateInvoice };
-    }
-    if (invoices.length > 0 && invoices[0].status === InvoiceStatus.DRAFT) {
-      return { label: 'Send Invoice', icon: 'bx-send', color: 'text-success', bg: 'bg-green-50', border: 'border-green-200', action: () => handleSendInvoiceWhatsApp(invoices[0].id) };
-    }
-    return { label: 'Completed', icon: 'bx-check-double', color: 'text-secondary', bg: 'bg-gray-50', border: 'border-gray-200', action: () => {} };
-  };
 
-  const recommendedAction = getRecommendedAction();
 
   // Fetch related data
   const fetchRelatedData = useCallback(async () => {
@@ -402,6 +385,23 @@ export function UnifiedBookingPanel({
   const paymentStatusColor = booking.paymentStatus === PaymentStatus.PAID 
     ? 'bg-green-100 text-success' 
     : 'bg-yellow-100 text-warning';
+
+  // Compute Recommended Action with useMemo to ensure handlers are defined
+  const recommendedAction = React.useMemo(() => {
+    if (booking.status === BookingStatus.PENDING) {
+      return { label: 'Confirm Booking', icon: 'bx-check-circle', color: 'text-warning', bg: 'bg-yellow-50', border: 'border-yellow-200', action: () => handleUpdateStatus(BookingStatus.CONFIRMED) };
+    }
+    if (booking.status === BookingStatus.CONFIRMED && booking.paymentStatus !== PaymentStatus.PAID) {
+      return { label: 'Record Payment', icon: 'bx-dollar-circle', color: 'text-info', bg: 'bg-cyan-50', border: 'border-cyan-200', action: () => setShowPaymentDialog(true) };
+    }
+    if (booking.status === BookingStatus.CONFIRMED && booking.paymentStatus === PaymentStatus.PAID && invoices.length === 0) {
+      return { label: 'Generate Invoice', icon: 'bx-file', color: 'text-primary', bg: 'bg-primary-light/30', border: 'border-primary-light', action: handleGenerateInvoice };
+    }
+    if (invoices.length > 0 && invoices[0].status === InvoiceStatus.DRAFT) {
+      return { label: 'Send Invoice', icon: 'bx-send', color: 'text-success', bg: 'bg-green-50', border: 'border-green-200', action: () => handleSendInvoiceWhatsApp(invoices[0].id) };
+    }
+    return { label: 'Completed', icon: 'bx-check-double', color: 'text-secondary', bg: 'bg-gray-50', border: 'border-gray-200', action: () => {} };
+  }, [booking.status, booking.paymentStatus, invoices, handleUpdateStatus, handleGenerateInvoice, handleSendInvoiceWhatsApp]);
 
   // --- TAB CONTENT RENDERERS ---
 
