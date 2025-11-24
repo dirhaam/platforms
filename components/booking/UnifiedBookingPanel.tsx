@@ -5,7 +5,6 @@ import { Booking, BookingStatus, PaymentStatus, Customer, Service } from '@/type
 import { Invoice, InvoiceStatus, PaymentMethod } from '@/types/invoice';
 
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,7 +42,6 @@ export function UnifiedBookingPanel({
   onGenerateInvoice,
   isGeneratingInvoice,
 }: UnifiedBookingPanelProps) {
-  const [activeTab, setActiveTab] = useState('summary');
   const [loading, setLoading] = useState(false);
   
   // Related data
@@ -601,43 +599,43 @@ export function UnifiedBookingPanel({
     : 'bg-yellow-100 text-warning';
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-card shadow-card p-6 border-0">
-        <div className="flex items-start gap-5">
+      <div className="bg-white rounded-card shadow-card p-4 md:p-6 border-0">
+        <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-5">
           {/* Icon Container */}
           <div className="w-12 h-12 rounded bg-primary-light flex items-center justify-center text-primary shrink-0">
             <Calendar className="h-6 w-6" />
           </div>
 
-          <div className="flex-1 space-y-4">
+          <div className="flex-1 w-full space-y-3 md:space-y-4">
             {/* Title Row */}
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-txt-primary">{booking.bookingNumber}</h2>
-                <p className="text-sm text-txt-secondary mt-1">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 md:gap-4">
+              <div className="min-w-0">
+                <h2 className="text-lg md:text-xl font-bold text-txt-primary truncate">{booking.bookingNumber}</h2>
+                <p className="text-xs md:text-sm text-txt-secondary mt-1 line-clamp-2">
                   {booking.customer?.name} • {booking.service?.name}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Badge className={`px-3 py-1 rounded text-xs font-bold uppercase shadow-sm ${statusColor[booking.status]}`}>
+              <div className="flex gap-2 flex-wrap">
+                <Badge className={`px-2 md:px-3 py-1 rounded text-xs font-bold uppercase shadow-sm ${statusColor[booking.status]}`}>
                   {booking.status}
                 </Badge>
-                <Badge className={`px-3 py-1 rounded text-xs font-bold uppercase shadow-sm ${paymentStatusColor}`}>
+                <Badge className={`px-2 md:px-3 py-1 rounded text-xs font-bold uppercase shadow-sm ${paymentStatusColor}`}>
                   {booking.paymentStatus}
                 </Badge>
               </div>
             </div>
 
-            {/* Schedule Row */}
-            <div className="flex items-center gap-6 text-sm text-txt-secondary">
+            {/* Schedule Row - Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 text-xs md:text-sm text-txt-secondary">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {new Date(booking.scheduledAt).toLocaleDateString()}
+                <Calendar className="h-4 w-4 flex-shrink-0" />
+                <span>{new Date(booking.scheduledAt).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <Clock className="h-4 w-4 flex-shrink-0" />
+                <span>{new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium text-txt-primary">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
@@ -660,18 +658,10 @@ export function UnifiedBookingPanel({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-card shadow-card p-6 border-0">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-50">
-            <TabsTrigger value="summary" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">Summary</TabsTrigger>
-            <TabsTrigger value="payment" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">Payment</TabsTrigger>
-            <TabsTrigger value="invoice" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">Invoice</TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">History</TabsTrigger>
-          </TabsList>
-
-          {/* Summary Tab */}
-          <TabsContent value="summary" className="space-y-4 mt-4">
+      {/* Booking Information */}
+      <div className="bg-white rounded-card shadow-card p-4 md:p-6 border-0">
+        <h3 className="text-lg md:text-xl font-semibold text-txt-primary mb-4">Booking Information</h3>
+        <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-txt-secondary text-sm">Customer</Label>
@@ -783,10 +773,13 @@ export function UnifiedBookingPanel({
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </div>
-            </TabsContent>
+        </div>
+      </div>
 
-            {/* Payment Tab */}
-            <TabsContent value="payment" className="space-y-4 mt-4">
+      {/* Payment Information */}
+      <div className="bg-white rounded-card shadow-card p-4 md:p-6 border-0">
+        <h3 className="text-lg md:text-xl font-semibold text-txt-primary mb-4">Payment Information</h3>
+        <div className="space-y-4">
               {/* Payment Summary */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -890,10 +883,13 @@ export function UnifiedBookingPanel({
                   </p>
                 )}
               </div>
-            </TabsContent>
+        </div>
+      </div>
 
-            {/* Invoice Tab */}
-            <TabsContent value="invoice" className="space-y-4 mt-4">
+      {/* Invoice & Documents */}
+      <div className="bg-white rounded-card shadow-card p-4 md:p-6 border-0">
+        <h3 className="text-lg md:text-xl font-semibold text-txt-primary mb-4">Invoice & Documents</h3>
+        <div className="space-y-4">
               {invoices.length > 0 ? (
                 <div className="space-y-3">
                   {invoices.map((invoice) => (
@@ -979,11 +975,13 @@ export function UnifiedBookingPanel({
                   ) : null}
                 </div>
               )}
-            </TabsContent>
+        </div>
+      </div>
 
-            {/* History Tab */}
-            <TabsContent value="history" className="space-y-4 mt-4">
-              <div className="space-y-0">
+      {/* Booking History */}
+      <div className="bg-white rounded-card shadow-card p-4 md:p-6 border-0">
+        <h3 className="text-lg md:text-xl font-semibold text-txt-primary mb-4">Booking History</h3>
+        <div className="space-y-4">
                 {history && history.length > 0 ? (
                   history.map((item, index) => {
                     // Get icon based on action
@@ -1026,10 +1024,31 @@ export function UnifiedBookingPanel({
                     <p className="text-sm">Belum ada riwayat booking</p>
                   </div>
                 )}
-              </div>
-            </TabsContent>
-          </Tabs>
         </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button 
+          variant="outline"
+          onClick={() => handleUpdateStatus(
+            booking.status === BookingStatus.PENDING 
+              ? BookingStatus.CONFIRMED 
+              : BookingStatus.COMPLETED
+          )}
+          className="flex-1"
+        >
+          {booking.status === BookingStatus.PENDING ? 'Confirm Booking' : 'Complete Booking'}
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={() => setShowRescheduleDialog(true)}
+          disabled={booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED}
+          className="flex-1"
+        >
+          Reschedule
+        </Button>
+      </div>
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
