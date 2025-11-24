@@ -27,7 +27,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
           IDR {summary.totalRevenue.toLocaleString('id-ID')}
         </h3>
         <div className="flex items-center gap-1 text-xs text-success font-medium">
-           <i className='bx bx-up-arrow-alt'></i>
+           <i className='bx bx-arrow-up'></i>
            <span>+12.5%</span>
            <span className="text-txt-muted font-normal ml-1">vs last month</span>
         </div>
@@ -43,7 +43,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
           {summary.totalTransactions}
         </h3>
         <div className="flex items-center gap-1 text-xs text-success font-medium">
-           <i className='bx bx-up-arrow-alt'></i>
+           <i className='bx bx-arrow-up'></i>
            <span>+5.2%</span>
            <span className="text-txt-muted font-normal ml-1">vs last month</span>
         </div>

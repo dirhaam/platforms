@@ -21,10 +21,10 @@ export function PaymentMethodSection({
       
       <div className="grid grid-cols-2 gap-3 mb-4">
         {[
-          { id: 'cash', label: 'Cash', icon: 'bx-money' },
+          { id: 'cash', label: 'Cash', icon: 'bx-wallet' },
           { id: 'card', label: 'Card', icon: 'bx-credit-card' },
-          { id: 'qris', label: 'QRIS', icon: 'bx-qr-scan' },
-          { id: 'transfer', label: 'Transfer', icon: 'bx-transfer' }
+          { id: 'qris', label: 'QRIS', icon: 'bx-qr' },
+          { id: 'transfer', label: 'Transfer', icon: 'bx-send' }
         ].map(method => (
           <button
             key={method.id}

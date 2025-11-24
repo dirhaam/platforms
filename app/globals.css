@@ -231,3 +231,27 @@
 .emoji-picker-container .epr-category-nav button:hover {
   opacity: 0.8;
 }
+
+/* Boxicons Font */
+@font-face {
+  font-family: "boxicons";
+  src: url("/icon/fonts/basic/boxicons.ttf") format("truetype"),
+       url("/icon/fonts/basic/boxicons.woff") format("woff"),
+       url("/icon/fonts/basic/boxicons.woff2") format("woff2");
+  font-weight: normal;
+}
+
+[class^="bx"],
+[class*=" bx"],
+.bx {
+  font-family: boxicons !important;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  display: inline-block;
+  speak: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
