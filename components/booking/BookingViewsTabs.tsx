@@ -22,6 +22,7 @@ interface BookingViewsTabsProps {
 
   // Sales
   salesTransactions: SalesTransaction[];
+  salesSummary: any;
   loadingSales: boolean;
   onNewSale: () => void;
   onViewSalesTransaction: (t: SalesTransaction) => void;
@@ -51,6 +52,7 @@ export function BookingViewsTabs({
   onDateSelect,
   onBookingClick,
   salesTransactions,
+  salesSummary,
   loadingSales,
   onNewSale,
   onViewSalesTransaction,

@@ -10,10 +10,18 @@ interface SalesSummaryData {
 }
 
 interface SalesSummaryCardsProps {
-  summary: SalesSummaryData;
+  summary?: SalesSummaryData;
 }
 
 export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
+  if (!summary) {
+    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="bg-white rounded-card shadow-card p-5 h-32 animate-pulse bg-gray-200"></div>
+      ))}
+    </div>;
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       

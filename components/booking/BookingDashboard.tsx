@@ -466,6 +466,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
         onDateSelect={setSelectedDate}
         onBookingClick={handleBookingClick}
         salesTransactions={filteredSales}
+        salesSummary={salesSummary}
         loadingSales={loadingSales}
         onNewSale={() => setShowQuickSaleDialog(true)}
         onViewSalesTransaction={(t) => {
