@@ -49,7 +49,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'sales' | 'home-visits'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'booking' | 'sales' | 'home-visits'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   // Home Visits states
