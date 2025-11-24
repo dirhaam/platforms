@@ -10,7 +10,7 @@ import { HomeVisitBookingManager } from './HomeVisitBookingManagerNew';
 import { BookingFilters } from './BookingFilters';
 import { SalesSummaryCards } from './SalesSummaryCards';
 
-type ViewMode = 'calendar' | 'list' | 'sales' | 'home-visits';
+type ViewMode = 'calendar' | 'booking' | 'sales' | 'home-visits';
 
 interface BookingViewsTabsProps {
   viewMode: ViewMode;
@@ -67,7 +67,7 @@ export function BookingViewsTabs({
   onPaymentChange,
   onRefreshAll,
 }: BookingViewsTabsProps) {
-  const isBookingView = viewMode === 'calendar' || viewMode === 'list' || viewMode === 'home-visits';
+  const isBookingView = viewMode === 'calendar' || viewMode === 'booking' || viewMode === 'home-visits';
   const statusOptions = isBookingView
     ? [
         { value: 'all', label: 'All Status' },
@@ -121,11 +121,11 @@ export function BookingViewsTabs({
               Calendar
             </TabsTrigger>
             <TabsTrigger 
-              value="list" 
+              value="booking" 
               className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md px-4 py-2 h-auto rounded-md border border-transparent hover:text-primary hover:bg-primary-light/50 transition-all text-txt-secondary gap-2"
             >
               <i className='bx bx-list-ul text-lg'></i>
-              List
+              Booking
             </TabsTrigger>
             <TabsTrigger 
               value="sales" 
@@ -172,28 +172,90 @@ export function BookingViewsTabs({
         </div>
       </TabsContent>
 
-      {/* List View */}
-      <TabsContent value="list" className="space-y-4">
-        <div className="bg-white rounded-card shadow-card overflow-hidden border border-gray-100">
-            <div className="p-5 border-b border-gray-100">
-                <h5 className="font-semibold text-lg text-txt-primary">Booking List</h5>
+      {/* Booking View */}
+      <TabsContent value="booking" className="space-y-6">
+        {/* Booking Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Bookings */}
+          <div className="bg-white rounded-card shadow-card p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border border-gray-100">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-info mb-3">
+              <i className='bx bx-calendar-check text-2xl'></i>
             </div>
-            <div className="p-6">
-                <UnifiedTransactionTable
+            <span className="block text-txt-secondary font-semibold mb-1 text-sm">Total Bookings</span>
+            <h3 className="text-2xl font-bold text-txt-primary mb-3">
+              {filteredBookings.length}
+            </h3>
+            <div className="flex items-center gap-1 text-xs text-success font-medium">
+              <i className='bx bx-up-arrow-alt'></i>
+              <span>Active</span>
+            </div>
+          </div>
+
+          {/* Confirmed Bookings */}
+          <div className="bg-white rounded-card shadow-card p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border border-gray-100">
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-success mb-3">
+              <i className='bx bx-check-circle text-2xl'></i>
+            </div>
+            <span className="block text-txt-secondary font-semibold mb-1 text-sm">Confirmed</span>
+            <h3 className="text-2xl font-bold text-txt-primary mb-3">
+              {filteredBookings.filter(b => b.status === 'confirmed').length}
+            </h3>
+            <p className="text-xs text-txt-muted">Ready to execute</p>
+          </div>
+
+          {/* Pending Payment */}
+          <div className="bg-white rounded-card shadow-card p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border border-gray-100">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-warning mb-3">
+              <i className='bx bx-time-five text-2xl'></i>
+            </div>
+            <span className="block text-txt-secondary font-semibold mb-1 text-sm">Pending Payment</span>
+            <h3 className="text-2xl font-bold text-txt-primary mb-3">
+              {filteredBookings.filter(b => b.paymentStatus === 'pending').length}
+            </h3>
+            <p className="text-xs text-txt-muted">Requires follow-up</p>
+          </div>
+
+          {/* Completed */}
+          <div className="bg-white rounded-card shadow-card p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border border-gray-100">
+            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 mb-3">
+              <i className='bx bx-check text-2xl'></i>
+            </div>
+            <span className="block text-txt-secondary font-semibold mb-1 text-sm">Completed</span>
+            <h3 className="text-2xl font-bold text-txt-primary mb-3">
+              {filteredBookings.filter(b => b.status === 'completed').length}
+            </h3>
+            <p className="text-xs text-txt-muted">Finished jobs</p>
+          </div>
+        </div>
+
+        {/* Bookings Table */}
+        <div className="bg-white rounded-card shadow-card overflow-hidden border border-gray-100">
+          <div className="p-5 border-b border-gray-100">
+            <h5 className="font-semibold text-lg text-txt-primary">All Bookings</h5>
+          </div>
+          <div className="p-6">
+            {filteredBookings.length === 0 ? (
+              <div className="text-center py-12 text-txt-muted">
+                <i className='bx bx-inbox text-4xl mb-3'></i>
+                <p>No bookings found</p>
+              </div>
+            ) : (
+              <UnifiedTransactionTable
                 data={filteredBookings}
                 type="booking"
                 renderActions={(item) => (
-                    <Button
+                  <Button
                     size="sm"
                     variant="outline"
                     className="border-gray-200 text-txt-secondary hover:text-primary hover:border-primary hover:bg-primary-light/10"
                     onClick={() => onBookingClick(item as Booking)}
-                    >
-                      <i className='bx bx-show text-lg mr-1'></i> View
-                    </Button>
+                  >
+                    <i className='bx bx-show text-lg mr-1'></i> View
+                  </Button>
                 )}
-                />
-            </div>
+              />
+            )}
+          </div>
         </div>
       </TabsContent>
 

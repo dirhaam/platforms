@@ -128,25 +128,18 @@ export function UnifiedTransactionTable({
             <th className="text-left py-3 px-4 font-semibold">Date</th>
             <th className="text-left py-3 px-4 font-semibold">Customer</th>
             {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Service</th>}
-            {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Amount</th>}
-            {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Paid</th>}
-            {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Total</th>}
-            <th className="text-left py-3 px-4 font-semibold">Payment Method</th>
+            {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Service</th>}
+            <th className="text-left py-3 px-4 font-semibold">{type === 'booking' ? 'Amount' : 'Total'}</th>
+            <th className="text-left py-3 px-4 font-semibold">Payment</th>
             {type === 'sales' && <th className="text-left py-3 px-4 font-semibold">Status</th>}
-            {type === 'booking' && (
-              <>
-                <th className="text-left py-3 px-4 font-semibold">Payment Status</th>
-                <th className="text-left py-3 px-4 font-semibold">Balance</th>
-                <th className="text-left py-3 px-4 font-semibold">Status</th>
-              </>
-            )}
+            {type === 'booking' && <th className="text-left py-3 px-4 font-semibold">Booking Status</th>}
             {renderActions && <th className="text-right py-3 px-4 font-semibold">Action</th>}
           </tr>
         </thead>
         <tbody>
           {data.length === 0 ? (
             <tr>
-              <td colSpan={type === 'booking' ? (renderActions ? 11 : 10) : (renderActions ? 6 : 5)} className="text-center py-8 text-gray-500">
+              <td colSpan={type === 'booking' ? (renderActions ? 8 : 7) : (renderActions ? 8 : 7)} className="text-center py-8 text-gray-500">
                 {type === 'booking' ? 'No bookings found' : 'No sales found'}
               </td>
             </tr>
@@ -158,108 +151,72 @@ export function UnifiedTransactionTable({
               return (
                 <tr key={item.id} className="border-b hover:bg-gray-50">
                   {/* ID Column */}
-                  <td className="py-3 px-4 font-medium">
+                  <td className="py-3 px-4 font-medium text-sm">
                     {isBookingItem ? item.bookingNumber : item.transactionNumber}
                   </td>
 
                   {/* Date Column */}
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 text-sm">
                     {formatDateTime(isBookingItem ? item.scheduledAt : item.transactionDate)}
                   </td>
 
                   {/* Customer Column */}
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 text-sm">
                     {isBookingItem ? item.customer?.name : item.customer?.name || '-'}
                   </td>
 
-                  {/* Service Column - Only for Booking */}
-                  {type === 'booking' && (
-                    <td className="py-3 px-4">
-                      {isBookingItem ? item.service?.name : item.serviceName}
-                    </td>
-                  )}
+                  {/* Service Column */}
+                  <td className="py-3 px-4 text-sm">
+                    {isBookingItem ? item.service?.name : item.serviceName}
+                  </td>
 
-                  {/* Booking: Amount Column */}
-                  {type === 'booking' && (
-                    <td className="py-3 px-4 font-medium">
-                      {formatCurrency(item.totalAmount)}
-                    </td>
-                  )}
+                  {/* Amount / Total Column */}
+                  <td className="py-3 px-4 font-medium text-sm">
+                    {formatCurrency(item.totalAmount)}
+                  </td>
 
-                  {/* Booking: Paid Amount Column */}
-                  {type === 'booking' && (
-                    <td className="py-3 px-4">
-                      {isBookingItem 
-                        ? formatCurrency(item.paidAmount || 0)
-                        : formatCurrency(item.paidAmount || 0)
-                      }
-                    </td>
-                  )}
-
-                  {/* Sales: Total Column */}
-                  {type === 'sales' && (
-                    <td className="py-3 px-4 font-medium">
-                      {formatCurrency(item.totalAmount)}
-                    </td>
-                  )}
-
-                  {/* Payment Method Column */}
+                  {/* Payment Status Column */}
                   <td className="py-3 px-4">
-                    {isSalesItem && item.payments && item.payments.length > 1 ? (
-                      <div className="flex gap-2 text-lg">
-                        {item.payments.map((payment, idx) => (
-                          <span key={idx} title={payment.paymentMethod}>
-                            {getPaymentMethodEmoji(payment.paymentMethod)}
-                          </span>
-                        ))}
+                    {type === 'booking' ? (
+                      <div className={`px-3 py-1 rounded-md text-sm font-medium text-center inline-block ${
+                        (item.paidAmount || 0) >= item.totalAmount
+                          ? 'bg-green-100 text-green-800'
+                          : (item.paidAmount || 0) > 0 ? 'bg-blue-100 text-blue-800'
+                          : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {(item.paidAmount || 0) >= item.totalAmount 
+                          ? 'Lunas' 
+                          : (item.paidAmount || 0) > 0 
+                          ? 'Partial' 
+                          : 'Pending'}
                       </div>
                     ) : (
-                      <span className="text-lg" title={item.paymentMethod}>
-                        {getPaymentMethodEmoji(item.paymentMethod || '')}
-                      </span>
+                      <div className={`px-3 py-1 rounded-md text-sm font-medium text-center inline-block ${
+                        (item.paidAmount || 0) >= item.totalAmount
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {(item.paidAmount || 0) >= item.totalAmount ? 'Lunas' : 'Kurang Bayar'}
+                      </div>
                     )}
                   </td>
 
-                  {/* Sales: Payment Status Card */}
+                  {/* Status Column */}
                   {type === 'sales' && (
                     <td className="py-3 px-4">
-                      {isSalesItem && (
-                        <div className={`px-3 py-2 rounded-md text-sm font-medium text-center ${
-                          (item.paidAmount || 0) >= item.totalAmount
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {(item.paidAmount || 0) >= item.totalAmount ? 'Lunas' : 'Kurang Bayar'}
-                        </div>
-                      )}
+                      <Badge className={getStatusColor(item.status, type)}>
+                        {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
+                      </Badge>
                     </td>
                   )}
 
-                  {/* Booking-only columns */}
+                  {/* Booking Status Column */}
                   {type === 'booking' && (
-                    <>
-                      {/* Payment Status Column */}
-                      <td className="py-3 px-4">
-                        <Badge className={getPaymentStatusColor(item.paymentStatus || 'pending')}>
-                          {item.paymentStatus ? item.paymentStatus.charAt(0).toUpperCase() + item.paymentStatus.slice(1) : 'Pending'}
-                        </Badge>
-                      </td>
-
-                      {/* Balance Column */}
-                      <td className="py-3 px-4">
-                        {isBookingItem 
-                          ? formatCurrency(item.remainingBalance || 0)
-                          : '-'
-                        }
-                      </td>
-
-                      {/* Status Column */}
-                      <td className="py-3 px-4">
-                        <Badge className={getStatusColor(item.status, type)}>
-                          {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
-                        </Badge>
-                      </td>
-                    </>
+                    <td className="py-3 px-4">
+                      <Badge className={getStatusColor(item.status, type)}>
+                        {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
+                      </Badge>
+                    </td>
                   )}
 
                   {/* Action Column */}
