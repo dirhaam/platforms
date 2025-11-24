@@ -101,14 +101,6 @@ export function BookingViewsTabs({
         { value: 'refunded', label: 'Refunded' },
       ];
 
-  // Calculate Sales Summary
-  const salesSummary = {
-    totalRevenue: salesTransactions.reduce((sum, t) => sum + t.totalAmount, 0),
-    totalTransactions: salesTransactions.length,
-    totalPaid: salesTransactions.reduce((sum, t) => sum + (t.paidAmount || 0), 0),
-    totalPending: salesTransactions.reduce((sum, t) => sum + (t.totalAmount - (t.paidAmount || 0)), 0)
-  };
-
   return (
     <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as ViewMode)} className="space-y-6">
       {/* Controls Header */}
