@@ -14,7 +14,7 @@ interface SalesSummaryCardsProps {
 }
 
 export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
-  if (!summary) {
+  if (!summary || typeof summary.totalRevenue !== 'number' || typeof summary.totalTransactions !== 'number' || typeof summary.totalPaid !== 'number' || typeof summary.totalPending !== 'number') {
     return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[1, 2, 3, 4].map(i => (
         <div key={i} className="bg-white rounded-card shadow-card p-5 h-32 animate-pulse bg-gray-200"></div>
@@ -32,7 +32,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
         </div>
         <span className="block text-txt-secondary text-sm mb-1">Total Revenue</span>
         <h3 className="text-2xl font-bold text-txt-primary mb-3">
-          IDR {summary.totalRevenue.toLocaleString('id-ID')}
+          IDR {(summary.totalRevenue || 0).toLocaleString('id-ID')}
         </h3>
         <div className="flex items-center gap-1 text-xs text-success font-medium">
            <i className='bx bx-arrow-up'></i>
@@ -48,7 +48,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
         </div>
         <span className="block text-txt-secondary text-sm mb-1">Total Transactions</span>
         <h3 className="text-2xl font-bold text-txt-primary mb-3">
-          {summary.totalTransactions}
+          {summary.totalTransactions || 0}
         </h3>
         <div className="flex items-center gap-1 text-xs text-success font-medium">
            <i className='bx bx-arrow-up'></i>
@@ -64,7 +64,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
         </div>
         <span className="block text-txt-secondary text-sm mb-1">Paid Amount</span>
         <h3 className="text-2xl font-bold text-txt-primary mb-3">
-          IDR {summary.totalPaid.toLocaleString('id-ID')}
+          IDR {(summary.totalPaid || 0).toLocaleString('id-ID')}
         </h3>
         <div className="w-full bg-gray-100 rounded-full h-1.5">
            <div className="bg-primary h-1.5 rounded-full" style={{ width: '85%' }}></div>
@@ -78,7 +78,7 @@ export function SalesSummaryCards({ summary }: SalesSummaryCardsProps) {
         </div>
         <span className="block text-txt-secondary text-sm mb-1">Pending Amount</span>
         <h3 className="text-2xl font-bold text-txt-primary mb-3">
-          IDR {summary.totalPending.toLocaleString('id-ID')}
+          IDR {(summary.totalPending || 0).toLocaleString('id-ID')}
         </h3>
         <p className="text-xs text-txt-muted">
           Needs attention
