@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Booking, BookingStatus, PaymentStatus, Customer, Service } from '@/types/booking';
 import { Invoice, InvoiceStatus, PaymentMethod } from '@/types/invoice';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -589,115 +589,112 @@ export function UnifiedBookingPanel({
 
   const recommended = getRecommendedAction();
   const statusColor = {
-    [BookingStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
-    [BookingStatus.CONFIRMED]: 'bg-blue-100 text-blue-800',
-    [BookingStatus.COMPLETED]: 'bg-green-100 text-green-800',
-    [BookingStatus.CANCELLED]: 'bg-red-100 text-red-800',
-    [BookingStatus.NO_SHOW]: 'bg-gray-100 text-gray-800'
+    [BookingStatus.PENDING]: 'bg-orange-100 text-warning',
+    [BookingStatus.CONFIRMED]: 'bg-primary-light text-primary',
+    [BookingStatus.COMPLETED]: 'bg-green-100 text-success',
+    [BookingStatus.CANCELLED]: 'bg-red-100 text-danger',
+    [BookingStatus.NO_SHOW]: 'bg-gray-100 text-txt-muted'
   };
 
   const paymentStatusColor = booking.paymentStatus === PaymentStatus.PAID 
-    ? 'bg-green-100 text-green-800' 
-    : 'bg-orange-100 text-orange-800';
+    ? 'bg-green-100 text-success' 
+    : 'bg-orange-100 text-warning';
 
   return (
     <div className="w-full space-y-4">
       {/* Header */}
-      <Card className="border-2">
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            {/* Title Row */}
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">{booking.bookingNumber}</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  {booking.customer?.name} • {booking.service?.name}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Badge className={statusColor[booking.status]}>
-                  {booking.status.toUpperCase()}
-                </Badge>
-                <Badge className={paymentStatusColor}>
-                  {booking.paymentStatus.toUpperCase()}
-                </Badge>
-              </div>
+      <div className="bg-white rounded-card shadow-card p-5 border border-gray-100">
+        <div className="space-y-4">
+          {/* Title Row */}
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-txt-primary">{booking.bookingNumber}</h2>
+              <p className="text-sm text-txt-secondary mt-1">
+                {booking.customer?.name} • {booking.service?.name}
+              </p>
             </div>
-
-            {/* Schedule Row */}
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {new Date(booking.scheduledAt).toLocaleDateString()}
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
-              </div>
-            </div>
-
-            {/* Recommended Action */}
-            <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-                <span className={`text-sm font-medium ${recommended.color}`}>
-                  Next Action: {recommended.label}
-                </span>
-              </div>
-              {recommended.label !== 'Completed' && (
-                <ChevronDown className="h-4 w-4 text-blue-600" />
-              )}
+            <div className="flex gap-2">
+              <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[booking.status]}`}>
+                {booking.status.toUpperCase()}
+              </Badge>
+              <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${paymentStatusColor}`}>
+                {booking.paymentStatus.toUpperCase()}
+              </Badge>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Schedule Row */}
+          <div className="flex items-center gap-6 text-sm text-txt-secondary">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              {new Date(booking.scheduledAt).toLocaleDateString()}
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              {new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-txt-primary">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+
+          {/* Recommended Action */}
+          <div className="flex items-center justify-between bg-primary-light/30 p-3 rounded-md border border-primary-light">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">
+                Next Action: {recommended.label}
+              </span>
+            </div>
+            {recommended.label !== 'Completed' && (
+              <ChevronDown className="h-4 w-4 text-primary" />
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Tabs */}
-      <Card>
-        <CardContent className="pt-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="summary">Summary</TabsTrigger>
-              <TabsTrigger value="payment">Payment</TabsTrigger>
-              <TabsTrigger value="invoice">Invoice</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
+      <div className="bg-white rounded-card shadow-card p-5 border border-gray-100">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-50">
+            <TabsTrigger value="summary" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">Summary</TabsTrigger>
+            <TabsTrigger value="payment" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">Payment</TabsTrigger>
+            <TabsTrigger value="invoice" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">Invoice</TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">History</TabsTrigger>
+          </TabsList>
 
-            {/* Summary Tab */}
-            <TabsContent value="summary" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-600">Customer</Label>
-                  <p className="font-medium">{booking.customer?.name}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Phone</Label>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{booking.customer?.phone}</p>
-                    <Phone className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Service</Label>
-                  <p className="font-medium">{booking.service?.name}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Duration</Label>
-                  <p className="font-medium">{booking.service?.duration} minutes</p>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Status</Label>
-                  <Badge className={statusColor[booking.status]}>
-                    {booking.status.toUpperCase()}
-                  </Badge>
+          {/* Summary Tab */}
+          <TabsContent value="summary" className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-txt-secondary text-sm">Customer</Label>
+                <p className="font-medium text-txt-primary">{booking.customer?.name}</p>
+              </div>
+              <div>
+                <Label className="text-txt-secondary text-sm">Phone</Label>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-txt-primary">{booking.customer?.phone}</p>
+                  <Phone className="h-4 w-4 text-txt-muted" />
                 </div>
               </div>
+              <div>
+                <Label className="text-txt-secondary text-sm">Service</Label>
+                <p className="font-medium text-txt-primary">{booking.service?.name}</p>
+              </div>
+              <div>
+                <Label className="text-txt-secondary text-sm">Duration</Label>
+                <p className="font-medium text-txt-primary">{booking.service?.duration} minutes</p>
+              </div>
+              <div>
+                <Label className="text-txt-secondary text-sm">Status</Label>
+                <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[booking.status]}`}>
+                  {booking.status.toUpperCase()}
+                </Badge>
+              </div>
+            </div>
 
-              {/* Amount Breakdown */}
-              <div className="p-4 bg-gray-50 rounded-lg border space-y-2">
+            {/* Amount Breakdown */}
+            <div className="p-4 bg-gray-50 rounded-md border border-gray-200 space-y-2">
                 <h3 className="font-semibold text-sm mb-3">Amount Breakdown</h3>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Base Service Amount</span>
@@ -734,12 +731,12 @@ export function UnifiedBookingPanel({
               </div>
 
               {booking.isHomeVisit && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mt-4 p-3 bg-primary-light/30 rounded-md border border-primary-light">
                   <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-blue-600 mt-1" />
+                    <MapPin className="h-4 w-4 text-primary mt-1" />
                     <div>
-                      <p className="text-sm font-medium text-blue-900">Home Visit</p>
-                      <p className="text-sm text-blue-700">{booking.homeVisitAddress}</p>
+                      <p className="text-sm font-medium text-primary">Home Visit</p>
+                      <p className="text-sm text-txt-secondary">{booking.homeVisitAddress}</p>
                     </div>
                   </div>
                 </div>
@@ -747,8 +744,8 @@ export function UnifiedBookingPanel({
 
               {booking.notes && (
                 <div>
-                  <Label className="text-gray-600">Notes</Label>
-                  <p className="text-sm">{booking.notes}</p>
+                  <Label className="text-txt-secondary text-sm">Notes</Label>
+                  <p className="text-sm text-txt-primary">{booking.notes}</p>
                 </div>
               )}
 
@@ -1025,8 +1022,7 @@ export function UnifiedBookingPanel({
               </div>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+        </div>
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>

@@ -30,12 +30,12 @@ export function BookingDetailsDrawer({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-0 sm:rounded-lg">
-        <DialogHeader className="sticky top-0 bg-white z-10 border-b px-6 py-4">
+      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-0 sm:rounded-card bg-body border-0">
+        <DialogHeader className="sticky top-0 bg-white z-10 border-b border-gray-100 px-6 py-4 rounded-t-card">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="text-2xl">Booking Details</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-xl font-bold text-txt-primary">Booking Details</DialogTitle>
+              <DialogDescription className="text-txt-secondary text-sm">
                 View and manage booking information with unified panel
               </DialogDescription>
             </div>
@@ -43,7 +43,7 @@ export function BookingDetailsDrawer({
               variant="ghost"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 text-txt-muted hover:bg-gray-100 hover:text-txt-primary"
             >
               <X className="h-4 w-4" />
             </Button>

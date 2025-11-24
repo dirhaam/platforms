@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Booking, Service } from '@/types/booking';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, MapPin, Clock, DollarSign, Navigation } from 'lucide-react';
@@ -59,10 +58,10 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
 
   if (bookings.length === 0) {
     return (
-      <Card className="p-6 text-center">
-        <MapPin className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-        <p className="text-gray-500">Tidak ada home visit bookings</p>
-      </Card>
+      <div className="bg-white rounded-card shadow-card p-12 text-center border border-gray-100">
+        <MapPin className="h-12 w-12 mx-auto text-txt-muted mb-4 opacity-50" />
+        <p className="text-txt-muted text-sm">Tidak ada home visit bookings</p>
+      </div>
     );
   }
 
@@ -73,7 +72,7 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
         const service = services.get(booking.serviceId);
 
         return (
-          <Card key={booking.id} className="overflow-hidden hover:shadow-md transition-shadow">
+          <div key={booking.id} className="bg-white rounded-card shadow-card overflow-hidden hover:shadow-lg transition-all duration-300 border border-gray-100">
             {/* Collapsible Header */}
             <button
               onClick={() => setExpandedId(isExpanded ? null : booking.id)}
@@ -270,7 +269,7 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         );
       })}
     </div>

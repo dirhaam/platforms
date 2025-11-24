@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { MapPin, AlertTriangle } from 'lucide-react';
 import { Booking, Service } from '@/types/booking';
 import { HomeVisitBookingList } from './HomeVisitBookingList';
@@ -46,60 +44,56 @@ export function HomeVisitBookingManager({
 
   if (homeVisitBookings.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Tidak ada home visit bookings</h3>
-          <p className="text-muted-foreground text-center">
-            Home visit bookings akan ditampilkan di sini setelah dibuat dari menu booking.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="bg-white rounded-card shadow-card p-12 text-center border border-gray-100">
+        <MapPin className="h-12 w-12 text-txt-muted mb-4 mx-auto opacity-50" />
+        <h3 className="text-lg font-semibold text-txt-primary mb-2">Tidak ada home visit bookings</h3>
+        <p className="text-txt-muted text-sm">
+          Home visit bookings akan ditampilkan di sini setelah dibuat dari menu booking.
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Summary Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Home Visit Schedule
-              </CardTitle>
-              <CardDescription>
-                {homeVisitBookings.length} home visit{homeVisitBookings.length !== 1 ? 's' : ''} - Tampilan daftar
-              </CardDescription>
-            </div>
-            <Badge variant="outline">{homeVisitBookings.length} bookings</Badge>
+      <div className="bg-white rounded-card shadow-card p-5 border border-gray-100">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="flex items-center gap-2 font-semibold text-lg text-txt-primary mb-1">
+              <MapPin className="h-5 w-5" />
+              Home Visit Schedule
+            </h4>
+            <p className="text-txt-secondary text-sm">
+              {homeVisitBookings.length} home visit{homeVisitBookings.length !== 1 ? 's' : ''} - Tampilan daftar
+            </p>
           </div>
-        </CardHeader>
-      </Card>
+          <div className="bg-primary-light px-3 py-1 rounded text-sm font-medium text-primary">
+            {homeVisitBookings.length} bookings
+          </div>
+        </div>
+      </div>
 
       {/* Warning if missing travel data */}
       {missingTravelData.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div>
-                <p className="font-medium text-yellow-800">
-                  {missingTravelData.length} booking(s) belum memiliki data travel
-                </p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Travel calculation akan dilakukan saat membuat booking baru melalui menu booking.
-                </p>
-              </div>
+        <div className="bg-orange-50 rounded-card p-5 border border-orange-200 shadow-card">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-txt-primary">
+                {missingTravelData.length} booking(s) belum memiliki data travel
+              </p>
+              <p className="text-sm text-txt-secondary mt-1">
+                Travel calculation akan dilakukan saat membuat booking baru melalui menu booking.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Collapsible List with Mini-Maps */}
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground mb-2">
+      <div className="space-y-3">
+        <p className="text-sm text-txt-muted mb-3">
           💡 Klik untuk expand dan lihat map perjalanan dari homebase ke masing-masing customer
         </p>
         <HomeVisitBookingList 
