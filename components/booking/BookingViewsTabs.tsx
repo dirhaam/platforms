@@ -186,7 +186,7 @@ export function BookingViewsTabs({
               {filteredBookings.length}
             </h3>
             <div className="flex items-center gap-1 text-xs text-success font-medium">
-              <i className='bx bx-up-arrow-alt'></i>
+              <i className='bx bx-arrow-up'></i>
               <span>Active</span>
             </div>
           </div>
@@ -206,7 +206,7 @@ export function BookingViewsTabs({
           {/* Pending Payment */}
           <div className="bg-white rounded-card shadow-card p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border border-gray-100">
             <div className="w-10 h-10 rounded bg-orange-100 flex items-center justify-center text-warning mb-3">
-              <i className='bx bx-time-five text-2xl'></i>
+              <i className='bx bx-clock-5 text-2xl'></i>
             </div>
             <span className="block text-txt-secondary text-sm mb-1">Pending Payment</span>
             <h3 className="text-2xl font-bold text-txt-primary mb-3">

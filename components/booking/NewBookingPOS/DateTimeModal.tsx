@@ -118,7 +118,7 @@ export function DateTimeModal({
               
               {availableSlots.length === 0 ? (
                 <div className="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                  <i className='bx bx-time-five text-4xl text-txt-muted mb-3'></i>
+                  <i className='bx bx-clock-5 text-4xl text-txt-muted mb-3'></i>
                   <p className="text-sm text-txt-secondary">No available time slots for this date.</p>
                   <Button variant="link" onClick={() => onStepChange('date')} className="text-primary mt-2">Pick another date</Button>
                 </div>
@@ -212,7 +212,7 @@ export function DateTimeModal({
                   onClick={() => onStepChange('date')}
                   className="text-txt-secondary"
                 >
-                  <i className='bx bx-arrow-back mr-1'></i> Back to Date
+                  <i className='bx bx-arrow-left mr-1'></i> Back to Date
                 </Button>
                 <Button
                   variant="ghost"

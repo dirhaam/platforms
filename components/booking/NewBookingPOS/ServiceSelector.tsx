@@ -33,7 +33,7 @@ export function ServiceSelector({
                 {service.name}
               </div>
               <div className={`text-xs mt-1 ${selectedServiceId === service.id ? 'text-primary/80' : 'text-txt-muted'}`}>
-                <i className='bx bx-time-five inline-block mr-1'></i>{service.duration} min
+                <i className='bx bx-clock-5 inline-block mr-1'></i>{service.duration} min
               </div>
             </div>
             <div className={`text-sm font-bold ${selectedServiceId === service.id ? 'text-primary' : 'text-txt-primary'}`}>

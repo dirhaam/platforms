@@ -35,7 +35,7 @@ export function HomeVisitSection({
           className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
         <Label htmlFor="homeVisit" className="cursor-pointer text-sm font-medium text-txt-primary select-none flex items-center gap-2">
-          <i className='bx bx-map-pin text-lg text-txt-secondary'></i>
+          <i className='bx bx-location-pin text-lg text-txt-secondary'></i>
           Home Visit Service
         </Label>
       </div>

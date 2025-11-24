@@ -293,7 +293,7 @@ export function NewBookingPOS({
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center h-full text-txt-muted">
-                      <i className='bx bx-loader-alt bx-spin text-3xl mb-2'></i>
+                      <i className='bx bx-loader-lines bx-spin text-3xl mb-2'></i>
                       <span className="text-sm">Loading resources...</span>
                     </div>
                   ) : (
@@ -378,7 +378,7 @@ export function NewBookingPOS({
                     className="bg-primary hover:bg-primary-dark text-white font-semibold shadow-lg shadow-primary/30 min-w-[150px]"
                   >
                     {submitting ? (
-                      <><i className='bx bx-loader-alt bx-spin mr-2'></i> Processing</>
+                      <><i className='bx bx-loader-lines bx-spin mr-2'></i> Processing</>
                     ) : (
                       <><i className='bx bx-check mr-2'></i> Create Booking</>
                     )}

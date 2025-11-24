@@ -29,7 +29,7 @@ export function NotesSection({
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-danger px-4 py-3 rounded-lg flex items-start gap-3">
-          <i className='bx bx-error-circle text-xl mt-0.5'></i>
+          <i className='bx bx-alert-circle text-xl mt-0.5'></i>
           <p className="text-sm">{error}</p>
         </div>
       )}

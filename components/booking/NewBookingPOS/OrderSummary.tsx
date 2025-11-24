@@ -41,7 +41,7 @@ export function OrderSummary({
       
       {!selectedService ? (
         <div className="text-center py-8 text-txt-muted bg-gray-50 rounded-lg border border-dashed border-gray-200">
-          <i className='bx bx-cart-alt text-3xl mb-2 opacity-50'></i>
+          <i className='bx bx-cart text-3xl mb-2 opacity-50'></i>
           <p className="text-sm">Select a service to view breakdown</p>
         </div>
       ) : (

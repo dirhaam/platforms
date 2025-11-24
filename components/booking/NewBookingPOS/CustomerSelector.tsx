@@ -160,7 +160,7 @@ export function CustomerSelector({
               disabled={creatingCustomer || !newCustomer.name.trim() || !newCustomer.phone.trim()}
               className="h-9 flex-1 bg-primary hover:bg-primary-dark text-white shadow-sm"
             >
-              {creatingCustomer ? <i className='bx bx-loader-alt bx-spin'></i> : 'Save Customer'}
+              {creatingCustomer ? <i className='bx bx-loader-lines bx-spin'></i> : 'Save Customer'}
             </Button>
             <Button
               type="button"

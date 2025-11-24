@@ -456,7 +456,7 @@ export function UnifiedBookingPanel({
           <h4 className="text-xs font-bold text-txt-muted uppercase tracking-wider mb-3">Service Details</h4>
           <div className="flex items-start gap-3">
              <div className="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center text-primary">
-                <i className='bx bx-time-five text-xl'></i>
+                <i className='bx bx-clock-5 text-xl'></i>
              </div>
              <div>
                 <p className="font-semibold text-txt-primary">{displayService.name || 'Unknown Service'}</p>
