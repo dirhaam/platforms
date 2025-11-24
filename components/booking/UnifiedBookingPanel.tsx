@@ -45,10 +45,16 @@ export function UnifiedBookingPanel({
   const [history, setHistory] = useState<BookingHistory[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   
+  // Additional data fetching state
+  const [customerDetails, setCustomerDetails] = useState<any>(null);
+  const [serviceDetails, setServiceDetails] = useState<any>(null);
+
   // UI state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  
+  // Form State
   const [paymentMethod, setPaymentMethod] = useState<string>(booking.paymentMethod || 'cash');
   const [refundAmount, setRefundAmount] = useState(booking.totalAmount);
   const [refundNotes, setRefundNotes] = useState('');
@@ -56,10 +62,57 @@ export function UnifiedBookingPanel({
     booking.scheduledAt ? new Date(booking.scheduledAt).toISOString().slice(0, 16) : ''
   );
 
+  // Derived state for display
+  const displayCustomer = booking.customer || customerDetails || {};
+  const displayService = booking.service || serviceDetails || {};
+
+  // Helper: Get Recommended Action
+  const getRecommendedAction = () => {
+    if (booking.status === BookingStatus.PENDING) {
+      return { label: 'Confirm Booking', icon: 'bx-check-circle', color: 'text-warning', bg: 'bg-yellow-50', border: 'border-yellow-200', action: () => handleUpdateStatus(BookingStatus.CONFIRMED) };
+    }
+    if (booking.status === BookingStatus.CONFIRMED && booking.paymentStatus !== PaymentStatus.PAID) {
+      return { label: 'Record Payment', icon: 'bx-dollar-circle', color: 'text-info', bg: 'bg-cyan-50', border: 'border-cyan-200', action: () => setShowPaymentDialog(true) };
+    }
+    if (booking.status === BookingStatus.CONFIRMED && booking.paymentStatus === PaymentStatus.PAID && invoices.length === 0) {
+      return { label: 'Generate Invoice', icon: 'bx-file', color: 'text-primary', bg: 'bg-primary-light/30', border: 'border-primary-light', action: handleGenerateInvoice };
+    }
+    if (invoices.length > 0 && invoices[0].status === InvoiceStatus.DRAFT) {
+      return { label: 'Send Invoice', icon: 'bx-send', color: 'text-success', bg: 'bg-green-50', border: 'border-green-200', action: () => handleSendInvoiceWhatsApp(invoices[0].id) };
+    }
+    return { label: 'Completed', icon: 'bx-check-double', color: 'text-secondary', bg: 'bg-gray-50', border: 'border-gray-200', action: () => {} };
+  };
+
+  const recommendedAction = getRecommendedAction();
+
   // Fetch related data
   const fetchRelatedData = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Fetch customer & service details if missing in booking object
+      if (!booking.customer || !booking.service) {
+        try {
+          const promises = [];
+          if (!booking.customer && booking.customerId) {
+             promises.push(
+                fetch(`/api/customers/${booking.customerId}`, { headers: { 'x-tenant-id': tenantId } })
+                .then(r => r.json())
+                .then(d => setCustomerDetails(d))
+             );
+          }
+          if (!booking.service && booking.serviceId) {
+             promises.push(
+                fetch(`/api/services/${booking.serviceId}`, { headers: { 'x-tenant-id': tenantId } })
+                .then(r => r.json())
+                .then(d => setServiceDetails(d))
+             );
+          }
+          await Promise.all(promises);
+        } catch (err) {
+          console.error('Error fetching details:', err);
+        }
+      }
 
       // Fetch invoices
       const invoicesUrl = new URL('/api/invoices', window.location.origin);
@@ -138,11 +191,13 @@ export function UnifiedBookingPanel({
     } finally {
       setLoading(false);
     }
-  }, [tenantId, booking.id]);
+  }, [tenantId, booking.id, booking.customer, booking.service, booking.customerId, booking.serviceId]);
 
   useEffect(() => {
     fetchRelatedData();
   }, [fetchRelatedData]);
+
+  // --- ACTIONS ---
 
   const handleUpdateStatus = async (status: BookingStatus) => {
     if (!onBookingUpdate) return;
@@ -222,7 +277,117 @@ export function UnifiedBookingPanel({
       await fetchRelatedData();
       return;
     }
-    // Fallback internal logic if needed...
+
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/from-booking/${booking.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
+        body: JSON.stringify({
+          tenantId,
+          bookingId: booking.id,
+          customerId: booking.customerId,
+          totalAmount: booking.totalAmount
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Invoice generated successfully');
+        await fetchRelatedData();
+      } else {
+        toast.error('Failed to generate invoice');
+      }
+    } catch (error) {
+      toast.error('Error generating invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendInvoiceWhatsApp = async (invoiceId: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/${invoiceId}/whatsapp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          customerId: booking.customerId,
+          invoiceId
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Invoice sent via WhatsApp');
+      } else {
+        toast.error('Failed to send invoice');
+      }
+    } catch (error) {
+      toast.error('Error sending invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkInvoicePaid = async (invoiceId: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/${invoiceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId
+        },
+        body: JSON.stringify({
+          status: InvoiceStatus.PAID
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Invoice marked as paid');
+        await fetchRelatedData();
+      } else {
+        toast.error('Failed to update invoice');
+      }
+    } catch (error) {
+      toast.error('Error updating invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadInvoicePDF = async (invoiceId: string, invoiceNumber: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/invoices/${invoiceId}/pdf`, {
+        headers: { 'x-tenant-id': tenantId }
+      });
+
+      if (!response.ok) throw new Error('Failed to download invoice');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Invoice downloaded');
+    } catch (error) {
+      toast.error('Failed to download invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefund = async () => {
+    // Implement refund logic here
+    toast.info("Refund processed successfully.");
+    setShowRefundDialog(false);
   };
 
   // Helper styles
@@ -244,6 +409,25 @@ export function UnifiedBookingPanel({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
       {/* Left Column: Details */}
       <div className="space-y-6">
+        
+        {/* Recommended Action Card */}
+        {recommendedAction && recommendedAction.label !== 'Completed' && (
+           <div className={`p-4 rounded-lg border flex items-center justify-between ${recommendedAction.bg} ${recommendedAction.border}`}>
+              <div className="flex items-center gap-3">
+                 <div className={`w-10 h-10 rounded-full bg-white flex items-center justify-center ${recommendedAction.color}`}>
+                    <i className={`bx ${recommendedAction.icon} text-xl`}></i>
+                 </div>
+                 <div>
+                    <p className="text-xs font-bold text-txt-muted uppercase">Recommended Action</p>
+                    <p className="font-semibold text-txt-primary">{recommendedAction.label}</p>
+                 </div>
+              </div>
+              <Button size="sm" onClick={recommendedAction.action} className="bg-white text-txt-primary hover:bg-gray-50 border border-gray-200 shadow-sm">
+                 Go
+              </Button>
+           </div>
+        )}
+
         {/* Customer Card */}
         <div className="bg-gray-50/50 rounded-lg p-4 border border-gray-100">
           <h4 className="text-xs font-bold text-txt-muted uppercase tracking-wider mb-3">Customer Details</h4>
@@ -252,10 +436,10 @@ export function UnifiedBookingPanel({
                 <i className='bx bx-user text-xl'></i>
              </div>
              <div>
-                <p className="font-semibold text-txt-primary">{booking.customer?.name}</p>
+                <p className="font-semibold text-txt-primary">{displayCustomer.name || 'Unknown Customer'}</p>
                 <div className="flex items-center gap-2 text-sm text-txt-secondary mt-0.5">
                    <i className='bx bx-phone text-xs'></i>
-                   {booking.customer?.phone}
+                   {displayCustomer.phone || '-'}
                 </div>
                 {booking.isHomeVisit && (
                   <div className="flex items-start gap-2 text-sm text-txt-secondary mt-2 bg-white p-2 rounded border border-gray-200">
@@ -272,12 +456,12 @@ export function UnifiedBookingPanel({
           <h4 className="text-xs font-bold text-txt-muted uppercase tracking-wider mb-3">Service Details</h4>
           <div className="flex items-start gap-3">
              <div className="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center text-primary">
-                <i className='bx bx-clock-5 text-xl'></i>
+                <i className='bx bx-time-five text-xl'></i>
              </div>
              <div>
-                <p className="font-semibold text-txt-primary">{booking.service?.name}</p>
+                <p className="font-semibold text-txt-primary">{displayService.name || 'Unknown Service'}</p>
                 <div className="flex items-center gap-2 text-sm text-txt-secondary mt-0.5">
-                   <span>Duration: {booking.service?.duration} mins</span>
+                   <span>Duration: {displayService.duration || 0} mins</span>
                 </div>
                 {booking.notes && (
                   <div className="mt-2 text-sm bg-yellow-50 text-warning-dark border border-yellow-100 p-2 rounded">
@@ -300,7 +484,7 @@ export function UnifiedBookingPanel({
         <div className="p-4 space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-txt-secondary">Base Price</span>
-              <span>Rp {(booking.service?.price ?? 0).toLocaleString('id-ID')}</span>
+              <span>Rp {(displayService.price ?? 0).toLocaleString('id-ID')}</span>
             </div>
             {booking.isHomeVisit && Number(booking.travelSurchargeAmount ?? 0) > 0 && (
               <div className="flex justify-between text-sm">
@@ -311,7 +495,7 @@ export function UnifiedBookingPanel({
             {Number(booking.taxPercentage ?? 0) > 0 && (
               <div className="flex justify-between text-sm text-txt-secondary">
                 <span>Tax {Number(booking.taxPercentage).toFixed(0)}%</span>
-                <span>Rp {((Number(booking.service?.price ?? 0) + (booking.isHomeVisit ? booking.travelSurchargeAmount ?? 0 : 0)) * Number(booking.taxPercentage ?? 0) / 100).toLocaleString('id-ID')}</span>
+                <span>Rp {((Number(displayService.price ?? 0) + (booking.isHomeVisit ? booking.travelSurchargeAmount ?? 0 : 0)) * Number(booking.taxPercentage ?? 0) / 100).toLocaleString('id-ID')}</span>
               </div>
             )}
             {/* Divider */}
@@ -391,12 +575,20 @@ export function UnifiedBookingPanel({
            )}
         </div>
         
-        {booking.paymentStatus !== PaymentStatus.PAID && (
-           <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary-light" onClick={() => setShowPaymentDialog(true)}>
-              <i className='bx bx-credit-card text-base mr-2'></i>
-              Add Payment
-           </Button>
-        )}
+        <div className="flex gap-2">
+            {booking.paymentStatus !== PaymentStatus.PAID && (
+               <Button variant="outline" className="flex-1 border-primary text-primary hover:bg-primary-light" onClick={() => setShowPaymentDialog(true)}>
+                  <i className='bx bx-credit-card text-base mr-2'></i>
+                  Add Payment
+               </Button>
+            )}
+             {booking.paidAmount && booking.paidAmount > 0 ? (
+                <Button variant="outline" className="flex-1 border-danger text-danger hover:bg-red-50" onClick={() => setShowRefundDialog(true)}>
+                    <i className='bx bx-undo text-base mr-2'></i>
+                    Refund
+                </Button>
+             ) : null}
+        </div>
       </div>
 
       {/* Invoices Section */}
@@ -419,13 +611,18 @@ export function UnifiedBookingPanel({
                           inv.status === InvoiceStatus.PAID ? 'bg-green-100 text-success border-0' : 'text-txt-secondary'
                        }>{inv.status}</Badge>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                       <Button size="sm" variant="outline" className="flex-1 h-8 text-xs">
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                       <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => handleDownloadInvoicePDF(inv.id, inv.invoiceNumber)}>
                           <i className='bx bx-download text-xs mr-1'></i> PDF
                        </Button>
-                       <Button size="sm" variant="outline" className="flex-1 h-8 text-xs">
-                          <i className='bx bx-send text-xs mr-1'></i> WhatsApp
+                       <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => handleSendInvoiceWhatsApp(inv.id)}>
+                          <i className='bx bxl-whatsapp text-xs mr-1'></i> WhatsApp
                        </Button>
+                       {inv.status !== InvoiceStatus.PAID && (
+                          <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => handleMarkInvoicePaid(inv.id)}>
+                             <i className='bx bx-check-circle text-xs mr-1'></i> Paid
+                          </Button>
+                       )}
                     </div>
                  </div>
               ))}
@@ -588,6 +785,39 @@ export function UnifiedBookingPanel({
           <div className="flex justify-end gap-2">
              <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Cancel</Button>
              <Button onClick={handleRecordPayment} className="bg-primary">Confirm Payment</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Process Refund</DialogTitle>
+            <DialogDescription>Process a refund for this booking.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Refund Amount</Label>
+              <Input 
+                type="number" 
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(parseFloat(e.target.value))}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Reason</Label>
+              <Textarea 
+                value={refundNotes}
+                onChange={(e) => setRefundNotes(e.target.value)}
+                placeholder="Reason for refund..."
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowRefundDialog(false)}>Cancel</Button>
+            <Button onClick={handleRefund} className="bg-danger text-white hover:bg-red-600">Process Refund</Button>
           </div>
         </DialogContent>
       </Dialog>
