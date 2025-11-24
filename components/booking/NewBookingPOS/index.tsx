@@ -393,7 +393,11 @@ export function NewBookingPOS({
       {/* Modals */}
       <DateTimeModal
         open={currentStep !== 'main'}
-        onOpenChange={(open) => !open && setCurrentStep('main')}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCurrentStep('main');
+          }
+        }}
         currentStep={currentStep as 'date' | 'time'}
         onStepChange={setCurrentStep}
         selectedDate={booking.scheduledAt}
@@ -408,7 +412,11 @@ export function NewBookingPOS({
 
       <HomeVisitModal
         open={currentStep === 'homevisit'}
-        onOpenChange={(open) => !open && setCurrentStep('main')}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCurrentStep('main');
+          }
+        }}
         address={booking.homeVisitAddress}
         onAddressChange={(addr) => setBooking({ ...booking, homeVisitAddress: addr })}
         latitude={booking.homeVisitLat}

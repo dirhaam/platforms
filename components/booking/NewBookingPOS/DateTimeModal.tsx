@@ -65,8 +65,10 @@ export function DateTimeModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
-      if (!isOpen) onStepChange('main');
-      else onOpenChange(isOpen);
+      onOpenChange(isOpen);
+      if (!isOpen) {
+        onStepChange('main');
+      }
     }}>
       <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden rounded-card shadow-lg border-0">
         <DialogTitle className="sr-only">{currentStep === 'date' ? 'Select Date' : 'Select Time'}</DialogTitle>

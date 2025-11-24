@@ -67,7 +67,7 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {bookings.map((booking) => {
         const isExpanded = expandedId === booking.id;
         const service = services.get(booking.serviceId);
