@@ -49,7 +49,7 @@ export function BookingDetailsDrawer({
             </Button>
           </div>
         </DialogHeader>
-        <div className="px-6 py-4">
+        <div className="p-6">
           <UnifiedBookingPanel
             booking={booking}
             tenantId={tenantId}

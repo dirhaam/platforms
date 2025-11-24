@@ -221,7 +221,7 @@ export function UnifiedBookingPanel({
     if (invoices.length > 0 && invoices[0].status === InvoiceStatus.DRAFT) {
       return { label: 'Send Invoice', color: 'text-purple-600' };
     }
-    return { label: 'Completed', color: 'text-gray-600' };
+    return { label: 'Completed', color: 'text-txt-secondary' };
   };
 
   const handleUpdateStatus = async (status: BookingStatus) => {
@@ -589,8 +589,8 @@ export function UnifiedBookingPanel({
 
   const recommended = getRecommendedAction();
   const statusColor = {
-    [BookingStatus.PENDING]: 'bg-orange-100 text-warning',
-    [BookingStatus.CONFIRMED]: 'bg-primary-light text-primary',
+    [BookingStatus.PENDING]: 'bg-yellow-100 text-warning',
+    [BookingStatus.CONFIRMED]: 'bg-green-100 text-success',
     [BookingStatus.COMPLETED]: 'bg-green-100 text-success',
     [BookingStatus.CANCELLED]: 'bg-red-100 text-danger',
     [BookingStatus.NO_SHOW]: 'bg-gray-100 text-txt-muted'
@@ -598,63 +598,70 @@ export function UnifiedBookingPanel({
 
   const paymentStatusColor = booking.paymentStatus === PaymentStatus.PAID 
     ? 'bg-green-100 text-success' 
-    : 'bg-orange-100 text-warning';
+    : 'bg-yellow-100 text-warning';
 
   return (
     <div className="w-full space-y-4">
       {/* Header */}
-      <div className="bg-white rounded-card shadow-card p-5 border border-gray-100">
-        <div className="space-y-4">
-          {/* Title Row */}
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-txt-primary">{booking.bookingNumber}</h2>
-              <p className="text-sm text-txt-secondary mt-1">
-                {booking.customer?.name} • {booking.service?.name}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[booking.status]}`}>
-                {booking.status.toUpperCase()}
-              </Badge>
-              <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${paymentStatusColor}`}>
-                {booking.paymentStatus.toUpperCase()}
-              </Badge>
-            </div>
+      <div className="bg-white rounded-card shadow-card p-6 border-0">
+        <div className="flex items-start gap-5">
+          {/* Icon Container */}
+          <div className="w-12 h-12 rounded bg-primary-light flex items-center justify-center text-primary shrink-0">
+            <Calendar className="h-6 w-6" />
           </div>
 
-          {/* Schedule Row */}
-          <div className="flex items-center gap-6 text-sm text-txt-secondary">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {new Date(booking.scheduledAt).toLocaleDateString()}
+          <div className="flex-1 space-y-4">
+            {/* Title Row */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-txt-primary">{booking.bookingNumber}</h2>
+                <p className="text-sm text-txt-secondary mt-1">
+                  {booking.customer?.name} • {booking.service?.name}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Badge className={`px-3 py-1 rounded text-xs font-bold uppercase shadow-sm ${statusColor[booking.status]}`}>
+                  {booking.status}
+                </Badge>
+                <Badge className={`px-3 py-1 rounded text-xs font-bold uppercase shadow-sm ${paymentStatusColor}`}>
+                  {booking.paymentStatus}
+                </Badge>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              {new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-txt-primary">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
-            </div>
-          </div>
 
-          {/* Recommended Action */}
-          <div className="flex items-center justify-between bg-primary-light/30 p-3 rounded-md border border-primary-light">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">
-                Next Action: {recommended.label}
-              </span>
+            {/* Schedule Row */}
+            <div className="flex items-center gap-6 text-sm text-txt-secondary">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                {new Date(booking.scheduledAt).toLocaleDateString()}
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                {new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-txt-primary">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
+              </div>
             </div>
-            {recommended.label !== 'Completed' && (
-              <ChevronDown className="h-4 w-4 text-primary" />
-            )}
+
+            {/* Recommended Action */}
+            <div className="flex items-center justify-between bg-primary-light/50 p-3 rounded-md border border-primary-light/20">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-primary">
+                  Next Action: {recommended.label}
+                </span>
+              </div>
+              {recommended.label !== 'Completed' && (
+                <ChevronDown className="h-4 w-4 text-primary" />
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-card shadow-card p-5 border border-gray-100">
+      <div className="bg-white rounded-card shadow-card p-6 border-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-gray-50">
             <TabsTrigger value="summary" className="data-[state=active]:bg-primary-light data-[state=active]:text-primary text-txt-secondary">Summary</TabsTrigger>
@@ -697,29 +704,29 @@ export function UnifiedBookingPanel({
             <div className="p-4 bg-gray-50 rounded-md border border-gray-200 space-y-2">
                 <h3 className="font-semibold text-sm mb-3">Amount Breakdown</h3>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Base Service Amount</span>
+                  <span className="text-txt-secondary">Base Service Amount</span>
                   <span>Rp {(booking.service?.price ?? 0).toLocaleString('id-ID')}</span>
                 </div>
                 {booking.isHomeVisit && Number(booking.travelSurchargeAmount ?? 0) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Travel Surcharge {booking.travelDistance ? `(${booking.travelDistance.toFixed(1)}km)` : ''}</span>
+                    <span className="text-txt-secondary">Travel Surcharge {booking.travelDistance ? `(${booking.travelDistance.toFixed(1)}km)` : ''}</span>
                     <span>Rp {(Number(booking.travelSurchargeAmount ?? 0)).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {Number(booking.taxPercentage ?? 0) > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600">
+                  <div className="flex justify-between text-sm text-txt-secondary">
                     <span>Tax {Number(booking.taxPercentage).toFixed(2)}%</span>
                     <span>Rp {((Number(booking.service?.price ?? 0) + (booking.isHomeVisit ? booking.travelSurchargeAmount ?? 0 : 0)) * Number(booking.taxPercentage ?? 0) / 100).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {Number(booking.serviceChargeAmount ?? 0) > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600">
+                  <div className="flex justify-between text-sm text-txt-secondary">
                     <span>Service Charge</span>
                     <span>Rp {Number(booking.serviceChargeAmount ?? 0).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {Number(booking.additionalFeesAmount ?? 0) > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600">
+                  <div className="flex justify-between text-sm text-txt-secondary">
                     <span>Additional Fees</span>
                     <span>Rp {Number(booking.additionalFeesAmount ?? 0).toLocaleString('id-ID')}</span>
                   </div>
@@ -783,13 +790,13 @@ export function UnifiedBookingPanel({
               {/* Payment Summary */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-600">Status</Label>
+                  <Label className="text-txt-secondary">Status</Label>
                   <Badge className={paymentStatusColor}>
                     {booking.paymentStatus.toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-gray-600">Total Amount</Label>
+                  <Label className="text-txt-secondary">Total Amount</Label>
                   <p className="font-medium">Rp {booking.totalAmount.toLocaleString('id-ID')}</p>
                 </div>
               </div>
@@ -798,12 +805,12 @@ export function UnifiedBookingPanel({
               {booking.paidAmount !== undefined && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Paid Amount:</span>
+                    <span className="text-txt-secondary">Paid Amount:</span>
                     <span className="font-medium">Rp {(booking.paidAmount || 0).toLocaleString('id-ID')}</span>
                   </div>
                   {booking.remainingBalance !== undefined && booking.remainingBalance > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Remaining Balance:</span>
+                      <span className="text-txt-secondary">Remaining Balance:</span>
                       <span className="font-medium text-orange-600">Rp {booking.remainingBalance.toLocaleString('id-ID')}</span>
                     </div>
                   )}
@@ -838,17 +845,17 @@ export function UnifiedBookingPanel({
                           <span className="font-medium text-sm">{methodLabel}</span>
                           <span className="font-semibold">Rp {(payment.paymentAmount || 0).toLocaleString('id-ID')}</span>
                         </div>
-                        <div className="flex justify-between text-xs text-gray-500">
+                        <div className="flex justify-between text-xs text-txt-muted">
                           <span>{paidDate?.toLocaleDateString('id-ID') || 'Invalid Date'}</span>
                           <span>{paidDate?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) || ''}</span>
                         </div>
                         {payment.paymentReference && (
-                          <div className="text-xs text-gray-600">
+                          <div className="text-xs text-txt-secondary">
                             Ref: {payment.paymentReference}
                           </div>
                         )}
                         {payment.notes && (
-                          <div className="text-xs text-gray-600">
+                          <div className="text-xs text-txt-secondary">
                             Notes: {payment.notes}
                           </div>
                         )}
@@ -859,7 +866,7 @@ export function UnifiedBookingPanel({
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-4 text-gray-500 text-sm">
+                <div className="text-center py-4 text-txt-muted text-sm">
                   No payment history
                 </div>
               )}
@@ -894,9 +901,9 @@ export function UnifiedBookingPanel({
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">{invoice.invoiceNumber}</p>
-                          <p className="text-sm text-gray-600">Rp {invoice.totalAmount.toLocaleString('id-ID')}</p>
+                          <p className="text-sm text-txt-secondary">Rp {invoice.totalAmount.toLocaleString('id-ID')}</p>
                           {invoice.dueDate && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-txt-muted">
                               Due: {new Date(invoice.dueDate).toLocaleDateString('id-ID')}
                             </p>
                           )}
@@ -959,9 +966,9 @@ export function UnifiedBookingPanel({
                 </div>
               ) : (
                 <div className="py-6 text-center space-y-3">
-                  <p className="text-sm text-gray-600">No invoices yet</p>
+                  <p className="text-sm text-txt-secondary">No invoices yet</p>
                   {booking.paymentStatus === PaymentStatus.PENDING ? (
-                    <p className="text-xs text-gray-500">Record payment first to generate invoice</p>
+                    <p className="text-xs text-txt-muted">Record payment first to generate invoice</p>
                   ) : booking.paymentStatus === PaymentStatus.PAID ? (
                     <Button 
                       onClick={handleGenerateInvoice}
@@ -998,8 +1005,8 @@ export function UnifiedBookingPanel({
                           {getActionIcon()}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-sm text-gray-900">{item.action}</p>
-                          <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                          <p className="font-semibold text-sm text-txt-primary">{item.action}</p>
+                          <p className="text-xs text-txt-muted mt-1 flex items-center gap-2">
                             <Clock className="h-3 w-3" />
                             {new Date(item.timestamp).toLocaleString('id-ID')}
                             <span className="text-gray-400">•</span>
@@ -1015,7 +1022,7 @@ export function UnifiedBookingPanel({
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-txt-muted">
                     <p className="text-sm">Belum ada riwayat booking</p>
                   </div>
                 )}
@@ -1135,7 +1142,7 @@ export function UnifiedBookingPanel({
           <div className="space-y-4">
             <div>
               <Label>Current Scheduled Date</Label>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-txt-secondary mt-1">
                 {new Date(booking.scheduledAt).toLocaleString('id-ID')}
               </p>
             </div>
