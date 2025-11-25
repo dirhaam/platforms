@@ -6,6 +6,8 @@ import { Sidebar } from '@/components/tenant/Sidebar';
 import { Navbar } from '@/components/tenant/Navbar';
 import { cn } from '@/lib/utils';
 
+import { fetchTenantBySubdomain } from '@/lib/subdomain-fetcher';
+
 function TenantAdminLayoutContent({
   children,
 }: {
@@ -15,10 +17,25 @@ function TenantAdminLayoutContent({
   const subdomain = searchParams?.get('subdomain') || '';
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [tenantData, setTenantData] = useState<{ logo?: string; businessName?: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+
+    const loadTenantData = async () => {
+      if (subdomain) {
+        const data = await fetchTenantBySubdomain(subdomain);
+        if (data) {
+          setTenantData({
+            logo: data.logo,
+            businessName: data.businessName
+          });
+        }
+      }
+    };
+
+    loadTenantData();
+  }, [subdomain]);
 
   if (!mounted) {
     return null;
@@ -30,6 +47,8 @@ function TenantAdminLayoutContent({
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
         subdomain={subdomain}
+        logo={tenantData?.logo}
+        businessName={tenantData?.businessName}
       />
 
       <div
@@ -46,7 +65,7 @@ function TenantAdminLayoutContent({
 
           {/* Footer */}
           <footer className="mt-12 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()}, made with ❤️ by Booqing</p>
+            <p>&copy; {new Date().getFullYear()} {tenantData?.businessName || 'Booqing'}, made with ❤️ by Booqing</p>
             <div className="flex gap-4 mt-2 md:mt-0">
               <a href="#" className="hover:text-primary">License</a>
               <a href="#" className="hover:text-primary">Documentation</a>

@@ -26,6 +26,8 @@ interface SidebarProps {
     collapsed: boolean;
     setCollapsed: (val: boolean) => void;
     subdomain?: string;
+    logo?: string;
+    businessName?: string;
 }
 
 const NAV_ITEMS = [
@@ -43,7 +45,7 @@ const NAV_ITEMS = [
     { title: 'Settings', path: '/settings', icon: Settings },
 ];
 
-export function Sidebar({ collapsed, setCollapsed, subdomain }: SidebarProps) {
+export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName }: SidebarProps) {
     const pathname = usePathname();
 
     return (
@@ -56,11 +58,17 @@ export function Sidebar({ collapsed, setCollapsed, subdomain }: SidebarProps) {
             {/* Brand Logo */}
             <div className="h-20 flex items-center justify-center px-6 relative">
                 <Link href={`/tenant/admin?subdomain=${subdomain}`} className="flex items-center gap-2 cursor-pointer">
-                    <div className="text-primary text-3xl">
-                        <Command className="w-8 h-8" />
-                    </div>
+                    {logo ? (
+                        <img src={logo} alt={businessName || 'Logo'} className="w-8 h-8 object-contain" />
+                    ) : (
+                        <div className="text-primary text-3xl">
+                            <Command className="w-8 h-8" />
+                        </div>
+                    )}
                     {!collapsed && (
-                        <span className="text-2xl font-bold text-foreground tracking-tight">sneat</span>
+                        <span className="text-xl font-bold text-foreground tracking-tight truncate max-w-[150px]">
+                            {businessName || 'NamaWebsite'}
+                        </span>
                     )}
                 </Link>
 
