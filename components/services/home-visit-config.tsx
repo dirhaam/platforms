@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface HomeVisitConfig {
@@ -100,34 +99,41 @@ export function HomeVisitConfig({ serviceId, tenantId, onSave }: Props) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="shadow-card border-none rounded-card bg-white">
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <i className='bx bx-loader-alt animate-spin text-2xl text-primary'></i>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
+    <Card className="shadow-card border-none rounded-card bg-white">
       <CardHeader>
-        <CardTitle>Home Visit Configuration</CardTitle>
-        <CardDescription>
-          Configure how this service handles home visit bookings
-        </CardDescription>
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-10 h-10 rounded bg-primary-light flex items-center justify-center text-primary">
+            <i className='bx bx-home-heart text-xl'></i>
+          </div>
+          <div>
+            <CardTitle className="text-lg font-semibold text-txt-primary">Home Visit Configuration</CardTitle>
+            <CardDescription className="text-txt-secondary">
+              Configure how this service handles home visit bookings
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+          <Alert variant="destructive" className="bg-red-50 border-red-200 text-danger">
+            <i className='bx bx-error-circle text-xl mr-2'></i>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {success && (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+          <Alert className="border-green-200 bg-green-50 text-success">
+            <i className='bx bx-check-circle text-xl mr-2'></i>
+            <AlertDescription>
               Configuration saved successfully
             </AlertDescription>
           </Alert>
@@ -135,43 +141,51 @@ export function HomeVisitConfig({ serviceId, tenantId, onSave }: Props) {
 
         {/* Service Type */}
         <div className="space-y-2">
-          <Label htmlFor="service-type">Service Type</Label>
+          <Label htmlFor="service-type" className="text-txt-primary font-semibold flex items-center gap-2">
+            <i className='bx bx-category text-primary'></i> Service Type
+          </Label>
           <Select
             value={config.serviceType}
             onValueChange={(value: any) =>
               setConfig({ ...config, serviceType: value })
             }
           >
-            <SelectTrigger id="service-type">
+            <SelectTrigger id="service-type" className="bg-gray-50 border-transparent focus:bg-white focus:border-primary">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="on_premise">
-                On Premise Only (Office/Salon)
+                <div className="flex items-center gap-2">
+                  <i className='bx bx-building'></i> On Premise Only (Office/Salon)
+                </div>
               </SelectItem>
               <SelectItem value="home_visit">
-                Home Visit Only (Customer Home)
+                <div className="flex items-center gap-2">
+                  <i className='bx bx-home'></i> Home Visit Only (Customer Home)
+                </div>
               </SelectItem>
               <SelectItem value="both">
-                Both (Flexible)
+                <div className="flex items-center gap-2">
+                  <i className='bx bx-buildings'></i> Both (Flexible)
+                </div>
               </SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-txt-muted">
             Choose where this service can be performed
           </p>
         </div>
 
         {/* Show home visit options only if home_visit is selected */}
         {(config.serviceType === 'home_visit' || config.serviceType === 'both') && (
-          <>
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
             {/* Full Day Booking */}
-            <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 p-4">
               <div className="space-y-1">
-                <Label className="text-base font-medium">
-                  Full Day Booking Only
+                <Label className="text-base font-medium text-txt-primary flex items-center gap-2">
+                  <i className='bx bx-calendar-event text-primary'></i> Full Day Booking Only
                 </Label>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-txt-secondary">
                   Only allow 1 booking per day per staff (e.g., Makeup Artist)
                 </p>
               </div>
@@ -180,13 +194,14 @@ export function HomeVisitConfig({ serviceId, tenantId, onSave }: Props) {
                 onCheckedChange={(checked) =>
                   setConfig({ ...config, homeVisitFullDayBooking: checked })
                 }
+                className="data-[state=checked]:bg-primary"
               />
             </div>
 
             {/* Travel Buffer Minutes */}
             <div className="space-y-2">
-              <Label htmlFor="buffer-minutes">
-                Travel Buffer Between Appointments (minutes)
+              <Label htmlFor="buffer-minutes" className="text-txt-primary font-semibold flex items-center gap-2">
+                <i className='bx bx-time-five text-primary'></i> Travel Buffer (minutes)
               </Label>
               <Input
                 id="buffer-minutes"
@@ -200,16 +215,17 @@ export function HomeVisitConfig({ serviceId, tenantId, onSave }: Props) {
                     homeVisitMinBufferMinutes: parseInt(e.target.value) || 0,
                   })
                 }
+                className="bg-gray-50 border-transparent focus:bg-white focus:border-primary"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-txt-muted">
                 Time needed for travel between appointments. Default: 30 minutes
               </p>
             </div>
 
             {/* Daily Quota */}
             <div className="space-y-2">
-              <Label htmlFor="daily-quota">
-                Daily Quota Per Staff (optional)
+              <Label htmlFor="daily-quota" className="text-txt-primary font-semibold flex items-center gap-2">
+                <i className='bx bx-list-check text-primary'></i> Daily Quota Per Staff
               </Label>
               <Input
                 id="daily-quota"
@@ -226,22 +242,22 @@ export function HomeVisitConfig({ serviceId, tenantId, onSave }: Props) {
                       : undefined,
                   })
                 }
+                className="bg-gray-50 border-transparent focus:bg-white focus:border-primary"
               />
-              <p className="text-xs text-gray-500">
-                Maximum bookings per staff member per day. Leave empty for
-                unlimited.
+              <p className="text-xs text-txt-muted">
+                Maximum bookings per staff member per day. Leave empty for unlimited.
               </p>
             </div>
-          </>
+          </div>
         )}
 
         {/* Requires Staff Assignment */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 p-4">
           <div className="space-y-1">
-            <Label className="text-base font-medium">
-              Requires Staff Assignment
+            <Label className="text-base font-medium text-txt-primary flex items-center gap-2">
+              <i className='bx bx-user-check text-primary'></i> Requires Staff Assignment
             </Label>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-txt-secondary">
               Each booking must be assigned to a staff member
             </p>
           </div>
@@ -250,6 +266,7 @@ export function HomeVisitConfig({ serviceId, tenantId, onSave }: Props) {
             onCheckedChange={(checked) =>
               setConfig({ ...config, requiresStaffAssignment: checked })
             }
+            className="data-[state=checked]:bg-primary"
           />
         </div>
 
@@ -257,11 +274,18 @@ export function HomeVisitConfig({ serviceId, tenantId, onSave }: Props) {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="w-full"
+          className="w-full bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/20"
           size="lg"
         >
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Configuration
+          {saving ? (
+            <>
+              <i className='bx bx-loader-alt animate-spin mr-2'></i> Saving...
+            </>
+          ) : (
+            <>
+              <i className='bx bx-save mr-2'></i> Save Configuration
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>
