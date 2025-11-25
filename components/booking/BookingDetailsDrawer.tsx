@@ -31,16 +31,16 @@ export function BookingDetailsDrawer({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-0 sm:rounded-card bg-body border-0">
-        <div className="p-0">
 
-          <UnifiedBookingPanel
-            booking={booking}
-            tenantId={tenantId}
-            onBookingUpdate={onBookingUpdate}
-            onGenerateInvoice={onGenerateInvoice}
-            isGeneratingInvoice={isGeneratingInvoice}
-            onClose={() => onOpenChange(false)}
-          />
+
+        <UnifiedBookingPanel
+          booking={booking}
+          tenantId={tenantId}
+          onBookingUpdate={onBookingUpdate}
+          onGenerateInvoice={onGenerateInvoice}
+          isGeneratingInvoice={isGeneratingInvoice}
+          onClose={() => onOpenChange(false)}
+        />
 
       </DialogContent>
     </Dialog>
