@@ -132,7 +132,7 @@ export function BookingCalendar({
   const BookingDetailPanel = () => {
     const displayDate = currentDate;
     const bookingsForDate = getBookingsForDate(displayDate);
-    
+
     return (
       <div className="flex-1 pl-4 border-l border-gray-200">
         <h3 className="font-semibold text-sm mb-4 text-txt-primary flex items-center gap-2">
@@ -142,8 +142,8 @@ export function BookingCalendar({
         <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
           {bookingsForDate.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-               <i className='bx bx-coffee text-2xl text-txt-muted mb-2'></i>
-               <p className="text-xs text-txt-secondary">No bookings for this date</p>
+              <i className='bx bx-coffee text-2xl text-txt-muted mb-2'></i>
+              <p className="text-xs text-txt-secondary">No bookings for this date</p>
             </div>
           ) : (
             bookingsForDate.map(booking => (
@@ -175,30 +175,34 @@ export function BookingCalendar({
   /* MONTH VIEW */
   const renderMonthView = () => (
     <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2 mb-4">
+      {/* Header */}
+      <div className="relative flex items-center justify-center mb-6">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigateMonth('prev')}
-            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
+            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
             type="button"
           >
             <i className='bx bx-chevron-left text-xl'></i>
           </button>
-          <span className="text-lg font-bold text-txt-primary whitespace-nowrap">
+          <span className="text-lg font-bold text-txt-primary w-48 text-center select-none">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </span>
           <button
             onClick={() => navigateMonth('next')}
-            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
+            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
             type="button"
           >
             <i className='bx bx-chevron-right text-xl'></i>
           </button>
+        </div>
+
+        <div className="absolute right-0 top-1/2 -translate-y-1/2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs px-3 h-8 border-gray-200 text-txt-secondary">
-                {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-                <i className='bx bx-chevron-down ml-1 text-base'></i>
+              <Button variant="outline" size="sm" className="w-32 justify-between text-xs px-3 h-9 border-gray-200 text-txt-secondary">
+                {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View
+                <i className='bx bx-chevron-down text-base'></i>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32">
@@ -214,55 +218,57 @@ export function BookingCalendar({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-2">
-          {weekdays.map((day, idx) => (
-            <div
-              key={day}
-              className={`h-8 flex items-center justify-center font-semibold text-xs uppercase tracking-wider text-center ${idx === 6 ? 'text-danger' : 'text-txt-muted'}`}
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-2">
-          {getCalendarDays().map((day, idx) => {
-            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-            const isToday = day.toDateString() === new Date().toDateString();
-            const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
-            const isSunday = day.getDay() === 0;
-            const dayBookings = getBookingsForDate(day);
-            return (
-              <button
-                key={idx}
-                onClick={() => isCurrentMonth && onDateSelect(day)}
-                disabled={!isCurrentMonth}
-                className={`
+      </div>
+
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 gap-2">
+        {weekdays.map((day, idx) => (
+          <div
+            key={day}
+            className={`h-8 flex items-center justify-center font-semibold text-xs uppercase tracking-wider text-center ${idx === 6 ? 'text-danger' : 'text-txt-muted'}`}
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {getCalendarDays().map((day, idx) => {
+          const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+          const isToday = day.toDateString() === new Date().toDateString();
+          const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
+          const isSunday = day.getDay() === 0;
+          const dayBookings = getBookingsForDate(day);
+          return (
+            <button
+              key={idx}
+              onClick={() => isCurrentMonth && onDateSelect(day)}
+              disabled={!isCurrentMonth}
+              className={`
                   flex flex-col items-center justify-center rounded-lg font-semibold text-sm
                   h-10 w-full transition-all relative select-none
-                  ${isSelected 
-                     ? 'bg-primary text-white shadow-lg shadow-primary/40' 
-                     : isCurrentMonth 
-                        ? (isSunday ? 'text-danger hover:bg-red-50' : 'text-txt-primary hover:bg-primary-light/50 hover:text-primary')
-                        : 'text-gray-300 cursor-not-allowed'}
+                  ${isSelected
+                  ? 'bg-primary text-white shadow-lg shadow-primary/40'
+                  : isCurrentMonth
+                    ? (isSunday ? 'text-danger hover:bg-red-50' : 'text-txt-primary hover:bg-primary-light/50 hover:text-primary')
+                    : 'text-gray-300 cursor-not-allowed'}
                   ${isToday && !isSelected ? 'ring-1 ring-primary text-primary bg-white' : ''}
                   group
                 `}
-                type="button"
-              >
-                <span className="relative z-10">{day.getDate()}</span>
-                {dayBookings.length > 0 && isCurrentMonth && (
-                  <div className="flex gap-0.5 mt-0.5">
-                    {dayBookings.slice(0, 3).map((_, i) => (
-                      <div key={i} className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-primary'}`} />
-                    ))}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+              type="button"
+            >
+              <span className="relative z-10">{day.getDate()}</span>
+              {dayBookings.length > 0 && isCurrentMonth && (
+                <div className="flex gap-0.5 mt-0.5">
+                  {dayBookings.slice(0, 3).map((_, i) => (
+                    <div key={i} className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-primary'}`} />
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -273,30 +279,34 @@ export function BookingCalendar({
 
     return (
       <div className="space-y-4">
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2 mb-4">
+        {/* Header */}
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigateWeek('prev')}
-              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-               <i className='bx bx-chevron-left text-xl'></i>
+              <i className='bx bx-chevron-left text-xl'></i>
             </button>
-            <span className="text-lg font-bold text-txt-primary whitespace-nowrap">
+            <span className="text-lg font-bold text-txt-primary w-48 text-center select-none">
               Week {Math.ceil((days[0].getDate() / 7))}
             </span>
             <button
               onClick={() => navigateWeek('next')}
-              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-               <i className='bx bx-chevron-right text-xl'></i>
+              <i className='bx bx-chevron-right text-xl'></i>
             </button>
+          </div>
+
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs px-3 h-8 border-gray-200 text-txt-secondary">
-                  {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-                  <i className='bx bx-chevron-down ml-1 text-base'></i>
+                <Button variant="outline" size="sm" className="w-32 justify-between text-xs px-3 h-9 border-gray-200 text-txt-secondary">
+                  {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View
+                  <i className='bx bx-chevron-down text-base'></i>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-32">
@@ -312,66 +322,68 @@ export function BookingCalendar({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {/* Day headers */}
-          <div className="flex gap-2 mb-2 overflow-hidden pl-12">
-            {days.map(day => {
-              const isToday = day.toDateString() === new Date().toDateString();
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={`flex-1 p-1 text-center rounded-md text-xs flex flex-col items-center justify-center
+        </div>
+
+        {/* Day headers */}
+        <div className="flex gap-2 mb-2 overflow-hidden pl-12">
+          {days.map(day => {
+            const isToday = day.toDateString() === new Date().toDateString();
+            return (
+              <div
+                key={day.toISOString()}
+                className={`flex-1 p-1 text-center rounded-md text-xs flex flex-col items-center justify-center
                      ${isToday ? 'bg-primary-light text-primary font-bold' : 'bg-gray-50 text-txt-secondary'}
                   `}
-                >
-                  <div className="text-[10px] opacity-70 uppercase">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                  <div className="text-sm">{day.getDate()}</div>
-                </div>
-              );
-            })}
+              >
+                <div className="text-[10px] opacity-70 uppercase">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                <div className="text-sm">{day.getDate()}</div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Hours grid */}
+        <div className="relative h-[400px] overflow-y-auto custom-scrollbar">
+          {/* Time sidebar */}
+          <div className="absolute left-0 top-0 w-10 space-y-2 pt-2">
+            {hours.map(hour => (
+              <div key={hour} className="h-12 text-[10px] text-txt-muted text-right pr-2 font-medium relative top-[-6px]">
+                {hour.toString().padStart(2, '0')}:00
+              </div>
+            ))}
           </div>
-          {/* Hours grid */}
-          <div className="relative h-[400px] overflow-y-auto custom-scrollbar">
-             {/* Time sidebar */}
-             <div className="absolute left-0 top-0 w-10 space-y-2 pt-2">
-                {hours.map(hour => (
-                   <div key={hour} className="h-12 text-[10px] text-txt-muted text-right pr-2 font-medium relative top-[-6px]">
-                      {hour.toString().padStart(2, '0')}:00
-                   </div>
-                ))}
-             </div>
-             
-             {/* Grid */}
-             <div className="ml-10 grid grid-cols-7 gap-2 pt-2">
-                {days.map(day => {
-                   return (
-                      <div key={day.toISOString()} className="space-y-2">
-                         {hours.map(hour => {
-                             const dayBookings = getBookingsForDate(day);
-                             const bookingsInHour = dayBookings.filter(b => toDate(b.scheduledAt).getHours() === hour);
-                             const hasBooking = bookingsInHour.length > 0;
-                             
-                             return (
-                                <div
-                                  key={hour}
-                                  onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
-                                  className={`
+
+          {/* Grid */}
+          <div className="ml-10 grid grid-cols-7 gap-2 pt-2">
+            {days.map(day => {
+              return (
+                <div key={day.toISOString()} className="space-y-2">
+                  {hours.map(hour => {
+                    const dayBookings = getBookingsForDate(day);
+                    const bookingsInHour = dayBookings.filter(b => toDate(b.scheduledAt).getHours() === hour);
+                    const hasBooking = bookingsInHour.length > 0;
+
+                    return (
+                      <div
+                        key={hour}
+                        onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
+                        className={`
                                      h-12 rounded border border-transparent hover:border-primary/30 transition-all cursor-pointer relative
                                      ${hasBooking ? 'bg-primary-light/50 border-primary/20' : 'bg-gray-50/50 hover:bg-gray-100'}
                                   `}
-                                >
-                                   {hasBooking && (
-                                      <div className="absolute inset-0.5 bg-primary rounded-sm text-[10px] text-white flex items-center justify-center font-bold shadow-sm">
-                                         {bookingsInHour.length > 1 ? `${bookingsInHour.length}` : getInitials(bookingsInHour[0].customer?.name || '')}
-                                      </div>
-                                   )}
-                                </div>
-                             )
-                         })}
+                      >
+                        {hasBooking && (
+                          <div className="absolute inset-0.5 bg-primary rounded-sm text-[10px] text-white flex items-center justify-center font-bold shadow-sm">
+                            {bookingsInHour.length > 1 ? `${bookingsInHour.length}` : getInitials(bookingsInHour[0].customer?.name || '')}
+                          </div>
+                        )}
                       </div>
-                   )
-                })}
-             </div>
+                    )
+                  })}
+                </div>
+              )
+            })}
           </div>
+        </div>
       </div>
     );
   };
@@ -389,30 +401,34 @@ export function BookingCalendar({
 
     return (
       <div className="space-y-4">
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2 mb-4">
+        {/* Header */}
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigateDay('prev')}
-              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-               <i className='bx bx-chevron-left text-xl'></i>
+              <i className='bx bx-chevron-left text-xl'></i>
             </button>
-            <span className="text-lg font-bold text-txt-primary whitespace-nowrap">
+            <span className="text-lg font-bold text-txt-primary w-48 text-center select-none">
               {currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
             <button
               onClick={() => navigateDay('next')}
-              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-1.5 flex items-center transition-colors text-txt-secondary"
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
               type="button"
             >
-               <i className='bx bx-chevron-right text-xl'></i>
+              <i className='bx bx-chevron-right text-xl'></i>
             </button>
+          </div>
+
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs px-3 h-8 border-gray-200 text-txt-secondary">
-                  {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-                  <i className='bx bx-chevron-down ml-1 text-base'></i>
+                <Button variant="outline" size="sm" className="w-32 justify-between text-xs px-3 h-9 border-gray-200 text-txt-secondary">
+                  {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View
+                  <i className='bx bx-chevron-down text-base'></i>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-32">
@@ -428,43 +444,45 @@ export function BookingCalendar({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {/* Hours list */}
-          <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
-            {hours.map(hour => {
-              const hourBookings = bookingsByHour[hour] || [];
-              return (
-                <div key={hour} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group">
-                  <div className="w-14 pt-2 text-xs font-semibold text-txt-muted text-right">
-                    {hour.toString().padStart(2, '0')}:00
-                  </div>
-                  <div className="flex-1 space-y-2 pt-1">
-                    {hourBookings.length === 0 ? (
-                      <div className="h-8 border-b border-gray-100 group-hover:border-dashed group-hover:border-gray-300 w-full"></div>
-                    ) : (
-                      hourBookings.map(booking => (
-                        <div
-                          key={booking.id}
-                          className={`p-3 rounded-md border cursor-pointer shadow-sm hover:shadow-md transition-all ${getStatusColor(booking.status)}`}
-                          onClick={e => {
-                            e.stopPropagation();
-                            onBookingClick?.(booking);
-                          }}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-bold text-sm">{booking.customer?.name}</div>
-                              <div className="text-xs opacity-90">{booking.service?.name}</div>
-                            </div>
-                            <Badge variant="outline" className="text-[10px] bg-white/60 border-0 px-1.5">{booking.status}</Badge>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+        </div>
+
+        {/* Hours list */}
+        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+          {hours.map(hour => {
+            const hourBookings = bookingsByHour[hour] || [];
+            return (
+              <div key={hour} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                <div className="w-14 pt-2 text-xs font-semibold text-txt-muted text-right">
+                  {hour.toString().padStart(2, '0')}:00
                 </div>
-              );
-            })}
-          </div>
+                <div className="flex-1 space-y-2 pt-1">
+                  {hourBookings.length === 0 ? (
+                    <div className="h-8 border-b border-gray-100 group-hover:border-dashed group-hover:border-gray-300 w-full"></div>
+                  ) : (
+                    hourBookings.map(booking => (
+                      <div
+                        key={booking.id}
+                        className={`p-3 rounded-md border cursor-pointer shadow-sm hover:shadow-md transition-all ${getStatusColor(booking.status)}`}
+                        onClick={e => {
+                          e.stopPropagation();
+                          onBookingClick?.(booking);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-sm">{booking.customer?.name}</div>
+                            <div className="text-xs opacity-90">{booking.service?.name}</div>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] bg-white/60 border-0 px-1.5">{booking.status}</Badge>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };

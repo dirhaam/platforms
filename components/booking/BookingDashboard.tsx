@@ -29,10 +29,10 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   // New Booking states
   const [showNewBookingDialog, setShowNewBookingDialog] = useState(false);
-  
+
   // Quick Sale states
   const [showQuickSaleDialog, setShowQuickSaleDialog] = useState(false);
   const [salesTransactions, setSalesTransactions] = useState<SalesTransaction[]>([]);
@@ -44,14 +44,14 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [showInvoicePrompt, setShowInvoicePrompt] = useState(false);
   const [selectedSalesTransaction, setSelectedSalesTransaction] = useState<SalesTransaction | null>(null);
   const [showSalesDetailsDialog, setShowSalesDetailsDialog] = useState(false);
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'calendar' | 'booking' | 'sales' | 'home-visits'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
+
   // Home Visits states
   const [services, setServices] = useState<any[]>([]);
   const [businessLocation, setBusinessLocation] = useState<string>('');
@@ -440,7 +440,7 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   return (
     <div className="w-full space-y-6">
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 px-1">
+      <div className="flex justify-end gap-3 px-6">
         <Button onClick={() => setShowNewBookingDialog(true)} className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30">
           <Plus className="h-4 w-4 mr-2" />
           New Booking
@@ -459,32 +459,32 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
       {/* Booking Views */}
       <div className="mt-6">
         <BookingViewsTabs
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        filteredBookings={filteredBookings}
-        selectedDate={selectedDate}
-        onDateSelect={setSelectedDate}
-        onBookingClick={handleBookingClick}
-        salesTransactions={filteredSales}
-        salesSummary={salesSummary}
-        loadingSales={loadingSales}
-        onNewSale={() => setShowQuickSaleDialog(true)}
-        onViewSalesTransaction={(t) => {
-          setSelectedSalesTransaction(t);
-          setShowSalesDetailsDialog(true);
-        }}
-        resolvedTenantId={resolvedTenantId}
-        bookings={filteredBookings}
-        services={services}
-        businessLocation={businessLocation}
-        businessCoordinates={businessLocationCoords || undefined}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        paymentFilter={paymentFilter}
-        onPaymentChange={setPaymentFilter}
-        onRefreshAll={refreshAll}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          filteredBookings={filteredBookings}
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+          onBookingClick={handleBookingClick}
+          salesTransactions={filteredSales}
+          salesSummary={salesSummary}
+          loadingSales={loadingSales}
+          onNewSale={() => setShowQuickSaleDialog(true)}
+          onViewSalesTransaction={(t) => {
+            setSelectedSalesTransaction(t);
+            setShowSalesDetailsDialog(true);
+          }}
+          resolvedTenantId={resolvedTenantId}
+          bookings={filteredBookings}
+          services={services}
+          businessLocation={businessLocation}
+          businessCoordinates={businessLocationCoords || undefined}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          paymentFilter={paymentFilter}
+          onPaymentChange={setPaymentFilter}
+          onRefreshAll={refreshAll}
         />
       </div>
 
