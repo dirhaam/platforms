@@ -171,25 +171,33 @@ export async function PUT(
 
     // Log to subscription history
     if (changes.length > 0) {
-      await supabase.from('subscription_history').insert({
-        tenant_id: id,
-        old_plan: currentTenant.subscription_plan,
-        new_plan: updateData.subscription_plan || currentTenant.subscription_plan,
-        old_status: currentTenant.subscription_status,
-        new_status: updateData.subscription_status || currentTenant.subscription_status,
-        old_expires_at: currentTenant.subscription_expires_at,
-        new_expires_at: updateData.subscription_expires_at,
-        changed_by: session.userId,
-        created_at: new Date().toISOString(),
-      }).catch(err => console.error('Subscription history error:', err));
+      try {
+        await supabase.from('subscription_history').insert({
+          tenant_id: id,
+          old_plan: currentTenant.subscription_plan,
+          new_plan: updateData.subscription_plan || currentTenant.subscription_plan,
+          old_status: currentTenant.subscription_status,
+          new_status: updateData.subscription_status || currentTenant.subscription_status,
+          old_expires_at: currentTenant.subscription_expires_at,
+          new_expires_at: updateData.subscription_expires_at,
+          changed_by: session.userId,
+          created_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Subscription history error:', err);
+      }
 
       // Also log to activity logs
-      await supabase.from('activity_logs').insert({
-        tenant_id: id,
-        action: 'subscription_changed',
-        details: changes.join('; '),
-        created_at: new Date().toISOString(),
-      }).catch(err => console.error('Activity log error:', err));
+      try {
+        await supabase.from('activity_logs').insert({
+          tenant_id: id,
+          action: 'subscription_changed',
+          details: changes.join('; '),
+          created_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Activity log error:', err);
+      }
     }
 
     return NextResponse.json({
