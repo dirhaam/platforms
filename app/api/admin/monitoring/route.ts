@@ -122,11 +122,12 @@ export async function GET(request: NextRequest) {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Fetch real data from database with error handling
-    let tenantsResult = { count: 0, error: null as any };
-    let bookingsResult = { count: 0, error: null as any };
-    let customersResult = { count: 0, error: null as any };
-    let servicesResult = { count: 0, error: null as any };
-    let staffResult = { count: 0, error: null as any };
+    let tenantsCount = 0;
+    let bookingsCount = 0;
+    let customersCount = 0;
+    let servicesCount = 0;
+    let staffCount = 0;
+    let dbError: any = null;
 
     try {
       const results = await Promise.all([
@@ -136,13 +137,15 @@ export async function GET(request: NextRequest) {
         supabase.from('services').select('id', { count: 'exact', head: true }),
         supabase.from('staff').select('id', { count: 'exact', head: true }),
       ]);
-      tenantsResult = results[0];
-      bookingsResult = results[1];
-      customersResult = results[2];
-      servicesResult = results[3];
-      staffResult = results[4];
-    } catch (dbError) {
-      console.error('Error fetching table counts:', dbError);
+      tenantsCount = results[0].count || 0;
+      bookingsCount = results[1].count || 0;
+      customersCount = results[2].count || 0;
+      servicesCount = results[3].count || 0;
+      staffCount = results[4].count || 0;
+      dbError = results[0].error || results[1].error;
+    } catch (err) {
+      console.error('Error fetching table counts:', err);
+      dbError = err;
     }
 
     // Try to fetch Prometheus metrics from Supabase endpoint (optional)
@@ -188,11 +191,11 @@ export async function GET(request: NextRequest) {
           : Math.floor(Math.random() * 500) + 100,
       },
       tables: {
-        tenants: tenantsResult.count || 0,
-        bookings: bookingsResult.count || 0,
-        customers: customersResult.count || 0,
-        services: servicesResult.count || 0,
-        staff: staffResult.count || 0,
+        tenants: tenantsCount,
+        bookings: bookingsCount,
+        customers: customersCount,
+        services: servicesCount,
+        staff: staffCount,
       },
       performance: {
         avgResponseTimeMs: prometheusMetrics['http_request_duration_seconds_sum'] 
@@ -214,7 +217,7 @@ export async function GET(request: NextRequest) {
       services: [
         {
           name: 'PostgreSQL Database',
-          status: tenantsResult.error ? 'degraded' : 'online',
+          status: dbError ? 'degraded' : 'online',
           responseTime: Math.floor(Math.random() * 50) + 10,
           lastChecked: new Date().toISOString(),
         },
