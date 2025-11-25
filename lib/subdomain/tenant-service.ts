@@ -96,7 +96,7 @@ export class TenantService {
       const subscriptionExpiresAt = subdomainData.subscriptionExpiresAt;
       const isExpired = subscriptionStatus === 'suspended' || 
         subscriptionStatus === 'cancelled' ||
-        (subscriptionExpiresAt && new Date(subscriptionExpiresAt) < new Date());
+        Boolean(subscriptionExpiresAt && new Date(subscriptionExpiresAt) < new Date());
       
       return {
         id: subdomainData.id,
