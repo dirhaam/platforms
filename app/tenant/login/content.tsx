@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function TenantLoginContent() {
   const router = useRouter();
@@ -117,144 +116,166 @@ export default function TenantLoginContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl">Staff Login</CardTitle>
-          <CardDescription>
-            Enter your credentials to access the dashboard
+    <div className="min-h-screen flex items-center justify-center bg-body p-4">
+      <Card className="w-full max-w-md shadow-card rounded-card border-none bg-white">
+        <CardHeader className="space-y-2 text-center pb-2">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+              <i className='bx bxs-business text-3xl'></i>
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold text-txt-primary">Welcome Back! 👋</CardTitle>
+          <CardDescription className="text-txt-secondary">
+            Please sign-in to your account and start the adventure
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="bg-red-50 text-danger border-none">
+              <div className="flex items-center gap-2">
+                <i className='bx bx-error-circle text-xl'></i>
+                <AlertDescription>{error}</AlertDescription>
+              </div>
             </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Login Type Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Login As</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="text-sm font-medium text-txt-secondary">Login As</label>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setLoginType('owner')}
-                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
-                    loginType === 'owner'
-                      ? 'bg-yellow-50 border-yellow-300 text-yellow-700 font-medium'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-2 text-sm rounded-md border transition-all duration-200 ${loginType === 'owner'
+                      ? 'bg-primary/10 border-primary text-primary font-semibold shadow-sm'
+                      : 'bg-gray-50 border-transparent text-txt-secondary hover:bg-gray-100'
+                    }`}
                   disabled={loading}
                 >
-                  👑 Owner
+                  <i className='bx bxs-crown text-lg'></i>
+                  Owner
                 </button>
                 <button
                   type="button"
                   onClick={() => setLoginType('admin')}
-                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
-                    loginType === 'admin'
-                      ? 'bg-purple-50 border-purple-300 text-purple-700 font-medium'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-2 text-sm rounded-md border transition-all duration-200 ${loginType === 'admin'
+                      ? 'bg-primary/10 border-primary text-primary font-semibold shadow-sm'
+                      : 'bg-gray-50 border-transparent text-txt-secondary hover:bg-gray-100'
+                    }`}
                   disabled={loading}
                 >
-                  🛡️ Admin
+                  <i className='bx bx-shield-quarter text-lg'></i>
+                  Admin
                 </button>
                 <button
                   type="button"
                   onClick={() => setLoginType('staff')}
-                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
-                    loginType === 'staff'
-                      ? 'bg-green-50 border-green-300 text-green-700 font-medium'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-2 text-sm rounded-md border transition-all duration-200 ${loginType === 'staff'
+                      ? 'bg-primary/10 border-primary text-primary font-semibold shadow-sm'
+                      : 'bg-gray-50 border-transparent text-txt-secondary hover:bg-gray-100'
+                    }`}
                   disabled={loading}
                 >
-                  👤 Staff
+                  <i className='bx bx-user text-lg'></i>
+                  Staff
                 </button>
                 <button
                   type="button"
                   onClick={() => setLoginType('superadmin')}
-                  className={`py-2 px-2 text-sm rounded-md border transition-colors ${
-                    loginType === 'superadmin'
-                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-2 text-sm rounded-md border transition-all duration-200 ${loginType === 'superadmin'
+                      ? 'bg-primary/10 border-primary text-primary font-semibold shadow-sm'
+                      : 'bg-gray-50 border-transparent text-txt-secondary hover:bg-gray-100'
+                    }`}
                   disabled={loading}
                 >
-                  🔐 SuperAdmin
+                  <i className='bx bx-key text-lg'></i>
+                  SuperAdmin
                 </button>
               </div>
             </div>
 
             {!subdomain && (
-              <div className="space-y-2">
-                <label htmlFor="subdomain" className="text-sm font-medium">
+              <div className="space-y-1.5">
+                <label htmlFor="subdomain" className="text-sm font-medium text-txt-secondary">
                   Subdomain / Tenant
                 </label>
-                <Input
-                  id="subdomain"
-                  type="text"
-                  placeholder="e.g., test-demo"
-                  value={subdomainInput}
-                  onChange={(e) => setSubdomainInput(e.target.value)}
-                  disabled={loading}
-                  required={!subdomain}
-                />
+                <div className="relative">
+                  <Input
+                    id="subdomain"
+                    type="text"
+                    placeholder="e.g., test-demo"
+                    value={subdomainInput}
+                    onChange={(e) => setSubdomainInput(e.target.value)}
+                    disabled={loading}
+                    required={!subdomain}
+                    className="bg-gray-50 border-transparent focus:bg-white focus:border-primary focus:ring-primary/20 pl-10 h-11 transition-all"
+                  />
+                  <i className='bx bx-buildings absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted text-xl'></i>
+                </div>
               </div>
             )}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-sm font-medium text-txt-secondary">
                 Email
               </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="staff@example.com"
-                value={formData.email}
-                onChange={handleInputChange}
-                disabled={loading}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                  required
+                  className="bg-gray-50 border-transparent focus:bg-white focus:border-primary focus:ring-primary/20 pl-10 h-11 transition-all"
+                />
+                <i className='bx bx-envelope absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted text-xl'></i>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleInputChange}
-                disabled={loading}
-                required
-              />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-sm font-medium text-txt-secondary">
+                  Password
+                </label>
+                <a href="#" className="text-xs text-primary hover:text-primary-dark">Forgot Password?</a>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                  required
+                  className="bg-gray-50 border-transparent focus:bg-white focus:border-primary focus:ring-primary/20 pl-10 h-11 transition-all"
+                />
+                <i className='bx bx-lock-alt absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted text-xl'></i>
+              </div>
             </div>
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-primary hover:bg-primary-dark text-white h-11 font-medium shadow-md hover:shadow-lg transition-all mt-2"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <i className='bx bx-loader-alt bx-spin mr-2 text-xl'></i>
                   Logging in...
                 </>
               ) : (
-                'Login'
+                'Sign in'
               )}
             </Button>
           </form>
 
-          <p className="text-xs text-gray-500 text-center">
-            Tenant: <span className="font-mono">{subdomainInput || subdomain || 'not set'}</span>
+          <p className="text-xs text-txt-muted text-center pt-2">
+            Tenant: <span className="font-mono text-txt-secondary font-medium">{subdomainInput || subdomain || 'not set'}</span>
           </p>
         </CardContent>
       </Card>
