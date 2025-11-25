@@ -142,7 +142,21 @@ export class PermissionService {
     feature: 'bookings' | 'customers' | 'services' | 'staff' | 'analytics' | 'settings' | 'messages' | 'finance'
   ): boolean {
     if (!role) return false;
-    return this.hasPermission(role, feature as keyof RolePermissions);
+    
+    const permissions = this.getDefaultPermissions(role);
+    const featurePermission = permissions[feature as keyof RolePermissions];
+    
+    // If it's a boolean (analytics, settings, messages, finance)
+    if (typeof featurePermission === 'boolean') {
+      return featurePermission;
+    }
+    
+    // If it's an object (bookings, customers, services, staff), check if user has view permission
+    if (typeof featurePermission === 'object' && featurePermission !== null) {
+      return featurePermission.view === true;
+    }
+    
+    return false;
   }
 
   /**
@@ -161,7 +175,7 @@ export class PermissionService {
    * Get visible navigation items based on role
    */
   static getVisibleNavItems(role: UserRole): string[] {
-    const items: string[] = [];
+    const items: string[] = ['dashboard']; // Dashboard is always visible
 
     if (this.canAccess(role, 'bookings')) items.push('bookings');
     if (this.canAccess(role, 'customers')) items.push('customers');

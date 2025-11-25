@@ -76,8 +76,8 @@ export function usePermissions() {
   ): boolean => {
     if (!session?.role) return false;
     
-    // Superadmin and owner have full access
-    if (session.isSuperAdmin || session.role === 'owner' || session.role === 'superadmin') {
+    // Superadmin, owner, and admin have full access
+    if (session.isSuperAdmin || session.role === 'owner' || session.role === 'admin' || session.role === 'superadmin') {
       return true;
     }
     
@@ -95,8 +95,8 @@ export function usePermissions() {
   ): boolean => {
     if (!session?.role) return false;
     
-    // Superadmin and owner have full access
-    if (session.isSuperAdmin || session.role === 'owner' || session.role === 'superadmin') {
+    // Superadmin, owner, and admin have full access
+    if (session.isSuperAdmin || session.role === 'owner' || session.role === 'admin' || session.role === 'superadmin') {
       return true;
     }
     
