@@ -58,7 +58,7 @@ const NAV_ITEMS: NavItem[] = [
     { 
         title: 'Staff', 
         path: '/staff', 
-        icon: 'id-card',
+        icon: 'user-id-card',
         feature: 'staff',
         roles: ['owner', 'admin', 'superadmin']
     },
@@ -80,7 +80,7 @@ const NAV_ITEMS: NavItem[] = [
     { 
         title: 'Analytics', 
         path: '/analytics', 
-        icon: 'bar-chart-alt-2',
+        icon: 'bar-chart',
         feature: 'analytics',
         roles: ['owner', 'admin', 'superadmin']
     },

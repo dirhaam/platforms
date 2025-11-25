@@ -30,12 +30,25 @@ export function BoxIcon({
   className,
   animate
 }: BoxIconProps) {
-  // Build class name based on type
-  const prefix = type === 'regular' ? 'bx' : type === 'solid' ? 'bxs' : 'bxl';
-  const iconClass = `${prefix}-${name}`;
   const animateClass = animate ? `bx-${animate}` : '';
-  
   const sizeValue = typeof size === 'number' ? `${size}px` : size;
+
+  // Brands use different class structure: "bxl bx-{name}"
+  if (type === 'logos') {
+    return (
+      <i 
+        className={cn('bxl', `bx-${name}`, animateClass, className)}
+        style={{
+          fontSize: sizeValue,
+          lineHeight: 1,
+        }}
+      />
+    );
+  }
+
+  // Regular and solid icons: "bx bx-{name}" or "bx bxs-{name}"
+  const prefix = type === 'solid' ? 'bxs' : 'bx';
+  const iconClass = `${prefix}-${name}`;
 
   return (
     <i 

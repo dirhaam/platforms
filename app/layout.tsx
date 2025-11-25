@@ -21,6 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link href="/fonts/boxicons/boxicons.css" rel="stylesheet" />
+        <link href="/fonts/brands/boxicons-brands.css" rel="stylesheet" />
       </head>
       <body className={`${geistSans.variable} antialiased`}>
         {children}
