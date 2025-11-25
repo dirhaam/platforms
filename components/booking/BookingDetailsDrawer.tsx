@@ -31,25 +31,8 @@ export function BookingDetailsDrawer({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-0 sm:rounded-card bg-body border-0">
-        <div className="bg-white px-6 py-5 rounded-t-card border-b border-gray-50">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-txt-primary">Booking Details</h2>
-              <p className="text-txt-secondary text-sm mt-1">
-                View and manage booking information with unified panel
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8 p-0 text-txt-muted hover:bg-gray-100 hover:text-txt-primary"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="p-6">
+        <div className="p-0">
+
           <UnifiedBookingPanel
             booking={booking}
             tenantId={tenantId}
@@ -58,7 +41,7 @@ export function BookingDetailsDrawer({
             isGeneratingInvoice={isGeneratingInvoice}
             onClose={() => onOpenChange(false)}
           />
-        </div>
+
       </DialogContent>
     </Dialog>
   );
