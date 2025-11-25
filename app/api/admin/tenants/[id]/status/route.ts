@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/auth/auth-middleware';
 import { createClient } from '@supabase/supabase-js';
+import { CacheService } from '@/lib/cache/cache-service';
 
 export const runtime = 'nodejs';
 
@@ -35,7 +36,7 @@ export async function PATCH(
     // Get current tenant
     const { data: tenant, error: fetchError } = await supabase
       .from('tenants')
-      .select('id, business_name, subscription_status')
+      .select('id, business_name, subscription_status, subdomain')
       .eq('id', id)
       .single();
 
@@ -62,6 +63,14 @@ export async function PATCH(
         { error: 'Failed to update tenant status' },
         { status: 500 }
       );
+    }
+
+    // Invalidate cache so changes take effect immediately
+    try {
+      await CacheService.invalidateTenant(id, tenant.subdomain);
+      console.log(`Cache invalidated for tenant ${id} (${tenant.subdomain})`);
+    } catch (cacheError) {
+      console.error('Failed to invalidate cache:', cacheError);
     }
 
     // Log to subscription history
