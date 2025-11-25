@@ -91,6 +91,13 @@ const NAV_ITEMS: NavItem[] = [
         feature: 'settings',
         roles: ['owner', 'admin', 'superadmin']
     },
+    { 
+        title: 'Profile', 
+        path: '/profile', 
+        icon: 'user-circle',
+        feature: 'profile',
+        roles: ['owner', 'admin', 'staff', 'superadmin']
+    },
 ];
 
 export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName }: SidebarProps) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,28 +13,78 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BoxIcon } from '@/components/ui/box-icon';
+
+interface UserSession {
+    name: string;
+    email: string;
+    role: string;
+    userId?: string;
+}
 
 export function Navbar() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const subdomain = searchParams?.get('subdomain') || '';
+    
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
+    const [user, setUser] = useState<UserSession>({
+        name: 'User',
+        email: '',
+        role: 'staff',
+    });
     const [notifications, setNotifications] = useState([
         { id: 1, title: 'New Booking', message: 'You have a new booking from John Doe', time: '5m ago', read: false },
         { id: 2, title: 'Payment Received', message: 'Payment of Rp 150.000 received', time: '1h ago', read: false },
         { id: 3, title: 'System Update', message: 'System maintenance scheduled for tonight', time: '5h ago', read: true },
     ]);
 
-    // Mock user data (replace with actual auth hook later)
-    const user = {
-        name: 'Admin User',
-        email: 'admin@example.com',
-        role: 'Owner',
-        avatar: 'https://picsum.photos/seed/admin/100',
+    // Fetch user session data
+    useEffect(() => {
+        const fetchSession = async () => {
+            try {
+                const response = await fetch('/api/auth/session');
+                if (response.ok) {
+                    const data = await response.json();
+                    const session = data.session || data;
+                    setUser({
+                        name: session.name || 'User',
+                        email: session.email || '',
+                        role: session.role || 'staff',
+                        userId: session.userId,
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to fetch session:', error);
+            }
+        };
+        fetchSession();
+    }, []);
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        try {
+            const response = await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (response.ok) {
+                router.push('/tenant/login');
+            } else {
+                console.error('Logout failed');
+                setLoggingOut(false);
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            setLoggingOut(false);
+        }
     };
 
-    const handleLogout = () => {
-        router.push('/auth/login');
+    const handleProfile = () => {
+        router.push(`/tenant/admin/profile?subdomain=${subdomain}`);
     };
 
     const toggleTheme = () => {
@@ -133,8 +183,9 @@ export function Navbar() {
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-10 w-10 rounded-full ml-2">
                                 <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                                    <AvatarImage src={user.avatar} alt={user.name} />
-                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
                                 </Avatar>
                                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></span>
                             </Button>
@@ -144,25 +195,40 @@ export function Navbar() {
                                 <div className="flex flex-col space-y-1">
                                     <p className="text-sm font-medium leading-none">{user.name}</p>
                                     <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                                    <Badge variant="outline" className="w-fit mt-1 capitalize text-xs">
+                                        {user.role}
+                                    </Badge>
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer">
+                            <DropdownMenuItem className="cursor-pointer" onClick={handleProfile}>
                                 <BoxIcon name="user" size={16} className="mr-2 opacity-70" />
-                                <span>Profile</span>
+                                <span>Profile & Subscription</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">
+                            <DropdownMenuItem 
+                                className="cursor-pointer" 
+                                onClick={() => router.push(`/tenant/admin/settings?subdomain=${subdomain}`)}
+                            >
                                 <BoxIcon name="cog" size={16} className="mr-2 opacity-70" />
                                 <span>Settings</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">
-                                <BoxIcon name="credit-card" size={16} className="mr-2 opacity-70" />
-                                <span>Billing</span>
-                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleLogout}>
-                                <BoxIcon name="log-out" size={16} className="mr-2 opacity-70" />
-                                <span>Log out</span>
+                            <DropdownMenuItem 
+                                className="cursor-pointer text-destructive focus:text-destructive" 
+                                onClick={handleLogout}
+                                disabled={loggingOut}
+                            >
+                                {loggingOut ? (
+                                    <>
+                                        <BoxIcon name="loader-alt" size={16} className="mr-2 animate-spin" />
+                                        <span>Logging out...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <BoxIcon name="log-out" size={16} className="mr-2 opacity-70" />
+                                        <span>Logout</span>
+                                    </>
+                                )}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

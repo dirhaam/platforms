@@ -754,7 +754,7 @@ export function UnifiedBookingPanel({
               </Button>
             )}
             {booking.status === BookingStatus.CONFIRMED && (
-              <Button onClick={() => handleUpdateStatus(BookingStatus.COMPLETED)} className="bg-success hover:bg-green-600 text-white shadow-md shadow-green-500/20">
+              <Button onClick={() => handleUpdateStatus(BookingStatus.COMPLETED)} className="!bg-green-500 hover:!bg-green-600 !text-white shadow-md shadow-green-500/20">
                 <i className='bx bx-check-circle text-lg mr-2'></i> Complete
               </Button>
             )}
