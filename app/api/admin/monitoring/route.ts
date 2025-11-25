@@ -56,11 +56,20 @@ function parsePrometheusMetrics(text: string): Record<string, number> {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    let session;
+    try {
+      session = await getServerSession();
+    } catch (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { error: 'Session error', details: String(sessionError) },
+        { status: 500 }
+      );
+    }
     
     if (!session || session.role !== 'superadmin') {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', role: session?.role },
         { status: 401 }
       );
     }
@@ -70,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     if (!supabaseUrl || !serviceRoleKey) {
       return NextResponse.json(
-        { error: 'Supabase configuration missing' },
+        { error: 'Supabase configuration missing', hasUrl: !!supabaseUrl, hasKey: !!serviceRoleKey },
         { status: 500 }
       );
     }
@@ -112,45 +121,56 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch real data from database
-    const [
-      tenantsResult,
-      bookingsResult,
-      customersResult,
-      servicesResult,
-      staffResult,
-      dbStatsResult,
-    ] = await Promise.all([
-      supabase.from('tenants').select('id', { count: 'exact', head: true }),
-      supabase.from('bookings').select('id', { count: 'exact', head: true }),
-      supabase.from('customers').select('id', { count: 'exact', head: true }),
-      supabase.from('services').select('id', { count: 'exact', head: true }),
-      supabase.from('staff').select('id', { count: 'exact', head: true }),
-      // Get database size and connection info from pg_stat
-      supabase.rpc('get_db_stats').catch(() => ({ data: null, error: 'RPC not available' })),
-    ]);
+    // Fetch real data from database with error handling
+    let tenantsResult = { count: 0, error: null as any };
+    let bookingsResult = { count: 0, error: null as any };
+    let customersResult = { count: 0, error: null as any };
+    let servicesResult = { count: 0, error: null as any };
+    let staffResult = { count: 0, error: null as any };
 
-    // Try to fetch Prometheus metrics from Supabase endpoint
+    try {
+      const results = await Promise.all([
+        supabase.from('tenants').select('id', { count: 'exact', head: true }),
+        supabase.from('bookings').select('id', { count: 'exact', head: true }),
+        supabase.from('customers').select('id', { count: 'exact', head: true }),
+        supabase.from('services').select('id', { count: 'exact', head: true }),
+        supabase.from('staff').select('id', { count: 'exact', head: true }),
+      ]);
+      tenantsResult = results[0];
+      bookingsResult = results[1];
+      customersResult = results[2];
+      servicesResult = results[3];
+      staffResult = results[4];
+    } catch (dbError) {
+      console.error('Error fetching table counts:', dbError);
+    }
+
+    // Try to fetch Prometheus metrics from Supabase endpoint (optional)
     let prometheusMetrics: Record<string, number> = {};
     if (projectRef) {
       try {
         const metricsUrl = `https://${projectRef}.supabase.co/customer/v1/privileged/metrics`;
         const authHeader = 'Basic ' + Buffer.from(`service_role:${serviceRoleKey}`).toString('base64');
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         const metricsResponse = await fetch(metricsUrl, {
           headers: {
             'Authorization': authHeader,
           },
-          // Timeout after 5 seconds
-          signal: AbortSignal.timeout(5000),
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
         
         if (metricsResponse.ok) {
           const metricsText = await metricsResponse.text();
           prometheusMetrics = parsePrometheusMetrics(metricsText);
         }
       } catch (metricsError) {
-        console.log('Could not fetch Prometheus metrics:', metricsError);
+        // Silently ignore - Prometheus metrics are optional
+        console.log('Prometheus metrics not available');
       }
     }
 
@@ -230,7 +250,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching monitoring data:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch monitoring data' },
+      { 
+        error: 'Failed to fetch monitoring data', 
+        details: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      },
       { status: 500 }
     );
   }
