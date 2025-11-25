@@ -1,10 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { BoxIcon } from '@/components/ui/box-icon';
+
+interface PendingBooking {
+    id: string;
+    status: string;
+}
 
 interface SidebarProps {
     collapsed: boolean;
@@ -104,6 +109,22 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
     const pathname = usePathname();
     const [userRole, setUserRole] = useState<UserRole | null>(null);
     const [loading, setLoading] = useState(true);
+    const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
+
+    const fetchPendingBookings = useCallback(async () => {
+        if (!subdomain) return;
+        try {
+            const response = await fetch(`/api/bookings?status=pending`, {
+                headers: { 'x-tenant-id': subdomain }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setPendingBookingsCount(data.bookings?.length || 0);
+            }
+        } catch (error) {
+            console.error('Failed to fetch pending bookings:', error);
+        }
+    }, [subdomain]);
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -120,7 +141,12 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
             }
         };
         fetchSession();
-    }, []);
+        fetchPendingBookings();
+        
+        // Refresh pending bookings every 30 seconds
+        const interval = setInterval(fetchPendingBookings, 30000);
+        return () => clearInterval(interval);
+    }, [fetchPendingBookings]);
 
     // Filter nav items based on user role
     const visibleNavItems = NAV_ITEMS.filter(item => {
@@ -193,12 +219,14 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                 ? pathname === fullPath
                                 : pathname?.startsWith(fullPath);
 
+                            const showBadge = item.feature === 'bookings' && pendingBookingsCount > 0;
+
                             return (
                                 <Link
                                     key={item.path}
                                     href={`${fullPath}?subdomain=${subdomain}`}
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium",
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium relative",
                                         isActive
                                             ? "bg-primary/10 text-primary shadow-none"
                                             : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
@@ -206,15 +234,29 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                     )}
                                     title={collapsed ? item.title : ''}
                                 >
-                                    <BoxIcon 
-                                        name={item.icon} 
-                                        type={item.iconType || 'regular'}
-                                        size={20} 
-                                        className={cn(
-                                            isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
+                                    <div className="relative">
+                                        <BoxIcon 
+                                            name={item.icon} 
+                                            type={item.iconType || 'regular'}
+                                            size={20} 
+                                            className={cn(
+                                                isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
+                                            )}
+                                        />
+                                        {showBadge && collapsed && (
+                                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full ring-2 ring-background animate-pulse"></span>
                                         )}
-                                    />
-                                    {!collapsed && <span>{item.title}</span>}
+                                    </div>
+                                    {!collapsed && (
+                                        <div className="flex items-center justify-between flex-1">
+                                            <span>{item.title}</span>
+                                            {showBadge && (
+                                                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                                                    {pendingBookingsCount > 99 ? '99+' : pendingBookingsCount}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </Link>
                             );
                         })}

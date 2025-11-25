@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,12 +15,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BoxIcon } from '@/components/ui/box-icon';
+import { formatDistanceToNow } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 
 interface UserSession {
     name: string;
     email: string;
     role: string;
     userId?: string;
+}
+
+interface BookingNotification {
+    id: string;
+    title: string;
+    message: string;
+    time: string;
+    read: boolean;
+    bookingId: string;
 }
 
 export function Navbar() {
@@ -35,11 +46,31 @@ export function Navbar() {
         email: '',
         role: 'staff',
     });
-    const [notifications, setNotifications] = useState([
-        { id: 1, title: 'New Booking', message: 'You have a new booking from John Doe', time: '5m ago', read: false },
-        { id: 2, title: 'Payment Received', message: 'Payment of Rp 150.000 received', time: '1h ago', read: false },
-        { id: 3, title: 'System Update', message: 'System maintenance scheduled for tonight', time: '5h ago', read: true },
-    ]);
+    const [notifications, setNotifications] = useState<BookingNotification[]>([]);
+
+    const fetchPendingBookings = useCallback(async () => {
+        if (!subdomain) return;
+        try {
+            const response = await fetch(`/api/bookings?status=pending&limit=10`, {
+                headers: { 'x-tenant-id': subdomain }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const bookings = data.bookings || [];
+                const bookingNotifications: BookingNotification[] = bookings.map((booking: any) => ({
+                    id: booking.id,
+                    title: 'Booking Baru',
+                    message: `${booking.customerName || 'Pelanggan'} - ${booking.serviceName || 'Layanan'}`,
+                    time: formatDistanceToNow(new Date(booking.createdAt), { addSuffix: true, locale: idLocale }),
+                    read: false,
+                    bookingId: booking.id,
+                }));
+                setNotifications(bookingNotifications);
+            }
+        } catch (error) {
+            console.error('Failed to fetch pending bookings:', error);
+        }
+    }, [subdomain]);
 
     // Fetch user session data
     useEffect(() => {
@@ -61,7 +92,12 @@ export function Navbar() {
             }
         };
         fetchSession();
-    }, []);
+        fetchPendingBookings();
+
+        // Refresh pending bookings every 30 seconds
+        const interval = setInterval(fetchPendingBookings, 30000);
+        return () => clearInterval(interval);
+    }, [fetchPendingBookings]);
 
     const handleLogout = async () => {
         setLoggingOut(true);
@@ -146,14 +182,18 @@ export function Navbar() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-80">
                             <DropdownMenuLabel className="flex justify-between items-center">
-                                <span>Notifications</span>
-                                {unreadCount > 0 && <Badge variant="secondary" className="text-xs">{unreadCount} New</Badge>}
+                                <span>Booking Pending</span>
+                                {unreadCount > 0 && <Badge variant="secondary" className="text-xs">{unreadCount} Baru</Badge>}
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <div className="max-h-[300px] overflow-y-auto">
                                 {notifications.length > 0 ? (
                                     notifications.map((notification) => (
-                                        <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3 cursor-pointer">
+                                        <DropdownMenuItem 
+                                            key={notification.id} 
+                                            className="flex flex-col items-start p-3 cursor-pointer"
+                                            onClick={() => router.push(`/tenant/admin/bookings?subdomain=${subdomain}`)}
+                                        >
                                             <div className="flex justify-between w-full mb-1">
                                                 <span className={`font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
                                                     {notification.title}
@@ -167,13 +207,16 @@ export function Navbar() {
                                     ))
                                 ) : (
                                     <div className="p-4 text-center text-sm text-muted-foreground">
-                                        No notifications
+                                        Tidak ada booking pending
                                     </div>
                                 )}
                             </div>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="justify-center text-primary font-medium cursor-pointer">
-                                View All Notifications
+                            <DropdownMenuItem 
+                                className="justify-center text-primary font-medium cursor-pointer"
+                                onClick={() => router.push(`/tenant/admin/bookings?subdomain=${subdomain}`)}
+                            >
+                                Lihat Semua Booking
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
