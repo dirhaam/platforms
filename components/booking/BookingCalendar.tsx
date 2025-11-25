@@ -487,6 +487,70 @@ export function BookingCalendar({
     );
   };
 
+  const getUpcomingHomeVisits = (): Booking[] => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+
+    return bookings
+      .filter(b => {
+        const date = toDate(b.scheduledAt);
+        return (
+          b.isHomeVisit &&
+          date >= today &&
+          date <= nextWeek &&
+          (b.status === BookingStatus.PENDING || b.status === BookingStatus.CONFIRMED)
+        );
+      })
+      .sort((a, b) => toDate(a.scheduledAt).getTime() - toDate(b.scheduledAt).getTime());
+  };
+
+  /* Upcoming Home Visits Panel */
+  const UpcomingHomeVisitsPanel = () => {
+    const upcomingVisits = getUpcomingHomeVisits();
+
+    return (
+      <div className="flex-1 pl-4 border-l border-gray-200 mt-6 pt-6 border-t">
+        <h3 className="font-semibold text-sm mb-4 text-txt-primary flex items-center gap-2">
+          <i className='bx bx-map-pin text-primary'></i>
+          Upcoming Home Visits (7 Days)
+        </h3>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+          {upcomingVisits.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+              <i className='bx bx-home text-2xl text-txt-muted mb-2'></i>
+              <p className="text-xs text-txt-secondary">No upcoming home visits</p>
+            </div>
+          ) : (
+            upcomingVisits.map(booking => (
+              <div
+                key={booking.id}
+                className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all duration-200 ${getStatusColor(booking.status)}`}
+                onClick={() => onBookingClick?.(booking)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-1 truncate">{booking.customer?.name}</div>
+                    <div className="text-xs opacity-90 mb-1 flex items-center gap-1">
+                      <i className='bx bx-map text-[10px]'></i>
+                      <span className="truncate">{booking.homeVisitAddress || 'No address'}</span>
+                    </div>
+                    <div className="text-xs font-mono flex items-center gap-1 opacity-80">
+                      <i className='bx bx-calendar'></i>
+                      {toDate(booking.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {formatTime(toDate(booking.scheduledAt))}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] px-1.5 h-5 bg-white/50 border-0 shadow-sm flex-shrink-0">{booking.status}</Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`w-full ${className}`}>
       {/* 2-column layout for all views */}
@@ -499,8 +563,9 @@ export function BookingCalendar({
         </div>
 
         {/* Booking detail panel - side panel on large screens */}
-        <div className="w-full lg:w-72 flex-shrink-0 lg:h-auto">
+        <div className="w-full lg:w-96 flex-shrink-0 lg:h-auto flex flex-col">
           <BookingDetailPanel />
+          <UpcomingHomeVisitsPanel />
         </div>
       </div>
     </div>
