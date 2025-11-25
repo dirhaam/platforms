@@ -10,6 +10,7 @@ import MinimalTemplate from '@/components/subdomain/templates/MinimalTemplate';
 import BeautyTemplate from '@/components/subdomain/templates/BeautyTemplate';
 import HealthcareTemplate from '@/components/subdomain/templates/HealthcareTemplate';
 import HealthcareV2Template from '@/components/subdomain/templates/HealthcareV2Template';
+import { ExpiredLandingWrapper } from '@/components/tenant/ExpiredOverlay';
 
 export async function generateMetadata({
   params
@@ -85,98 +86,55 @@ export default async function SubdomainPage({
     // Select template based on tenant preferences
     const templateId = tenantData.template?.id || 'modern';
 
+    // Common props for all templates
+    const templateProps = {
+      tenant: tenantData,
+      services,
+      businessHours: businessHours || undefined,
+      videos,
+      socialMedia,
+      galleries,
+      videoOptions: mediaSettings,
+    };
+
+    // Helper to wrap template with expired overlay if needed
+    const wrapWithExpired = (template: React.ReactNode) => {
+      if (tenantData.isExpired) {
+        return (
+          <ExpiredLandingWrapper 
+            businessName={tenantData.businessName}
+            expiresAt={tenantData.subscriptionExpiresAt}
+          >
+            {template}
+          </ExpiredLandingWrapper>
+        );
+      }
+      return template;
+    };
+
     // Render appropriate template
     switch (templateId) {
       case 'modern':
-        return (
-          <ModernTemplate
-            tenant={tenantData}
-            services={services}
-            businessHours={businessHours || undefined}
-            videos={videos}
-            socialMedia={socialMedia}
-            galleries={galleries}
-            videoOptions={mediaSettings}
-          />
-        );
+        return wrapWithExpired(<ModernTemplate {...templateProps} />);
       
       case 'classic':
-        return (
-          <ClassicTemplate
-            tenant={tenantData}
-            services={services}
-            businessHours={businessHours || undefined}
-            videos={videos}
-            socialMedia={socialMedia}
-            galleries={galleries}
-            videoOptions={mediaSettings}
-          />
-        );
+        return wrapWithExpired(<ClassicTemplate {...templateProps} />);
       
       case 'minimal':
-        return (
-          <MinimalTemplate
-            tenant={tenantData}
-            services={services}
-            businessHours={businessHours || undefined}
-            videos={videos}
-            socialMedia={socialMedia}
-            galleries={galleries}
-            videoOptions={mediaSettings}
-          />
-        );
+        return wrapWithExpired(<MinimalTemplate {...templateProps} />);
       
       case 'beauty':
-        return (
-          <BeautyTemplate
-            tenant={tenantData}
-            services={services}
-            businessHours={businessHours || undefined}
-            videos={videos}
-            socialMedia={socialMedia}
-            galleries={galleries}
-            videoOptions={mediaSettings}
-          />
-        );
+        return wrapWithExpired(<BeautyTemplate {...templateProps} />);
       
       case 'healthcare':
-        return (
-          <HealthcareTemplate
-            tenant={tenantData}
-            services={services}
-            businessHours={businessHours || undefined}
-            videos={videos}
-            socialMedia={socialMedia}
-            galleries={galleries}
-            videoOptions={mediaSettings}
-          />
-        );
+        return wrapWithExpired(<HealthcareTemplate {...templateProps} />);
       
       case 'healthcarev2':
-        return (
-          <HealthcareV2Template
-            tenant={tenantData}
-            services={services}
-            businessHours={businessHours || undefined}
-            videos={videos}
-            socialMedia={socialMedia}
-            galleries={galleries}
-            videoOptions={mediaSettings}
-          />
-        );
+        return wrapWithExpired(<HealthcareV2Template {...templateProps} />);
       
       default:
         // Fallback to Modern if template not found
-        return (
-          <ModernTemplate
-            tenant={tenantData}
-            services={services}
-            businessHours={businessHours || undefined}
-            videos={videos}
-            socialMedia={socialMedia}
-            galleries={galleries}
-          />
-        );
+        return wrapWithExpired(<ModernTemplate {...templateProps} />);
     }
   } catch (error) {
     console.error('[SubdomainPage] Error:', error);

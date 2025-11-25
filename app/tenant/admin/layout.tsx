@@ -5,8 +5,17 @@ import { useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/tenant/Sidebar';
 import { Navbar } from '@/components/tenant/Navbar';
 import { cn } from '@/lib/utils';
+import { ExpiredAdminBlock } from '@/components/tenant/ExpiredOverlay';
 
 import { fetchTenantBySubdomain } from '@/lib/subdomain-fetcher';
+
+interface TenantData {
+  logo?: string;
+  businessName?: string;
+  subscriptionStatus?: string;
+  subscriptionExpiresAt?: string;
+  isExpired?: boolean;
+}
 
 function TenantAdminLayoutContent({
   children,
@@ -17,28 +26,65 @@ function TenantAdminLayoutContent({
   const subdomain = searchParams?.get('subdomain') || '';
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [tenantData, setTenantData] = useState<{ logo?: string; businessName?: string } | null>(null);
+  const [tenantData, setTenantData] = useState<TenantData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
 
     const loadTenantData = async () => {
       if (subdomain) {
-        const data = await fetchTenantBySubdomain(subdomain);
-        if (data) {
-          setTenantData({
-            logo: data.logo,
-            businessName: data.businessName
-          });
+        try {
+          const data = await fetchTenantBySubdomain(subdomain);
+          if (data) {
+            // Check if subscription is expired
+            const subscriptionStatus = data.subscriptionStatus || 'active';
+            const subscriptionExpiresAt = data.subscriptionExpiresAt;
+            const isExpired = subscriptionStatus === 'suspended' || 
+              subscriptionStatus === 'cancelled' ||
+              (subscriptionExpiresAt && new Date(subscriptionExpiresAt) < new Date());
+            
+            setTenantData({
+              logo: data.logo,
+              businessName: data.businessName,
+              subscriptionStatus,
+              subscriptionExpiresAt: subscriptionExpiresAt ? String(subscriptionExpiresAt) : undefined,
+              isExpired,
+            });
+          }
+        } catch (error) {
+          console.error('Error loading tenant data:', error);
         }
       }
+      setLoading(false);
     };
 
     loadTenantData();
   }, [subdomain]);
 
-  if (!mounted) {
-    return null;
+  if (!mounted || loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show expired block if subscription is expired
+  if (tenantData?.isExpired) {
+    return (
+      <ExpiredAdminBlock 
+        businessName={tenantData.businessName || 'Business'}
+        expiresAt={tenantData.subscriptionExpiresAt}
+        onRenew={() => {
+          // Redirect to contact or show contact info
+          window.location.href = 'mailto:support@booqing.my.id?subject=Perpanjang Subscription';
+        }}
+      />
+    );
   }
 
   return (

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Building2, Users, Settings, BarChart3, MessageSquare, Smartphone,
   ArrowLeft, Globe, ExternalLink, Edit, CreditCard, MapPin, Calendar,
-  Clock, CheckCircle, AlertTriangle, Copy, Check
+  Clock, CheckCircle, AlertTriangle, Copy, Check, Ban, Power, Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -27,9 +27,11 @@ interface TenantDetailViewProps {
 
 type TabType = 'overview' | 'users' | 'services' | 'settings';
 
-export function TenantDetailView({ tenant, stats, staffMembers, services }: TenantDetailViewProps) {
+export function TenantDetailView({ tenant: initialTenant, stats, staffMembers, services }: TenantDetailViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [copied, setCopied] = useState(false);
+  const [tenant, setTenant] = useState(initialTenant);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const getTenantUrl = (subdomain: string) => {
     if (typeof window === 'undefined') return '';
@@ -44,6 +46,29 @@ export function TenantDetailView({ tenant, stats, staffMembers, services }: Tena
     setCopied(true);
     toast.success('URL copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleStatusChange = async (newStatus: 'active' | 'suspended') => {
+    const action = newStatus === 'suspended' ? 'suspend' : 'activate';
+    if (!confirm(`${action === 'suspend' ? 'Suspend' : 'Aktifkan'} "${tenant.business_name}"?`)) return;
+    
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(`/api/admin/tenants/${tenant.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update status');
+      
+      toast.success(data.message || `Tenant berhasil di-${action}`);
+      setTenant(prev => ({ ...prev, subscription_status: newStatus }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal mengubah status tenant');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const statusColors: Record<string, string> = {
@@ -110,6 +135,36 @@ export function TenantDetailView({ tenant, stats, staffMembers, services }: Tena
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Suspend/Activate Button */}
+          {tenant.subscription_status === 'active' ? (
+            <Button 
+              variant="outline"
+              onClick={() => handleStatusChange('suspended')}
+              disabled={isUpdatingStatus}
+              className="text-orange-600 border-orange-300 hover:bg-orange-50"
+            >
+              {isUpdatingStatus ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Ban className="w-4 h-4 mr-2" />
+              )}
+              Suspend
+            </Button>
+          ) : (
+            <Button 
+              variant="outline"
+              onClick={() => handleStatusChange('active')}
+              disabled={isUpdatingStatus}
+              className="text-green-600 border-green-300 hover:bg-green-50"
+            >
+              {isUpdatingStatus ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Power className="w-4 h-4 mr-2" />
+              )}
+              Activate
+            </Button>
+          )}
           <Button variant="outline" asChild>
             <Link href={`/admin/tenants/${tenant.id}/edit`}>
               <Edit className="w-4 h-4 mr-2" />

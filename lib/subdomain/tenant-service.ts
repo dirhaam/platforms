@@ -30,6 +30,10 @@ export interface TenantLandingData {
     accent: string;
   };
   template: LandingPageTemplate;
+  // Subscription info
+  subscriptionStatus: string;
+  subscriptionExpiresAt?: string;
+  isExpired: boolean;
 }
 
 export interface BusinessHours {
@@ -87,6 +91,13 @@ export class TenantService {
         template = getRecommendedTemplate(subdomainData.businessCategory);
       }
       
+      // Check if subscription is expired
+      const subscriptionStatus = subdomainData.subscriptionStatus || 'active';
+      const subscriptionExpiresAt = subdomainData.subscriptionExpiresAt;
+      const isExpired = subscriptionStatus === 'suspended' || 
+        subscriptionStatus === 'cancelled' ||
+        (subscriptionExpiresAt && new Date(subscriptionExpiresAt) < new Date());
+      
       return {
         id: subdomainData.id,
         subdomain: subdomainData.subdomain,
@@ -101,6 +112,9 @@ export class TenantService {
         logo: subdomainData.logo,
         brandColors: subdomainData.brandColors,
         template,
+        subscriptionStatus,
+        subscriptionExpiresAt: subscriptionExpiresAt ? String(subscriptionExpiresAt) : undefined,
+        isExpired,
       };
     } else {
       // Handle legacy data with defaults
@@ -116,6 +130,8 @@ export class TenantService {
         email: '',
         phone: '',
         template,
+        subscriptionStatus: 'active',
+        isExpired: false,
       };
     }
   }

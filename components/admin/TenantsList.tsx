@@ -22,7 +22,10 @@ import {
   MessageSquare,
   MapPin,
   BarChart3,
-  Smartphone
+  Smartphone,
+  Ban,
+  CheckCircle,
+  Power
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -63,6 +66,7 @@ export function TenantsList({ initialSession }: TenantsListProps) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
@@ -103,6 +107,31 @@ export function TenantsList({ initialSession }: TenantsListProps) {
       toast.error(error instanceof Error ? error.message : 'Gagal menghapus tenant');
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const handleStatusChange = async (tenantId: string, tenantName: string, newStatus: 'active' | 'suspended') => {
+    const action = newStatus === 'suspended' ? 'suspend' : 'activate';
+    if (!confirm(`${action === 'suspend' ? 'Suspend' : 'Aktifkan'} "${tenantName}"?`)) return;
+    
+    setIsUpdatingStatus(tenantId);
+    try {
+      const response = await fetch(`/api/admin/tenants/${tenantId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update status');
+      
+      toast.success(data.message || `Tenant "${tenantName}" berhasil di-${action}`);
+      setTenants(prev => prev.map(t => 
+        t.id === tenantId ? { ...t, subscriptionStatus: newStatus } : t
+      ));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal mengubah status tenant');
+    } finally {
+      setIsUpdatingStatus(null);
     }
   };
 
@@ -268,7 +297,9 @@ export function TenantsList({ initialSession }: TenantsListProps) {
               key={tenant.id} 
               tenant={tenant} 
               onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
               isDeleting={isDeleting === tenant.id}
+              isUpdatingStatus={isUpdatingStatus === tenant.id}
               getTenantUrl={getTenantUrl}
               formatDate={formatDate}
             />
@@ -281,7 +312,9 @@ export function TenantsList({ initialSession }: TenantsListProps) {
               key={tenant.id} 
               tenant={tenant} 
               onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
               isDeleting={isDeleting === tenant.id}
+              isUpdatingStatus={isUpdatingStatus === tenant.id}
               getTenantUrl={getTenantUrl}
               formatDate={formatDate}
             />
@@ -299,10 +332,12 @@ export function TenantsList({ initialSession }: TenantsListProps) {
   );
 }
 
-function TenantCard({ tenant, onDelete, isDeleting, getTenantUrl, formatDate }: {
+function TenantCard({ tenant, onDelete, onStatusChange, isDeleting, isUpdatingStatus, getTenantUrl, formatDate }: {
   tenant: Tenant;
   onDelete: (id: string, name: string) => void;
+  onStatusChange: (id: string, name: string, status: 'active' | 'suspended') => void;
   isDeleting: boolean;
+  isUpdatingStatus: boolean;
   getTenantUrl: (subdomain: string) => string;
   formatDate: (timestamp: number) => string;
 }) {
@@ -402,12 +437,37 @@ function TenantCard({ tenant, onDelete, isDeleting, getTenantUrl, formatDate }: 
               Edit
             </Link>
           </Button>
+          {/* Suspend/Activate Button */}
+          {tenant.subscriptionStatus === 'active' ? (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => onStatusChange(tenant.id, tenant.businessName, 'suspended')}
+              disabled={isUpdatingStatus}
+              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              title="Suspend Tenant"
+            >
+              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+            </Button>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => onStatusChange(tenant.id, tenant.businessName, 'active')}
+              disabled={isUpdatingStatus}
+              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              title="Activate Tenant"
+            >
+              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => onDelete(tenant.id, tenant.businessName)}
             disabled={isDeleting}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            title="Delete Tenant"
           >
             {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
           </Button>
@@ -417,10 +477,12 @@ function TenantCard({ tenant, onDelete, isDeleting, getTenantUrl, formatDate }: 
   );
 }
 
-function TenantRow({ tenant, onDelete, isDeleting, getTenantUrl, formatDate }: {
+function TenantRow({ tenant, onDelete, onStatusChange, isDeleting, isUpdatingStatus, getTenantUrl, formatDate }: {
   tenant: Tenant;
   onDelete: (id: string, name: string) => void;
+  onStatusChange: (id: string, name: string, status: 'active' | 'suspended') => void;
   isDeleting: boolean;
+  isUpdatingStatus: boolean;
   getTenantUrl: (subdomain: string) => string;
   formatDate: (timestamp: number) => string;
 }) {
@@ -472,22 +534,47 @@ function TenantRow({ tenant, onDelete, isDeleting, getTenantUrl, formatDate }: {
 
           {/* Actions */}
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" asChild title="View Details">
               <Link href={`/admin/tenants/${tenant.id}`}>
                 <Eye className="w-4 h-4" />
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" asChild title="Edit">
               <Link href={`/admin/tenants/${tenant.id}/edit`}>
                 <Edit className="w-4 h-4" />
               </Link>
             </Button>
+            {/* Suspend/Activate Button */}
+            {tenant.subscriptionStatus === 'active' ? (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => onStatusChange(tenant.id, tenant.businessName, 'suspended')}
+                disabled={isUpdatingStatus}
+                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                title="Suspend Tenant"
+              >
+                {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+              </Button>
+            ) : (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => onStatusChange(tenant.id, tenant.businessName, 'active')}
+                disabled={isUpdatingStatus}
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                title="Activate Tenant"
+              >
+                {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm"
               onClick={() => onDelete(tenant.id, tenant.businessName)}
               disabled={isDeleting}
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              title="Delete Tenant"
             >
               {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             </Button>
