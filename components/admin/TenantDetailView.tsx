@@ -63,7 +63,7 @@ export function TenantDetailView({ tenant: initialTenant, stats, staffMembers, s
       if (!response.ok) throw new Error(data.error || 'Failed to update status');
       
       toast.success(data.message || `Tenant berhasil di-${action}`);
-      setTenant(prev => ({ ...prev, subscription_status: newStatus }));
+      setTenant((prev: any) => ({ ...prev, subscription_status: newStatus }));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Gagal mengubah status tenant');
     } finally {
