@@ -110,6 +110,12 @@ export async function PUT(
     if (body.address !== undefined) updateData.address = body.address;
     if (body.businessDescription !== undefined) updateData.business_description = body.businessDescription;
     if (body.subscriptionPlan) updateData.subscription_plan = body.subscriptionPlan;
+    if (body.subscriptionStatus) updateData.subscription_status = body.subscriptionStatus;
+    if (body.subscriptionExpiresAt !== undefined) {
+      updateData.subscription_expires_at = body.subscriptionExpiresAt 
+        ? new Date(body.subscriptionExpiresAt).toISOString()
+        : null;
+    }
     if (body.whatsappEnabled !== undefined) updateData.whatsapp_enabled = body.whatsappEnabled;
     if (body.homeVisitEnabled !== undefined) updateData.home_visit_enabled = body.homeVisitEnabled;
     if (body.analyticsEnabled !== undefined) updateData.analytics_enabled = body.analyticsEnabled;

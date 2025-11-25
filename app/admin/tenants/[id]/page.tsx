@@ -231,10 +231,10 @@ export default async function TenantDetailPage({
                   Edit Details
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="w-full justify-start">
+              <Button asChild className="w-full justify-start bg-blue-600 hover:bg-blue-700">
                 <Link href={`/admin/tenants/${tenantId}/subscription`}>
                   <BarChart3 className="w-4 h-4 mr-2" />
-                  Subscription
+                  Manage Subscription
                 </Link>
               </Button>
             </div>
