@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Calendar, FileText, Palette, Image, Clock } from 'lucide-react';
+import { Settings, Calendar, FileText, Palette, Image, Clock, Link as LinkIcon } from 'lucide-react';
 import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
@@ -12,6 +12,7 @@ import OperatingHoursSettings from '@/components/settings/OperatingHoursSettings
 import HomeVisitSettings from '@/components/settings/HomeVisitSettings';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
 import LandingPageMediaSettings from '@/components/settings/LandingPageMediaSettings';
+import ContactPageSettings from '@/components/settings/ContactPageSettings';
 import { PermissionGate } from '@/components/tenant/permission-gate';
 
 interface TenantData {
@@ -106,10 +107,14 @@ function SettingsPageInner() {
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-4 mb-4">
+        <TabsList className="grid w-full grid-cols-5 mb-4">
           <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="w-4 h-4" />
             <span className="hidden sm:inline">Appearance</span>
+          </TabsTrigger>
+          <TabsTrigger value="contact" className="flex items-center gap-2">
+            <LinkIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">Contact</span>
           </TabsTrigger>
           <TabsTrigger value="invoice" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
@@ -131,6 +136,15 @@ function SettingsPageInner() {
           <TabsContent value="appearance" className="mt-0">
             <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
               <LandingPageStyleSettings subdomain={subdomain} currentTemplate="modern" />
+            </div>
+          </TabsContent>
+
+          {/* Contact Page Tab */}
+          <TabsContent value="contact" className="mt-0">
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+              {tenantId && subdomain && (
+                <ContactPageSettings tenantId={tenantId} subdomain={subdomain} />
+              )}
             </div>
           </TabsContent>
 

@@ -632,3 +632,48 @@ export const tenantMediaSettings = pgTable('tenant_media_settings', {
 export const tenantMediaSettingsRelations = relations(tenantMediaSettings, ({ one }) => ({
   tenant: one(tenants, { fields: [tenantMediaSettings.tenantId], references: [tenants.id] }),
 }));
+
+// Contact Links table (Linktree feature)
+export const contactLinks = pgTable('contact_links', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  icon: text('icon'),
+  iconType: text('icon_type').default('emoji'),
+  backgroundColor: text('background_color'),
+  textColor: text('text_color'),
+  displayOrder: integer('display_order').default(0),
+  isActive: boolean('is_active').default(true),
+  clickCount: integer('click_count').default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Contact Page Settings table
+export const contactPageSettings = pgTable('contact_page_settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().unique().references(() => tenants.id, { onDelete: 'cascade' }),
+  pageTitle: text('page_title'),
+  pageDescription: text('page_description'),
+  profileImage: text('profile_image'),
+  backgroundType: text('background_type').default('solid'),
+  backgroundValue: text('background_value').default('#000000'),
+  buttonStyle: text('button_style').default('rounded'),
+  buttonShadow: boolean('button_shadow').default(true),
+  fontFamily: text('font_family').default('default'),
+  showSocialIcons: boolean('show_social_icons').default(true),
+  showLogo: boolean('show_logo').default(true),
+  customCss: text('custom_css'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Relations for contact links and contact page settings
+export const contactLinksRelations = relations(contactLinks, ({ one }) => ({
+  tenant: one(tenants, { fields: [contactLinks.tenantId], references: [tenants.id] }),
+}));
+
+export const contactPageSettingsRelations = relations(contactPageSettings, ({ one }) => ({
+  tenant: one(tenants, { fields: [contactPageSettings.tenantId], references: [tenants.id] }),
+}));
