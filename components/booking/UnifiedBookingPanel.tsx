@@ -44,6 +44,7 @@ export function UnifiedBookingPanel({
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [history, setHistory] = useState<BookingHistory[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [calculatedPaidAmount, setCalculatedPaidAmount] = useState<number>(booking.paidAmount || 0);
 
   // Additional data fetching state
   const [customerDetails, setCustomerDetails] = useState<any>(null);
@@ -131,11 +132,17 @@ export function UnifiedBookingPanel({
             updatedAt: p.updated_at
           }));
           setPaymentHistory(mappedPayments);
+          
+          // Calculate total paid amount from payment history
+          const totalPaid = mappedPayments.reduce((sum: number, p: any) => sum + Number(p.paymentAmount || 0), 0);
+          setCalculatedPaidAmount(totalPaid > 0 ? totalPaid : (paymentData.booking?.paidAmount || booking.paidAmount || 0));
         } else {
           setPaymentHistory(booking.paymentHistory || []);
+          setCalculatedPaidAmount(booking.paidAmount || 0);
         }
       } catch (error) {
         setPaymentHistory(booking.paymentHistory || []);
+        setCalculatedPaidAmount(booking.paidAmount || 0);
       }
 
       // Fetch real booking history
@@ -214,12 +221,13 @@ export function UnifiedBookingPanel({
   const handleRecordPayment = async () => {
     try {
       setLoading(true);
+      const paymentAmount = booking.totalAmount - calculatedPaidAmount;
       const response = await fetch(`/api/bookings/${booking.id}/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
         body: JSON.stringify({
           tenantId,
-          paymentAmount: booking.totalAmount - (booking.paidAmount || 0),
+          paymentAmount: paymentAmount,
           paymentMethod: paymentMethod,
           notes: 'Payment recorded'
         })
@@ -577,18 +585,18 @@ export function UnifiedBookingPanel({
         {/* Progress Bar */}
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex justify-between text-sm mb-2">
-            <span className="text-txt-secondary">Paid: Rp {(booking.paidAmount || 0).toLocaleString('id-ID')}</span>
+            <span className="text-txt-secondary">Paid: Rp {calculatedPaidAmount.toLocaleString('id-ID')}</span>
             <span className="font-semibold text-txt-primary">Total: Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
             <div
               className="bg-success h-full transition-all duration-500"
-              style={{ width: `${Math.min(100, ((booking.paidAmount || 0) / booking.totalAmount) * 100)}%` }}
+              style={{ width: `${Math.min(100, (calculatedPaidAmount / booking.totalAmount) * 100)}%` }}
             ></div>
           </div>
-          {(booking.remainingBalance || 0) > 0 && (
+          {(booking.totalAmount - calculatedPaidAmount) > 0 && (
             <p className="text-xs text-danger mt-2 text-right">
-              Remaining: Rp {booking.remainingBalance?.toLocaleString('id-ID')}
+              Remaining: Rp {(booking.totalAmount - calculatedPaidAmount).toLocaleString('id-ID')}
             </p>
           )}
         </div>
@@ -808,9 +816,13 @@ export function UnifiedBookingPanel({
                 <span>Total Bill:</span>
                 <span className="font-semibold">Rp {booking.totalAmount.toLocaleString('id-ID')}</span>
               </div>
+              <div className="flex justify-between mb-1">
+                <span>Paid:</span>
+                <span className="text-success">Rp {calculatedPaidAmount.toLocaleString('id-ID')}</span>
+              </div>
               <div className="flex justify-between text-danger font-bold">
                 <span>Remaining:</span>
-                <span>Rp {((booking.remainingBalance || booking.totalAmount - (booking.paidAmount || 0))).toLocaleString('id-ID')}</span>
+                <span>Rp {(booking.totalAmount - calculatedPaidAmount).toLocaleString('id-ID')}</span>
               </div>
             </div>
             <div>
