@@ -9,7 +9,17 @@ const geistSans = Geist({
 
 export const metadata: Metadata = {
   title: 'Booqing - Professional Booking Platform for Indonesian Businesses',
-  description: 'Create a professional booking system for your business with WhatsApp integration, home visit management, and powerful analytics. Start free today.'
+  description: 'Create a professional booking system for your business with WhatsApp integration, home visit management, and powerful analytics. Start free today.',
+  manifest: '/manifest.json',
+  themeColor: '#3b82f6',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Booqing Admin',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({
@@ -22,6 +32,18 @@ export default function RootLayout({
       <head>
         <link href="/fonts/boxicons/boxicons.css" rel="stylesheet" />
         <link href="/fonts/brands/boxicons-brands.css" rel="stylesheet" />
+        {/* PWA Meta Tags */}
+        <meta name="application-name" content="Booqing Admin" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Booqing" />
+        <link rel="apple-touch-icon" href="/pwa/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/pwa/icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/pwa/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/pwa/icon-192x192.png" />
+        <meta name="msapplication-TileColor" content="#3b82f6" />
+        <meta name="msapplication-tap-highlight" content="no" />
       </head>
       <body className={`${geistSans.variable} antialiased`}>
         {children}
