@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Globe, Moon, Sun, Bell, LogOut, User, Settings, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import { BoxIcon } from '@/components/ui/box-icon';
 
 export function Navbar() {
     const router = useRouter();
@@ -34,14 +34,11 @@ export function Navbar() {
     };
 
     const handleLogout = () => {
-        // Implement actual logout logic here
-        // For now, just redirect
         router.push('/auth/login');
     };
 
     const toggleTheme = () => {
         setIsDarkMode(!isDarkMode);
-        // Implement actual theme switching logic here
     };
 
     const unreadCount = notifications.filter(n => !n.read).length;
@@ -52,7 +49,9 @@ export function Navbar() {
                 {/* Search */}
                 <div className="flex items-center gap-4 flex-1 max-w-xl">
                     <div className="relative w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            <BoxIcon name="search" size={16} className="opacity-50" />
+                        </span>
                         <Input
                             type="text"
                             placeholder="Search bookings, customers, services..."
@@ -67,7 +66,7 @@ export function Navbar() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                                <Globe className="w-5 h-5" />
+                                <BoxIcon name="globe" size={20} className="opacity-70" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -78,14 +77,18 @@ export function Navbar() {
 
                     {/* Theme Toggle */}
                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
-                        {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                        {isDarkMode ? (
+                            <BoxIcon name="moon" size={20} className="opacity-70" />
+                        ) : (
+                            <BoxIcon name="sun" size={20} className="opacity-70" />
+                        )}
                     </Button>
 
                     {/* Notifications */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative">
-                                <Bell className="w-5 h-5" />
+                                <BoxIcon name="bell" size={20} className="opacity-70" />
                                 {unreadCount > 0 && (
                                     <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full ring-2 ring-background animate-pulse"></span>
                                 )}
@@ -145,20 +148,20 @@ export function Navbar() {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="cursor-pointer">
-                                <User className="mr-2 h-4 w-4" />
+                                <BoxIcon name="user" size={16} className="mr-2 opacity-70" />
                                 <span>Profile</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer">
-                                <Settings className="mr-2 h-4 w-4" />
+                                <BoxIcon name="cog" size={16} className="mr-2 opacity-70" />
                                 <span>Settings</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer">
-                                <CreditCard className="mr-2 h-4 w-4" />
+                                <BoxIcon name="credit-card" size={16} className="mr-2 opacity-70" />
                                 <span>Billing</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleLogout}>
-                                <LogOut className="mr-2 h-4 w-4" />
+                                <BoxIcon name="log-out" size={16} className="mr-2 opacity-70" />
                                 <span>Log out</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>

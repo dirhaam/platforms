@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Lock } from 'lucide-react';
+import { BoxIcon } from '@/components/ui/box-icon';
 
 interface ExpiredOverlayProps {
   businessName: string;
@@ -26,7 +26,7 @@ export function ExpiredOverlay({ businessName, expiresAt, isAdmin = false }: Exp
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock className="w-10 h-10 text-red-600" />
+            <BoxIcon name="lock" size={40} className="text-red-600" />
           </div>
           
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -39,7 +39,7 @@ export function ExpiredOverlay({ businessName, expiresAt, isAdmin = false }: Exp
 
           {formattedDate && (
             <div className="flex items-center justify-center gap-2 text-sm text-red-600 mb-6">
-              <AlertTriangle className="w-4 h-4" />
+              <BoxIcon name="error" size={16} />
               <span>Berakhir pada {formattedDate}</span>
             </div>
           )}
@@ -106,7 +106,7 @@ export function ExpiredAdminBlock({
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-8 text-center">
         <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Lock className="w-12 h-12 text-red-600" />
+          <BoxIcon name="lock" size={48} className="text-red-600" />
         </div>
         
         <h1 className="text-3xl font-bold text-gray-900 mb-3">
@@ -119,7 +119,7 @@ export function ExpiredAdminBlock({
 
         {formattedDate && (
           <div className="inline-flex items-center gap-2 text-sm text-red-600 bg-red-50 px-4 py-2 rounded-full mb-6">
-            <AlertTriangle className="w-4 h-4" />
+            <BoxIcon name="error" size={16} />
             <span>Berakhir pada {formattedDate}</span>
           </div>
         )}
@@ -133,8 +133,9 @@ export function ExpiredAdminBlock({
         <div className="space-y-3">
           <button
             onClick={onRenew}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
           >
+            <BoxIcon name="refresh" size={20} />
             Perpanjang Subscription
           </button>
           

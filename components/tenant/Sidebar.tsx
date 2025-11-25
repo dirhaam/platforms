@@ -3,24 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-    Home,
-    Calendar,
-    Users,
-    Briefcase,
-    Contact,
-    TrendingUp,
-    Wallet,
-    FileText,
-    MessageSquare,
-    MessageCircle,
-    BarChart2,
-    Settings,
-    Command,
-    ChevronLeft,
-    Loader2,
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BoxIcon } from '@/components/ui/box-icon';
 
 interface SidebarProps {
     collapsed: boolean;
@@ -35,7 +19,8 @@ type UserRole = 'owner' | 'admin' | 'staff' | 'superadmin';
 interface NavItem {
     title: string;
     path: string;
-    icon: any;
+    icon: string;
+    iconType?: 'regular' | 'solid' | 'logos';
     feature: string;
     roles: UserRole[];
 }
@@ -45,84 +30,64 @@ const NAV_ITEMS: NavItem[] = [
     { 
         title: 'Dashboard', 
         path: '', 
-        icon: Home, 
+        icon: 'home',
         feature: 'dashboard',
         roles: ['owner', 'admin', 'staff', 'superadmin']
     },
     { 
         title: 'Bookings', 
         path: '/bookings', 
-        icon: Calendar, 
+        icon: 'calendar',
         feature: 'bookings',
         roles: ['owner', 'admin', 'staff', 'superadmin']
     },
     { 
         title: 'Customers', 
         path: '/customers', 
-        icon: Users, 
+        icon: 'group',
         feature: 'customers',
         roles: ['owner', 'admin', 'staff', 'superadmin']
     },
     { 
         title: 'Services', 
         path: '/services', 
-        icon: Briefcase, 
+        icon: 'briefcase',
         feature: 'services',
         roles: ['owner', 'admin', 'superadmin']
     },
     { 
         title: 'Staff', 
         path: '/staff', 
-        icon: Contact, 
+        icon: 'id-card',
         feature: 'staff',
         roles: ['owner', 'admin', 'superadmin']
     },
     { 
         title: 'Sales', 
         path: '/sales', 
-        icon: TrendingUp, 
+        icon: 'trending-up',
         feature: 'sales',
         roles: ['owner', 'admin', 'superadmin']
     },
     { 
-        title: 'Finance', 
-        path: '/finance', 
-        icon: Wallet, 
-        feature: 'finance',
-        roles: ['owner', 'admin', 'superadmin']
-    },
-    { 
-        title: 'Invoices', 
-        path: '/invoices', 
-        icon: FileText, 
-        feature: 'invoices',
-        roles: ['owner', 'admin', 'superadmin']
-    },
-    { 
-        title: 'Messages', 
-        path: '/messages', 
-        icon: MessageSquare, 
-        feature: 'messages',
-        roles: ['owner', 'admin', 'staff', 'superadmin']
-    },
-    { 
         title: 'WhatsApp', 
         path: '/whatsapp', 
-        icon: MessageCircle, 
+        icon: 'whatsapp',
+        iconType: 'logos',
         feature: 'whatsapp',
         roles: ['owner', 'admin', 'superadmin']
     },
     { 
         title: 'Analytics', 
         path: '/analytics', 
-        icon: BarChart2, 
+        icon: 'bar-chart-alt-2',
         feature: 'analytics',
         roles: ['owner', 'admin', 'superadmin']
     },
     { 
         title: 'Settings', 
         path: '/settings', 
-        icon: Settings, 
+        icon: 'cog',
         feature: 'settings',
         roles: ['owner', 'admin', 'superadmin']
     },
@@ -170,7 +135,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                         <img src={logo} alt={businessName || 'Logo'} className="w-8 h-8 object-contain" />
                     ) : (
                         <div className="text-primary text-3xl">
-                            <Command className="w-8 h-8" />
+                            <BoxIcon name="command" size={32} />
                         </div>
                     )}
                     {!collapsed && (
@@ -188,7 +153,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                         collapsed && "rotate-180"
                     )}
                 >
-                    <ChevronLeft className="w-4 h-4" />
+                    <BoxIcon name="chevron-left" size={16} />
                 </button>
             </div>
 
@@ -211,7 +176,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
             <div className="flex-1 overflow-y-auto py-2 px-4 custom-scrollbar">
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                        <BoxIcon name="loader-alt" size={20} className="animate-spin opacity-50" />
                     </div>
                 ) : (
                     <nav className="space-y-1">
@@ -234,7 +199,14 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                     )}
                                     title={collapsed ? item.title : ''}
                                 >
-                                    <item.icon className={cn("w-5 h-5", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                                    <BoxIcon 
+                                        name={item.icon} 
+                                        type={item.iconType || 'regular'}
+                                        size={20} 
+                                        className={cn(
+                                            isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
+                                        )}
+                                    />
                                     {!collapsed && <span>{item.title}</span>}
                                 </Link>
                             );

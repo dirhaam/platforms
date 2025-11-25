@@ -182,8 +182,6 @@ export class PermissionService {
     if (this.canAccess(role, 'services')) items.push('services');
     if (this.canAccess(role, 'staff')) items.push('staff');
     if (this.canAccess(role, 'analytics')) items.push('analytics');
-    if (this.canAccess(role, 'messages')) items.push('messages');
-    if (this.canAccess(role, 'finance')) items.push('finance');
     if (this.canAccess(role, 'settings')) items.push('settings');
 
     return items;

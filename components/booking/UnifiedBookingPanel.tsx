@@ -750,12 +750,12 @@ export function UnifiedBookingPanel({
             </Button>
             {booking.status === BookingStatus.PENDING && (
               <Button onClick={() => handleUpdateStatus(BookingStatus.CONFIRMED)} className="bg-primary hover:bg-primary-dark shadow-md shadow-primary/20">
-                Confirm
+                <i className='bx bx-check text-lg mr-2'></i> Confirm
               </Button>
             )}
             {booking.status === BookingStatus.CONFIRMED && (
               <Button onClick={() => handleUpdateStatus(BookingStatus.COMPLETED)} className="bg-success hover:bg-green-600 text-white shadow-md shadow-green-500/20">
-                Complete
+                <i className='bx bx-check-circle text-lg mr-2'></i> Complete
               </Button>
             )}
             <Button variant="outline" onClick={() => setShowRescheduleDialog(true)} className="border-gray-300 text-txt-secondary hover:text-primary hover:border-primary">
