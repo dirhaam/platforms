@@ -11,6 +11,7 @@ import BusinessHoursGlobalSettings from '@/components/settings/BusinessHoursGlob
 import OperatingHoursSettings from '@/components/settings/OperatingHoursSettings';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
 import LandingPageMediaSettings from '@/components/settings/LandingPageMediaSettings';
+import { PermissionGate } from '@/components/tenant/permission-gate';
 
 interface TenantData {
   id: string;
@@ -18,6 +19,14 @@ interface TenantData {
 }
 
 export default function SettingsPageContent() {
+  return (
+    <PermissionGate feature="settings">
+      <SettingsPageInner />
+    </PermissionGate>
+  );
+}
+
+function SettingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain');

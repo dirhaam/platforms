@@ -5,8 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { InvoiceManagement } from '@/components/invoice/InvoiceManagement';
+import { PermissionGate } from '@/components/tenant/permission-gate';
 
 export default function InvoicePageContent() {
+  return (
+    <PermissionGate feature="finance">
+      <InvoicePageInner />
+    </PermissionGate>
+  );
+}
+
+function InvoicePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain');

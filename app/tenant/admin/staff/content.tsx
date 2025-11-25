@@ -7,8 +7,17 @@ import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Plus, Edit2, Trash2 } from 'lucide-react';
+import { PermissionGate } from '@/components/tenant/permission-gate';
 
 export default function StaffPageContent() {
+  return (
+    <PermissionGate feature="staff">
+      <StaffPageInner />
+    </PermissionGate>
+  );
+}
+
+function StaffPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain');

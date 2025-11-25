@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -18,7 +18,7 @@ import {
     Settings,
     Command,
     ChevronLeft,
-    ChevronRight,
+    Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,23 +30,131 @@ interface SidebarProps {
     businessName?: string;
 }
 
-const NAV_ITEMS = [
-    { title: 'Dashboard', path: '', icon: Home },
-    { title: 'Bookings', path: '/bookings', icon: Calendar },
-    { title: 'Customers', path: '/customers', icon: Users },
-    { title: 'Services', path: '/services', icon: Briefcase },
-    { title: 'Staff', path: '/staff', icon: Contact },
-    { title: 'Sales', path: '/sales', icon: TrendingUp },
-    { title: 'Finance', path: '/finance', icon: Wallet },
-    { title: 'Invoices', path: '/invoices', icon: FileText },
-    { title: 'Messages', path: '/messages', icon: MessageSquare },
-    { title: 'WhatsApp', path: '/whatsapp', icon: MessageCircle },
-    { title: 'Analytics', path: '/analytics', icon: BarChart2 },
-    { title: 'Settings', path: '/settings', icon: Settings },
+type UserRole = 'owner' | 'admin' | 'staff' | 'superadmin';
+
+interface NavItem {
+    title: string;
+    path: string;
+    icon: any;
+    feature: string;
+    roles: UserRole[];
+}
+
+// Navigation items with role-based access
+const NAV_ITEMS: NavItem[] = [
+    { 
+        title: 'Dashboard', 
+        path: '', 
+        icon: Home, 
+        feature: 'dashboard',
+        roles: ['owner', 'admin', 'staff', 'superadmin']
+    },
+    { 
+        title: 'Bookings', 
+        path: '/bookings', 
+        icon: Calendar, 
+        feature: 'bookings',
+        roles: ['owner', 'admin', 'staff', 'superadmin']
+    },
+    { 
+        title: 'Customers', 
+        path: '/customers', 
+        icon: Users, 
+        feature: 'customers',
+        roles: ['owner', 'admin', 'staff', 'superadmin']
+    },
+    { 
+        title: 'Services', 
+        path: '/services', 
+        icon: Briefcase, 
+        feature: 'services',
+        roles: ['owner', 'admin', 'superadmin']
+    },
+    { 
+        title: 'Staff', 
+        path: '/staff', 
+        icon: Contact, 
+        feature: 'staff',
+        roles: ['owner', 'admin', 'superadmin']
+    },
+    { 
+        title: 'Sales', 
+        path: '/sales', 
+        icon: TrendingUp, 
+        feature: 'sales',
+        roles: ['owner', 'admin', 'superadmin']
+    },
+    { 
+        title: 'Finance', 
+        path: '/finance', 
+        icon: Wallet, 
+        feature: 'finance',
+        roles: ['owner', 'admin', 'superadmin']
+    },
+    { 
+        title: 'Invoices', 
+        path: '/invoices', 
+        icon: FileText, 
+        feature: 'invoices',
+        roles: ['owner', 'admin', 'superadmin']
+    },
+    { 
+        title: 'Messages', 
+        path: '/messages', 
+        icon: MessageSquare, 
+        feature: 'messages',
+        roles: ['owner', 'admin', 'staff', 'superadmin']
+    },
+    { 
+        title: 'WhatsApp', 
+        path: '/whatsapp', 
+        icon: MessageCircle, 
+        feature: 'whatsapp',
+        roles: ['owner', 'admin', 'superadmin']
+    },
+    { 
+        title: 'Analytics', 
+        path: '/analytics', 
+        icon: BarChart2, 
+        feature: 'analytics',
+        roles: ['owner', 'admin', 'superadmin']
+    },
+    { 
+        title: 'Settings', 
+        path: '/settings', 
+        icon: Settings, 
+        feature: 'settings',
+        roles: ['owner', 'admin', 'superadmin']
+    },
 ];
 
 export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName }: SidebarProps) {
     const pathname = usePathname();
+    const [userRole, setUserRole] = useState<UserRole | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSession = async () => {
+            try {
+                const response = await fetch('/api/auth/session');
+                if (response.ok) {
+                    const data = await response.json();
+                    setUserRole(data.session?.role || data.role || null);
+                }
+            } catch (error) {
+                console.error('Failed to fetch session:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSession();
+    }, []);
+
+    // Filter nav items based on user role
+    const visibleNavItems = NAV_ITEMS.filter(item => {
+        if (!userRole) return false;
+        return item.roles.includes(userRole);
+    });
 
     return (
         <aside
@@ -84,41 +192,65 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                 </button>
             </div>
 
+            {/* Role Badge */}
+            {!collapsed && userRole && (
+                <div className="px-6 pb-2">
+                    <span className={cn(
+                        "text-xs px-2 py-1 rounded-full font-medium",
+                        userRole === 'owner' && "bg-purple-100 text-purple-700",
+                        userRole === 'admin' && "bg-blue-100 text-blue-700",
+                        userRole === 'staff' && "bg-green-100 text-green-700",
+                        userRole === 'superadmin' && "bg-red-100 text-red-700",
+                    )}>
+                        {userRole === 'superadmin' ? 'Super Admin' : userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                    </span>
+                </div>
+            )}
+
             {/* Navigation */}
             <div className="flex-1 overflow-y-auto py-2 px-4 custom-scrollbar">
-                <nav className="space-y-1">
-                    {NAV_ITEMS.map((item) => {
-                        // Construct absolute path for comparison and linking
-                        // Base path is /tenant/admin
-                        // Item path is relative to admin, e.g., /bookings
-                        const fullPath = `/tenant/admin${item.path}`;
+                {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    </div>
+                ) : (
+                    <nav className="space-y-1">
+                        {visibleNavItems.map((item) => {
+                            const fullPath = `/tenant/admin${item.path}`;
+                            const isActive = item.path === ''
+                                ? pathname === fullPath
+                                : pathname?.startsWith(fullPath);
 
-                        // Check active state
-                        // Exact match for dashboard ('') or startsWith for others
-                        const isActive = item.path === ''
-                            ? pathname === fullPath
-                            : pathname?.startsWith(fullPath);
-
-                        return (
-                            <Link
-                                key={item.path}
-                                href={`${fullPath}?subdomain=${subdomain}`}
-                                className={cn(
-                                    "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium",
-                                    isActive
-                                        ? "bg-primary/10 text-primary shadow-none"
-                                        : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
-                                    collapsed ? "justify-center px-2" : ""
-                                )}
-                                title={collapsed ? item.title : ''}
-                            >
-                                <item.icon className={cn("w-5 h-5", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                                {!collapsed && <span>{item.title}</span>}
-                            </Link>
-                        );
-                    })}
-                </nav>
+                            return (
+                                <Link
+                                    key={item.path}
+                                    href={`${fullPath}?subdomain=${subdomain}`}
+                                    className={cn(
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium",
+                                        isActive
+                                            ? "bg-primary/10 text-primary shadow-none"
+                                            : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
+                                        collapsed ? "justify-center px-2" : ""
+                                    )}
+                                    title={collapsed ? item.title : ''}
+                                >
+                                    <item.icon className={cn("w-5 h-5", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                                    {!collapsed && <span>{item.title}</span>}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                )}
             </div>
+
+            {/* Footer with restricted access note for staff */}
+            {!collapsed && userRole === 'staff' && (
+                <div className="p-4 border-t">
+                    <p className="text-xs text-gray-400 text-center">
+                        Akses terbatas untuk staff
+                    </p>
+                </div>
+            )}
         </aside>
     );
 }

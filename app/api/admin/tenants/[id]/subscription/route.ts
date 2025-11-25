@@ -131,21 +131,25 @@ export async function PUT(
       const newExpiry = body.subscriptionExpiresAt
         ? new Date(body.subscriptionExpiresAt).toISOString()
         : null;
-      const oldExpiry = currentTenant.subscription_expires_at
-        ? new Date(currentTenant.subscription_expires_at).toISOString()
+      const oldExpiryDate = currentTenant.subscription_expires_at 
+        ? new Date(currentTenant.subscription_expires_at).toISOString().split('T')[0]
         : null;
+      const newExpiryDate = newExpiry ? newExpiry.split('T')[0] : null;
 
-      if (newExpiry !== oldExpiry) {
+      if (newExpiryDate !== oldExpiryDate) {
         updateData.subscription_expires_at = newExpiry;
-        changes.push(`expiry: ${oldExpiry || 'none'} → ${newExpiry || 'none'}`);
+        changes.push(`expiry: ${oldExpiryDate || 'none'} → ${newExpiryDate || 'none'}`);
       }
     }
 
+    // If no changes, return current data without error
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { error: 'No changes detected' },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        subscriptionPlan: currentTenant.subscription_plan,
+        subscriptionStatus: currentTenant.subscription_status,
+        subscriptionExpiresAt: currentTenant.subscription_expires_at,
+        message: 'No changes detected',
+      });
     }
 
     updateData.updated_at = new Date().toISOString();
