@@ -54,7 +54,10 @@ export async function POST(
       homeVisitFullDayBooking = false,
       homeVisitMinBufferMinutes = 30,
       dailyQuotaPerStaff,
-      requiresStaffAssignment = false
+      requiresStaffAssignment = false,
+      // Simplified quota-based settings
+      dailyHomeVisitQuota = 3,
+      homeVisitTimeSlots = ['09:00', '13:00', '16:00']
     } = body;
 
     if (!['on_premise', 'home_visit', 'both'].includes(serviceType)) {
@@ -73,6 +76,9 @@ export async function POST(
         home_visit_min_buffer_minutes: homeVisitMinBufferMinutes,
         daily_quota_per_staff: dailyQuotaPerStaff || null,
         requires_staff_assignment: requiresStaffAssignment,
+        // Simplified quota-based settings
+        daily_home_visit_quota: dailyHomeVisitQuota,
+        home_visit_time_slots: homeVisitTimeSlots,
         updated_at: new Date().toISOString()
       })
       .eq('id', serviceId)
@@ -136,7 +142,10 @@ export async function GET(
       homeVisitFullDayBooking: data.home_visit_full_day_booking,
       homeVisitMinBufferMinutes: data.home_visit_min_buffer_minutes,
       dailyQuotaPerStaff: data.daily_quota_per_staff,
-      requiresStaffAssignment: data.requires_staff_assignment
+      requiresStaffAssignment: data.requires_staff_assignment,
+      // Simplified quota-based settings
+      dailyHomeVisitQuota: data.daily_home_visit_quota || 3,
+      homeVisitTimeSlots: data.home_visit_time_slots || ['09:00', '13:00', '16:00']
     });
   } catch (error) {
     console.error('Error in home-visit-config GET endpoint:', error);

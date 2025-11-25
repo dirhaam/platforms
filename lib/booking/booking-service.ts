@@ -248,19 +248,56 @@ export class BookingService {
       let travelTimeBeforeMinutes = 0;
       let travelTimeAfterMinutes = 0;
 
-      // Check if service requires staff assignment or is home visit
-      if ((service.requiresStaffAssignment || service.serviceType === 'home_visit' || service.serviceType === 'both') && data.isHomeVisit) {
+      // Check if this is a home visit booking
+      if (data.isHomeVisit) {
         // Validate service supports home visits
-        if (service.serviceType === 'on_premise') {
+        if (service.service_type === 'on_premise' || service.serviceType === 'on_premise') {
           return { error: 'This service does not support home visit bookings' };
         }
 
-        // Apply travel time buffers for home visits
-        travelTimeBeforeMinutes = service.homeVisitMinBufferMinutes || 30;
-        travelTimeAfterMinutes = service.homeVisitMinBufferMinutes || 30;
+        // SIMPLIFIED QUOTA-BASED CHECK (no staff assignment needed)
+        // Get global home visit settings from tenant
+        const { data: tenantConfig } = await supabase
+          .from('tenants')
+          .select('home_visit_config')
+          .eq('id', tenantId)
+          .single();
 
-        // If staff is pre-assigned, validate they can perform this service
-        if (staffIdToAssign) {
+        const globalConfig = tenantConfig?.home_visit_config || { enabled: true, dailyQuota: 3 };
+        
+        // Check if home visit is enabled globally
+        if (!globalConfig.enabled) {
+          return { error: 'Home visit bookings are not enabled' };
+        }
+
+        // Use global quota (priority) or fallback to service-level quota
+        const dailyQuota = globalConfig.dailyQuota || service.daily_home_visit_quota || service.dailyHomeVisitQuota || 3;
+        const startOfDay = new Date(scheduledAt);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(scheduledAt);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const { data: existingHomeVisits, error: hvError } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('is_home_visit', true)
+          .gte('scheduled_at', startOfDay.toISOString())
+          .lte('scheduled_at', endOfDay.toISOString())
+          .in('status', ['pending', 'confirmed']);
+
+        if (!hvError && existingHomeVisits && existingHomeVisits.length >= dailyQuota) {
+          return { error: `Home visit slots are fully booked for this date (max ${dailyQuota} per day)` };
+        }
+
+        // Only do staff assignment if explicitly required
+        const requiresStaff = service.requires_staff_assignment || service.requiresStaffAssignment;
+        
+        if (requiresStaff && staffIdToAssign) {
+          // Apply travel time buffers for home visits with staff
+          travelTimeBeforeMinutes = service.home_visit_min_buffer_minutes || service.homeVisitMinBufferMinutes || 30;
+          travelTimeAfterMinutes = service.home_visit_min_buffer_minutes || service.homeVisitMinBufferMinutes || 30;
+
           const { data: staffMember } = await supabase
             .from('staff')
             .select('id, is_active')
@@ -272,7 +309,6 @@ export class BookingService {
             return { error: 'Assigned staff member not found or inactive' };
           }
 
-          // Verify staff is assigned to this service
           const { data: staffService } = await supabase
             .from('staff_services')
             .select('id, can_perform')
@@ -284,7 +320,6 @@ export class BookingService {
             return { error: 'Selected staff member cannot perform this service' };
           }
 
-          // Check if assigned staff is available considering travel time
           const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
           const bookingStartWithBuffer = new Date(scheduledAt.getTime() - travelTimeBeforeMinutes * 60000);
           const bookingEndWithBuffer = new Date(scheduledAt.getTime() + (service.duration + travelTimeAfterMinutes) * 60000);
@@ -301,35 +336,10 @@ export class BookingService {
           if (!isAvailable) {
             return { error: 'Selected staff member is not available for this time slot (including travel time)' };
           }
-        } else if (service.requiresStaffAssignment) {
-          // Staff assignment is required but none provided
+        } else if (requiresStaff && !staffIdToAssign) {
           return { error: 'This service requires staff assignment. Please assign a staff member.' };
-        } else if (data.autoAssignStaff !== false) {
-          // Auto-assign staff if requested
-          try {
-            const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
-
-            const bookingStartWithBuffer = new Date(scheduledAt.getTime() - travelTimeBeforeMinutes * 60000);
-            const bookingEndWithBuffer = new Date(scheduledAt.getTime() + (service.duration + travelTimeAfterMinutes) * 60000);
-
-            const bestStaff = await StaffAvailabilityService.findBestAvailableStaff(
-              tenantId,
-              data.serviceId,
-              scheduledAt,
-              bookingStartWithBuffer,
-              bookingEndWithBuffer,
-              0
-            );
-
-            if (bestStaff) {
-              staffIdToAssign = bestStaff.id;
-              console.log('[BookingService] Auto-assigned staff:', { staffId: staffIdToAssign, staffName: bestStaff.name });
-            }
-          } catch (error) {
-            console.warn('[BookingService] Auto-assignment failed:', error);
-            // Continue without auto-assignment if it fails
-          }
         }
+        // If staff not required, booking proceeds without staff assignment (simplified flow)
       }
 
       // Create the booking

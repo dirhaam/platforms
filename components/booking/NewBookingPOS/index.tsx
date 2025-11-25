@@ -236,30 +236,47 @@ export function NewBookingPOS({
   const fetchAvailableSlots = async () => {
     if (!booking.serviceId || !booking.scheduledAt || !subdomain) return;
     try {
-      const response = await fetch(
-        `/api/bookings/availability?serviceId=${booking.serviceId}&date=${booking.scheduledAt}`,
-        { headers: { 'x-tenant-id': subdomain } }
-      );
+      // Use simplified home visit endpoint if home visit is selected
+      const endpoint = booking.isHomeVisit
+        ? `/api/bookings/home-visit-availability?serviceId=${booking.serviceId}&date=${booking.scheduledAt}`
+        : `/api/bookings/availability?serviceId=${booking.serviceId}&date=${booking.scheduledAt}`;
+      
+      const response = await fetch(endpoint, { headers: { 'x-tenant-id': subdomain } });
       if (response.ok) {
         const data = await response.json();
-        const slots = (data.slots || []).map((slot: any) => ({
-          ...slot,
-          start: typeof slot.start === 'string' ? new Date(slot.start) : slot.start,
-          end: typeof slot.end === 'string' ? new Date(slot.end) : slot.end
-        }));
-        setAvailableSlots(slots);
+        
+        // Handle home visit response format
+        if (booking.isHomeVisit && data.slots) {
+          const slots = data.slots
+            .filter((slot: any) => slot.available)
+            .map((slot: any) => ({
+              start: new Date(slot.start),
+              end: new Date(slot.end),
+              available: slot.available,
+              time: slot.time
+            }));
+          setAvailableSlots(slots);
+        } else {
+          // Standard availability response
+          const slots = (data.slots || []).map((slot: any) => ({
+            ...slot,
+            start: typeof slot.start === 'string' ? new Date(slot.start) : slot.start,
+            end: typeof slot.end === 'string' ? new Date(slot.end) : slot.end
+          }));
+          setAvailableSlots(slots);
+        }
       }
     } catch (err) {
       console.error('Error fetching slots:', err);
     }
   };
 
-  // Fetch slots when date changes
+  // Fetch slots when date or home visit status changes
   React.useEffect(() => {
     if (currentStep === 'time' && booking.scheduledAt) {
       fetchAvailableSlots();
     }
-  }, [booking.scheduledAt, booking.serviceId, currentStep]);
+  }, [booking.scheduledAt, booking.serviceId, booking.isHomeVisit, currentStep]);
 
   return (
     <>

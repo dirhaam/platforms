@@ -35,6 +35,15 @@ export const tenants = pgTable('tenants', {
   passwordResetToken: text('password_reset_token'),
   passwordResetExpires: timestamp('password_reset_expires', { withTimezone: true }),
 
+  // Home visit global settings
+  homeVisitConfig: jsonb('home_visit_config').$type<{
+    enabled: boolean;
+    dailyQuota: number;
+    timeSlots: string[];
+    requireAddress: boolean;
+    calculateTravelSurcharge: boolean;
+  } | null>(),
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -65,6 +74,10 @@ export const services = pgTable('services', {
   homeVisitMinBufferMinutes: integer('home_visit_min_buffer_minutes').default(30), // Travel buffer between appointments
   dailyQuotaPerStaff: integer('daily_quota_per_staff'), // Max bookings per staff per day (NULL = unlimited)
   requiresStaffAssignment: boolean('requires_staff_assignment').default(false),
+  
+  // Simplified home visit quota (no staff assignment needed)
+  dailyHomeVisitQuota: integer('daily_home_visit_quota').default(3), // Max home visit bookings per day
+  homeVisitTimeSlots: jsonb('home_visit_time_slots').$type<string[] | null>().default(['09:00', '13:00', '16:00']), // Fixed time slots
   
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

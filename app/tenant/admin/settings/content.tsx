@@ -9,6 +9,7 @@ import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettin
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
 import BusinessHoursGlobalSettings from '@/components/settings/BusinessHoursGlobalSettings';
 import OperatingHoursSettings from '@/components/settings/OperatingHoursSettings';
+import HomeVisitSettings from '@/components/settings/HomeVisitSettings';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
 import LandingPageMediaSettings from '@/components/settings/LandingPageMediaSettings';
 import { PermissionGate } from '@/components/tenant/permission-gate';
@@ -159,6 +160,7 @@ function SettingsPageInner() {
                 <>
                   <BusinessHoursGlobalSettings tenantId={tenantId} />
                   <OperatingHoursSettings tenantId={tenantId} />
+                  <HomeVisitSettings tenantId={tenantId} />
                   <BlockedDatesManager tenantId={tenantId} />
                 </>
               )}
