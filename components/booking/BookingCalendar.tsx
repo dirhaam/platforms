@@ -41,10 +41,10 @@ const formatTime = (date: Date): string =>
 
 const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
-    case BookingStatus.PENDING: return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    case BookingStatus.CONFIRMED: return 'bg-blue-100 text-blue-700 border-blue-200';
-    case BookingStatus.COMPLETED: return 'bg-green-100 text-green-700 border-green-200';
-    case BookingStatus.CANCELLED: return 'bg-red-100 text-red-700 border-red-200';
+    case BookingStatus.PENDING: return 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]';
+    case BookingStatus.CONFIRMED: return 'bg-[#DBEAFE] text-[#1E40AF] border-[#BFDBFE]';
+    case BookingStatus.COMPLETED: return 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]';
+    case BookingStatus.CANCELLED: return 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]';
     case BookingStatus.NO_SHOW: return 'bg-gray-100 text-gray-700 border-gray-200';
     default: return 'bg-gray-100 text-gray-700 border-gray-200';
   }
@@ -316,12 +316,12 @@ export function BookingCalendar({
                   {day.getDate()}
                 </span>
               </div>
-              <div className="flex-1 mt-1 space-y-1 overflow-hidden">
+              <div className="flex-1 mt-1.5 space-y-1.5 overflow-hidden">
                 {dayBookings.slice(0, 3).map((booking) => (
                   <div
                     key={booking.id}
                     className={`
-                        text-[10px] px-1.5 py-0.5 rounded truncate font-medium border
+                        text-xs px-2 py-1.5 rounded-md truncate font-medium border cursor-pointer transition-all hover:shadow-sm
                         ${getStatusColor(booking.status)}
                     `}
                     onClick={(e) => {
@@ -333,7 +333,7 @@ export function BookingCalendar({
                   </div>
                 ))}
                 {dayBookings.length > 3 && (
-                  <div className="text-[10px] text-gray-500 font-medium pl-1">
+                  <div className="text-[11px] text-gray-500 font-medium pl-1.5">
                     +{dayBookings.length - 3} more
                   </div>
                 )}
