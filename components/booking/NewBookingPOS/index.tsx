@@ -111,7 +111,7 @@ export function NewBookingPOS({
         if (customerCache?.data) setCustomers(customerCache.data);
         if (serviceCache?.data) setServices(serviceCache.data);
         
-        return customerCache?.data?.length > 0 || serviceCache?.data?.length > 0;
+        return (customerCache?.data?.length ?? 0) > 0 || (serviceCache?.data?.length ?? 0) > 0;
       } catch {
         return false;
       }
