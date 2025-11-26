@@ -39,14 +39,14 @@ const formatTime = (date: Date): string =>
     hour12: false
   });
 
-const getStatusColor = (status: BookingStatus): string => {
+const getStatusColor = (status: BookingStatus): { bg: string; text: string; border: string } => {
   switch (status) {
-    case BookingStatus.PENDING: return 'bg-yellow-100 text-yellow-800 border-yellow-300'; // kuning
-    case BookingStatus.CONFIRMED: return 'bg-indigo-100 text-indigo-800 border-indigo-300'; // biru
-    case BookingStatus.COMPLETED: return 'bg-green-100 text-green-800 border-green-300'; // hijau
-    case BookingStatus.CANCELLED: return 'bg-rose-100 text-rose-800 border-rose-300'; // merah
-    case BookingStatus.NO_SHOW: return 'bg-gray-100 text-gray-700 border-gray-200';
-    default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    case BookingStatus.PENDING: return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' }; // kuning
+    case BookingStatus.CONFIRMED: return { bg: '#E0E7FF', text: '#3730A3', border: '#C7D2FE' }; // biru
+    case BookingStatus.COMPLETED: return { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' }; // hijau
+    case BookingStatus.CANCELLED: return { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' }; // merah
+    case BookingStatus.NO_SHOW: return { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' };
+    default: return { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' };
   }
 };
 
@@ -264,7 +264,7 @@ export function BookingCalendar({
           table: "w-full border-collapse",
           head_row: "hidden",
           row: "grid grid-cols-7 gap-x-1 w-full mt-1",
-          cell: "h-8 w-full text-center flex items-center justify-center text-sm p-0 relative",
+          cell: "h-8 text-center flex items-center justify-center text-sm p-0 relative",
           day: `
           h-8 w-8 rounded-md flex items-center justify-center cursor-pointer 
           transition-all 
@@ -323,21 +323,26 @@ export function BookingCalendar({
                 </span>
               </div>
               <div className="flex-1 mt-1.5 space-y-1.5 overflow-hidden">
-                {dayBookings.slice(0, 3).map((booking) => (
-                  <div
-                    key={booking.id}
-                    className={`
-                        text-xs px-2 py-1.5 rounded-md truncate font-medium border cursor-pointer transition-all hover:shadow-sm
-                        ${getStatusColor(booking.status)}
-                    `}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onBookingClick?.(booking);
-                    }}
-                  >
-                    {booking.customer?.name || 'Unknown'}
-                  </div>
-                ))}
+                {dayBookings.slice(0, 3).map((booking) => {
+                  const colors = getStatusColor(booking.status);
+                  return (
+                    <div
+                      key={booking.id}
+                      className="text-xs px-2 py-1.5 rounded-md truncate font-medium border cursor-pointer transition-all hover:shadow-sm"
+                      style={{
+                        backgroundColor: colors.bg,
+                        color: colors.text,
+                        borderColor: colors.border
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onBookingClick?.(booking);
+                      }}
+                    >
+                      {booking.customer?.name || 'Unknown'}
+                    </div>
+                  );
+                })}
                 {dayBookings.length > 3 && (
                   <div className="text-[11px] text-gray-500 font-medium pl-1.5">
                     +{dayBookings.length - 3} more
