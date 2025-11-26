@@ -10,9 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Calendar } from '@/components/ui/calendar';
-import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -21,8 +18,8 @@ interface BookingCalendarProps {
   selectedDate?: Date;
   className?: string;
   businessHours?: { openTime: number; closeTime: number };
-  statusFilter?: string; // Kept for compatibility, but we'll use internal state for multi-select
-  onStatusChange?: (status: string) => void; // Kept for compatibility
+  statusFilter?: string;
+  onStatusChange?: (status: string) => void;
 }
 
 export function BookingCalendar({
@@ -32,19 +29,14 @@ export function BookingCalendar({
   selectedDate,
   className = '',
   businessHours = { openTime: 9, closeTime: 17 },
-  statusFilter: initialStatusFilter = 'all',
+  statusFilter = 'all',
   onStatusChange
 }: BookingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
-  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month');
-
-  // Filter State
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['pending', 'confirmed', 'completed', 'cancelled']);
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
 
   useEffect(() => {
-    if (selectedDate) {
-      setCurrentDate(selectedDate);
-    }
+    setCurrentDate(selectedDate || new Date());
   }, [selectedDate]);
 
   const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -62,8 +54,7 @@ export function BookingCalendar({
       return (
         bookingDate.getDate() === date.getDate() &&
         bookingDate.getMonth() === date.getMonth() &&
-        bookingDate.getFullYear() === date.getFullYear() &&
-        selectedStatuses.includes(booking.status.toLowerCase())
+        bookingDate.getFullYear() === date.getFullYear()
       );
     })
   );
@@ -105,24 +96,14 @@ export function BookingCalendar({
 
   const getStatusColor = (status: BookingStatus): string => {
     switch (status) {
-      case BookingStatus.PENDING: return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case BookingStatus.CONFIRMED: return 'bg-blue-100 text-blue-700 border-blue-200';
-      case BookingStatus.COMPLETED: return 'bg-green-100 text-green-700 border-green-200';
-      case BookingStatus.CANCELLED: return 'bg-red-100 text-red-700 border-red-200';
-      case BookingStatus.NO_SHOW: return 'bg-gray-100 text-gray-700 border-gray-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case BookingStatus.PENDING: return 'bg-yellow-100 text-warning border-yellow-200';
+      case BookingStatus.CONFIRMED: return 'bg-primary-light text-primary border-primary-light';
+      case BookingStatus.COMPLETED: return 'bg-green-100 text-success border-green-200';
+      case BookingStatus.CANCELLED: return 'bg-red-100 text-danger border-red-200';
+      case BookingStatus.NO_SHOW: return 'bg-gray-100 text-secondary border-gray-200';
+      default: return 'bg-gray-100 text-secondary border-gray-200';
     }
   };
-
-  const getStatusBaseColor = (status: string): string => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-400 border-yellow-400';
-      case 'confirmed': return 'bg-blue-500 border-blue-500';
-      case 'completed': return 'bg-green-500 border-green-500';
-      case 'cancelled': return 'bg-red-500 border-red-500';
-      default: return 'bg-gray-400 border-gray-400';
-    }
-  }
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
@@ -142,99 +123,88 @@ export function BookingCalendar({
     setCurrentDate(newDate);
   };
 
-  const toggleStatus = (status: string) => {
-    if (status === 'all') {
-      if (selectedStatuses.length === 4) {
-        setSelectedStatuses([]);
-      } else {
-        setSelectedStatuses(['pending', 'confirmed', 'completed', 'cancelled']);
-      }
-    } else {
-      setSelectedStatuses(prev =>
-        prev.includes(status)
-          ? prev.filter(s => s !== status)
-          : [...prev, status]
-      );
-    }
+  const getInitials = (name: string): string => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 2);
   };
 
-  /* Sidebar Component */
-  const Sidebar = () => {
+  /* Filter Panel (Left Side) */
+  const FilterPanel = () => {
     const filters = [
-      { id: 'pending', label: 'Pending', color: 'bg-yellow-400' },
-      { id: 'confirmed', label: 'Confirmed', color: 'bg-blue-500' },
-      { id: 'completed', label: 'Completed', color: 'bg-green-500' },
-      { id: 'cancelled', label: 'Cancelled', color: 'bg-red-500' },
+      { id: 'all', label: 'All Events', color: 'bg-gray-100 border-gray-200' },
+      { id: 'pending', label: 'Pending', color: 'bg-yellow-100 border-yellow-200' },
+      { id: 'confirmed', label: 'Confirmed', color: 'bg-primary-light border-primary-light' },
+      { id: 'completed', label: 'Completed', color: 'bg-green-100 border-green-200' },
+      { id: 'cancelled', label: 'Cancelled', color: 'bg-red-100 border-red-200' },
     ];
 
     return (
-      <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
-        {/* Mini Calendar */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-2">
-          <Calendar
-            mode="single"
-            selected={currentDate}
-            onSelect={(date) => date && onDateSelect(date)}
-            className="rounded-md border-0"
-            classNames={{
-              head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
-              cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-              day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
-              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-            }}
-          />
+      <div className="w-full lg:w-48 flex-shrink-0 space-y-4">
+        <h3 className="font-semibold text-sm text-txt-primary mb-2">Filters</h3>
+        <div className="space-y-2">
+          {filters.map(filter => (
+            <button
+              key={filter.id}
+              onClick={() => onStatusChange?.(filter.id)}
+              className={`
+                w-full text-left px-3 py-2 rounded-md text-sm transition-all flex items-center gap-2
+                ${statusFilter === filter.id
+                  ? 'bg-white shadow-sm ring-1 ring-primary text-primary font-medium'
+                  : 'text-txt-secondary hover:bg-gray-50'}
+              `}
+            >
+              <div className={`w-3 h-3 rounded-full border ${filter.color}`}></div>
+              {filter.label}
+            </button>
+          ))}
         </div>
+      </div>
+    );
+  };
 
-        {/* Filters */}
-        <div>
-          <h3 className="font-semibold text-sm text-txt-primary mb-3 px-1">Event Filters</h3>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2 px-1">
-              <Checkbox
-                id="filter-all"
-                checked={selectedStatuses.length === 4}
-                onCheckedChange={() => toggleStatus('all')}
-                className="border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-              />
-              <label
-                htmlFor="filter-all"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-txt-secondary cursor-pointer"
-              >
-                View All
-              </label>
+  /* Booking detail yang ditampilkan di kanan */
+  const BookingDetailPanel = () => {
+    const displayDate = currentDate;
+    const bookingsForDate = getBookingsForDate(displayDate);
+
+    return (
+      <div className="flex-1 pl-4 border-l border-gray-200">
+        <h3 className="font-semibold text-sm mb-4 text-txt-primary flex items-center gap-2">
+          <i className='bx bx-calendar-event text-primary'></i>
+          {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        </h3>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+          {bookingsForDate.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+              <i className='bx bx-coffee text-2xl text-txt-muted mb-2'></i>
+              <p className="text-xs text-txt-secondary">No bookings for this date</p>
             </div>
-
-            {filters.map(filter => (
-              <div key={filter.id} className="flex items-center space-x-2 px-1">
-                <Checkbox
-                  id={`filter-${filter.id}`}
-                  checked={selectedStatuses.includes(filter.id)}
-                  onCheckedChange={() => toggleStatus(filter.id)}
-                  className={`border-gray-300 data-[state=checked]:${filter.color} data-[state=checked]:border-transparent`}
-                  style={{
-                    backgroundColor: selectedStatuses.includes(filter.id) ? 'var(--checkbox-color)' : undefined,
-                    borderColor: selectedStatuses.includes(filter.id) ? 'var(--checkbox-color)' : undefined,
-                  }}
-                />
-                {/* Hack to pass dynamic color to checkbox since tailwind classes might not be safe-listed if dynamic */}
-                <style jsx global>{`
-                            #filter-${filter.id}[data-state=checked] {
-                                background-color: ${filter.color === 'bg-yellow-400' ? '#facc15' :
-                    filter.color === 'bg-blue-500' ? '#3b82f6' :
-                      filter.color === 'bg-green-500' ? '#22c55e' : '#ef4444'} !important;
-                                border-color: transparent !important;
-                            }
-                         `}</style>
-
-                <label
-                  htmlFor={`filter-${filter.id}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-txt-secondary cursor-pointer"
-                >
-                  {filter.label}
-                </label>
+          ) : (
+            bookingsForDate.map(booking => (
+              <div
+                key={booking.id}
+                className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all duration-200 ${getStatusColor(booking.status)}`}
+                onClick={() => onBookingClick?.(booking)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-1 truncate">{booking.customer?.name}</div>
+                    <div className="text-xs opacity-90 mb-1">{booking.service?.name}</div>
+                    <div className="text-xs font-mono flex items-center gap-1 opacity-80">
+                      <i className='bx bx-time'></i>
+                      {formatTime(toDate(booking.scheduledAt))} -{' '}
+                      {formatTime(new Date(toDate(booking.scheduledAt).getTime() + booking.duration * 60000))}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] px-1.5 h-5 bg-white/50 border-0 shadow-sm flex-shrink-0">{booking.status}</Badge>
+                </div>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
       </div>
     );
@@ -242,73 +212,98 @@ export function BookingCalendar({
 
   /* MONTH VIEW */
   const renderMonthView = () => (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="relative flex items-center justify-center mb-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
+            type="button"
+          >
+            <i className='bx bx-chevron-left text-xl'></i>
+          </button>
+          <span className="text-lg font-bold text-txt-primary w-48 text-center select-none">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </span>
+          <button
+            onClick={() => navigateMonth('next')}
+            className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
+            type="button"
+          >
+            <i className='bx bx-chevron-right text-xl'></i>
+          </button>
+        </div>
+
+        <div className="absolute right-0 top-1/2 -translate-y-1/2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="w-32 justify-between text-xs px-3 h-9 border-gray-200 text-txt-secondary">
+                {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View
+                <i className='bx bx-chevron-down text-base'></i>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-32">
+              <DropdownMenuItem onClick={() => setViewMode('month')}>
+                Month View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('week')}>
+                Week View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('day')}>
+                Day View
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-px bg-gray-100 border border-gray-200 rounded-t-lg overflow-hidden">
+      <div className="grid grid-cols-7 gap-2">
         {weekdays.map((day, idx) => (
           <div
             key={day}
-            className={`h-10 flex items-center justify-center font-semibold text-xs uppercase tracking-wider bg-white ${idx === 6 ? 'text-red-500' : 'text-gray-500'}`}
+            className={`h-8 flex items-center justify-center font-semibold text-xs uppercase tracking-wider text-center ${idx === 6 ? 'text-danger' : 'text-txt-muted'}`}
           >
             {day}
           </div>
         ))}
       </div>
-
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 grid-rows-6 gap-px bg-gray-200 border-x border-b border-gray-200 rounded-b-lg overflow-hidden flex-1 min-h-[600px]">
+      <div className="grid grid-cols-7 gap-2">
         {getCalendarDays().map((day, idx) => {
           const isCurrentMonth = day.getMonth() === currentDate.getMonth();
           const isToday = day.toDateString() === new Date().toDateString();
           const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
+          const isSunday = day.getDay() === 0;
           const dayBookings = getBookingsForDate(day);
-
           return (
-            <div
+            <button
               key={idx}
               onClick={() => isCurrentMonth && onDateSelect(day)}
+              disabled={!isCurrentMonth}
               className={`
-                  flex flex-col bg-white p-1 transition-all relative group min-h-[100px]
-                  ${!isCurrentMonth ? 'bg-gray-50/50' : 'hover:bg-gray-50 cursor-pointer'}
-                  ${isSelected ? 'bg-blue-50/30' : ''}
-              `}
+                  flex flex-col items-center justify-center rounded-lg font-semibold text-sm
+                  h-10 w-full transition-all relative select-none
+                  ${isSelected
+                  ? 'bg-primary text-white shadow-lg shadow-primary/40'
+                  : isCurrentMonth
+                    ? (isSunday ? 'text-danger hover:bg-red-50' : 'text-txt-primary hover:bg-primary-light/50 hover:text-primary')
+                    : 'text-gray-300 cursor-not-allowed'}
+                  ${isToday && !isSelected ? 'ring-1 ring-primary text-primary bg-white' : ''}
+                  group
+                `}
+              type="button"
             >
-              <div className="flex justify-between items-start">
-                <span className={`
-                    text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full
-                    ${isToday
-                    ? 'bg-primary text-white shadow-sm'
-                    : !isCurrentMonth
-                      ? 'text-gray-300'
-                      : 'text-gray-700'}
-                  `}>
-                  {day.getDate()}
-                </span>
-              </div>
-
-              <div className="flex-1 mt-1 space-y-1 overflow-hidden">
-                {dayBookings.slice(0, 3).map((booking, i) => (
-                  <div
-                    key={booking.id}
-                    className={`
-                        text-[10px] px-1.5 py-0.5 rounded truncate font-medium border
-                        ${getStatusColor(booking.status)}
-                    `}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onBookingClick?.(booking);
-                    }}
-                  >
-                    {booking.customer?.name || 'Unknown'}
-                  </div>
-                ))}
-                {dayBookings.length > 3 && (
-                  <div className="text-[10px] text-gray-500 font-medium pl-1">
-                    +{dayBookings.length - 3} more
-                  </div>
-                )}
-              </div>
-            </div>
+              <span className="relative z-10">{day.getDate()}</span>
+              {dayBookings.length > 0 && isCurrentMonth && (
+                <div className="flex gap-0.5 mt-0.5">
+                  {dayBookings.slice(0, 3).map((_, i) => (
+                    <div key={i} className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-primary'}`} />
+                  ))}
+                </div>
+              )}
+            </button>
           );
         })}
       </div>
@@ -321,78 +316,110 @@ export function BookingCalendar({
     const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
 
     return (
-      <div className="space-y-4 h-full overflow-hidden flex flex-col">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigateWeek('prev')}
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
+              type="button"
+            >
+              <i className='bx bx-chevron-left text-xl'></i>
+            </button>
+            <span className="text-lg font-bold text-txt-primary w-48 text-center select-none">
+              Week {Math.ceil((days[0].getDate() / 7))}
+            </span>
+            <button
+              onClick={() => navigateWeek('next')}
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
+              type="button"
+            >
+              <i className='bx bx-chevron-right text-xl'></i>
+            </button>
+          </div>
+
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="w-32 justify-between text-xs px-3 h-9 border-gray-200 text-txt-secondary">
+                  {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View
+                  <i className='bx bx-chevron-down text-base'></i>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32">
+                <DropdownMenuItem onClick={() => setViewMode('month')}>
+                  Month View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('week')}>
+                  Week View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('day')}>
+                  Day View
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
         {/* Day headers */}
-        <div className="grid grid-cols-8 gap-0 border-b border-gray-200 pb-2">
-          <div className="w-16"></div> {/* Time column spacer */}
+        <div className="flex gap-2 mb-2 overflow-hidden pl-12">
           {days.map(day => {
             const isToday = day.toDateString() === new Date().toDateString();
             return (
               <div
                 key={day.toISOString()}
-                className="text-center"
+                className={`flex-1 p-1 text-center rounded-md text-xs flex flex-col items-center justify-center
+                     ${isToday ? 'bg-primary-light text-primary font-bold' : 'bg-gray-50 text-txt-secondary'}
+                  `}
               >
-                <div className={`text-xs font-medium uppercase ${isToday ? 'text-primary' : 'text-gray-500'}`}>
-                  {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                </div>
-                <div className={`text-lg font-semibold ${isToday ? 'text-primary' : 'text-gray-900'}`}>
-                  {day.getDate()}
-                </div>
+                <div className="text-[10px] opacity-70 uppercase">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                <div className="text-sm">{day.getDate()}</div>
               </div>
             );
           })}
         </div>
-
         {/* Hours grid */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-          <div className="grid grid-cols-8 gap-0">
-            {/* Time sidebar */}
-            <div className="w-16 border-r border-gray-100">
-              {hours.map(hour => (
-                <div key={hour} className="h-20 text-xs text-gray-400 text-right pr-2 pt-2 relative">
-                  <span className="relative -top-3">{hour.toString().padStart(2, '0')}:00</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Days columns */}
-            {days.map(day => (
-              <div key={day.toISOString()} className="border-r border-gray-100 relative min-h-[800px]">
-                {/* Grid lines */}
-                {hours.map(hour => (
-                  <div key={hour} className="h-20 border-b border-gray-50"></div>
-                ))}
-
-                {/* Events */}
-                {getBookingsForDate(day).map(booking => {
-                  const startHour = toDate(booking.scheduledAt).getHours();
-                  const startMin = toDate(booking.scheduledAt).getMinutes();
-                  const duration = booking.duration || 60; // default 60 mins
-
-                  // Calculate position
-                  const top = ((startHour - businessHours.openTime) * 80) + ((startMin / 60) * 80);
-                  const height = (duration / 60) * 80;
-
-                  return (
-                    <div
-                      key={booking.id}
-                      className={`
-                                    absolute left-0.5 right-0.5 rounded border p-1 overflow-hidden cursor-pointer hover:brightness-95 transition-all
-                                    ${getStatusColor(booking.status)}
-                                `}
-                      style={{ top: `${top}px`, height: `${height}px` }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onBookingClick?.(booking);
-                      }}
-                    >
-                      <div className="font-semibold text-xs truncate">{booking.customer?.name}</div>
-                      <div className="text-[10px] opacity-90 truncate">{booking.service?.name}</div>
-                    </div>
-                  );
-                })}
+        <div className="relative h-[400px] overflow-y-auto custom-scrollbar">
+          {/* Time sidebar */}
+          <div className="absolute left-0 top-0 w-10 space-y-2 pt-2">
+            {hours.map(hour => (
+              <div key={hour} className="h-12 text-[10px] text-txt-muted text-right pr-2 font-medium relative top-[-6px]">
+                {hour.toString().padStart(2, '0')}:00
               </div>
             ))}
+          </div>
+
+          {/* Grid */}
+          <div className="ml-10 grid grid-cols-7 gap-2 pt-2">
+            {days.map(day => {
+              return (
+                <div key={day.toISOString()} className="space-y-2">
+                  {hours.map(hour => {
+                    const dayBookings = getBookingsForDate(day);
+                    const bookingsInHour = dayBookings.filter(b => toDate(b.scheduledAt).getHours() === hour);
+                    const hasBooking = bookingsInHour.length > 0;
+
+                    return (
+                      <div
+                        key={hour}
+                        onClick={() => onDateSelect(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour))}
+                        className={`
+                                     h-12 rounded border border-transparent hover:border-primary/30 transition-all cursor-pointer relative
+                                     ${hasBooking ? 'bg-primary-light/50 border-primary/20' : 'bg-gray-50/50 hover:bg-gray-100'}
+                                  `}
+                      >
+                        {hasBooking && (
+                          <div className="absolute inset-0.5 bg-primary rounded-sm text-[10px] text-white flex items-center justify-center font-bold shadow-sm">
+                            {bookingsInHour.length > 1 ? `${bookingsInHour.length}` : getInitials(bookingsInHour[0].customer?.name || '')}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -403,128 +430,183 @@ export function BookingCalendar({
   const renderDayView = () => {
     const dayBookings = getBookingsForDate(currentDate);
     const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
+    const bookingsByHour = dayBookings.reduce((acc, booking) => {
+      const hour = toDate(booking.scheduledAt).getHours();
+      if (!acc[hour]) acc[hour] = [];
+      acc[hour].push(booking);
+      return acc;
+    }, {} as Record<number, Booking[]>);
 
     return (
-      <div className="space-y-4 h-full overflow-hidden flex flex-col">
-        {/* Day Header */}
-        <div className="text-center border-b border-gray-200 pb-4">
-          <div className="text-sm font-medium text-gray-500 uppercase">
-            {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigateDay('prev')}
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
+              type="button"
+            >
+              <i className='bx bx-chevron-left text-xl'></i>
+            </button>
+            <span className="text-lg font-bold text-txt-primary w-48 text-center select-none">
+              {currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+            <button
+              onClick={() => navigateDay('next')}
+              className="rounded-full bg-gray-50 hover:bg-primary-light hover:text-primary p-2 flex items-center transition-colors text-txt-secondary"
+              type="button"
+            >
+              <i className='bx bx-chevron-right text-xl'></i>
+            </button>
           </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {currentDate.getDate()}
+
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="w-32 justify-between text-xs px-3 h-9 border-gray-200 text-txt-secondary">
+                  {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} View
+                  <i className='bx bx-chevron-down text-base'></i>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32">
+                <DropdownMenuItem onClick={() => setViewMode('month')}>
+                  Month View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('week')}>
+                  Week View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('day')}>
+                  Day View
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         {/* Hours list */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-          <div className="relative min-h-[800px]">
-            {hours.map(hour => (
-              <div key={hour} className="flex h-20 border-b border-gray-50 group">
-                <div className="w-20 text-xs text-gray-400 text-right pr-4 pt-2 border-r border-gray-100">
-                  <span className="relative -top-3">{hour.toString().padStart(2, '0')}:00</span>
+        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+          {hours.map(hour => {
+            const hourBookings = bookingsByHour[hour] || [];
+            return (
+              <div key={hour} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                <div className="w-14 pt-2 text-xs font-semibold text-txt-muted text-right">
+                  {hour.toString().padStart(2, '0')}:00
                 </div>
-                <div className="flex-1 relative">
-                  {/* Events for this hour */}
-                  {dayBookings
-                    .filter(b => toDate(b.scheduledAt).getHours() === hour)
-                    .map(booking => {
-                      const startMin = toDate(booking.scheduledAt).getMinutes();
-                      const duration = booking.duration || 60;
-                      const top = (startMin / 60) * 80;
-                      const height = (duration / 60) * 80;
-
-                      return (
-                        <div
-                          key={booking.id}
-                          className={`
-                                                absolute left-2 right-2 rounded border p-2 overflow-hidden cursor-pointer hover:brightness-95 transition-all flex items-center justify-between
-                                                ${getStatusColor(booking.status)}
-                                            `}
-                          style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onBookingClick?.(booking);
-                          }}
-                        >
-                          <div>
-                            <div className="font-semibold text-sm">{booking.customer?.name}</div>
+                <div className="flex-1 space-y-2 pt-1">
+                  {hourBookings.length === 0 ? (
+                    <div className="h-8 border-b border-gray-100 group-hover:border-dashed group-hover:border-gray-300 w-full"></div>
+                  ) : (
+                    hourBookings.map(booking => (
+                      <div
+                        key={booking.id}
+                        className={`p-3 rounded-md border cursor-pointer shadow-sm hover:shadow-md transition-all ${getStatusColor(booking.status)}`}
+                        onClick={e => {
+                          e.stopPropagation();
+                          onBookingClick?.(booking);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-sm">{booking.customer?.name}</div>
                             <div className="text-xs opacity-90">{booking.service?.name}</div>
                           </div>
-                          <div className="text-xs font-mono opacity-80">
-                            {formatTime(toDate(booking.scheduledAt))} - {formatTime(new Date(toDate(booking.scheduledAt).getTime() + booking.duration * 60000))}
-                          </div>
+                          <Badge variant="outline" className="text-[10px] bg-white/60 border-0 px-1.5">{booking.status}</Badge>
                         </div>
-                      );
-                    })
-                  }
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const getUpcomingHomeVisits = (): Booking[] => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+
+    return bookings
+      .filter(b => {
+        const date = toDate(b.scheduledAt);
+        return (
+          b.isHomeVisit &&
+          date >= today &&
+          date <= nextWeek &&
+          (b.status === BookingStatus.PENDING || b.status === BookingStatus.CONFIRMED)
+        );
+      })
+      .sort((a, b) => toDate(a.scheduledAt).getTime() - toDate(b.scheduledAt).getTime());
+  };
+
+  /* Upcoming Home Visits Panel */
+  const UpcomingHomeVisitsPanel = () => {
+    const upcomingVisits = getUpcomingHomeVisits();
+
+    return (
+      <div className="flex-1 pl-4 border-l border-gray-200 mt-6 pt-6 border-t">
+        <h3 className="font-semibold text-sm mb-4 text-txt-primary flex items-center gap-2">
+          <i className='bx bx-map-pin text-primary'></i>
+          Upcoming Home Visits (7 Days)
+        </h3>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+          {upcomingVisits.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+              <i className='bx bx-home text-2xl text-txt-muted mb-2'></i>
+              <p className="text-xs text-txt-secondary">No upcoming home visits</p>
+            </div>
+          ) : (
+            upcomingVisits.map(booking => (
+              <div
+                key={booking.id}
+                className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all duration-200 ${getStatusColor(booking.status)}`}
+                onClick={() => onBookingClick?.(booking)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-1 truncate">{booking.customer?.name}</div>
+                    <div className="text-xs opacity-90 mb-1 flex items-center gap-1">
+                      <i className='bx bx-map text-[10px]'></i>
+                      <span className="truncate">{booking.homeVisitAddress || 'No address'}</span>
+                    </div>
+                    <div className="text-xs font-mono flex items-center gap-1 opacity-80">
+                      <i className='bx bx-calendar'></i>
+                      {toDate(booking.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {formatTime(toDate(booking.scheduledAt))}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] px-1.5 h-5 bg-white/50 border-0 shadow-sm flex-shrink-0">{booking.status}</Badge>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     );
   };
 
   return (
-    <div className={`w-full bg-white rounded-card shadow-card p-6 ${className}`}>
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-        {/* Left: Title & Navigation */}
-        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full border-gray-200"
-              onClick={() => viewMode === 'month' ? navigateMonth('prev') : viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
-            >
-              <i className='bx bx-chevron-left text-lg'></i>
-            </Button>
-            <h2 className="text-xl font-bold text-gray-900 min-w-[180px] text-center">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full border-gray-200"
-              onClick={() => viewMode === 'month' ? navigateMonth('next') : viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
-            >
-              <i className='bx bx-chevron-right text-lg'></i>
-            </Button>
-          </div>
-        </div>
+    <div className={`w-full ${className}`}>
+      {/* 3-column layout: Filters - Calendar - Details */}
+      <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* Left: Filters */}
+        <FilterPanel />
 
-        {/* Right: View Switcher */}
-        <div className="flex bg-gray-100 p-1 rounded-lg">
-          {(['month', 'week', 'day'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`
-                        px-4 py-1.5 text-sm font-medium rounded-md transition-all capitalize
-                        ${viewMode === mode
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}
-                    `}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content Layout */}
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Sidebar */}
-        <Sidebar />
-
-        {/* Main Calendar Area */}
-        <div className="flex-1 min-w-0 min-h-[600px]">
+        {/* Center: Calendar views */}
+        <div className="flex-1 min-w-[300px]">
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
+        </div>
+
+        {/* Right: Booking detail panel */}
+        <div className="w-full lg:w-80 flex-shrink-0 lg:h-auto flex flex-col">
+          <BookingDetailPanel />
+          <UpcomingHomeVisitsPanel />
         </div>
       </div>
     </div>
