@@ -32,6 +32,7 @@ export default function RootLayout({
       <head>
         <link href="/fonts/boxicons/boxicons.css" rel="stylesheet" />
         <link href="/fonts/brands/boxicons-brands.css" rel="stylesheet" />
+        <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet' />
         {/* PWA Meta Tags */}
         <meta name="application-name" content="Booqing Admin" />
         <meta name="mobile-web-app-capable" content="yes" />

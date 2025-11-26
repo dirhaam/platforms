@@ -8,6 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { DayPicker } from 'react-day-picker';
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -425,50 +426,6 @@ export function BookingCalendar({
 
   return (
     <div className={`w-full bg-white rounded-card shadow-card p-6 ${className}`}>
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-        {/* Left: Title & Navigation */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-full border-gray-200"
-            onClick={() => viewMode === 'month' ? navigateMonth('prev') : viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-full border-gray-200"
-            onClick={() => viewMode === 'month' ? navigateMonth('next') : viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <h2 className="text-xl font-bold text-gray-900 min-w-[180px]">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h2>
-        </div>
-
-        {/* Right: View Switcher (Segmented Control) */}
-        <div className="flex bg-gray-100 p-1 rounded-lg">
-          {(['month', 'week', 'day'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`
-                        px-4 py-1.5 text-sm font-medium rounded-md transition-all capitalize
-                        ${viewMode === mode
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}
-                    `}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Main Content Layout */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Sidebar */}
@@ -479,18 +436,24 @@ export function BookingCalendar({
               mode="single"
               selected={currentDate}
               onSelect={(date) => date && onDateSelect(date)}
-              className="rounded-md border-0"
+              className="rounded-md border-0 w-full"
+              components={{
+                IconLeft: () => <i className='bx bx-chevron-left text-lg'></i>,
+                IconRight: () => <i className='bx bx-chevron-right text-lg'></i>,
+              }}
               classNames={{
-                caption: "flex justify-between items-center py-2 relative",
-                caption_label: "text-sm font-medium",
-                nav: "flex items-center gap-1",
+                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                month: "space-y-4 w-full",
+                caption: "flex justify-start items-center pt-1 relative mb-2 gap-2",
+                caption_label: "text-sm font-medium order-2",
+                nav: "flex items-center gap-1 order-1",
                 nav_button: cn(
                   "h-7 w-7 bg-gray-100 p-0 opacity-100 hover:opacity-75 rounded-md flex items-center justify-center"
                 ),
                 nav_button_previous: "static",
                 nav_button_next: "static",
-                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
-                cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex-1",
+                cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 flex-1 flex items-center justify-center",
                 day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
               }}
@@ -507,6 +470,50 @@ export function BookingCalendar({
 
         {/* Main Calendar Area */}
         <div className="flex-1 min-w-0 min-h-[600px]">
+          {/* Header (Moved inside Right Column) */}
+          <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+            {/* Left: Title & Navigation */}
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full border-gray-200"
+                onClick={() => viewMode === 'month' ? navigateMonth('prev') : viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full border-gray-200"
+                onClick={() => viewMode === 'month' ? navigateMonth('next') : viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <h2 className="text-xl font-bold text-gray-900 min-w-[180px]">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+            </div>
+
+            {/* Right: View Switcher (Segmented Control) */}
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              {(['month', 'week', 'day'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`
+                            px-4 py-1.5 text-sm font-medium rounded-md transition-all capitalize
+                            ${viewMode === mode
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}
+                        `}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
