@@ -2,12 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import { BoxIcon } from '@/components/ui/box-icon';
 
 interface TenantData {
@@ -142,250 +138,305 @@ export default function ProfileContent() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Profile"
-        description="Informasi akun dan langganan website Anda"
-      />
+      {/* Profile Header Card */}
+      <div className="bg-white shadow-card rounded-card overflow-hidden">
+        <div className="bg-gradient-to-r from-primary to-primary/80 h-32 relative">
+          <div className="absolute -bottom-12 left-6">
+            <div className="w-24 h-24 rounded-card bg-white shadow-card flex items-center justify-center border-4 border-white">
+              {tenant?.logo ? (
+                <img src={tenant.logo} alt="Logo" className="w-16 h-16 object-contain rounded-md" />
+              ) : (
+                <div className="w-16 h-16 rounded-md bg-primary-light flex items-center justify-center">
+                  <span className="text-3xl font-bold text-primary">
+                    {tenant?.businessName?.charAt(0) || 'B'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="absolute top-4 right-4">
+            <span className={`px-3 py-1 rounded text-xs font-bold uppercase text-white ${tenant?.subscriptionStatus === 'active' ? 'bg-success' : 'bg-warning'}`}>
+              {tenant?.subscriptionStatus === 'active' ? 'Aktif' : tenant?.subscriptionStatus || 'Trial'}
+            </span>
+          </div>
+        </div>
+        <div className="pt-16 pb-6 px-6">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <h4 className="text-xl font-bold text-txt-primary">{tenant?.businessName || 'Bisnis Anda'}</h4>
+              <p className="text-txt-muted flex items-center gap-2 mt-1 text-sm">
+                <BoxIcon name="globe" size={16} />
+                <a 
+                  href={`https://${tenant?.subdomain}.booqing.my.id`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {tenant?.subdomain}.booqing.my.id
+                </a>
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-gray-300 text-txt-secondary hover:bg-gray-50"
+              onClick={() => router.push(`/tenant/admin/settings?subdomain=${subdomain}`)}
+            >
+              <BoxIcon name="edit" size={16} className="mr-2" />
+              Edit Profil
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Subscription Alert */}
-      {isExpiringSoon && (
-        <Alert className="bg-amber-50 border-amber-200">
-          <BoxIcon name="error-circle" className="text-amber-600" size={20} />
-          <AlertDescription className="text-amber-800">
-            <strong>Perhatian!</strong> Langganan Anda akan berakhir dalam {daysUntilExpiry} hari.
-            Silakan perpanjang untuk menghindari gangguan layanan.
-          </AlertDescription>
-        </Alert>
+      {(isExpiringSoon || isExpired) && (
+        <div className={`rounded-card p-4 flex items-start gap-3 ${isExpired ? 'bg-red-100' : 'bg-yellow-100'}`}>
+          <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${isExpired ? 'bg-red-200 text-danger' : 'bg-yellow-200 text-warning'}`}>
+            <BoxIcon name="error-circle" size={24} />
+          </div>
+          <div>
+            <p className={`font-semibold text-sm ${isExpired ? 'text-danger' : 'text-warning'}`}>
+              {isExpired ? 'Langganan Expired!' : 'Langganan Segera Berakhir'}
+            </p>
+            <p className={`text-sm ${isExpired ? 'text-red-700' : 'text-yellow-700'}`}>
+              {isExpired 
+                ? 'Layanan Anda telah berakhir. Silakan hubungi admin untuk memperpanjang.'
+                : `Langganan Anda akan berakhir dalam ${daysUntilExpiry} hari.`}
+            </p>
+          </div>
+        </div>
       )}
 
-      {isExpired && (
-        <Alert variant="destructive">
-          <BoxIcon name="error-circle" size={20} />
-          <AlertDescription>
-            <strong>Langganan Expired!</strong> Layanan Anda telah berakhir. 
-            Silakan hubungi admin untuk memperpanjang.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* User Account Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <BoxIcon name="user" className="text-primary" size={24} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - Account & Subscription */}
+        <div className="space-y-6">
+          {/* User Account */}
+          <div className="bg-white shadow-card rounded-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded bg-primary-light flex items-center justify-center text-info">
+                <BoxIcon name="user" size={20} />
               </div>
-              <div>
-                <CardTitle>Akun Pengguna</CardTitle>
-                <CardDescription>Informasi login Anda</CardDescription>
-              </div>
+              <h5 className="text-lg font-semibold text-txt-primary">Akun Pengguna</h5>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Nama</span>
-                <span className="font-medium">{session?.name || '-'}</span>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                <BoxIcon name="user-circle" size={20} className="text-txt-muted" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-txt-muted">Nama</p>
+                  <p className="font-medium text-txt-primary text-sm truncate">{session?.name || '-'}</p>
+                </div>
               </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Email</span>
-                <span className="font-medium">{session?.email || '-'}</span>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                <BoxIcon name="envelope" size={20} className="text-txt-muted" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-txt-muted">Email</p>
+                  <p className="font-medium text-txt-primary text-sm truncate">{session?.email || '-'}</p>
+                </div>
               </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Role</span>
-                <Badge variant="outline" className="capitalize">
-                  {session?.role || '-'}
-                </Badge>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                <BoxIcon name="shield" size={20} className="text-txt-muted" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-txt-muted">Role</p>
+                  <span className="bg-primary-light text-primary px-2 py-0.5 rounded text-xs font-bold uppercase mt-1 inline-block">
+                    {session?.role || '-'}
+                  </span>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Subscription Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <BoxIcon name="credit-card" className="text-primary" size={24} />
+          {/* Subscription */}
+          <div className="bg-white shadow-card rounded-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center text-purple-600">
+                <BoxIcon name="credit-card" size={20} />
               </div>
-              <div>
-                <CardTitle>Langganan</CardTitle>
-                <CardDescription>Status subscription website</CardDescription>
-              </div>
+              <h5 className="text-lg font-semibold text-txt-primary">Langganan</h5>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Paket</span>
-                <Badge variant="secondary" className="capitalize">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                <span className="text-sm text-txt-muted">Paket</span>
+                <span className="bg-primary-light text-primary px-2 py-0.5 rounded text-xs font-bold uppercase">
                   {tenant?.subscriptionPlan || 'basic'}
-                </Badge>
+                </span>
               </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <Badge variant={getSubscriptionBadgeVariant(tenant?.subscriptionStatus || 'active')}>
-                  {tenant?.subscriptionStatus === 'active' ? 'Aktif' : 
-                   tenant?.subscriptionStatus === 'trial' ? 'Trial' :
-                   tenant?.subscriptionStatus === 'suspended' ? 'Ditangguhkan' :
-                   tenant?.subscriptionStatus === 'cancelled' ? 'Dibatalkan' : 
-                   tenant?.subscriptionStatus || '-'}
-                </Badge>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                <span className="text-sm text-txt-muted">Status</span>
+                <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${tenant?.subscriptionStatus === 'active' ? 'bg-green-100 text-success' : 'bg-yellow-100 text-warning'}`}>
+                  {tenant?.subscriptionStatus === 'active' ? 'Aktif' : tenant?.subscriptionStatus || '-'}
+                </span>
               </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Berlaku Hingga</span>
-                <span className={`font-medium ${isExpired ? 'text-destructive' : isExpiringSoon ? 'text-amber-600' : ''}`}>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                <span className="text-sm text-txt-muted">Berlaku Hingga</span>
+                <span className={`font-medium text-sm ${isExpired ? 'text-danger' : isExpiringSoon ? 'text-warning' : 'text-txt-primary'}`}>
                   {formatDate(tenant?.subscriptionExpiresAt)}
                 </span>
               </div>
               {daysUntilExpiry !== null && !isExpired && (
-                <>
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Sisa Waktu</span>
-                    <span className={`font-medium ${isExpiringSoon ? 'text-amber-600' : 'text-green-600'}`}>
-                      {daysUntilExpiry} hari lagi
+                <div className="p-3 bg-green-50 rounded-md border border-green-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-success">Sisa Waktu</span>
+                    <span className={`font-bold text-sm ${isExpiringSoon ? 'text-warning' : 'text-success'}`}>
+                      {daysUntilExpiry} hari
                     </span>
                   </div>
-                </>
+                  <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full ${isExpiringSoon ? 'bg-warning' : 'bg-success'}`}
+                      style={{ width: `${Math.min(100, (daysUntilExpiry / 30) * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
               )}
             </div>
-
             <Button 
               variant="outline" 
-              className="w-full mt-4"
+              className="w-full mt-4 border-primary text-primary hover:bg-primary hover:text-white"
               onClick={() => window.location.href = 'mailto:support@booqing.my.id?subject=Perpanjang Subscription'}
             >
-              <BoxIcon name="envelope" className="mr-2" size={16} />
-              Hubungi untuk Perpanjang
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Business Info Card */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                {tenant?.logo ? (
-                  <img src={tenant.logo} alt="Logo" className="w-8 h-8 object-contain rounded" />
-                ) : (
-                  <BoxIcon name="building" className="text-primary" size={24} />
-                )}
-              </div>
-              <div>
-                <CardTitle>Informasi Bisnis</CardTitle>
-                <CardDescription>Detail website dan bisnis Anda</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm text-muted-foreground">Nama Bisnis</span>
-                  <p className="font-medium">{tenant?.businessName || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-muted-foreground">Kategori</span>
-                  <p className="font-medium capitalize">{tenant?.businessCategory || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-muted-foreground">Pemilik</span>
-                  <p className="font-medium">{tenant?.ownerName || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-muted-foreground">URL Website</span>
-                  <p className="font-medium text-primary">
-                    <a 
-                      href={`https://${tenant?.subdomain}.booqing.my.id`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="hover:underline"
-                    >
-                      {tenant?.subdomain}.booqing.my.id
-                    </a>
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm text-muted-foreground">Email</span>
-                  <p className="font-medium">{tenant?.email || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-muted-foreground">Telepon</span>
-                  <p className="font-medium">{tenant?.phone || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-muted-foreground">Alamat</span>
-                  <p className="font-medium">{tenant?.address || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-muted-foreground">Terdaftar Sejak</span>
-                  <p className="font-medium">{formatDate(tenant?.createdAt)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Features */}
-            <Separator className="my-6" />
-            <div>
-              <span className="text-sm text-muted-foreground mb-3 block">Fitur Aktif</span>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant={tenant?.whatsappEnabled ? 'default' : 'outline'}>
-                  <BoxIcon name="whatsapp" type="logos" size={14} className="mr-1" />
-                  WhatsApp {tenant?.whatsappEnabled ? 'Aktif' : 'Nonaktif'}
-                </Badge>
-                <Badge variant={tenant?.homeVisitEnabled ? 'default' : 'outline'}>
-                  <BoxIcon name="home" size={14} className="mr-1" />
-                  Home Visit {tenant?.homeVisitEnabled ? 'Aktif' : 'Nonaktif'}
-                </Badge>
-                <Badge variant={tenant?.analyticsEnabled ? 'default' : 'outline'}>
-                  <BoxIcon name="bar-chart" size={14} className="mr-1" />
-                  Analytics {tenant?.analyticsEnabled ? 'Aktif' : 'Nonaktif'}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Logout Button */}
-      <Card className="border-destructive/20 bg-destructive/5">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-destructive">Keluar dari Akun</h3>
-              <p className="text-sm text-muted-foreground">
-                Anda akan dialihkan ke halaman login
-              </p>
-            </div>
-            <Button 
-              variant="destructive" 
-              onClick={handleLogout}
-              disabled={loggingOut}
-            >
-              {loggingOut ? (
-                <>
-                  <BoxIcon name="loader-alt" className="mr-2 animate-spin" size={16} />
-                  Logging out...
-                </>
-              ) : (
-                <>
-                  <BoxIcon name="log-out" className="mr-2" size={16} />
-                  Logout
-                </>
-              )}
+              <BoxIcon name="envelope" size={16} className="mr-2" />
+              Perpanjang Langganan
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Right Column - Business Info */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Business Details */}
+          <div className="bg-white shadow-card rounded-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded bg-green-100 flex items-center justify-center text-success">
+                <BoxIcon name="store" size={20} />
+              </div>
+              <h5 className="text-lg font-semibold text-txt-primary">Informasi Bisnis</h5>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="p-4 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <BoxIcon name="building" size={16} className="text-txt-muted" />
+                  <span className="text-xs text-txt-muted">Nama Bisnis</span>
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">{tenant?.businessName || '-'}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <BoxIcon name="category" size={16} className="text-txt-muted" />
+                  <span className="text-xs text-txt-muted">Kategori</span>
+                </div>
+                <p className="font-semibold text-txt-primary text-sm capitalize">{tenant?.businessCategory || '-'}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <BoxIcon name="user" size={16} className="text-txt-muted" />
+                  <span className="text-xs text-txt-muted">Pemilik</span>
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">{tenant?.ownerName || '-'}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <BoxIcon name="calendar" size={16} className="text-txt-muted" />
+                  <span className="text-xs text-txt-muted">Terdaftar Sejak</span>
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">{formatDate(tenant?.createdAt)}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <BoxIcon name="envelope" size={16} className="text-txt-muted" />
+                  <span className="text-xs text-txt-muted">Email Bisnis</span>
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">{tenant?.email || '-'}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <BoxIcon name="phone" size={16} className="text-txt-muted" />
+                  <span className="text-xs text-txt-muted">Telepon</span>
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">{tenant?.phone || '-'}</p>
+              </div>
+              <div className="sm:col-span-2 p-4 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <BoxIcon name="map" size={16} className="text-txt-muted" />
+                  <span className="text-xs text-txt-muted">Alamat</span>
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">{tenant?.address || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Features */}
+          <div className="bg-white shadow-card rounded-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded bg-orange-100 flex items-center justify-center text-warning">
+                <BoxIcon name="cog" size={20} />
+              </div>
+              <h5 className="text-lg font-semibold text-txt-primary">Fitur Aktif</h5>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div className={`p-4 rounded-md border-2 transition-all ${tenant?.whatsappEnabled ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`w-12 h-12 rounded flex items-center justify-center mb-3 ${tenant?.whatsappEnabled ? 'bg-green-100' : 'bg-gray-100'}`}>
+                  <BoxIcon name="whatsapp" type="logos" size={24} className={tenant?.whatsappEnabled ? 'text-green-600' : 'text-secondary'} />
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">WhatsApp</p>
+                <p className={`text-xs ${tenant?.whatsappEnabled ? 'text-success' : 'text-secondary'}`}>
+                  {tenant?.whatsappEnabled ? 'Aktif' : 'Nonaktif'}
+                </p>
+              </div>
+              <div className={`p-4 rounded-md border-2 transition-all ${tenant?.homeVisitEnabled ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`w-12 h-12 rounded flex items-center justify-center mb-3 ${tenant?.homeVisitEnabled ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                  <BoxIcon name="home" size={24} className={tenant?.homeVisitEnabled ? 'text-info' : 'text-secondary'} />
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">Home Visit</p>
+                <p className={`text-xs ${tenant?.homeVisitEnabled ? 'text-info' : 'text-secondary'}`}>
+                  {tenant?.homeVisitEnabled ? 'Aktif' : 'Nonaktif'}
+                </p>
+              </div>
+              <div className={`p-4 rounded-md border-2 transition-all ${tenant?.analyticsEnabled ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`w-12 h-12 rounded flex items-center justify-center mb-3 ${tenant?.analyticsEnabled ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                  <BoxIcon name="bar-chart" size={24} className={tenant?.analyticsEnabled ? 'text-purple-600' : 'text-secondary'} />
+                </div>
+                <p className="font-semibold text-txt-primary text-sm">Analytics</p>
+                <p className={`text-xs ${tenant?.analyticsEnabled ? 'text-purple-600' : 'text-secondary'}`}>
+                  {tenant?.analyticsEnabled ? 'Aktif' : 'Nonaktif'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Logout Section */}
+          <div className="bg-white shadow-card rounded-card p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded bg-red-100 flex items-center justify-center text-danger">
+                  <BoxIcon name="log-out" size={20} />
+                </div>
+                <div>
+                  <h5 className="font-semibold text-txt-primary">Keluar dari Akun</h5>
+                  <p className="text-sm text-txt-muted">Anda akan dialihkan ke halaman login</p>
+                </div>
+              </div>
+              <Button 
+                variant="destructive" 
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="sm:w-auto w-full bg-danger hover:bg-danger/90"
+              >
+                {loggingOut ? (
+                  <>
+                    <BoxIcon name="loader-alt" size={16} className="mr-2 animate-spin" />
+                    Logging out...
+                  </>
+                ) : (
+                  <>
+                    <BoxIcon name="log-out" size={16} className="mr-2" />
+                    Logout
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
