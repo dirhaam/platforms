@@ -275,4 +275,4 @@
   visibility: hidden !important;
   height: 0 !important;
   overflow: hidden !important;
-}
+}.mini-calendar-hide-default .rdp-caption, .mini-calendar-hide-default .rdp-month_caption, .mini-calendar-hide-default thead, .mini-calendar-hide-default .rdp-weekdays, .mini-calendar-hide-default .rdp-head, .mini-calendar-hide-default .rdp-root nav { display: none !important; }
