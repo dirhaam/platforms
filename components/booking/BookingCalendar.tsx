@@ -21,7 +21,7 @@ interface BookingCalendarProps {
   onStatusChange?: (status: string) => void;
 }
 
-const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -421,9 +421,11 @@ export function BookingCalendar({
   };
 
   // MINI CALENDAR DESIGNED OUTSIDE CARD - ONLY THIS PART WAS MODIFIED
+  const weekdaysFull = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
   const renderMiniCalendar = () => (
     <div className="mb-6">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-3">
         <button
           className="px-2 py-1 rounded hover:bg-gray-100"
           onClick={() => navigateMonth('prev')}
@@ -440,28 +442,34 @@ export function BookingCalendar({
           <ChevronRight size={16} />
         </button>
       </div>
-      <Calendar
-        mode="single"
-        selected={currentDate}
-        onSelect={date => date && onDateSelect(date)}
-        className="rounded-md border-0 w-full bg-transparent shadow-none"
-        classNames={{
-          months: "flex flex-col w-full",
-          month: "w-full",
-          caption: "flex justify-center items-center pt-1 mb-4",
-          caption_label: "text-sm font-semibold text-gray-900",
-          nav: "hidden",
-          table: "w-full border-collapse space-y-1",
-          head_row: "flex",
-          head_cell: "rounded-md w-9 font-normal text-[0.8rem]",
-          row: "flex w-full mt-2",
-          cell: "h-9 w-9 text-center text-sm p-0 relative",
-          day: "h-9 w-9 p-0 font-normal rounded-md hover:bg-gray-100",
-          day_selected: "bg-indigo-500 text-white font-semibold",
-          day_today: "font-bold text-indigo-500",
-          day_outside: "text-muted-foreground opacity-50",
-        }}
-      />
+      <div>
+        {/* Headings hari */}
+        <div className="grid grid-cols-7 gap-x-2 mb-1 text-xs font-semibold text-gray-500">
+          {weekdaysFull.map(day => (
+            <div key={day} className="text-center">{day}</div>
+          ))}
+        </div>
+        {/* Calendar component */}
+        <Calendar
+          mode="single"
+          selected={currentDate}
+          onSelect={date => date && onDateSelect(date)}
+          className="rounded-md border-0 w-full bg-transparent shadow-none"
+          classNames={{
+            months: "flex flex-col w-full",
+            month: "w-full",
+            caption: "hidden", // Sembunyikan caption sebelumnya agar tidak double
+            table: "w-full border-collapse",
+            head_row: "hidden", // Sembunyikan heading calendar default karena sudah custom di atas
+            row: "grid grid-cols-7 gap-x-2 w-full mt-1",
+            cell: "h-8 w-8 text-center flex items-center justify-center text-sm p-0 relative",
+            day: "h-8 w-8 px-0 font-normal rounded-md hover:bg-gray-100",
+            day_selected: "bg-indigo-500 text-white font-semibold",
+            day_today: "font-bold text-indigo-500",
+            day_outside: "opacity-50 text-gray-400",
+          }}
+        />
+      </div>
     </div>
   );
 
