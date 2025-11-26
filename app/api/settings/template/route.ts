@@ -2,8 +2,9 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
 
-const VALID_TEMPLATES = ['modern', 'classic', 'minimal', 'beauty', 'healthcare', 'healthcarev2'];
+const VALID_TEMPLATES = ['modern', 'classic', 'minimal', 'beauty', 'healthcare', 'healthcarev2', 'sneat'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,15 +79,29 @@ export async function POST(request: NextRequest) {
     // Clear cache for this tenant to ensure fresh data on next load
     try {
       const { CacheService } = await import('@/lib/cache/cache-service');
-      // Clear tenant-specific cache - if we have a subdomain, use it for cache key
-      if (isUUID) {
-        // If tenantId was already a UUID, we don't have the subdomain for cache key
-        await CacheService.invalidateTenant(resolvedTenantId);
-      } else {
-        // If tenantId was a subdomain, clear both UUID and subdomain cache
-        await CacheService.invalidateTenant(resolvedTenantId, tenantId);
+      
+      // Get subdomain from tenant data if we only have UUID
+      let subdomainForCache = !isUUID ? tenantId : null;
+      if (isUUID && data[0]?.subdomain) {
+        subdomainForCache = data[0].subdomain;
       }
-      console.log('[template POST] Cache cleared for tenant:', resolvedTenantId, 'subdomain:', tenantId);
+      
+      // Clear both tenant cache keys
+      await CacheService.invalidateTenant(resolvedTenantId, subdomainForCache || undefined);
+      
+      // Also clear by pattern to be sure
+      await CacheService.deleteByPattern(`tenant:${resolvedTenantId}`);
+      if (subdomainForCache) {
+        await CacheService.deleteByPattern(`tenant:subdomain:${subdomainForCache}`);
+      }
+      
+      console.log('[template POST] Cache cleared for tenant:', resolvedTenantId, 'subdomain:', subdomainForCache);
+      
+      // Revalidate the landing page path
+      if (subdomainForCache) {
+        revalidatePath(`/s/${subdomainForCache}`);
+        console.log('[template POST] Revalidated path:', `/s/${subdomainForCache}`);
+      }
     } catch (cacheError) {
       console.warn('Could not clear cache after template update:', cacheError);
     }
@@ -94,7 +109,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Landing page template updated successfully',
-      template: data[0]?.template_id
+      template: data[0]?.template_id,
+      subdomain: data[0]?.subdomain
     });
   } catch (error) {
     console.error('Error in template update:', error);

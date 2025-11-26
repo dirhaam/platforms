@@ -175,6 +175,31 @@ export const LANDING_PAGE_TEMPLATES: LandingPageTemplate[] = [
     },
     isActive: true,
   },
+  {
+    id: 'sneat',
+    name: 'Sneat Admin Style',
+    category: 'Professional',
+    preview: '/templates/sneat-preview.jpg',
+    description: 'Modern card-based design with soft shadows, clean typography, and professional look',
+    sections: {
+      hero: true,
+      services: true,
+      about: true,
+      reviews: true,
+      contact: true,
+      gallery: true,
+      businessHours: true,
+      videos: true,
+      socialMedia: true,
+      photoGallery: true,
+    },
+    customization: {
+      colors: true,
+      fonts: true,
+      layout: true,
+    },
+    isActive: true,
+  },
 ];
 
 export function getTemplateById(templateId: string): LandingPageTemplate | null {

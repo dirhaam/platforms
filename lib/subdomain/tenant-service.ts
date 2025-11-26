@@ -45,20 +45,26 @@ export interface BusinessHours {
 }
 
 export class TenantService {
-  static async getTenantLandingData(subdomain: string): Promise<TenantLandingData | null> {
+  static async getTenantLandingData(subdomain: string, bypassCache: boolean = false): Promise<TenantLandingData | null> {
     return await PerformanceMonitor.monitorDatabaseQuery(
       'getTenantLandingData',
       async () => {
-        console.log(`[getTenantLandingData] Starting for subdomain: ${subdomain}`);
+        console.log(`[getTenantLandingData] Starting for subdomain: ${subdomain}, bypassCache: ${bypassCache}`);
         
-        // Try to get from cache first
-        const cached = await CacheService.getTenantBySubdomain(subdomain);
-        if (cached) {
-          console.log(`[getTenantLandingData] Found in cache for subdomain: ${subdomain}`);
-          return this.formatTenantLandingData(cached);
+        // Try to get from cache first (unless bypass is requested)
+        if (!bypassCache) {
+          const cached = await CacheService.getTenantBySubdomain(subdomain);
+          if (cached) {
+            console.log(`[getTenantLandingData] Found in cache for subdomain: ${subdomain}`);
+            return this.formatTenantLandingData(cached);
+          }
+        } else {
+          console.log(`[getTenantLandingData] Bypassing cache for subdomain: ${subdomain}`);
+          // Clear existing cache when bypassing
+          await CacheService.deleteByPattern(`tenant:subdomain:${subdomain}`);
         }
 
-        console.log(`[getTenantLandingData] Not in cache, fetching from DB for subdomain: ${subdomain}`);
+        console.log(`[getTenantLandingData] Fetching from DB for subdomain: ${subdomain}`);
         const subdomainData = await getSubdomainData(subdomain);
         
         if (!subdomainData) {
@@ -66,7 +72,7 @@ export class TenantService {
           return null;
         }
 
-        console.log(`[getTenantLandingData] Data found:`, { subdomain, businessName: subdomainData.businessName });
+        console.log(`[getTenantLandingData] Data found:`, { subdomain, businessName: subdomainData.businessName, templateId: (subdomainData as any).templateId });
 
         // Cache the result
         await CacheService.setTenantBySubdomain(subdomain, subdomainData);
@@ -85,11 +91,17 @@ export class TenantService {
       // Check for templateId using type assertion since it's not part of EnhancedTenant interface
       // but might be present in the raw database response
       const templateId = (subdomainData as any).templateId;
+      console.log(`[formatTenantLandingData] templateId from DB: "${templateId}", type: ${typeof templateId}`);
+      
       if (templateId && typeof templateId === 'string') {
-        template = getTemplateById(templateId) || getRecommendedTemplate(subdomainData.businessCategory);
+        const foundTemplate = getTemplateById(templateId);
+        console.log(`[formatTenantLandingData] getTemplateById("${templateId}") returned:`, foundTemplate?.id || 'null');
+        template = foundTemplate || getRecommendedTemplate(subdomainData.businessCategory);
       } else {
+        console.log(`[formatTenantLandingData] No templateId, using recommended template`);
         template = getRecommendedTemplate(subdomainData.businessCategory);
       }
+      console.log(`[formatTenantLandingData] Final template: ${template?.id}`);
       
       // Check if subscription is expired
       const subscriptionStatus = subdomainData.subscriptionStatus || 'active';

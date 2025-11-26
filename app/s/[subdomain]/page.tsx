@@ -51,9 +51,9 @@ export default async function SubdomainPage({
   console.log('[SubdomainPage] Rendering for subdomain:', subdomain);
   
   try {
-    // Get tenant data
+    // Get tenant data - bypass cache for fresh data
     console.log('[SubdomainPage] Getting tenant landing data...');
-    const tenantData = await TenantService.getTenantLandingData(subdomain);
+    const tenantData = await TenantService.getTenantLandingData(subdomain, true);
     
     console.log('[SubdomainPage] Tenant data received:', tenantData ? 'YES' : 'NO');
     
