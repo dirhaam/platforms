@@ -436,10 +436,6 @@ export function BookingCalendar({
               selected={currentDate}
               onSelect={(date) => date && onDateSelect(date)}
               className="rounded-md border-0 w-full"
-              components={{
-                IconLeft: ({ ...props }) => <i {...props} className={cn("bx bx-chevron-left text-lg", props.className)} />,
-                IconRight: ({ ...props }) => <i {...props} className={cn("bx bx-chevron-right text-lg", props.className)} />,
-              }}
               classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                 month: "space-y-4 w-full",
