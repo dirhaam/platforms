@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
 import { Button } from '@/components/ui/button';
