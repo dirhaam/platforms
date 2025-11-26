@@ -263,17 +263,12 @@ export function BookingCalendar({
           caption: "hidden",
           table: "w-full border-collapse",
           head_row: "hidden",
-          row: "grid grid-cols-7 gap-x-1 w-full mt-1",
-          cell: "h-8 text-center flex items-center justify-center text-sm p-0 relative",
-          day: `
-          h-8 w-8 rounded-md flex items-center justify-center cursor-pointer 
-          transition-all 
-          hover:bg-[#EEF2FF] hover:text-[#6366F1]
-          bg-white
-        `,
-          day_selected: "bg-[#6366F1] text-white font-bold",
-          day_today: "border-2 border-[#6366F1] font-bold bg-white text-[#6366F1]",
-          day_outside: "text-gray-300 bg-white",
+          row: "grid grid-cols-7 gap-x-1 w-full",
+          cell: "h-8 w-full text-center p-0 relative flex items-center justify-center",
+          day: "h-8 w-8 rounded-md flex items-center justify-center cursor-pointer transition-all hover:bg-gray-100 text-gray-900 font-normal",
+          day_selected: "bg-[#6366F1] text-white font-semibold hover:bg-[#6366F1]",
+          day_today: "bg-[#E0E7FF] text-[#6366F1] font-semibold",
+          day_outside: "text-gray-300 opacity-50",
         }}
       />
     </div>
