@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Download, Share } from 'lucide-react';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -90,6 +91,9 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+
+      {/* Offline Status Indicator */}
+      <OfflineIndicator />
 
       {/* Install Banner */}
       {showInstallBanner && (

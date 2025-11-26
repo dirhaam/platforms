@@ -1,11 +1,133 @@
-const CACHE_NAME = 'booqing-admin-v1';
+const CACHE_NAME = 'booqing-admin-v2';
 const OFFLINE_URL = '/offline.html';
+const SYNC_TAG = 'booqing-sync';
 
 const STATIC_ASSETS = [
   '/offline.html',
   '/pwa/icon-192x192.png',
   '/pwa/icon-512x512.png',
 ];
+
+// IndexedDB for background sync
+const DB_NAME = 'booqing-offline';
+const DB_VERSION = 1;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function getPendingItems() {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('offlineQueue', 'readonly');
+      const store = transaction.objectStore('offlineQueue');
+      const index = store.index('status');
+      const request = index.getAll('pending');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result || []);
+    });
+  } catch (error) {
+    console.log('[SW] Error getting pending items:', error);
+    return [];
+  }
+}
+
+async function updateItemStatus(id, status) {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction('offlineQueue', 'readwrite');
+    const store = transaction.objectStore('offlineQueue');
+    const item = await new Promise((resolve, reject) => {
+      const request = store.get(id);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+    if (item) {
+      item.status = status;
+      item.retryCount = (item.retryCount || 0) + 1;
+      store.put(item);
+    }
+  } catch (error) {
+    console.log('[SW] Error updating item status:', error);
+  }
+}
+
+async function deleteItem(id) {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction('offlineQueue', 'readwrite');
+    const store = transaction.objectStore('offlineQueue');
+    store.delete(id);
+  } catch (error) {
+    console.log('[SW] Error deleting item:', error);
+  }
+}
+
+async function syncItem(item) {
+  let endpoint = '';
+  let method = 'POST';
+
+  if (item.type === 'booking' && item.action === 'create') {
+    endpoint = '/api/bookings';
+  } else if (item.type === 'sale' && item.action === 'create') {
+    endpoint = '/api/sales';
+  } else {
+    return false;
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': item.subdomain,
+      },
+      body: JSON.stringify(item.data),
+    });
+
+    if (response.ok) {
+      await deleteItem(item.id);
+      return true;
+    } else {
+      await updateItemStatus(item.id, 'failed');
+      return false;
+    }
+  } catch (error) {
+    await updateItemStatus(item.id, 'failed');
+    return false;
+  }
+}
+
+async function syncAllPending() {
+  const pending = await getPendingItems();
+  let synced = 0;
+  let failed = 0;
+
+  for (const item of pending) {
+    const success = await syncItem(item);
+    if (success) synced++;
+    else failed++;
+  }
+
+  console.log(`[SW] Sync complete: ${synced} synced, ${failed} failed`);
+  
+  // Notify clients about sync completion
+  const clients = await self.clients.matchAll();
+  clients.forEach(client => {
+    client.postMessage({
+      type: 'SYNC_COMPLETE',
+      synced,
+      failed,
+    });
+  });
+
+  return { synced, failed };
+}
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -125,4 +247,20 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// Background sync event
+self.addEventListener('sync', (event) => {
+  if (event.tag === SYNC_TAG) {
+    console.log('[SW] Background sync triggered');
+    event.waitUntil(syncAllPending());
+  }
+});
+
+// Listen for messages from clients
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'TRIGGER_SYNC') {
+    console.log('[SW] Manual sync requested');
+    syncAllPending();
+  }
 });

@@ -174,12 +174,14 @@ export function CustomerSelector({
         </form>
       ) : (
         <div className="relative group">
-          <i className='bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted text-lg group-focus-within:text-primary transition-colors'></i>
+          <span className="absolute left-3 top-0 h-10 flex items-center pointer-events-none">
+            <i className='bx bx-search text-txt-muted text-base group-focus-within:text-primary transition-colors'></i>
+          </span>
           <Input
             placeholder="Search by name or phone..."
             value={customerSearch}
             onChange={(e) => setCustomerSearch(e.target.value)}
-            className="pl-10 h-10 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-primary focus:ring-primary/20 transition-all text-sm"
+            className="pl-9 h-10 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-primary focus:ring-primary/20 transition-all text-sm"
           />
           
           <div className="mt-2">

@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { SalesPaymentMethod, SalesTransaction } from '@/types/sales';
 import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
+import { addToOfflineQueue } from '@/lib/offline/queue';
+import { addToStore, getByIndex, CachedData } from '@/lib/offline/db';
 
 interface QuickSalesPOSProps {
   open: boolean;
@@ -80,8 +82,36 @@ export function QuickSalesPOS({
     }
   }, [open]);
 
+  const loadFromCache = async (): Promise<boolean> => {
+    try {
+      const cachedCustomers = await getByIndex<CachedData>('cachedData', 'type', 'customers');
+      const cachedServices = await getByIndex<CachedData>('cachedData', 'type', 'services');
+      
+      const customerCache = cachedCustomers.find(c => c.id === `customers_${subdomain || tenantId}`);
+      const serviceCache = cachedServices.find(c => c.id === `services_${subdomain || tenantId}`);
+      
+      if (customerCache?.data) setCustomers(customerCache.data);
+      if (serviceCache?.data) setServices(serviceCache.data);
+      
+      return (customerCache?.data?.length || 0) > 0 || (serviceCache?.data?.length || 0) > 0;
+    } catch {
+      return false;
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
+    
+    // If offline, only use cache
+    if (!navigator.onLine) {
+      const hasCached = await loadFromCache();
+      if (!hasCached) {
+        toast.error('Offline: No cached data available');
+      }
+      setLoading(false);
+      return;
+    }
+
     try {
       await Promise.all([
         fetchCustomers(),
@@ -90,7 +120,10 @@ export function QuickSalesPOS({
       ]);
     } catch (error) {
       console.error('Error loading POS data:', error);
-      toast.error('Failed to load data');
+      const hasCached = await loadFromCache();
+      if (!hasCached) {
+        toast.error('Failed to load data');
+      }
     } finally {
       setLoading(false);
     }
@@ -101,7 +134,16 @@ export function QuickSalesPOS({
       const response = await fetch(`/api/customers?tenantId=${tenantId}&limit=100`);
       if (!response.ok) throw new Error('Failed to fetch customers');
       const data = await response.json();
-      setCustomers(data.customers || []);
+      const customerList = data.customers || [];
+      setCustomers(customerList);
+      // Cache for offline
+      await addToStore<CachedData>('cachedData', {
+        id: `customers_${subdomain || tenantId}`,
+        type: 'customers',
+        tenantId: subdomain || tenantId,
+        data: customerList,
+        updatedAt: Date.now(),
+      });
     } catch (error) {
       console.error('Error fetching customers:', error);
     }
@@ -112,7 +154,16 @@ export function QuickSalesPOS({
       const response = await fetch(`/api/services?tenantId=${tenantId}&limit=100`);
       if (!response.ok) throw new Error('Failed to fetch services');
       const data = await response.json();
-      setServices(data.services || []);
+      const serviceList = data.services || [];
+      setServices(serviceList);
+      // Cache for offline
+      await addToStore<CachedData>('cachedData', {
+        id: `services_${subdomain || tenantId}`,
+        type: 'services',
+        tenantId: subdomain || tenantId,
+        data: serviceList,
+        updatedAt: Date.now(),
+      });
     } catch (error) {
       console.error('Error fetching services:', error);
     }
@@ -302,12 +353,15 @@ export function QuickSalesPOS({
 
     setSubmitting(true);
     try {
+        const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
         const payload = {
             tenantId: tenantId,
             type: 'on_the_spot',
             customerId: selectedCustomerId,
+            customerName: selectedCustomer?.name || '',
             items: cart.map(item => ({
                 serviceId: item.serviceId,
+                serviceName: item.serviceName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice
             })),
@@ -321,24 +375,53 @@ export function QuickSalesPOS({
 
         console.log('[QuickSalesPOS] Sending payload:', payload);
 
-        const response = await fetch('/api/sales/transactions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-tenant-id': tenantId
-            },
-            body: JSON.stringify(payload)
-        });
+        // Try online first
+        if (navigator.onLine) {
+            try {
+                const response = await fetch('/api/sales/transactions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-tenant-id': tenantId
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create sale');
+                if (response.ok) {
+                    const data = await response.json();
+                    toast.success('Sale completed successfully');
+                    onOpenChange(false);
+                    if (onCreated) onCreated(data.transaction);
+                    return;
+                }
+                
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create sale');
+            } catch (err) {
+                // If network error, fall through to offline mode
+                if (err instanceof TypeError && err.message.includes('fetch')) {
+                    console.log('[QuickSalesPOS] Network error, saving offline');
+                } else {
+                    throw err;
+                }
+            }
         }
-        
-        const data = await response.json();
-        toast.success('Sale completed successfully');
+
+        // Save offline
+        const offlineId = await addToOfflineQueue(
+            'sale',
+            'create',
+            payload,
+            tenantId,
+            subdomain || tenantId
+        );
+
+        console.log('[QuickSalesPOS] Saved offline with ID:', offlineId);
+        toast.success('Sale saved offline. Will sync when connected.', {
+            icon: '📴',
+            duration: 4000,
+        });
         onOpenChange(false);
-        if (onCreated) onCreated(data.transaction);
     } catch (error) {
         console.error('[QuickSalesPOS] Error:', error);
         toast.error(error instanceof Error ? error.message : 'Failed to process sale');

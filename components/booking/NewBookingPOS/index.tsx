@@ -12,6 +12,8 @@ import { Customer, Service, TimeSlot } from '@/types/booking';
 import type { InvoiceSettingsData } from '@/lib/invoice/invoice-settings-service';
 import { TravelCalculation } from '@/types/location';
 import { toast } from 'sonner';
+import { addToOfflineQueue } from '@/lib/offline/queue';
+import { addToStore, getByIndex, CachedData } from '@/lib/offline/db';
 import { CustomerSelector } from './CustomerSelector';
 import { ServiceSelector } from './ServiceSelector';
 import { ScheduleSection } from './ScheduleSection';
@@ -74,6 +76,19 @@ export function NewBookingPOS({
   const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
   const [currentStep, setCurrentStep] = useState<'main' | 'date' | 'time' | 'homevisit'>('main');
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [tenantId, setTenantId] = useState<string>('');
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -84,22 +99,69 @@ export function NewBookingPOS({
   const fetchData = async () => {
     if (!subdomain) return;
 
+    // Try to load from cache first (for offline support)
+    const loadFromCache = async () => {
+      try {
+        const cachedCustomers = await getByIndex<CachedData>('cachedData', 'type', 'customers');
+        const cachedServices = await getByIndex<CachedData>('cachedData', 'type', 'services');
+        
+        const customerCache = cachedCustomers.find(c => c.id === `customers_${subdomain}`);
+        const serviceCache = cachedServices.find(c => c.id === `services_${subdomain}`);
+        
+        if (customerCache?.data) setCustomers(customerCache.data);
+        if (serviceCache?.data) setServices(serviceCache.data);
+        
+        return customerCache?.data?.length > 0 || serviceCache?.data?.length > 0;
+      } catch {
+        return false;
+      }
+    };
+
+    // If offline, only use cache
+    if (!navigator.onLine) {
+      const hasCached = await loadFromCache();
+      if (!hasCached) {
+        setError('Offline: No cached data available');
+      }
+      setLoading(false);
+      return;
+    }
+
     try {
-      const [customersRes, servicesRes, settingsRes, blockedDatesRes] = await Promise.all([
+      const [customersRes, servicesRes, settingsRes, blockedDatesRes, tenantRes] = await Promise.all([
         fetch('/api/customers?limit=50', { headers: { 'x-tenant-id': subdomain } }),
         fetch('/api/services?limit=50', { headers: { 'x-tenant-id': subdomain } }),
         fetch(`/api/settings/invoice-config?tenantId=${subdomain}`, { headers: { 'x-tenant-id': subdomain } }),
-        fetch(`/api/bookings/blocked-dates?tenantId=${subdomain}`)
+        fetch(`/api/bookings/blocked-dates?tenantId=${subdomain}`),
+        fetch(`/api/tenants/${subdomain}`)
       ]);
 
       if (customersRes.ok) {
         const data = await customersRes.json();
-        setCustomers(data.customers || []);
+        const customerList = data.customers || [];
+        setCustomers(customerList);
+        // Cache for offline use
+        await addToStore<CachedData>('cachedData', {
+          id: `customers_${subdomain}`,
+          type: 'customers',
+          tenantId: subdomain,
+          data: customerList,
+          updatedAt: Date.now(),
+        });
       }
 
       if (servicesRes.ok) {
         const data = await servicesRes.json();
-        setServices(data.services || []);
+        const serviceList = data.services || [];
+        setServices(serviceList);
+        // Cache for offline use
+        await addToStore<CachedData>('cachedData', {
+          id: `services_${subdomain}`,
+          type: 'services',
+          tenantId: subdomain,
+          data: serviceList,
+          updatedAt: Date.now(),
+        });
       }
 
       if (settingsRes.ok) {
@@ -123,9 +185,18 @@ export function NewBookingPOS({
         );
         setBlockedDates(dateMap);
       }
+
+      if (tenantRes.ok) {
+        const data = await tenantRes.json();
+        setTenantId(data.id || subdomain);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Failed to load customers and services');
+      // Try to load from cache on network error
+      const hasCached = await loadFromCache();
+      if (!hasCached) {
+        setError('Failed to load data. Please check your connection.');
+      }
     } finally {
       setLoading(false);
     }
@@ -163,6 +234,9 @@ export function NewBookingPOS({
         isHomeVisit: booking.isHomeVisit,
         paymentMethod: booking.paymentMethod,
         dpAmount: booking.dpAmount,
+        // Include customer and service names for offline display
+        customerName: selectedCustomer?.name || '',
+        serviceName: selectedService?.name || '',
       };
 
       // Only add optional fields if they have values
@@ -195,35 +269,53 @@ export function NewBookingPOS({
 
       console.log('[NewBookingPOS] Sending request:', requestBody);
 
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': subdomain
-        },
-        body: JSON.stringify(requestBody)
-      });
+      // Try online first
+      if (navigator.onLine) {
+        try {
+          const response = await fetch('/api/bookings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': subdomain
+            },
+            body: JSON.stringify(requestBody)
+          });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create booking');
+          if (response.ok) {
+            resetBookingForm();
+            toast.success('Booking created successfully');
+            onOpenChange(false);
+            onBookingCreated?.();
+            return;
+          }
+          
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to create booking');
+        } catch (err) {
+          // If network error, fall through to offline mode
+          if (err instanceof TypeError && err.message.includes('fetch')) {
+            console.log('[NewBookingPOS] Network error, saving offline');
+          } else {
+            throw err;
+          }
+        }
       }
 
-      setBooking({
-        customerId: '',
-        serviceId: '',
-        scheduledAt: '',
-        scheduledTime: '',
-        selectedTimeSlot: undefined,
-        isHomeVisit: false,
-        homeVisitAddress: '',
-        homeVisitLat: undefined,
-        homeVisitLng: undefined,
-        paymentMethod: 'cash',
-        dpAmount: 0,
-        notes: ''
+      // Save offline
+      const offlineId = await addToOfflineQueue(
+        'booking',
+        'create',
+        requestBody,
+        tenantId || subdomain,
+        subdomain
+      );
+
+      console.log('[NewBookingPOS] Saved offline with ID:', offlineId);
+      resetBookingForm();
+      toast.success('Booking saved offline. Will sync when connected.', {
+        icon: '📴',
+        duration: 4000,
       });
-      toast.success('Booking created successfully');
       onOpenChange(false);
       onBookingCreated?.();
     } catch (err) {
@@ -231,6 +323,23 @@ export function NewBookingPOS({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const resetBookingForm = () => {
+    setBooking({
+      customerId: '',
+      serviceId: '',
+      scheduledAt: '',
+      scheduledTime: '',
+      selectedTimeSlot: undefined,
+      isHomeVisit: false,
+      homeVisitAddress: '',
+      homeVisitLat: undefined,
+      homeVisitLng: undefined,
+      paymentMethod: 'cash',
+      dpAmount: 0,
+      notes: ''
+    });
   };
 
   const fetchAvailableSlots = async () => {

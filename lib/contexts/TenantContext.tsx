@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { addToStore, getByIndex, CachedData } from '@/lib/offline/db';
 
 type UserRole = 'owner' | 'admin' | 'staff' | 'superadmin';
 
@@ -20,12 +21,43 @@ interface BookingNotification {
     bookingId: string;
 }
 
+interface CachedService {
+    id: string;
+    name: string;
+    price: number;
+    duration?: number;
+    description?: string;
+}
+
+interface CachedCustomer {
+    id: string;
+    name: string;
+    phone: string;
+    email?: string;
+}
+
+interface CachedStaff {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+}
+
 interface TenantContextValue {
     user: UserSession;
     userLoading: boolean;
     pendingBookingsCount: number;
     notifications: BookingNotification[];
     refreshPendingBookings: () => Promise<void>;
+    // Pre-cached data
+    services: CachedService[];
+    customers: CachedCustomer[];
+    staff: CachedStaff[];
+    dataLoading: boolean;
+    isOnline: boolean;
+    lastCacheUpdate: Date | null;
+    refreshCache: () => Promise<void>;
 }
 
 const TenantContext = createContext<TenantContextValue | null>(null);
@@ -43,6 +75,8 @@ interface TenantProviderProps {
     subdomain: string;
 }
 
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export function TenantProvider({ children, subdomain }: TenantProviderProps) {
     const [user, setUser] = useState<UserSession>({
         name: 'User',
@@ -52,6 +86,114 @@ export function TenantProvider({ children, subdomain }: TenantProviderProps) {
     const [userLoading, setUserLoading] = useState(true);
     const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
     const [notifications, setNotifications] = useState<BookingNotification[]>([]);
+    
+    // Pre-cached data state
+    const [services, setServices] = useState<CachedService[]>([]);
+    const [customers, setCustomers] = useState<CachedCustomer[]>([]);
+    const [staff, setStaff] = useState<CachedStaff[]>([]);
+    const [dataLoading, setDataLoading] = useState(true);
+    const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+    const [lastCacheUpdate, setLastCacheUpdate] = useState<Date | null>(null);
+
+    // Load from IndexedDB cache
+    const loadFromCache = useCallback(async () => {
+        try {
+            const [cachedServices, cachedCustomers, cachedStaff] = await Promise.all([
+                getByIndex<CachedData>('cachedData', 'type', 'services'),
+                getByIndex<CachedData>('cachedData', 'type', 'customers'),
+                getByIndex<CachedData>('cachedData', 'type', 'staff'),
+            ]);
+
+            const serviceCache = cachedServices.find(c => c.id === `services_${subdomain}`);
+            const customerCache = cachedCustomers.find(c => c.id === `customers_${subdomain}`);
+            const staffCache = cachedStaff.find(c => c.id === `staff_${subdomain}`);
+
+            if (serviceCache?.data) setServices(serviceCache.data);
+            if (customerCache?.data) setCustomers(customerCache.data);
+            if (staffCache?.data) setStaff(staffCache.data);
+
+            // Check if cache is fresh
+            const cacheTime = serviceCache?.updatedAt || customerCache?.updatedAt || 0;
+            if (cacheTime) {
+                setLastCacheUpdate(new Date(cacheTime));
+            }
+
+            return {
+                hasServices: (serviceCache?.data?.length || 0) > 0,
+                hasCustomers: (customerCache?.data?.length || 0) > 0,
+                hasStaff: (staffCache?.data?.length || 0) > 0,
+                isFresh: Date.now() - cacheTime < CACHE_DURATION,
+            };
+        } catch (error) {
+            console.error('[TenantContext] Error loading from cache:', error);
+            return { hasServices: false, hasCustomers: false, hasStaff: false, isFresh: false };
+        }
+    }, [subdomain]);
+
+    // Save to IndexedDB cache
+    const saveToCache = useCallback(async (type: 'services' | 'customers' | 'staff', data: any[]) => {
+        try {
+            await addToStore<CachedData>('cachedData', {
+                id: `${type}_${subdomain}`,
+                type,
+                tenantId: subdomain,
+                data,
+                updatedAt: Date.now(),
+            });
+        } catch (error) {
+            console.error(`[TenantContext] Error caching ${type}:`, error);
+        }
+    }, [subdomain]);
+
+    // Fetch and cache all data
+    const fetchAndCacheData = useCallback(async () => {
+        if (!subdomain || !navigator.onLine) return;
+
+        console.log('[TenantContext] Fetching fresh data from API...');
+
+        try {
+            const [servicesRes, customersRes, staffRes] = await Promise.all([
+                fetch('/api/services?limit=500', { headers: { 'x-tenant-id': subdomain } }),
+                fetch('/api/customers?limit=500', { headers: { 'x-tenant-id': subdomain } }),
+                fetch('/api/staff?limit=100', { headers: { 'x-tenant-id': subdomain } }),
+            ]);
+
+            if (servicesRes.ok) {
+                const data = await servicesRes.json();
+                const serviceList = data.services || [];
+                setServices(serviceList);
+                await saveToCache('services', serviceList);
+                console.log(`[TenantContext] Cached ${serviceList.length} services`);
+            }
+
+            if (customersRes.ok) {
+                const data = await customersRes.json();
+                const customerList = data.customers || [];
+                setCustomers(customerList);
+                await saveToCache('customers', customerList);
+                console.log(`[TenantContext] Cached ${customerList.length} customers`);
+            }
+
+            if (staffRes.ok) {
+                const data = await staffRes.json();
+                const staffList = data.staff || [];
+                setStaff(staffList);
+                await saveToCache('staff', staffList);
+                console.log(`[TenantContext] Cached ${staffList.length} staff`);
+            }
+
+            setLastCacheUpdate(new Date());
+        } catch (error) {
+            console.error('[TenantContext] Error fetching data:', error);
+        }
+    }, [subdomain, saveToCache]);
+
+    // Refresh cache (manual trigger)
+    const refreshCache = useCallback(async () => {
+        setDataLoading(true);
+        await fetchAndCacheData();
+        setDataLoading(false);
+    }, [fetchAndCacheData]);
 
     const fetchPendingBookings = useCallback(async () => {
         if (!subdomain) return;
@@ -94,6 +236,49 @@ export function TenantProvider({ children, subdomain }: TenantProviderProps) {
         }
     }, [subdomain]);
 
+    // Online/offline listener
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true);
+            // Refresh cache when back online
+            fetchAndCacheData();
+        };
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [fetchAndCacheData]);
+
+    // Initial data load
+    useEffect(() => {
+        const initializeData = async () => {
+            // First, load from cache (instant)
+            const cacheStatus = await loadFromCache();
+            
+            // If we have cached data, show it immediately
+            if (cacheStatus.hasServices || cacheStatus.hasCustomers) {
+                setDataLoading(false);
+            }
+
+            // Then, fetch fresh data if online and cache is stale
+            if (navigator.onLine && !cacheStatus.isFresh) {
+                await fetchAndCacheData();
+            }
+
+            setDataLoading(false);
+        };
+
+        if (subdomain) {
+            initializeData();
+        }
+    }, [subdomain, loadFromCache, fetchAndCacheData]);
+
+    // Session and pending bookings
     useEffect(() => {
         const fetchSession = async () => {
             try {
@@ -129,6 +314,14 @@ export function TenantProvider({ children, subdomain }: TenantProviderProps) {
         pendingBookingsCount,
         notifications,
         refreshPendingBookings: fetchPendingBookings,
+        // Pre-cached data
+        services,
+        customers,
+        staff,
+        dataLoading,
+        isOnline,
+        lastCacheUpdate,
+        refreshCache,
     };
 
     return (
