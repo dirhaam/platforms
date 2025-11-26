@@ -148,7 +148,6 @@ export function BookingCalendar({
     })
   );
 
-  // Calendar generators
   const getCalendarDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -193,9 +192,14 @@ export function BookingCalendar({
     setCurrentDate(newDate);
   };
 
-  // MINI CALENDAR DATE SELECT: sinkron ke main calendar
+  const navigateMiniMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(miniDate);
+    newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
+    setMiniDate(newDate);
+  };
+
   const onMiniDateSelect = (date: Date) => {
-    setCurrentDate(date);
+    setCurrentDate(date); // pilih di main calendar juga
     onDateSelect(date);
   };
 
@@ -214,10 +218,27 @@ export function BookingCalendar({
     }
   };
 
-  // MINI CALENDAR SIDEBAR: hanya nama hari, grid tanggal, filter
+  // MINI CALENDAR SIDEBAR - FINAL REVISION sesuai permintaan 
   const renderMiniCalendar = () => (
     <div className="mb-6">
-      {/* Baris nama hari 3 huruf */}
+      {/* Baris ATAS: Arrow, Nama Bulan/Tahun, Baris Hari */}
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <button
+          className="px-2 py-1 rounded hover:bg-gray-100"
+          onClick={() => navigateMiniMonth('prev')}
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <span className="flex-1 text-center font-semibold text-md">
+          {monthNames[miniDate.getMonth()]} {miniDate.getFullYear()}
+        </span>
+        <button
+          className="px-2 py-1 rounded hover:bg-gray-100"
+          onClick={() => navigateMiniMonth('next')}
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
       <div className="grid grid-cols-7 gap-x-3 mb-1 text-xs font-semibold text-gray-500">
         {weekdaysMini.map(day => (
           <div key={day} className="text-center">{day}</div>
