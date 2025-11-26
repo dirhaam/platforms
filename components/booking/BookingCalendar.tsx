@@ -60,27 +60,27 @@ const FilterPanel = ({
   onToggleAll: () => void
 }) => {
   const filters = [
-    { id: 'pending', label: 'Pending', color: '#facc15', borderColor: '#facc15' },
-    { id: 'confirmed', label: 'Confirmed', color: '#3b82f6', borderColor: '#3b82f6' },
-    { id: 'completed', label: 'Completed', color: '#22c55e', borderColor: '#22c55e' },
-    { id: 'cancelled', label: 'Cancelled', color: '#ef4444', borderColor: '#ef4444' },
+    { id: 'pending', label: 'Pending', color: '#FEF3C7', textColor: '#92400E', borderColor: '#FDE68A' },
+    { id: 'confirmed', label: 'Confirmed', color: '#DBEAFE', textColor: '#1E40AF', borderColor: '#BFDBFE' },
+    { id: 'completed', label: 'Completed', color: '#D1FAE5', textColor: '#065F46', borderColor: '#A7F3D0' },
+    { id: 'cancelled', label: 'Cancelled', color: '#FEE2E2', textColor: '#991B1B', borderColor: '#FECACA' },
   ];
 
   return (
     <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
       <div>
-        <h3 className="font-semibold text-sm text-txt-primary mb-3 px-1">Event Filters</h3>
-        <div className="space-y-3">
-          <div className="flex items-center space-x-2 px-1">
+        <h3 className="font-semibold text-sm text-gray-700 mb-4">Event Filters</h3>
+        <div className="space-y-2.5">
+          <div className="flex items-center space-x-2.5">
             <Checkbox
               id="filter-all"
               checked={selectedStatuses.length === 4}
               onCheckedChange={onToggleAll}
-              className="border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              className="rounded border-2 border-primary data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             />
             <label
               htmlFor="filter-all"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-txt-secondary cursor-pointer"
+              className="text-sm font-medium text-gray-700 cursor-pointer select-none"
             >
               View All
             </label>
@@ -88,21 +88,23 @@ const FilterPanel = ({
           {filters.map(filter => {
             const isChecked = selectedStatuses.includes(filter.id);
             return (
-              <div key={filter.id} className="flex items-center space-x-2 px-1">
+              <div key={filter.id} className="flex items-center space-x-2.5">
                 <Checkbox
                   id={`filter-${filter.id}`}
                   checked={isChecked}
                   onCheckedChange={() => onToggleStatus(filter.id)}
-                  className="border-gray-300"
+                  className="rounded border-2 data-[state=checked]:border-transparent"
                   style={{
-                    backgroundColor: isChecked ? filter.color : undefined,
-                    borderColor: isChecked ? filter.borderColor : undefined,
-                    color: 'white'
+                    backgroundColor: isChecked ? filter.color : 'transparent',
+                    borderColor: isChecked ? filter.borderColor : '#D1D5DB',
                   }}
                 />
                 <label
                   htmlFor={`filter-${filter.id}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-txt-secondary cursor-pointer"
+                  className="text-sm font-medium cursor-pointer select-none"
+                  style={{
+                    color: isChecked ? filter.textColor : '#6B7280'
+                  }}
                 >
                   {filter.label}
                 </label>
@@ -221,27 +223,30 @@ export function BookingCalendar({
   // MINI CALENDAR SIDEBAR - FINAL REVISION sesuai permintaan 
   const renderMiniCalendar = () => (
     <div className="mb-6 mini-calendar-hide-default">
-      {/* Baris ATAS: Arrow, Nama Bulan/Tahun, Baris Hari */}
-      <div className="flex items-center justify-between mb-2 gap-2">
+      {/* Baris ATAS: Arrow, Nama Bulan/Tahun */}
+      <div className="flex items-center justify-between mb-4 gap-2">
         <button
-          className="px-2 py-1 rounded hover:bg-gray-100"
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           onClick={() => navigateMiniMonth('prev')}
         >
-          <ChevronLeft size={16} />
+          <ChevronLeft size={18} className="text-gray-600" />
         </button>
-        <span className="flex-1 text-center font-semibold text-md">
+        <span className="flex-1 text-center font-semibold text-base text-gray-900">
           {monthNames[miniDate.getMonth()]} {miniDate.getFullYear()}
         </span>
         <button
-          className="px-2 py-1 rounded hover:bg-gray-100"
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           onClick={() => navigateMiniMonth('next')}
         >
-          <ChevronRight size={16} />
+          <ChevronRight size={18} className="text-gray-600" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-x-3 mb-1 text-xs font-semibold text-gray-500">
+      {/* Baris nama hari - 3 huruf */}
+      <div className="grid grid-cols-7 mb-2">
         {weekdaysMini.map(day => (
-          <div key={day} className="text-center">{day}</div>
+          <div key={day} className="text-center text-xs font-medium text-gray-500 h-8 flex items-center justify-center">
+            {day}
+          </div>
         ))}
       </div>
       {/* Grid tanggal */}
@@ -250,23 +255,24 @@ export function BookingCalendar({
         mode="single"
         selected={currentDate}
         onSelect={date => date && onMiniDateSelect(date)}
-        className="rounded-md border-0 w-full bg-transparent shadow-none"
+        className="p-0 rounded-md border-0 w-full bg-transparent shadow-none"
         classNames={{
           months: "flex flex-col w-full",
-          month: "w-full",
+          month: "w-full space-y-0",
           caption: "!hidden",
           table: "w-full border-collapse",
           head_row: "!hidden",
-          row: "grid grid-cols-7 gap-x-3 w-full mt-1",
-          cell: "h-9 w-9 text-center flex items-center justify-center text-[13px] p-0 relative",
-          day: "h-9 w-9 px-0 font-normal rounded-md hover:bg-gray-100",
-          day_selected: "bg-indigo-500 text-white font-semibold",
-          day_today: "font-bold text-indigo-500",
-          day_outside: "opacity-50 text-gray-400",
+          row: "grid grid-cols-7 w-full",
+          cell: "h-8 w-full text-center flex items-center justify-center text-sm p-0 relative",
+          day: "h-8 w-8 p-0 font-normal rounded-md hover:bg-gray-100 transition-colors cursor-pointer",
+          day_selected: "bg-primary text-white font-semibold hover:bg-primary",
+          day_today: "font-bold text-primary",
+          day_outside: "text-gray-300",
         }}
       />
     </div>
   );
+
 
   // MONTH VIEW
   const renderMonthView = () => (
