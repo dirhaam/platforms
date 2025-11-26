@@ -1,48 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Booking, BookingStatus } from '@/types/booking';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import { Booking, BookingStatus } from '@/types/booking';
-
-const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-const monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
-
-// ------------------------------
-// PERBAIKAN: tambahkan tipe parameter!
-const toDate = (scheduledAt: Date | string): Date =>
-  typeof scheduledAt === 'string' ? new Date(scheduledAt) : scheduledAt;
-
-const formatTime = (date: Date): string =>
-  date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-
-// ------------------------------
-const getStatusColor = (status: BookingStatus): string => {
-  switch (status) {
-    case BookingStatus.PENDING:
-      return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    case BookingStatus.CONFIRMED:
-      return 'bg-blue-100 text-blue-700 border-blue-200';
-    case BookingStatus.COMPLETED:
-      return 'bg-green-100 text-green-700 border-green-200';
-    case BookingStatus.CANCELLED:
-      return 'bg-red-100 text-red-700 border-red-200';
-    case BookingStatus.NO_SHOW:
-      return 'bg-gray-100 text-gray-700 border-gray-200';
-    default:
-      return 'bg-gray-100 text-gray-700 border-gray-200';
-  }
-};
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -55,7 +21,33 @@ interface BookingCalendarProps {
   onStatusChange?: (status: string) => void;
 }
 
-// Filter Panel
+const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const toDate = (scheduledAt: Date | string): Date =>
+  typeof scheduledAt === 'string' ? new Date(scheduledAt) : scheduledAt;
+
+const formatTime = (date: Date): string =>
+  date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+const getStatusColor = (status: BookingStatus): string => {
+  switch (status) {
+    case BookingStatus.PENDING: return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    case BookingStatus.CONFIRMED: return 'bg-blue-100 text-blue-700 border-blue-200';
+    case BookingStatus.COMPLETED: return 'bg-green-100 text-green-700 border-green-200';
+    case BookingStatus.CANCELLED: return 'bg-red-100 text-red-700 border-red-200';
+    case BookingStatus.NO_SHOW: return 'bg-gray-100 text-gray-700 border-gray-200';
+    default: return 'bg-gray-100 text-gray-700 border-gray-200';
+  }
+};
+
 const FilterPanel = ({
   selectedStatuses,
   onToggleStatus,
@@ -131,8 +123,8 @@ export function BookingCalendar({
   statusFilter = 'all',
   onStatusChange
 }: BookingCalendarProps) {
-  const [currentDate, setCurrentDate] = useState<Date>(selectedDate || new Date());
-  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
+  const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['pending', 'confirmed', 'completed', 'cancelled']);
 
   useEffect(() => {
@@ -153,7 +145,7 @@ export function BookingCalendar({
     })
   );
 
-  const getCalendarDays = (): Date[] => {
+  const getCalendarDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -161,7 +153,7 @@ export function BookingCalendar({
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDayWeekday);
 
-    const days: Date[] = [];
+    const days = [];
     for (let i = 0; i < 42; i++) {
       days.push(new Date(startDate));
       startDate.setDate(startDate.getDate() + 1);
@@ -169,10 +161,10 @@ export function BookingCalendar({
     return days;
   };
 
-  const getWeekDays = (): Date[] => {
+  const getWeekDays = () => {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(currentDate.getDate() - ((currentDate.getDay() + 6) % 7));
-    const days: Date[] = [];
+    const days = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
@@ -217,7 +209,7 @@ export function BookingCalendar({
 
   /* MONTH VIEW */
   const renderMonthView = () => (
-    <div className="space-y-4 h-full flex flex-col items-center">
+    <div className="space-y-4 h-full flex flex-col">
       <div className="grid grid-cols-7 gap-px bg-gray-100 border border-gray-200 rounded-t-lg overflow-hidden">
         {weekdays.map((day, idx) => (
           <div
@@ -228,6 +220,7 @@ export function BookingCalendar({
           </div>
         ))}
       </div>
+
       <div className="grid grid-cols-7 grid-rows-6 gap-px bg-gray-200 border-x border-b border-gray-200 rounded-b-lg overflow-hidden flex-1 min-h-[600px]">
         {getCalendarDays().map((day, idx) => {
           const isCurrentMonth = day.getMonth() === currentDate.getMonth();
@@ -257,7 +250,6 @@ export function BookingCalendar({
                   {day.getDate()}
                 </span>
               </div>
-
               <div className="flex-1 mt-1 space-y-1 overflow-hidden">
                 {dayBookings.slice(0, 3).map((booking) => (
                   <div
@@ -293,7 +285,7 @@ export function BookingCalendar({
     const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
 
     return (
-      <div className="space-y-4 h-full overflow-hidden flex flex-col items-center">
+      <div className="space-y-4 h-full overflow-hidden flex flex-col">
         <div className="grid grid-cols-8 gap-0 border-b border-gray-200 pb-2">
           <div className="w-16"></div>
           {days.map(day => {
@@ -323,6 +315,7 @@ export function BookingCalendar({
                 </div>
               ))}
             </div>
+
             {days.map(day => (
               <div key={day.toISOString()} className="border-r border-gray-100 relative min-h-[800px]">
                 {hours.map(hour => (
@@ -368,7 +361,7 @@ export function BookingCalendar({
     const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
 
     return (
-      <div className="space-y-4 h-full overflow-hidden flex flex-col items-center">
+      <div className="space-y-4 h-full overflow-hidden flex flex-col">
         <div className="text-center border-b border-gray-200 pb-4">
           <div className="text-sm font-medium text-gray-500 uppercase">
             {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
@@ -377,6 +370,7 @@ export function BookingCalendar({
             {currentDate.getDate()}
           </div>
         </div>
+
         <div className="flex-1 overflow-y-auto custom-scrollbar relative">
           <div className="relative min-h-[800px]">
             {hours.map(hour => (
@@ -426,60 +420,110 @@ export function BookingCalendar({
     );
   };
 
-  return (
-    <div className={`w-full ${className}`}>
-      {/* Navigasi Arrow di atas dan di tengah */}
-      <div className="flex items-center justify-center mt-4 mb-4 gap-2">
+  // MINI CALENDAR DESIGNED OUTSIDE CARD - ONLY THIS PART WAS MODIFIED
+  const renderMiniCalendar = () => (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-2">
         <button
-          className="p-1 rounded hover:bg-gray-100"
-          onClick={() => viewMode === 'month'
-            ? navigateMonth('prev')
-            : viewMode === 'week'
-              ? navigateWeek('prev')
-              : navigateDay('prev')
-          }
+          className="px-2 py-1 rounded hover:bg-gray-100"
+          onClick={() => navigateMonth('prev')}
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={16} />
         </button>
-        <span className="font-semibold text-lg mx-2 min-w-[180px] text-center">
+        <span className="font-semibold text-md">
           {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
         </span>
         <button
-          className="p-1 rounded hover:bg-gray-100"
-          onClick={() => viewMode === 'month'
-            ? navigateMonth('next')
-            : viewMode === 'week'
-              ? navigateWeek('next')
-              : navigateDay('next')
-          }
+          className="px-2 py-1 rounded hover:bg-gray-100"
+          onClick={() => navigateMonth('next')}
         >
-          <ChevronRight size={20} />
+          <ChevronRight size={16} />
         </button>
-        <div className="flex bg-gray-100 p-1 rounded-lg ml-6">
-          {(['month', 'week', 'day'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`
-                px-3 py-1 text-sm font-medium rounded-md transition-all capitalize
-                ${viewMode === mode
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}
-              `}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
       </div>
-      {/* Calendar Area (Tidak pakai Card) */}
+      <Calendar
+        mode="single"
+        selected={currentDate}
+        onSelect={date => date && onDateSelect(date)}
+        className="rounded-md border-0 w-full bg-transparent shadow-none"
+        classNames={{
+          months: "flex flex-col w-full",
+          month: "w-full",
+          caption: "flex justify-center items-center pt-1 mb-4",
+          caption_label: "text-sm font-semibold text-gray-900",
+          nav: "hidden",
+          table: "w-full border-collapse space-y-1",
+          head_row: "flex",
+          head_cell: "rounded-md w-9 font-normal text-[0.8rem]",
+          row: "flex w-full mt-2",
+          cell: "h-9 w-9 text-center text-sm p-0 relative",
+          day: "h-9 w-9 p-0 font-normal rounded-md hover:bg-gray-100",
+          day_selected: "bg-indigo-500 text-white font-semibold",
+          day_today: "font-bold text-indigo-500",
+          day_outside: "text-muted-foreground opacity-50",
+        }}
+      />
+    </div>
+  );
+
+  return (
+    <div className={`w-full bg-white rounded-card shadow-card p-6 ${className}`}>
+      {/* Layout utama */}
       <div className="flex flex-col lg:flex-row gap-8">
-        <FilterPanel
-          selectedStatuses={selectedStatuses}
-          onToggleStatus={toggleStatus}
-          onToggleAll={toggleAllStatuses}
-        />
+        {/* Sidebar kiri */}
+        <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
+          {/* MINI CALENDAR di luar card */}
+          {renderMiniCalendar()}
+
+          {/* Filter Panel */}
+          <FilterPanel
+            selectedStatuses={selectedStatuses}
+            onToggleStatus={toggleStatus}
+            onToggleAll={toggleAllStatuses}
+          />
+        </div>
+
+        {/* Main Calendar Area */}
         <div className="flex-1 min-w-0 min-h-[600px]">
+          {/* Header & view switcher */}
+          <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full border-gray-200"
+                onClick={() => viewMode === 'month' ? navigateMonth('prev') : viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full border-gray-200"
+                onClick={() => viewMode === 'month' ? navigateMonth('next') : viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <h2 className="text-xl font-bold text-gray-900 min-w-[180px]">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+            </div>
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              {(['month', 'week', 'day'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`
+                      px-4 py-1.5 text-sm font-medium rounded-md transition-all capitalize
+                      ${viewMode === mode
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}
+                    `}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
