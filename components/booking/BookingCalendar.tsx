@@ -220,7 +220,7 @@ export function BookingCalendar({
 
   // MINI CALENDAR SIDEBAR - FINAL REVISION sesuai permintaan 
   const renderMiniCalendar = () => (
-    <div className="mb-6">
+    <div className="mb-6 mini-calendar-hide-default">
       {/* Baris ATAS: Arrow, Nama Bulan/Tahun, Baris Hari */}
       <div className="flex items-center justify-between mb-2 gap-2">
         <button
