@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,100 +13,26 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { BoxIcon } from '@/components/ui/box-icon';
-import { formatDistanceToNow } from 'date-fns';
-import { id as idLocale } from 'date-fns/locale';
-
-interface UserSession {
-    name: string;
-    email: string;
-    role: string;
-    userId?: string;
-}
-
-interface BookingNotification {
-    id: string;
-    title: string;
-    message: string;
-    time: string;
-    read: boolean;
-    bookingId: string;
-}
+import { useTenantContext } from '@/lib/contexts/TenantContext';
 
 import { NewBookingPOS } from '@/components/booking/NewBookingPOS';
 import { QuickSalesPOS } from '@/components/sales/QuickSalesPOS';
 
 interface NavbarProps {
     tenantId?: string;
+    subdomain: string;
 }
 
-export function Navbar({ tenantId }: NavbarProps) {
+export function Navbar({ tenantId, subdomain }: NavbarProps) {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const subdomain = searchParams?.get('subdomain') || '';
+    const { user, notifications } = useTenantContext();
 
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
     const [showNewBooking, setShowNewBooking] = useState(false);
     const [showQuickSale, setShowQuickSale] = useState(false);
-    const [user, setUser] = useState<UserSession>({
-        name: 'User',
-        email: '',
-        role: 'staff',
-    });
-    const [notifications, setNotifications] = useState<BookingNotification[]>([]);
-
-    const fetchPendingBookings = useCallback(async () => {
-        if (!subdomain) return;
-        try {
-            const response = await fetch(`/api/bookings?status=pending&limit=10`, {
-                headers: { 'x-tenant-id': subdomain }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                const bookings = data.bookings || [];
-                const bookingNotifications: BookingNotification[] = bookings.map((booking: any) => ({
-                    id: booking.id,
-                    title: 'Booking Baru',
-                    message: `${booking.customerName || 'Pelanggan'} - ${booking.serviceName || 'Layanan'}`,
-                    time: formatDistanceToNow(new Date(booking.createdAt), { addSuffix: true, locale: idLocale }),
-                    read: false,
-                    bookingId: booking.id,
-                }));
-                setNotifications(bookingNotifications);
-            }
-        } catch (error) {
-            console.error('Failed to fetch pending bookings:', error);
-        }
-    }, [subdomain]);
-
-    // Fetch user session data
-    useEffect(() => {
-        const fetchSession = async () => {
-            try {
-                const response = await fetch('/api/auth/session');
-                if (response.ok) {
-                    const data = await response.json();
-                    const session = data.session || data;
-                    setUser({
-                        name: session.name || 'User',
-                        email: session.email || '',
-                        role: session.role || 'staff',
-                        userId: session.userId,
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to fetch session:', error);
-            }
-        };
-        fetchSession();
-        fetchPendingBookings();
-
-        // Refresh pending bookings every 30 seconds
-        const interval = setInterval(fetchPendingBookings, 30000);
-        return () => clearInterval(interval);
-    }, [fetchPendingBookings]);
 
     const handleLogout = async () => {
         setLoggingOut(true);

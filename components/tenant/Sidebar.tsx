@@ -1,15 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { BoxIcon } from '@/components/ui/box-icon';
-
-interface PendingBooking {
-    id: string;
-    status: string;
-}
+import { useTenantContext } from '@/lib/contexts/TenantContext';
 
 interface SidebarProps {
     collapsed: boolean;
@@ -119,47 +115,9 @@ const NAV_ITEMS: NavItem[] = [
 export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName }: SidebarProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [userRole, setUserRole] = useState<UserRole | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
-    const [expandedMenus, setExpandedMenus] = useState<string[]>(['Bookings']); // Default expand Bookings
-
-    const fetchPendingBookings = useCallback(async () => {
-        if (!subdomain) return;
-        try {
-            const response = await fetch(`/api/bookings?status=pending`, {
-                headers: { 'x-tenant-id': subdomain }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setPendingBookingsCount(data.bookings?.length || 0);
-            }
-        } catch (error) {
-            console.error('Failed to fetch pending bookings:', error);
-        }
-    }, [subdomain]);
-
-    useEffect(() => {
-        const fetchSession = async () => {
-            try {
-                const response = await fetch('/api/auth/session');
-                if (response.ok) {
-                    const data = await response.json();
-                    setUserRole(data.session?.role || data.role || null);
-                }
-            } catch (error) {
-                console.error('Failed to fetch session:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchSession();
-        fetchPendingBookings();
-
-        // Refresh pending bookings every 30 seconds
-        const interval = setInterval(fetchPendingBookings, 30000);
-        return () => clearInterval(interval);
-    }, [fetchPendingBookings]);
+    const { user, userLoading, pendingBookingsCount } = useTenantContext();
+    const userRole = user.role;
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(['Bookings']);
 
     // Filter nav items based on user role
     const visibleNavItems = NAV_ITEMS.filter(item => {
@@ -233,7 +191,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
 
             {/* Navigation */}
             <div className="flex-1 overflow-y-auto py-2 px-4 custom-scrollbar">
-                {loading ? (
+                {userLoading ? (
                     <div className="flex items-center justify-center py-8">
                         <BoxIcon name="loader-alt" size={20} className="animate-spin opacity-50" />
                     </div>

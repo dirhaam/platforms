@@ -7,6 +7,7 @@ import { Navbar } from '@/components/tenant/Navbar';
 import { cn } from '@/lib/utils';
 import { ExpiredAdminBlock } from '@/components/tenant/ExpiredOverlay';
 import { PWAProvider } from '@/components/pwa/PWAProvider';
+import { TenantProvider } from '@/lib/contexts/TenantContext';
 
 import { fetchTenantBySubdomain } from '@/lib/subdomain-fetcher';
 
@@ -92,39 +93,41 @@ function TenantAdminLayoutContent({
 
   return (
     <PWAProvider>
-      <div className="flex min-h-screen bg-background font-sans">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
-          subdomain={subdomain}
-          logo={tenantData?.logo}
-          businessName={tenantData?.businessName}
-        />
+      <TenantProvider subdomain={subdomain}>
+        <div className="flex min-h-screen bg-background font-sans">
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            setCollapsed={setSidebarCollapsed}
+            subdomain={subdomain}
+            logo={tenantData?.logo}
+            businessName={tenantData?.businessName}
+          />
 
-        <div
-          className={cn(
-            "flex-1 flex flex-col transition-all duration-300 ease-in-out relative",
-            sidebarCollapsed ? "ml-20" : "ml-64"
-          )}
-        >
-          <Navbar tenantId={tenantData?.id} />
+          <div
+            className={cn(
+              "flex-1 flex flex-col transition-all duration-300 ease-in-out relative",
+              sidebarCollapsed ? "ml-20" : "ml-64"
+            )}
+          >
+            <Navbar tenantId={tenantData?.id} subdomain={subdomain} />
 
-          {/* Main Content */}
-          <main className="flex-1 p-6 overflow-y-auto">
-            {children}
+            {/* Main Content */}
+            <main className="flex-1 p-6 overflow-y-auto">
+              {children}
 
-            {/* Footer */}
-            <footer className="mt-12 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-              <p>&copy; {new Date().getFullYear()} {tenantData?.businessName || 'Booqing'}, made with ❤️ by Booqing</p>
-              <div className="flex gap-4 mt-2 md:mt-0">
-                <a href="#" className="hover:text-primary">License</a>
-                <a href="#" className="hover:text-primary">Documentation</a>
-                <a href="#" className="hover:text-primary">Support</a>
-              </div>
-            </footer>
-          </main>
+              {/* Footer */}
+              <footer className="mt-12 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
+                <p>&copy; {new Date().getFullYear()} {tenantData?.businessName || 'Booqing'}, made with ❤️ by Booqing</p>
+                <div className="flex gap-4 mt-2 md:mt-0">
+                  <a href="#" className="hover:text-primary">License</a>
+                  <a href="#" className="hover:text-primary">Documentation</a>
+                  <a href="#" className="hover:text-primary">Support</a>
+                </div>
+              </footer>
+            </main>
+          </div>
         </div>
-      </div>
+      </TenantProvider>
     </PWAProvider>
   );
 }
