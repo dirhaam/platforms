@@ -6,6 +6,8 @@ import {
   getAllFromStore 
 } from './db';
 
+export type { OfflineQueueItem };
+
 function generateId(): string {
   return `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
