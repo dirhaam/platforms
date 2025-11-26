@@ -225,7 +225,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                 <BoxIcon
                                                     name={item.icon}
                                                     type={item.iconType || 'regular'}
-                                                    size={24}
+                                                    size={28}
                                                     className={cn(
                                                         isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
                                                     )}
@@ -274,7 +274,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                                     : "text-muted-foreground hover:text-foreground hover:bg-gray-50"
                                                             )}
                                                         >
-                                                            <BoxIcon name={child.icon} size={20} className="opacity-70" />
+                                                            <BoxIcon name={child.icon} size={22} className="opacity-70" />
                                                             <span>{child.title}</span>
                                                         </Link>
                                                     );
@@ -302,7 +302,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                         <BoxIcon
                                             name={item.icon}
                                             type={item.iconType || 'regular'}
-                                            size={24}
+                                            size={28}
                                             className={cn(
                                                 isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
                                             )}
