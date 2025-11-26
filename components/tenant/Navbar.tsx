@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { BoxIcon } from '@/components/ui/box-icon';
 import { useTenantContext } from '@/lib/contexts/TenantContext';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 import { NewBookingPOS } from '@/components/booking/NewBookingPOS';
 import { QuickSalesPOS } from '@/components/sales/QuickSalesPOS';
@@ -28,8 +29,8 @@ interface NavbarProps {
 export function Navbar({ tenantId, subdomain }: NavbarProps) {
     const router = useRouter();
     const { user, notifications } = useTenantContext();
+    const { theme, toggleTheme } = useTheme();
 
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
     const [showNewBooking, setShowNewBooking] = useState(false);
     const [showQuickSale, setShowQuickSale] = useState(false);
@@ -58,15 +59,11 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
         router.push(`/tenant/admin/profile?subdomain=${subdomain}`);
     };
 
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-    };
-
     const unreadCount = notifications.filter(n => !n.read).length;
 
     return (
         <>
-            <header className="px-6 py-3 sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/40">
+            <header className="px-6 py-3 sticky top-0 z-40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between h-16">
                     {/* Search */}
                     <div className="flex items-center gap-4 flex-1 max-w-xl">
@@ -77,7 +74,7 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                             <Input
                                 type="text"
                                 placeholder="Search bookings, customers, services..."
-                                className="w-full pl-10 bg-muted/50 border-transparent focus:bg-background focus:border-primary/20 transition-all duration-200"
+                                className="w-full pl-10 bg-gray-100 dark:bg-gray-700 border-transparent focus:bg-white dark:focus:bg-gray-600 focus:border-primary/20 transition-all duration-200 dark:text-white dark:placeholder:text-gray-400"
                             />
                         </div>
                     </div>
@@ -119,11 +116,17 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                         </DropdownMenu>
 
                         {/* Theme Toggle */}
-                        <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
-                            {isDarkMode ? (
-                                <BoxIcon name="moon" size={24} className="opacity-70" />
-                            ) : (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={toggleTheme} 
+                            className="text-muted-foreground hover:text-foreground"
+                            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        >
+                            {theme === 'dark' ? (
                                 <BoxIcon name="sun" size={24} className="opacity-70" />
+                            ) : (
+                                <BoxIcon name="moon" size={24} className="opacity-70" />
                             )}
                         </Button>
 

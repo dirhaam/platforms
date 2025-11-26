@@ -141,7 +141,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
     return (
         <aside
             className={cn(
-                "fixed left-0 top-0 h-full bg-white shadow-lg z-50 transition-all duration-300 ease-in-out",
+                "fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-lg z-50 transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700",
                 collapsed ? "w-20" : "w-64"
             )}
         >
@@ -156,7 +156,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                         </div>
                     )}
                     {!collapsed && (
-                        <span className="text-xl font-bold text-foreground tracking-tight truncate max-w-[150px]">
+                        <span className="text-xl font-bold text-txt-primary dark:text-white tracking-tight truncate max-w-[150px]">
                             {businessName || 'NamaWebsite'}
                         </span>
                     )}
@@ -216,7 +216,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                 "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium relative",
                                                 isActive
                                                     ? "bg-primary/10 text-primary shadow-none"
-                                                    : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
+                                                    : "text-txt-secondary dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-txt-primary dark:hover:text-white",
                                                 collapsed ? "justify-center px-2" : ""
                                             )}
                                             title={collapsed ? item.title : ''}
