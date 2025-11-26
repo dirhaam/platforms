@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
 import { getTenantSession } from '@/lib/auth/tenant-auth';
