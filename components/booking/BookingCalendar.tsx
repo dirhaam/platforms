@@ -432,30 +432,16 @@ export function BookingCalendar({
         <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
           {/* Mini Calendar */}
           <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-2">
-            <Calendar
-              mode="single"
-              selected={currentDate}
-              onSelect={(date) => date && onDateSelect(date)}
-              className="rounded-md border-0 w-full"
-              components={{
-                IconLeft: () => <i className='bx bx-chevron-left text-lg'></i>,
-                IconRight: () => <i className='bx bx-chevron-right text-lg'></i>,
-              }}
-              classNames={{
-                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                month: "space-y-4 w-full",
-                caption: "flex justify-start items-center pt-1 relative mb-2 gap-2",
-                caption_label: "text-sm font-medium order-2",
-                nav: "flex items-center gap-1 order-1",
-                nav_button: cn(
-                  "h-7 w-7 bg-gray-100 p-0 opacity-100 hover:opacity-75 rounded-md flex items-center justify-center"
-                ),
-                nav_button_previous: "static",
-                nav_button_next: "static",
-                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex-1",
-                cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 flex-1 flex items-center justify-center",
-                day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
-                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+            nav: "flex items-center gap-1 order-1",
+            nav_button: cn(
+            "h-7 w-7 bg-gray-100 p-0 opacity-100 hover:opacity-75 rounded-md flex items-center justify-center"
+            ),
+            nav_button_previous: "static",
+            nav_button_next: "static",
+            head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex-1",
+            cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 flex-1 flex items-center justify-center",
+            day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
+            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
               }}
             />
           </div>
