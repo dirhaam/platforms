@@ -338,7 +338,7 @@ export function BookingCalendar({
                   );
                 })}
                 {dayBookings.length > 3 && (
-                  <div className="text-[11px] text-gray-500 font-medium pl-1.5">
+                  <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-600 text-white text-[10px] font-semibold ml-1.5">
                     +{dayBookings.length - 3} more
                   </div>
                 )}
