@@ -4,14 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Booking, BookingStatus } from '@/types/booking';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -62,10 +57,10 @@ const FilterPanel = ({
   onToggleAll: () => void
 }) => {
   const filters = [
-    { id: 'pending', label: 'Pending', color: 'bg-yellow-400', borderColor: 'border-yellow-400' },
-    { id: 'confirmed', label: 'Confirmed', color: 'bg-blue-500', borderColor: 'border-blue-500' },
-    { id: 'completed', label: 'Completed', color: 'bg-green-500', borderColor: 'border-green-500' },
-    { id: 'cancelled', label: 'Cancelled', color: 'bg-red-500', borderColor: 'border-red-500' },
+    { id: 'pending', label: 'Pending', color: '#facc15', borderColor: '#facc15' }, // yellow-400
+    { id: 'confirmed', label: 'Confirmed', color: '#3b82f6', borderColor: '#3b82f6' }, // blue-500
+    { id: 'completed', label: 'Completed', color: '#22c55e', borderColor: '#22c55e' }, // green-500
+    { id: 'cancelled', label: 'Cancelled', color: '#ef4444', borderColor: '#ef4444' }, // red-500
   ];
 
   return (
@@ -96,10 +91,10 @@ const FilterPanel = ({
                   id={`filter-${filter.id}`}
                   checked={isChecked}
                   onCheckedChange={() => onToggleStatus(filter.id)}
-                  className={`border-gray-300`}
+                  className="border-gray-300"
                   style={{
-                    backgroundColor: isChecked ? getComputedStyleColor(filter.color) : undefined,
-                    borderColor: isChecked ? getComputedStyleColor(filter.borderColor) : undefined,
+                    backgroundColor: isChecked ? filter.color : undefined,
+                    borderColor: isChecked ? filter.borderColor : undefined,
                     color: 'white'
                   }}
                 />
@@ -116,15 +111,6 @@ const FilterPanel = ({
       </div>
     </div>
   );
-};
-
-// Helper to map tailwind classes to hex colors for inline styles (since dynamic classes are tricky)
-const getComputedStyleColor = (className: string) => {
-  if (className.includes('yellow')) return '#facc15';
-  if (className.includes('blue')) return '#3b82f6';
-  if (className.includes('green')) return '#22c55e';
-  if (className.includes('red')) return '#ef4444';
-  return undefined;
 };
 
 export function BookingCalendar({
@@ -438,31 +424,32 @@ export function BookingCalendar({
 
   return (
     <div className={`w-full bg-white rounded-card shadow-card p-6 ${className}`}>
+      {/* Header */}
       <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full border-gray-200"
-              onClick={() => viewMode === 'month' ? navigateMonth('prev') : viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
-            >
-              <i className='bx bx-chevron-left text-lg'></i>
-            </Button>
-            <h2 className="text-xl font-bold text-gray-900 min-w-[180px] text-center">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full border-gray-200"
-              onClick={() => viewMode === 'month' ? navigateMonth('next') : viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
-            >
-              <i className='bx bx-chevron-right text-lg'></i>
-            </Button>
-          </div>
+        {/* Left: Title & Navigation */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full border-gray-200"
+            onClick={() => viewMode === 'month' ? navigateMonth('prev') : viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
+          >
+            <i className='bx bx-chevron-left text-lg'></i>
+          </Button>
+          <h2 className="text-xl font-bold text-gray-900 min-w-[180px] text-center">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </h2>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full border-gray-200"
+            onClick={() => viewMode === 'month' ? navigateMonth('next') : viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
+          >
+            <i className='bx bx-chevron-right text-lg'></i>
+          </Button>
         </div>
 
+        {/* Right: View Switcher (Segmented Control) */}
         <div className="flex bg-gray-100 p-1 rounded-lg">
           {(['month', 'week', 'day'] as const).map((mode) => (
             <button
@@ -481,8 +468,11 @@ export function BookingCalendar({
         </div>
       </div>
 
+      {/* Main Content Layout */}
       <div className="flex flex-col lg:flex-row gap-8">
+        {/* Left Sidebar */}
         <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
+          {/* Mini Calendar */}
           <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-2">
             <Calendar
               mode="single"
@@ -497,6 +487,8 @@ export function BookingCalendar({
               }}
             />
           </div>
+
+          {/* Filters */}
           <FilterPanel
             selectedStatuses={selectedStatuses}
             onToggleStatus={toggleStatus}
@@ -504,6 +496,7 @@ export function BookingCalendar({
           />
         </div>
 
+        {/* Main Calendar Area */}
         <div className="flex-1 min-w-0 min-h-[600px]">
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
