@@ -41,11 +41,11 @@ const formatTime = (date: Date): string =>
 
 const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
-    case BookingStatus.PENDING: return 'bg-[#FFE8CC] text-[#CC5500] border-[#FFD699]'; // Orange/Yellow like Family
-    case BookingStatus.CONFIRMED: return 'bg-[#E0E7FF] text-[#4C63D2] border-[#C7D2FE]'; // Purple/Blue like Business
-    case BookingStatus.COMPLETED: return 'bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0]'; // Green like Holiday
-    case BookingStatus.CANCELLED: return 'bg-[#FECACA] text-[#B91C1C] border-[#FCA5A5]'; // Red like Personal
-    case BookingStatus.NO_SHOW: return 'bg-[#E0F2F1] text-[#00695C] border-[#B2DFDB]'; // Cyan like ETC
+    case BookingStatus.PENDING: return 'bg-yellow-100 text-yellow-800 border-yellow-300'; // kuning
+    case BookingStatus.CONFIRMED: return 'bg-indigo-100 text-indigo-800 border-indigo-300'; // biru
+    case BookingStatus.COMPLETED: return 'bg-green-100 text-green-800 border-green-300'; // hijau
+    case BookingStatus.CANCELLED: return 'bg-rose-100 text-rose-800 border-rose-300'; // merah
+    case BookingStatus.NO_SHOW: return 'bg-gray-100 text-gray-700 border-gray-200';
     default: return 'bg-gray-100 text-gray-700 border-gray-200';
   }
 };
@@ -223,14 +223,14 @@ export function BookingCalendar({
 
   // MINI CALENDAR SIDEBAR - FINAL REVISION sesuai permintaan 
   const renderMiniCalendar = () => (
-    <div className="mb-6 mini-calendar-hide-default">
-      {/* Baris ATAS: Arrow, Nama Bulan/Tahun */}
-      <div className="flex items-center justify-between mb-4 gap-2">
+    <div className="mb-6">
+      {/* Header bulan + arrow */}
+      <div className="flex items-center justify-between mb-1 gap-2">
         <button
           className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           onClick={() => navigateMiniMonth('prev')}
         >
-          <ChevronLeft size={18} className="text-gray-600" />
+          <ChevronLeft size={20} className="text-gray-400" />
         </button>
         <span className="flex-1 text-center font-semibold text-base text-gray-900">
           {monthNames[miniDate.getMonth()]} {miniDate.getFullYear()}
@@ -239,18 +239,18 @@ export function BookingCalendar({
           className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           onClick={() => navigateMiniMonth('next')}
         >
-          <ChevronRight size={18} className="text-gray-600" />
+          <ChevronRight size={20} className="text-gray-400" />
         </button>
       </div>
-      {/* Baris nama hari - 3 huruf */}
-      <div className="grid grid-cols-7 mb-2">
+      {/* Baris nama hari */}
+      <div className="grid grid-cols-7 mb-2 gap-x-1">
         {weekdaysMini.map(day => (
-          <div key={day} className="text-center text-xs font-medium text-gray-500 h-8 flex items-center justify-center">
+          <div key={day} className="text-center text-xs font-medium text-gray-400 h-7 flex items-center justify-center">
             {day}
           </div>
         ))}
       </div>
-      {/* Grid tanggal */}
+      {/* Grid tanggal style persis gambar 2 */}
       <Calendar
         month={miniDate}
         mode="single"
@@ -260,15 +260,20 @@ export function BookingCalendar({
         classNames={{
           months: "flex flex-col w-full",
           month: "w-full space-y-0",
-          caption: "!hidden",
+          caption: "hidden",
           table: "w-full border-collapse",
-          head_row: "!hidden",
-          row: "grid grid-cols-7 w-full",
+          head_row: "hidden",
+          row: "grid grid-cols-7 gap-x-1 w-full mt-1",
           cell: "h-8 w-full text-center flex items-center justify-center text-sm p-0 relative",
-          day: "h-8 w-8 p-0 font-normal rounded-md hover:bg-gray-100 transition-colors cursor-pointer",
-          day_selected: "bg-primary text-white font-semibold hover:bg-primary",
-          day_today: "font-bold text-primary",
-          day_outside: "text-gray-300",
+          day: `
+          h-8 w-8 rounded-md flex items-center justify-center cursor-pointer 
+          transition-all 
+          hover:bg-[#EEF2FF] hover:text-[#6366F1]
+          bg-white
+        `,
+          day_selected: "bg-[#6366F1] text-white font-bold",
+          day_today: "border-2 border-[#6366F1] font-bold bg-white text-[#6366F1]",
+          day_outside: "text-gray-300 bg-white",
         }}
       />
     </div>
