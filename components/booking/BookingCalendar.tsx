@@ -21,11 +21,13 @@ interface BookingCalendarProps {
   onStatusChange?: (status: string) => void;
 }
 
-const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
+
+const weekdaysMain = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const weekdaysMini = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const toDate = (scheduledAt: Date | string): Date =>
   typeof scheduledAt === 'string' ? new Date(scheduledAt) : scheduledAt;
@@ -124,6 +126,7 @@ export function BookingCalendar({
   onStatusChange
 }: BookingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+  const [miniDate, setMiniDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['pending', 'confirmed', 'completed', 'cancelled']);
 
@@ -145,15 +148,16 @@ export function BookingCalendar({
     })
   );
 
+  // Calendar generators
   const getCalendarDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
-    const firstDayWeekday = (firstDay.getDay() + 6) % 7;
+    const firstDayWeekday = firstDay.getDay();
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDayWeekday);
 
-    const days = [];
+    const days: Date[] = [];
     for (let i = 0; i < 42; i++) {
       days.push(new Date(startDate));
       startDate.setDate(startDate.getDate() + 1);
@@ -163,8 +167,8 @@ export function BookingCalendar({
 
   const getWeekDays = () => {
     const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(currentDate.getDate() - ((currentDate.getDay() + 6) % 7));
-    const days = [];
+    startOfWeek.setDate(currentDate.getDate() - startOfWeek.getDay());
+    const days: Date[] = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
@@ -178,17 +182,21 @@ export function BookingCalendar({
     newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
     setCurrentDate(newDate);
   };
-
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
     setCurrentDate(newDate);
   };
-
   const navigateDay = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
     setCurrentDate(newDate);
+  };
+
+  // MINI CALENDAR DATE SELECT: sinkron ke main calendar
+  const onMiniDateSelect = (date: Date) => {
+    setCurrentDate(date);
+    onDateSelect(date);
   };
 
   const toggleStatus = (status: string) => {
@@ -198,7 +206,6 @@ export function BookingCalendar({
         : [...prev, status]
     );
   };
-
   const toggleAllStatuses = () => {
     if (selectedStatuses.length === 4) {
       setSelectedStatuses([]);
@@ -207,11 +214,44 @@ export function BookingCalendar({
     }
   };
 
-  /* MONTH VIEW */
+  // MINI CALENDAR SIDEBAR: hanya nama hari, grid tanggal, filter
+  const renderMiniCalendar = () => (
+    <div className="mb-6">
+      {/* Baris nama hari 3 huruf */}
+      <div className="grid grid-cols-7 gap-x-3 mb-1 text-xs font-semibold text-gray-500">
+        {weekdaysMini.map(day => (
+          <div key={day} className="text-center">{day}</div>
+        ))}
+      </div>
+      {/* Grid tanggal */}
+      <Calendar
+        month={miniDate}
+        mode="single"
+        selected={currentDate}
+        onSelect={date => date && onMiniDateSelect(date)}
+        className="rounded-md border-0 w-full bg-transparent shadow-none"
+        classNames={{
+          months: "flex flex-col w-full",
+          month: "w-full",
+          caption: "hidden",
+          table: "w-full border-collapse",
+          head_row: "hidden",
+          row: "grid grid-cols-7 gap-x-3 w-full mt-1",
+          cell: "h-9 w-9 text-center flex items-center justify-center text-[13px] p-0 relative",
+          day: "h-9 w-9 px-0 font-normal rounded-md hover:bg-gray-100",
+          day_selected: "bg-indigo-500 text-white font-semibold",
+          day_today: "font-bold text-indigo-500",
+          day_outside: "opacity-50 text-gray-400",
+        }}
+      />
+    </div>
+  );
+
+  // MONTH VIEW
   const renderMonthView = () => (
     <div className="space-y-4 h-full flex flex-col">
       <div className="grid grid-cols-7 gap-px bg-gray-100 border border-gray-200 rounded-t-lg overflow-hidden">
-        {weekdays.map((day, idx) => (
+        {weekdaysMain.map((day, idx) => (
           <div
             key={day}
             className={`h-10 flex items-center justify-center font-semibold text-xs uppercase tracking-wider bg-white ${idx === 6 ? 'text-red-500' : 'text-gray-500'}`}
@@ -220,10 +260,9 @@ export function BookingCalendar({
           </div>
         ))}
       </div>
-
       <div className="grid grid-cols-7 grid-rows-6 gap-px bg-gray-200 border-x border-b border-gray-200 rounded-b-lg overflow-hidden flex-1 min-h-[600px]">
         {getCalendarDays().map((day, idx) => {
-          const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+          const isCurrentMonth = day.getMonth() === currentDate.getMonth() && day.getFullYear() === currentDate.getFullYear();
           const isToday = day.toDateString() === new Date().toDateString();
           const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
           const dayBookings = getBookingsForDate(day);
@@ -279,7 +318,7 @@ export function BookingCalendar({
     </div>
   );
 
-  /* WEEK VIEW */
+  // WEEK VIEW
   const renderWeekView = () => {
     const days = getWeekDays();
     const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
@@ -305,7 +344,6 @@ export function BookingCalendar({
             );
           })}
         </div>
-
         <div className="flex-1 overflow-y-auto custom-scrollbar relative">
           <div className="grid grid-cols-8 gap-0">
             <div className="w-16 border-r border-gray-100">
@@ -315,7 +353,6 @@ export function BookingCalendar({
                 </div>
               ))}
             </div>
-
             {days.map(day => (
               <div key={day.toISOString()} className="border-r border-gray-100 relative min-h-[800px]">
                 {hours.map(hour => (
@@ -325,7 +362,6 @@ export function BookingCalendar({
                   const startHour = toDate(booking.scheduledAt).getHours();
                   const startMin = toDate(booking.scheduledAt).getMinutes();
                   const duration = booking.duration || 60;
-
                   const top = ((startHour - businessHours.openTime) * 80) + ((startMin / 60) * 80);
                   const height = (duration / 60) * 80;
 
@@ -355,7 +391,7 @@ export function BookingCalendar({
     );
   };
 
-  /* DAY VIEW */
+  // DAY VIEW
   const renderDayView = () => {
     const dayBookings = getBookingsForDate(currentDate);
     const hours = Array.from({ length: businessHours.closeTime - businessHours.openTime }, (_, i) => businessHours.openTime + i);
@@ -370,7 +406,6 @@ export function BookingCalendar({
             {currentDate.getDate()}
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto custom-scrollbar relative">
           <div className="relative min-h-[800px]">
             {hours.map(hour => (
@@ -420,79 +455,23 @@ export function BookingCalendar({
     );
   };
 
-  // MINI CALENDAR DESIGNED OUTSIDE CARD - ONLY THIS PART WAS MODIFIED
-  const weekdaysFull = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-  const renderMiniCalendar = () => (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <button
-          className="px-2 py-1 rounded hover:bg-gray-100"
-          onClick={() => navigateMonth('prev')}
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <span className="font-semibold text-md">
-          {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-        </span>
-        <button
-          className="px-2 py-1 rounded hover:bg-gray-100"
-          onClick={() => navigateMonth('next')}
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
-      <div>
-        {/* Headings hari */}
-        <div className="grid grid-cols-7 gap-x-2 mb-1 text-xs font-semibold text-gray-500">
-          {weekdaysFull.map(day => (
-            <div key={day} className="text-center">{day}</div>
-          ))}
-        </div>
-        {/* Calendar component */}
-        <Calendar
-          mode="single"
-          selected={currentDate}
-          onSelect={date => date && onDateSelect(date)}
-          className="rounded-md border-0 w-full bg-transparent shadow-none"
-          classNames={{
-            months: "flex flex-col w-full",
-            month: "w-full",
-            caption: "hidden", // Sembunyikan caption sebelumnya agar tidak double
-            table: "w-full border-collapse",
-            head_row: "hidden", // Sembunyikan heading calendar default karena sudah custom di atas
-            row: "grid grid-cols-7 gap-x-2 w-full mt-1",
-            cell: "h-8 w-8 text-center flex items-center justify-center text-sm p-0 relative",
-            day: "h-8 w-8 px-0 font-normal rounded-md hover:bg-gray-100",
-            day_selected: "bg-indigo-500 text-white font-semibold",
-            day_today: "font-bold text-indigo-500",
-            day_outside: "opacity-50 text-gray-400",
-          }}
-        />
-      </div>
-    </div>
-  );
-
+  // MAIN RETURN
   return (
     <div className={`w-full bg-white rounded-card shadow-card p-6 ${className}`}>
-      {/* Layout utama */}
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar kiri */}
+        {/* MINI CALENDAR SIDEBAR */}
         <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
-          {/* MINI CALENDAR di luar card */}
           {renderMiniCalendar()}
-
-          {/* Filter Panel */}
+          {/* Filter Panel tetap */}
           <FilterPanel
             selectedStatuses={selectedStatuses}
             onToggleStatus={toggleStatus}
             onToggleAll={toggleAllStatuses}
           />
         </div>
-
-        {/* Main Calendar Area */}
+        {/* MAIN CALENDAR AREA */}
         <div className="flex-1 min-w-0 min-h-[600px]">
-          {/* Header & view switcher */}
+          {/* Header & view switcher hanya di main calendar */}
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
             <div className="flex items-center gap-4">
               <Button
