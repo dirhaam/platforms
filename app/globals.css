@@ -276,3 +276,4 @@
   height: 0 !important;
   overflow: hidden !important;
 }.mini-calendar-hide-default .rdp-caption, .mini-calendar-hide-default .rdp-month_caption, .mini-calendar-hide-default thead, .mini-calendar-hide-default .rdp-weekdays, .mini-calendar-hide-default .rdp-head, .mini-calendar-hide-default .rdp-root nav { display: none !important; }
+.mini-calendar-hide-default .rdp-today { background-color: #E0E7FF !important; color: #6366F1 !important; font-weight: 600 !important; } .mini-calendar-hide-default .rdp-selected { background-color: #6366F1 !important; color: white !important; font-weight: 600 !important; } .mini-calendar-hide-default .rdp-outside { opacity: 0.4 !important; }

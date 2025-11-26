@@ -243,7 +243,7 @@ export function BookingCalendar({
         </button>
       </div>
       {/* Baris nama hari */}
-      <div className="grid grid-cols-7 mb-2 gap-x-1">
+      <div className="grid grid-cols-7 mb-2 gap-x-2">
         {weekdaysMini.map(day => (
           <div key={day} className="text-center text-xs font-medium text-gray-400 h-7 flex items-center justify-center">
             {day}
@@ -263,7 +263,7 @@ export function BookingCalendar({
           caption: "hidden",
           table: "w-full border-collapse",
           head_row: "hidden",
-          row: "grid grid-cols-7 gap-x-1 w-full",
+          row: "grid grid-cols-7 gap-x-2 gap-y-1 w-full",
           cell: "h-8 w-full text-center p-0 relative flex items-center justify-center",
           day: "h-8 w-8 rounded-md flex items-center justify-center cursor-pointer transition-all hover:bg-gray-100 text-gray-900 font-normal",
           day_selected: "bg-[#6366F1] text-white font-semibold hover:bg-[#6366F1]",
