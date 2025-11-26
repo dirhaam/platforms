@@ -59,6 +59,61 @@ export default async function TenantAdminDashboard({
   const paidBookings = bookings?.filter(b => b.payment_status === 'PAID') || [];
   const totalPaymentsReceived = paidBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
 
+  // Calculate growth percentages (current month vs previous month)
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  const currentMonthBookings = bookings?.filter(b => {
+    const d = new Date(b.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }) || [];
+  
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  
+  const prevMonthBookings = bookings?.filter(b => {
+    const d = new Date(b.created_at);
+    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+  }) || [];
+
+  const currentMonthRevenue = currentMonthBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const prevMonthRevenue = prevMonthBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  
+  const revenueGrowth = prevMonthRevenue > 0 
+    ? ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue * 100).toFixed(1)
+    : currentMonthRevenue > 0 ? '100' : '0';
+
+  const bookingGrowth = prevMonthBookings.length > 0
+    ? ((currentMonthBookings.length - prevMonthBookings.length) / prevMonthBookings.length * 100).toFixed(1)
+    : currentMonthBookings.length > 0 ? '100' : '0';
+
+  const currentMonthPaid = currentMonthBookings.filter(b => b.payment_status === 'PAID');
+  const prevMonthPaid = prevMonthBookings.filter(b => b.payment_status === 'PAID');
+  const currentMonthPayments = currentMonthPaid.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const prevMonthPayments = prevMonthPaid.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+
+  const paymentGrowth = prevMonthPayments > 0
+    ? ((currentMonthPayments - prevMonthPayments) / prevMonthPayments * 100).toFixed(1)
+    : currentMonthPayments > 0 ? '100' : '0';
+
+  // Year over year growth
+  const lastYearBookings = bookings?.filter(b => {
+    const d = new Date(b.created_at);
+    return d.getFullYear() === currentYear - 1;
+  }) || [];
+  const thisYearBookings = bookings?.filter(b => {
+    const d = new Date(b.created_at);
+    return d.getFullYear() === currentYear;
+  }) || [];
+
+  const lastYearRevenue = lastYearBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const thisYearRevenue = thisYearBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+
+  const yearlyGrowth = lastYearRevenue > 0
+    ? ((thisYearRevenue - lastYearRevenue) / lastYearRevenue * 100).toFixed(1)
+    : thisYearRevenue > 0 ? '100' : '0';
+
   // Calculate Monthly Revenue for Chart
   const revenueByMonth: Record<string, number> = {};
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -141,8 +196,8 @@ export default async function TenantAdminDashboard({
             </div>
             <span className="block text-txt-muted font-semibold mb-1 text-sm">Total Revenue</span>
             <h3 className="text-2xl font-bold text-txt-primary mb-1">Rp {totalRevenue.toLocaleString('id-ID')}</h3>
-            <p className="text-success text-xs font-medium flex items-center gap-1">
-              <i className='bx bx-up-arrow-alt'></i> +12.5%
+            <p className={`text-xs font-medium flex items-center gap-1 ${Number(revenueGrowth) >= 0 ? 'text-success' : 'text-danger'}`}>
+              <i className={`bx ${Number(revenueGrowth) >= 0 ? 'bx-up-arrow-alt' : 'bx-down-arrow-alt'}`}></i> {Number(revenueGrowth) >= 0 ? '+' : ''}{revenueGrowth}%
             </p>
           </CardContent>
         </Card>
@@ -162,8 +217,8 @@ export default async function TenantAdminDashboard({
             </div>
             <span className="block text-txt-muted font-semibold mb-1 text-sm">Total Bookings</span>
             <h3 className="text-2xl font-bold text-txt-primary mb-1">{bookingCount}</h3>
-            <p className="text-success text-xs font-medium flex items-center gap-1">
-              <i className='bx bx-up-arrow-alt'></i> +5.2%
+            <p className={`text-xs font-medium flex items-center gap-1 ${Number(bookingGrowth) >= 0 ? 'text-success' : 'text-danger'}`}>
+              <i className={`bx ${Number(bookingGrowth) >= 0 ? 'bx-up-arrow-alt' : 'bx-down-arrow-alt'}`}></i> {Number(bookingGrowth) >= 0 ? '+' : ''}{bookingGrowth}%
             </p>
           </CardContent>
         </Card>
@@ -185,8 +240,8 @@ export default async function TenantAdminDashboard({
               </div>
               <span className="block text-txt-muted font-semibold mb-1 text-sm">Payments</span>
               <h3 className="text-lg font-bold text-txt-primary mb-1">Rp {totalPaymentsReceived.toLocaleString('id-ID')}</h3>
-              <p className="text-danger text-xs font-medium flex items-center gap-1">
-                <i className='bx bx-down-arrow-alt'></i> -2.4%
+              <p className={`text-xs font-medium flex items-center gap-1 ${Number(paymentGrowth) >= 0 ? 'text-success' : 'text-danger'}`}>
+                <i className={`bx ${Number(paymentGrowth) >= 0 ? 'bx-up-arrow-alt' : 'bx-down-arrow-alt'}`}></i> {Number(paymentGrowth) >= 0 ? '+' : ''}{paymentGrowth}%
               </p>
             </CardContent>
           </Card>
@@ -207,15 +262,15 @@ export default async function TenantAdminDashboard({
               <div className="flex justify-between mb-4">
                 <div>
                   <h5 className="text-lg font-semibold text-txt-primary">Growth Report</h5>
-                  <span className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded font-bold">YEAR 2024</span>
+                  <span className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded font-bold">YEAR {currentYear}</span>
                 </div>
                 <i className='bx bx-chevron-down text-txt-muted text-xl'></i>
               </div>
               <div className="flex items-center gap-2 mb-2">
-                <i className='bx bx-trending-up text-success text-lg'></i>
-                <span className="text-success font-medium">78.2% Growth</span>
+                <i className={`bx ${Number(yearlyGrowth) >= 0 ? 'bx-trending-up text-success' : 'bx-trending-down text-danger'} text-lg`}></i>
+                <span className={`font-medium ${Number(yearlyGrowth) >= 0 ? 'text-success' : 'text-danger'}`}>{Number(yearlyGrowth) >= 0 ? '+' : ''}{yearlyGrowth}% Growth</span>
               </div>
-              <p className="text-sm text-txt-secondary">Compared to last year</p>
+              <p className="text-sm text-txt-secondary">Compared to {currentYear - 1}</p>
             </CardContent>
           </Card>
         </div>
