@@ -85,7 +85,7 @@ export function BookingViewsTabs({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Total Bookings */}
             <div className="bg-white rounded-card shadow-card p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border border-gray-100">
-              <div className="w-10 h-10 rounded bg-primary-light flex items-center justify-center text-info mb-3">
+              <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center text-info mb-3">
                 <i className='bx bx-calendar-check text-2xl'></i>
               </div>
               <span className="block text-txt-secondary text-sm mb-1">Total Bookings</span>
@@ -124,7 +124,7 @@ export function BookingViewsTabs({
 
             {/* Completed */}
             <div className="bg-white rounded-card shadow-card p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border border-gray-100">
-              <div className="w-10 h-10 rounded bg-primary-light flex items-center justify-center text-primary mb-3">
+              <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center text-purple-600 mb-3">
                 <i className='bx bx-check text-2xl'></i>
               </div>
               <span className="block text-txt-secondary text-sm mb-1">Completed</span>

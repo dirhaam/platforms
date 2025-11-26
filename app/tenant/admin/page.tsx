@@ -162,7 +162,7 @@ export default async function TenantAdminDashboard({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
       {/* Welcome Card */}
-      <div className="lg:col-span-8 md:col-span-6 col-span-12">
+      <div className="lg:col-span-7 md:col-span-6 col-span-12">
         <Card className="h-full relative overflow-hidden border-none shadow-card bg-white rounded-card">
           <div className="p-6 flex-1 z-10 relative">
             <h5 className="text-primary font-bold text-lg mb-1">Welcome back, {tenant.business_name}! 👋</h5>
@@ -183,7 +183,7 @@ export default async function TenantAdminDashboard({
       </div>
 
       {/* Stats: Revenue (Right Side Column top) */}
-      <div className="lg:col-span-2 md:col-span-3 col-span-6">
+      <div className="lg:col-span-2 md:col-span-3 col-span-12">
         <Card className="h-full border-none shadow-card bg-white rounded-card">
           <CardContent className="p-5">
             <div className="flex justify-between items-start mb-4">
@@ -204,7 +204,7 @@ export default async function TenantAdminDashboard({
       </div>
 
       {/* Stats: Bookings (Right Side Column top) */}
-      <div className="lg:col-span-2 md:col-span-3 col-span-6">
+      <div className="lg:col-span-3 md:col-span-3 col-span-12">
         <Card className="h-full border-none shadow-card bg-white rounded-card">
           <CardContent className="p-5">
             <div className="flex justify-between items-start mb-4">
@@ -225,13 +225,13 @@ export default async function TenantAdminDashboard({
       </div>
 
       {/* Total Revenue Chart (Big Area) */}
-      <div className="lg:col-span-8 col-span-12">
+      <div className="lg:col-span-7 col-span-12">
         <DashboardCharts type="bar" title="Revenue Overview" description="Monthly revenue performance" data={revenueData} />
       </div>
 
       {/* More Stats (Grid of 2x2 on right side) */}
-      <div className="lg:col-span-4 col-span-12">
-        <div className="grid grid-cols-2 gap-6 h-full">
+      <div className="lg:col-span-5 col-span-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
 
           <Card className="border-none shadow-card bg-white rounded-card">
             <CardContent className="p-5">
@@ -277,12 +277,12 @@ export default async function TenantAdminDashboard({
       </div>
 
       {/* Booking / Order Statistics */}
-      <div className="md:col-span-6 lg:col-span-8 col-span-12">
+      <div className="md:col-span-6 lg:col-span-7 col-span-12">
         <DashboardCharts type="area" title="Booking Trends" description="Weekly booking activity" data={bookingTrends} />
       </div>
 
       {/* Transactions List */}
-      <div className="md:col-span-6 lg:col-span-4 col-span-12">
+      <div className="md:col-span-6 lg:col-span-5 col-span-12">
         <Card className="h-full border-none shadow-card bg-white rounded-card">
           <div className="p-6 flex justify-between items-center border-b border-gray-100">
             <h5 className="text-lg font-semibold text-txt-primary">Recent Transactions</h5>
