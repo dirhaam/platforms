@@ -437,9 +437,6 @@ export function BookingCalendar({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-xl font-bold text-gray-900 min-w-[180px] text-center">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h2>
           <Button
             variant="outline"
             size="icon"
@@ -448,6 +445,9 @@ export function BookingCalendar({
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <h2 className="text-xl font-bold text-gray-900 min-w-[180px]">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </h2>
         </div>
 
         {/* Right: View Switcher (Segmented Control) */}
@@ -485,6 +485,11 @@ export function BookingCalendar({
                 cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                 day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                nav_button: cn(
+                  "h-7 w-7 bg-gray-100 p-0 opacity-100 hover:opacity-75 rounded-md"
+                ),
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
               }}
             />
           </div>
