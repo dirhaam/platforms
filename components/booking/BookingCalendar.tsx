@@ -398,15 +398,18 @@ export function BookingCalendar({
                   const duration = booking.duration || 60;
                   const top = ((startHour - businessHours.openTime) * 80) + ((startMin / 60) * 80);
                   const height = (duration / 60) * 80;
+                  const colors = getStatusColor(booking.status);
 
                   return (
                     <div
                       key={booking.id}
-                      className={`
-                        absolute left-0.5 right-0.5 rounded border p-1 overflow-hidden cursor-pointer hover:brightness-95 transition-all
-                        ${getStatusColor(booking.status)}
-                      `}
-                      style={{ top: `${top}px`, height: `${height}px` }}
+                      className="absolute left-0.5 right-0.5 rounded p-1 overflow-hidden cursor-pointer hover:brightness-95 transition-all"
+                      style={{
+                        top: `${top}px`,
+                        height: `${height}px`,
+                        backgroundColor: colors.bg,
+                        color: colors.text
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         onBookingClick?.(booking);
@@ -455,15 +458,19 @@ export function BookingCalendar({
                       const duration = booking.duration || 60;
                       const top = (startMin / 60) * 80;
                       const height = (duration / 60) * 80;
+                      const colors = getStatusColor(booking.status);
 
                       return (
                         <div
                           key={booking.id}
-                          className={`
-                            absolute left-2 right-2 rounded border p-2 overflow-hidden cursor-pointer hover:brightness-95 transition-all flex items-center justify-between
-                            ${getStatusColor(booking.status)}
-                          `}
-                          style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
+                          className="absolute left-2 right-2 rounded p-2 overflow-hidden cursor-pointer hover:brightness-95 transition-all flex items-center justify-between"
+                          style={{
+                            top: `${top}px`,
+                            height: `${height}px`,
+                            minHeight: '40px',
+                            backgroundColor: colors.bg,
+                            color: colors.text
+                          }}
                           onClick={(e) => {
                             e.stopPropagation();
                             onBookingClick?.(booking);

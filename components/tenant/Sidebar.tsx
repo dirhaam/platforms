@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { BoxIcon } from '@/components/ui/box-icon';
 
@@ -118,6 +118,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName }: SidebarProps) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [userRole, setUserRole] = useState<UserRole | null>(null);
     const [loading, setLoading] = useState(true);
     const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
@@ -300,7 +301,9 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                 {item.children!.map((child) => {
                                                     const childFullPath = `/tenant/admin${child.path}`;
                                                     // Check if active based on query param if present
-                                                    const isChildActive = pathname === fullPath && window.location.search.includes(child.path.split('?')[1]);
+                                                    const currentView = searchParams.get('view');
+                                                    const childView = new URLSearchParams(child.path.split('?')[1]).get('view');
+                                                    const isChildActive = pathname === fullPath && currentView === childView;
 
                                                     return (
                                                         <Link
