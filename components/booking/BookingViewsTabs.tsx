@@ -17,6 +17,7 @@ interface BookingViewsTabsProps {
   selectedDate: Date;
   onDateSelect: (d: Date) => void;
   onBookingClick: (b: Booking) => void;
+  onNewBooking?: () => void;
 
   // Sales
   salesTransactions: SalesTransaction[];
@@ -48,6 +49,7 @@ export function BookingViewsTabs({
   selectedDate,
   onDateSelect,
   onBookingClick,
+  onNewBooking,
   salesTransactions,
   salesSummary,
   loadingSales,
@@ -137,8 +139,17 @@ export function BookingViewsTabs({
 
           {/* Bookings Table */}
           <div className="bg-white rounded-card shadow-card overflow-hidden border border-gray-100">
-            <div className="p-5 border-b border-gray-100">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <h5 className="font-semibold text-lg text-txt-primary">All Bookings</h5>
+              {onNewBooking && (
+                <Button
+                  onClick={onNewBooking}
+                  className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30"
+                >
+                  <i className='bx bx-plus text-lg mr-1'></i>
+                  New Booking
+                </Button>
+              )}
             </div>
             <div className="p-6">
               {filteredBookings.length === 0 ? (
