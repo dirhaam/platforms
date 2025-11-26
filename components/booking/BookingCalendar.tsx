@@ -254,9 +254,9 @@ export function BookingCalendar({
         classNames={{
           months: "flex flex-col w-full",
           month: "w-full",
-          caption: "hidden",
+          caption: "!hidden",
           table: "w-full border-collapse",
-          head_row: "hidden",
+          head_row: "!hidden",
           row: "grid grid-cols-7 gap-x-3 w-full mt-1",
           cell: "h-9 w-9 text-center flex items-center justify-center text-[13px] p-0 relative",
           day: "h-9 w-9 px-0 font-normal rounded-md hover:bg-gray-100",
