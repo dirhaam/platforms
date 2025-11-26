@@ -439,14 +439,14 @@ export function BookingCalendar({
               classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                 month: "space-y-4 w-full",
-                caption: "flex justify-start items-center pt-1 relative mb-2 gap-2",
-                caption_label: "text-sm font-medium order-2",
-                nav: "flex items-center gap-1 order-1",
+                caption: "flex justify-center items-center pt-1 relative mb-2",
+                caption_label: "text-sm font-medium",
+                nav: "absolute inset-x-0 flex justify-between items-center",
                 nav_button: cn(
-                  "h-7 w-7 bg-gray-100 p-0 opacity-100 hover:opacity-75 rounded-md flex items-center justify-center"
+                  "h-8 w-8 border border-gray-200 bg-white p-0 opacity-100 hover:bg-gray-50 rounded-md flex items-center justify-center"
                 ),
-                nav_button_previous: "static",
-                nav_button_next: "static",
+                nav_button_previous: "",
+                nav_button_next: "",
                 head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex-1",
                 cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 flex-1 flex items-center justify-center",
                 day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
