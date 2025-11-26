@@ -87,6 +87,39 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
     );
   };
 
+  // Open navigation app (Google Maps / Apple Maps)
+  const openNavigation = (address: string, coordinates?: { lat: number; lng: number }) => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    let url: string;
+    
+    if (coordinates) {
+      // Use coordinates if available (more accurate)
+      if (isIOS) {
+        // Apple Maps
+        url = `maps://maps.apple.com/?daddr=${coordinates.lat},${coordinates.lng}&dirflg=d`;
+      } else {
+        // Google Maps
+        url = `https://www.google.com/maps/dir/?api=1&destination=${coordinates.lat},${coordinates.lng}&travelmode=driving`;
+      }
+    } else {
+      // Fallback to address
+      const encodedAddress = encodeURIComponent(address);
+      if (isIOS) {
+        url = `maps://maps.apple.com/?daddr=${encodedAddress}&dirflg=d`;
+      } else {
+        url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+      }
+    }
+    
+    window.open(url, '_blank');
+  };
+
+  // Open phone dialer
+  const openPhone = (phone: string) => {
+    window.open(`tel:${phone}`, '_self');
+  };
+
   if (bookings.length === 0) {
     return null;
   }
@@ -307,22 +340,28 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                     <i className='bx bx-edit-alt mr-1'></i>
                     Edit
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="border-gray-200 text-txt-secondary hover:text-success hover:border-success"
-                  >
-                    <i className='bx bx-phone mr-1'></i>
-                    Hubungi
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="border-gray-200 text-txt-secondary hover:text-info hover:border-info"
-                  >
-                    <i className='bx bx-directions mr-1'></i>
-                    Navigasi
-                  </Button>
+                  {booking.customer?.phone && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-gray-200 text-txt-secondary hover:text-success hover:border-success"
+                      onClick={() => openPhone(booking.customer!.phone)}
+                    >
+                      <i className='bx bx-phone mr-1'></i>
+                      Hubungi
+                    </Button>
+                  )}
+                  {booking.homeVisitAddress && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-gray-200 text-txt-secondary hover:text-info hover:border-info"
+                      onClick={() => openNavigation(booking.homeVisitAddress!, booking.homeVisitCoordinates)}
+                    >
+                      <i className='bx bx-directions mr-1'></i>
+                      Navigasi
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
