@@ -323,11 +323,10 @@ export function BookingCalendar({
                   return (
                     <div
                       key={booking.id}
-                      className="text-xs px-2 py-1.5 rounded-md truncate font-medium border cursor-pointer transition-all hover:shadow-sm"
+                      className="text-xs px-2 py-1.5 rounded-md truncate font-medium cursor-pointer transition-all hover:shadow-sm"
                       style={{
                         backgroundColor: colors.bg,
-                        color: colors.text,
-                        borderColor: colors.border
+                        color: colors.text
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -493,7 +492,7 @@ export function BookingCalendar({
     <div className={`w-full bg-white rounded-card shadow-card p-6 ${className}`}>
       <div className="flex flex-col lg:flex-row gap-8">
         {/* MINI CALENDAR SIDEBAR */}
-        <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
+        <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
           {renderMiniCalendar()}
           {/* Filter Panel tetap */}
           <FilterPanel
@@ -503,7 +502,7 @@ export function BookingCalendar({
           />
         </div>
         {/* MAIN CALENDAR AREA */}
-        <div className="flex-1 min-w-0 min-h-[600px]">
+        <div className="flex-1 min-w-0 min-h-[600px] lg:pl-8 lg:border-l border-gray-100">
           {/* Header & view switcher hanya di main calendar */}
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
             <div className="flex items-center gap-4">
