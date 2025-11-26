@@ -1,5 +1,8 @@
-import { Booking, Service, Customer, TimeSlot, PaymentStatus } from '@/types/booking';
+import { Booking, Service, Customer, TimeSlot } from '@/types/booking';
+import { PaymentStatus } from '@/types/booking';
 import { ReminderTemplate } from '@/lib/reminder/reminder-service';
+
+export { PaymentStatus };
 
 export interface BookingManagementProps {
   tenantId: string;
@@ -54,4 +57,4 @@ export interface BookingManagementState {
   showReminderSettings: boolean;
 }
 
-export type { Booking, Service, Customer, TimeSlot, PaymentStatus, ReminderTemplate };
+export type { Booking, Service, Customer, TimeSlot, ReminderTemplate };

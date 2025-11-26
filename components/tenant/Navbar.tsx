@@ -72,7 +72,7 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                     <div className="flex items-center gap-4 flex-1 max-w-xl">
                         <div className="relative w-full">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                <BoxIcon name="search" size={16} className="opacity-50" />
+                                <BoxIcon name="search" size={20} className="opacity-50" />
                             </span>
                             <Input
                                 type="text"
@@ -91,7 +91,7 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                                 className="bg-primary hover:bg-primary-dark text-white shadow-sm"
                                 size="sm"
                             >
-                                <BoxIcon name="plus" size={16} className="mr-1" />
+                                <BoxIcon name="plus" size={20} className="mr-1" />
                                 New Booking
                             </Button>
                             <Button
@@ -100,7 +100,7 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                                 className="border-primary text-primary hover:bg-primary/5"
                                 size="sm"
                             >
-                                <BoxIcon name="cart" size={16} className="mr-1" />
+                                <BoxIcon name="cart" size={20} className="mr-1" />
                                 Quick Sale
                             </Button>
                         </div>
@@ -109,7 +109,7 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                                    <BoxIcon name="globe" size={20} className="opacity-70" />
+                                    <BoxIcon name="globe" size={24} className="opacity-70" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -121,9 +121,9 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                         {/* Theme Toggle */}
                         <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
                             {isDarkMode ? (
-                                <BoxIcon name="moon" size={20} className="opacity-70" />
+                                <BoxIcon name="moon" size={24} className="opacity-70" />
                             ) : (
-                                <BoxIcon name="sun" size={20} className="opacity-70" />
+                                <BoxIcon name="sun" size={24} className="opacity-70" />
                             )}
                         </Button>
 
@@ -131,7 +131,7 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative">
-                                    <BoxIcon name="bell" size={20} className="opacity-70" />
+                                    <BoxIcon name="bell" size={24} className="opacity-70" />
                                     {unreadCount > 0 && (
                                         <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full ring-2 ring-background animate-pulse"></span>
                                     )}
@@ -202,14 +202,14 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="cursor-pointer" onClick={handleProfile}>
-                                    <BoxIcon name="user" size={16} className="mr-2 opacity-70" />
+                                    <BoxIcon name="user" size={20} className="mr-2 opacity-70" />
                                     <span>Profile & Subscription</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     className="cursor-pointer"
                                     onClick={() => router.push(`/tenant/admin/settings?subdomain=${subdomain}`)}
                                 >
-                                    <BoxIcon name="cog" size={16} className="mr-2 opacity-70" />
+                                    <BoxIcon name="cog" size={20} className="mr-2 opacity-70" />
                                     <span>Settings</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -220,12 +220,12 @@ export function Navbar({ tenantId, subdomain }: NavbarProps) {
                                 >
                                     {loggingOut ? (
                                         <>
-                                            <BoxIcon name="loader-alt" size={16} className="mr-2 animate-spin" />
+                                            <BoxIcon name="loader-alt" size={20} className="mr-2 animate-spin" />
                                             <span>Logging out...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <BoxIcon name="log-out" size={16} className="mr-2 opacity-70" />
+                                            <BoxIcon name="log-out" size={20} className="mr-2 opacity-70" />
                                             <span>Logout</span>
                                         </>
                                     )}
