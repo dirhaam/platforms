@@ -8,7 +8,7 @@ import { Palette, Check, Loader } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Template {
-  id: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare' | 'healthcarev2';
+  id: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare' | 'healthcarev2' | 'sneat';
   name: string;
   description: string;
   bestFor: string;
@@ -64,6 +64,14 @@ const TEMPLATES: Template[] = [
     bestFor: 'Medical clinics, hospitals, therapy centers, wellness practices',
     icon: '🏥',
     colors: ['#0ea5e9', '#0369a1', '#22c55e']
+  },
+  {
+    id: 'sneat',
+    name: 'Sneat Admin Style',
+    description: 'Modern card-based design with soft shadows, clean typography, and professional look',
+    bestFor: 'Professional services, consultants, agencies, modern businesses',
+    icon: '🎨',
+    colors: ['#696cff', '#8592a3', '#71dd37']
   }
 ];
 

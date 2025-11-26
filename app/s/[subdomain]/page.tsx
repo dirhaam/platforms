@@ -11,6 +11,7 @@ import MinimalTemplate from '@/components/subdomain/templates/MinimalTemplate';
 import BeautyTemplate from '@/components/subdomain/templates/BeautyTemplate';
 import HealthcareTemplate from '@/components/subdomain/templates/HealthcareTemplate';
 import HealthcareV2Template from '@/components/subdomain/templates/HealthcareV2Template';
+import SneatTemplate from '@/components/subdomain/templates/SneatTemplate';
 import { ExpiredLandingWrapper } from '@/components/tenant/ExpiredOverlay';
 
 export async function generateMetadata({
@@ -132,6 +133,9 @@ export default async function SubdomainPage({
       
       case 'healthcarev2':
         return wrapWithExpired(<HealthcareV2Template {...templateProps} />);
+      
+      case 'sneat':
+        return wrapWithExpired(<SneatTemplate {...templateProps} />);
       
       default:
         // Fallback to Modern if template not found

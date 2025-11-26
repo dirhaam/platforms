@@ -42,7 +42,7 @@ interface BookingDialogProps {
   trigger?: React.ReactNode;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  template?: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare' | 'healthcarev2';
+  template?: 'modern' | 'classic' | 'minimal' | 'beauty' | 'healthcare' | 'healthcarev2' | 'sneat';
 }
 
 interface BookingFormData {
