@@ -118,7 +118,7 @@ export function HomeVisitBookingManager({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Home Visits */}
         <div className="bg-white rounded-card shadow-card p-5 border border-gray-100 hover:-translate-y-1 transition-all duration-300">
-          <div className="w-10 h-10 rounded bg-primary-light flex items-center justify-center text-primary mb-3">
+          <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center text-purple-600 mb-3">
             <i className='bx bx-map-pin text-2xl'></i>
           </div>
           <span className="block text-txt-secondary text-sm mb-1">Total Home Visit</span>
