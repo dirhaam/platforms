@@ -160,8 +160,8 @@ export function HomeVisitBookingManager({
       {/* Warning if missing travel data */}
       {missingTravelData.length > 0 && (
         <div className="bg-orange-50 rounded-card p-4 border border-orange-200 flex items-start gap-3">
-          <div className="w-8 h-8 rounded bg-orange-100 flex items-center justify-center flex-shrink-0">
-            <i className='bx bx-error text-xl text-warning'></i>
+          <div className="w-10 h-10 rounded bg-orange-100 flex items-center justify-center flex-shrink-0 text-warning">
+            <i className='bx bx-error text-2xl'></i>
           </div>
           <div>
             <p className="font-medium text-txt-primary text-sm">

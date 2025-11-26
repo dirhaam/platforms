@@ -141,12 +141,12 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
     return (
         <aside
             className={cn(
-                "fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-lg z-50 transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700",
+                "fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-lg z-50 transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700 flex flex-col",
                 collapsed ? "w-20" : "w-64"
             )}
         >
             {/* Brand Logo */}
-            <div className="h-20 flex items-center justify-center px-6 relative">
+            <div className="h-20 flex items-center justify-center px-6 relative flex-shrink-0">
                 <Link href={`/tenant/admin?subdomain=${subdomain}`} className="flex items-center gap-2 cursor-pointer">
                     {logo ? (
                         <img src={logo} alt={businessName || 'Logo'} className="w-8 h-8 object-contain" />
@@ -176,7 +176,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
 
             {/* Role Badge */}
             {!collapsed && userRole && (
-                <div className="px-6 pb-2">
+                <div className="px-6 pb-2 flex-shrink-0">
                     <span className={cn(
                         "text-xs px-2 py-1 rounded-full font-medium",
                         userRole === 'owner' && "bg-purple-100 text-purple-700",
@@ -190,7 +190,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
             )}
 
             {/* Navigation */}
-            <div className="flex-1 overflow-y-auto py-2 px-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto py-2 px-4 custom-scrollbar min-h-0">
                 {userLoading ? (
                     <div className="flex items-center justify-center py-8">
                         <BoxIcon name="loader-alt" size={20} className="animate-spin opacity-50" />
@@ -239,7 +239,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                     <span>{item.title}</span>
                                                     <div className="flex items-center gap-2">
                                                         {showBadge && (
-                                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                                                            <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-lg bg-destructive text-[10px] font-medium text-white">
                                                                 {pendingBookingsCount > 99 ? '99+' : pendingBookingsCount}
                                                             </span>
                                                         )}
@@ -315,7 +315,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                         <div className="flex items-center justify-between flex-1">
                                             <span>{item.title}</span>
                                             {showBadge && (
-                                                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                                                <span className="ml-auto flex h-5 min-w-5 px-1.5 items-center justify-center rounded-lg bg-destructive text-[10px] font-medium text-white">
                                                     {pendingBookingsCount > 99 ? '99+' : pendingBookingsCount}
                                                 </span>
                                             )}
@@ -330,7 +330,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
 
             {/* Footer with restricted access note for staff */}
             {!collapsed && userRole === 'staff' && (
-                <div className="p-4 border-t">
+                <div className="p-4 border-t flex-shrink-0">
                     <p className="text-xs text-gray-400 text-center">
                         Akses terbatas untuk staff
                     </p>

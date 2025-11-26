@@ -202,8 +202,10 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                   <div className="space-y-4">
                     {/* Address */}
                     <div className="bg-white rounded-lg p-4 border border-gray-100">
-                      <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-1">
-                        <i className='bx bx-map-pin text-primary'></i>
+                      <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-2">
+                        <div className="w-6 h-6 rounded bg-primary-light flex items-center justify-center text-primary">
+                          <i className='bx bx-map-pin text-sm'></i>
+                        </div>
                         Alamat Tujuan
                       </h5>
                       <p className="text-sm text-txt-primary font-medium">{booking.homeVisitAddress}</p>
@@ -238,21 +240,27 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                     {/* Travel Stats */}
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-white rounded-lg p-3 border border-gray-100 text-center">
-                        <i className='bx bx-ruler text-lg text-primary'></i>
+                        <div className="w-8 h-8 rounded bg-primary-light flex items-center justify-center text-primary mx-auto mb-1">
+                          <i className='bx bx-ruler text-lg'></i>
+                        </div>
                         <p className="text-sm font-bold text-txt-primary mt-1">
                           {booking.travelDistance ? `${booking.travelDistance.toFixed(1)} km` : '-'}
                         </p>
                         <p className="text-xs text-txt-muted">Jarak</p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-gray-100 text-center">
-                        <i className='bx bx-time-five text-lg text-info'></i>
+                        <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center text-info mx-auto mb-1">
+                          <i className='bx bx-time-five text-lg'></i>
+                        </div>
                         <p className="text-sm font-bold text-txt-primary mt-1">
                           {formatDuration(booking.travelDuration)}
                         </p>
                         <p className="text-xs text-txt-muted">Waktu</p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-gray-100 text-center">
-                        <i className='bx bx-car text-lg text-warning'></i>
+                        <div className="w-8 h-8 rounded bg-orange-100 flex items-center justify-center text-warning mx-auto mb-1">
+                          <i className='bx bx-car text-lg'></i>
+                        </div>
                         <p className="text-sm font-bold text-txt-primary mt-1">
                           {formatCurrency(booking.travelSurchargeAmount)}
                         </p>
@@ -262,8 +270,10 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
 
                     {/* Price Breakdown */}
                     <div className="bg-white rounded-lg p-4 border border-gray-100">
-                      <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-3 flex items-center gap-1">
-                        <i className='bx bx-receipt text-info'></i>
+                      <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-3 flex items-center gap-2">
+                        <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center text-info">
+                          <i className='bx bx-receipt text-sm'></i>
+                        </div>
                         Rincian Biaya
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -293,8 +303,10 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                     {/* Payment & Customer */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-white rounded-lg p-3 border border-gray-100">
-                        <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-1">
-                          <i className='bx bx-wallet text-success'></i>
+                        <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-2">
+                          <div className="w-6 h-6 rounded bg-green-100 flex items-center justify-center text-success">
+                            <i className='bx bx-wallet text-sm'></i>
+                          </div>
                           Pembayaran
                         </h5>
                         <p className="text-sm font-bold text-success">{formatCurrency(booking.paidAmount)}</p>
@@ -305,8 +317,10 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                       </div>
                       {booking.customer && (
                         <div className="bg-white rounded-lg p-3 border border-gray-100">
-                          <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-1">
-                            <i className='bx bx-user text-primary'></i>
+                          <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-primary-light flex items-center justify-center text-primary">
+                              <i className='bx bx-user text-sm'></i>
+                            </div>
                             Kontak
                           </h5>
                           <p className="text-sm text-txt-primary truncate">{booking.customer.phone}</p>
@@ -320,8 +334,10 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
                     {/* Notes */}
                     {booking.notes && (
                       <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-100">
-                        <p className="text-xs font-semibold text-warning mb-1 flex items-center gap-1">
-                          <i className='bx bx-note'></i>
+                        <p className="text-xs font-semibold text-warning mb-1 flex items-center gap-2">
+                          <div className="w-6 h-6 rounded bg-yellow-100 flex items-center justify-center text-warning">
+                            <i className='bx bx-note text-sm'></i>
+                          </div>
                           Catatan
                         </p>
                         <p className="text-sm text-txt-primary">{booking.notes}</p>
