@@ -79,16 +79,16 @@ async function fetchTenantBookings(
   let query = supabase
     .from('bookings')
     .select('*')
-    .eq('tenantId', tenantId)
-    .gte('createdAt', startDate.toISOString())
-    .lte('createdAt', endDate.toISOString());
+    .eq('tenant_id', tenantId)
+    .gte('created_at', startDate.toISOString())
+    .lte('created_at', endDate.toISOString());
 
   if (options.statuses && options.statuses.length > 0) {
     query = query.in('status', options.statuses);
   }
 
   if (options.serviceIds && options.serviceIds.length > 0) {
-    query = query.in('serviceId', options.serviceIds);
+    query = query.in('service_id', options.serviceIds);
   }
 
   const { data, error } = await query;
@@ -100,16 +100,16 @@ async function fetchTenantBookings(
 
   return (data || []).map<BookingRow>(row => ({
     id: row.id,
-    tenantId: row.tenantId,
-    customerId: row.customerId,
-    serviceId: row.serviceId,
+    tenantId: row.tenant_id,
+    customerId: row.customer_id,
+    serviceId: row.service_id,
     status: row.status,
-    scheduledAt: row.scheduledAt ? new Date(row.scheduledAt) : new Date(),
-    createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
-    totalAmount: row.totalAmount,
-    paymentStatus: row.paymentStatus,
-    paymentMethod: row.paymentMethod,
-    paidAmount: row.paidAmount,
+    scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : new Date(),
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    totalAmount: row.total_amount,
+    paymentStatus: row.payment_status,
+    paymentMethod: row.payment_method,
+    paidAmount: row.paid_amount,
   }));
 }
 
@@ -119,7 +119,7 @@ async function fetchTenantCustomers(tenantId: string): Promise<CustomerRow[]> {
   const { data, error } = await supabase
     .from('customers')
     .select('*')
-    .eq('tenantId', tenantId);
+    .eq('tenant_id', tenantId);
   
   if (error) {
     console.error('Error fetching customers:', error);
@@ -128,9 +128,9 @@ async function fetchTenantCustomers(tenantId: string): Promise<CustomerRow[]> {
   
   return (data || []).map<CustomerRow>(row => ({
     id: row.id,
-    tenantId: row.tenantId,
+    tenantId: row.tenant_id,
     name: row.name,
-    createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
   }));
 }
 
@@ -140,7 +140,7 @@ async function fetchTenantServices(tenantId: string): Promise<ServiceRow[]> {
   const { data, error } = await supabase
     .from('services')
     .select('*')
-    .eq('tenantId', tenantId);
+    .eq('tenant_id', tenantId);
   
   if (error) {
     console.error('Error fetching services:', error);
@@ -149,9 +149,9 @@ async function fetchTenantServices(tenantId: string): Promise<ServiceRow[]> {
   
   return (data || []).map<ServiceRow>(row => ({
     id: row.id,
-    tenantId: row.tenantId,
+    tenantId: row.tenant_id,
     name: row.name,
-    isActive: row.isActive,
+    isActive: row.is_active,
   }));
 }
 
@@ -327,9 +327,9 @@ export class AnalyticsService {
     const { count: newCustomersResult, error: countError } = await supabase
       .from('customers')
       .select('*', { count: 'exact', head: true })
-      .eq('tenantId', tenantId)
-      .gte('createdAt', startDate.toISOString())
-      .lte('createdAt', endDate.toISOString());
+      .eq('tenant_id', tenantId)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString());
     
     if (countError) {
       console.error('Error counting new customers:', countError);
@@ -527,13 +527,13 @@ export class AnalyticsService {
       supabase
         .from('customers')
         .select('*', { count: 'exact', head: true })
-        .eq('tenantId', tenantId)
-        .lte('createdAt', endDate.toISOString()),
+        .eq('tenant_id', tenantId)
+        .lte('created_at', endDate.toISOString()),
       supabase
         .from('customers')
         .select('*', { count: 'exact', head: true })
-        .eq('tenantId', tenantId)
-        .lte('createdAt', prevEndDate.toISOString()),
+        .eq('tenant_id', tenantId)
+        .lte('created_at', prevEndDate.toISOString()),
     ]);
 
     const currentCustomers = currentCustomersResult.count ?? 0;
@@ -628,13 +628,13 @@ export class AnalyticsService {
     
     const { data: tenantRows, error: tenantError } = await supabase
       .from('tenants')
-      .select('id, businessName, createdAt');
+      .select('id, business_name, created_at');
 
     const { data: bookingRowsRaw, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, tenantId, totalAmount, createdAt, status')
-      .gte('createdAt', startDate.toISOString())
-      .lte('createdAt', endDate.toISOString())
+      .select('id, tenant_id, total_amount, created_at, status')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
       .in('status', Array.from(COMPLETED_STATUSES));
     
     if (tenantError || bookingError) {
@@ -652,15 +652,17 @@ export class AnalyticsService {
 
     const bookingRows = (bookingRowsRaw || []).map(row => ({
       ...row,
-      createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
+      tenantId: row.tenant_id,
+      totalAmount: row.total_amount,
+      createdAt: row.created_at ? new Date(row.created_at) : new Date(),
     }));
 
     const totalTenants = tenantRows.length;
-    const bookingsByTenant = new Map<string, BookingRow[]>();
+    const bookingsByTenant = new Map<string, any[]>();
 
     for (const booking of bookingRows) {
       const list = bookingsByTenant.get(booking.tenantId) || [];
-      list.push(booking as unknown as BookingRow);
+      list.push(booking);
       bookingsByTenant.set(booking.tenantId, list);
     }
 
@@ -674,7 +676,7 @@ export class AnalyticsService {
         const revenue = tenantBookings.reduce((sum, b) => sum + toNumber(b.totalAmount), 0);
         return {
           tenantId: tenant.id,
-          businessName: tenant.businessName,
+          businessName: tenant.business_name,
           bookings: tenantBookings.length,
           revenue,
         };
@@ -692,8 +694,9 @@ export class AnalyticsService {
     const monthlyGrowth = new Map<string, { newTenants: number; activeTenants: number }>();
 
     tenantRows.forEach(tenant => {
-      if (!tenant.createdAt) return;
-      const monthKey = tenant.createdAt.toISOString().substring(0, 7);
+      if (!tenant.created_at) return;
+      const createdAt = new Date(tenant.created_at);
+      const monthKey = createdAt.toISOString().substring(0, 7);
       const entry = monthlyGrowth.get(monthKey) || { newTenants: 0, activeTenants: 0 };
       entry.newTenants += 1;
       monthlyGrowth.set(monthKey, entry);
