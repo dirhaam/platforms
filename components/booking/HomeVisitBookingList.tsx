@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Booking, Service } from '@/types/booking';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RouteMiniMap } from '@/components/location/RouteMiniMap';
 
@@ -16,7 +15,7 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const formatCurrency = (amount: number | undefined) => {
-    if (amount === undefined) return 'N/A';
+    if (amount === undefined) return '-';
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -25,13 +24,13 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
   };
 
   const formatDuration = (minutes: number | undefined) => {
-    if (minutes === undefined) return 'N/A';
+    if (minutes === undefined) return '-';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     if (hours > 0) {
-      return `${hours}h ${mins}m`;
+      return `${hours}j ${mins}m`;
     }
-    return `${mins}m`;
+    return `${mins} menit`;
   };
 
   const formatDate = (date: Date | string) => {
@@ -40,255 +39,289 @@ export function HomeVisitBookingList({ bookings, services, businessCoordinates }
       weekday: 'short',
       day: '2-digit',
       month: 'short',
-      year: 'numeric',
+    });
+  };
+
+  const formatTime = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleTimeString('id-ID', {
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'bg-green-100 text-success';
-      case 'completed': return 'bg-blue-100 text-info';
-      case 'cancelled': return 'bg-red-100 text-danger';
-      default: return 'bg-gray-100 text-txt-secondary';
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, { bg: string; text: string; label: string }> = {
+      confirmed: { bg: 'bg-green-100', text: 'text-success', label: 'CONFIRMED' },
+      completed: { bg: 'bg-blue-100', text: 'text-info', label: 'COMPLETED' },
+      cancelled: { bg: 'bg-red-100', text: 'text-danger', label: 'CANCELLED' },
+      pending: { bg: 'bg-yellow-100', text: 'text-warning', label: 'PENDING' },
+    };
+    const style = styles[status] || { bg: 'bg-gray-100', text: 'text-txt-secondary', label: status.toUpperCase() };
+    return (
+      <span className={`${style.bg} ${style.text} px-2.5 py-1 rounded text-xs font-bold uppercase`}>
+        {style.label}
+      </span>
+    );
+  };
+
+  const getPaymentBadge = (paymentStatus: string) => {
+    if (paymentStatus === 'paid') {
+      return (
+        <span className="bg-green-100 text-success px-2 py-0.5 rounded text-xs font-medium">
+          <i className='bx bx-check mr-1'></i>Lunas
+        </span>
+      );
     }
+    if (paymentStatus === 'partial') {
+      return (
+        <span className="bg-blue-100 text-info px-2 py-0.5 rounded text-xs font-medium">
+          <i className='bx bx-minus mr-1'></i>Sebagian
+        </span>
+      );
+    }
+    return (
+      <span className="bg-orange-100 text-warning px-2 py-0.5 rounded text-xs font-medium">
+        <i className='bx bx-time mr-1'></i>Belum Bayar
+      </span>
+    );
   };
 
   if (bookings.length === 0) {
-    return (
-      <div className="bg-white rounded-card shadow-card p-12 text-center border-none">
-        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <i className='bx bx-map text-3xl text-txt-muted opacity-50'></i>
-        </div>
-        <p className="text-txt-muted text-sm">Tidak ada home visit bookings</p>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {bookings.map((booking) => {
         const isExpanded = expandedId === booking.id;
         const service = services.get(booking.serviceId);
 
         return (
-          <div key={booking.id} className="bg-white rounded-card shadow-card overflow-hidden hover:shadow-lg transition-all duration-300 border-none">
-            {/* Collapsible Header */}
+          <div 
+            key={booking.id} 
+            className={`bg-white rounded-lg border transition-all duration-200 ${
+              isExpanded ? 'border-primary shadow-md' : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {/* Card Header - Clickable */}
             <button
               onClick={() => setExpandedId(isExpanded ? null : booking.id)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              className="w-full p-4 flex items-start gap-4 text-left"
             >
-              <div className="flex-1 text-left space-y-2">
-                {/* Top Row: Name and Status */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="font-semibold text-lg text-txt-primary">
-                      {booking.customer?.name || 'Unknown Customer'}
-                    </p>
-                    <p className="text-sm text-txt-secondary">
-                      {service?.name || 'Unknown Service'}
+              {/* Date Badge */}
+              <div className="flex-shrink-0 w-14 text-center">
+                <div className="bg-primary-light rounded-lg py-2 px-1">
+                  <p className="text-xs text-primary font-medium">{formatDate(booking.scheduledAt).split(',')[0]}</p>
+                  <p className="text-lg font-bold text-primary">{new Date(booking.scheduledAt).getDate()}</p>
+                </div>
+                <p className="text-xs text-txt-muted mt-1">{formatTime(booking.scheduledAt)}</p>
+              </div>
+
+              {/* Main Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div>
+                    <h4 className="font-semibold text-txt-primary truncate">
+                      {booking.customer?.name || 'Customer'}
+                    </h4>
+                    <p className="text-sm text-txt-secondary truncate">
+                      {service?.name || 'Service'}
                     </p>
                   </div>
-                  <Badge className={`${getStatusColor(booking.status)} shadow-sm border-none`}>
-                    {booking.status.toUpperCase()}
-                  </Badge>
+                  {getStatusBadge(booking.status)}
                 </div>
 
-                {/* Bottom Row: Quick Info */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-txt-secondary">
-                  <span className="flex items-center gap-1">
-                    <i className='bx bx-calendar text-primary'></i>
-                    {formatDate(booking.scheduledAt)}
+                {/* Quick Stats Row */}
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1 text-txt-secondary bg-gray-50 px-2 py-1 rounded">
+                    <i className='bx bx-map text-primary'></i>
+                    {booking.travelDistance ? `${booking.travelDistance.toFixed(1)} km` : '-'}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <i className='bx bx-time text-primary'></i>
-                    {formatDuration(booking.travelDuration)} travel
+                  <span className="flex items-center gap-1 text-txt-secondary bg-gray-50 px-2 py-1 rounded">
+                    <i className='bx bx-car text-primary'></i>
+                    {formatDuration(booking.travelDuration)}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <i className='bx bx-dollar text-primary'></i>
-                    {formatCurrency(booking.travelSurchargeAmount)}
+                  <span className="flex items-center gap-1 text-txt-secondary bg-gray-50 px-2 py-1 rounded">
+                    <i className='bx bx-money text-success'></i>
+                    {formatCurrency(booking.totalAmount)}
                   </span>
+                  {getPaymentBadge(booking.paymentStatus)}
                 </div>
               </div>
 
-              {/* Expand/Collapse Icon */}
-              <div className="ml-4 flex-shrink-0">
-                <i className={`bx bx-chevron-${isExpanded ? 'up' : 'down'} text-2xl text-txt-muted`}></i>
+              {/* Expand Icon */}
+              <div className="flex-shrink-0 self-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                  isExpanded ? 'bg-primary text-white' : 'bg-gray-100 text-txt-muted'
+                }`}>
+                  <i className={`bx bx-chevron-${isExpanded ? 'up' : 'down'} text-xl`}></i>
+                </div>
               </div>
             </button>
 
             {/* Expanded Content */}
             {isExpanded && (
-              <div className="border-t border-gray-100 bg-gray-50/30 px-6 py-6 space-y-6 animate-in slide-in-from-top-2 duration-200">
-                {/* Address Section */}
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm text-txt-primary flex items-center gap-2">
-                    <i className='bx bx-map text-primary'></i>
-                    Alamat Home Visit
-                  </h4>
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                    <p className="font-medium text-txt-primary">{booking.homeVisitAddress}</p>
-                    {booking.homeVisitCoordinates && (
-                      <p className="text-xs text-txt-muted mt-1 flex items-center gap-1">
-                        <i className='bx bx-target-lock'></i>
-                        {booking.homeVisitCoordinates.lat.toFixed(6)}, {booking.homeVisitCoordinates.lng.toFixed(6)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Travel Information & Mini Map */}
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm text-txt-primary flex items-center gap-2">
-                    <i className='bx bx-trip text-warning'></i>
-                    Informasi Perjalanan & Rute
-                  </h4>
-
-                  {/* Travel Stats */}
-                  {booking.travelDistance && (
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-100">
-                        <p className="text-xs text-txt-muted mb-1">Jarak</p>
-                        <p className="font-bold text-primary flex items-center justify-center gap-1">
-                          <i className='bx bx-ruler'></i>
-                          {booking.travelDistance.toFixed(1)} km
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-100">
-                        <p className="text-xs text-txt-muted mb-1">Waktu Tempuh</p>
-                        <p className="font-bold text-success flex items-center justify-center gap-1">
-                          <i className='bx bx-time-five'></i>
-                          {formatDuration(booking.travelDuration)}
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-100">
-                        <p className="text-xs text-txt-muted mb-1">Surcharge</p>
-                        <p className="font-bold text-warning flex items-center justify-center gap-1">
-                          <i className='bx bx-coin-stack'></i>
-                          {formatCurrency(booking.travelSurchargeAmount)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Mini Map - Always Visible */}
-                  {(businessCoordinates || booking.homeVisitCoordinates) ? (
-                    <div style={{ minHeight: '250px' }} className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-                      <RouteMiniMap
-                        origin={businessCoordinates}
-                        destination={booking.homeVisitCoordinates}
-                        route={booking.travelRoute}
-                        height={250}
-                        className="w-full"
-                      />
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
-                      <i className='bx bx-map-alt text-3xl text-txt-muted mb-2'></i>
-                      <p className="text-sm text-txt-muted">Map tidak dapat ditampilkan - koordinat tidak tersedia</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Amount Breakdown */}
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm text-txt-primary flex items-center gap-2">
-                    <i className='bx bx-receipt text-info'></i>
-                    Breakdown Biaya
-                  </h4>
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-txt-secondary">Base Service</span>
-                      <span className="font-medium text-txt-primary">{formatCurrency(service?.price)}</span>
-                    </div>
-                    {service?.homeVisitSurcharge && (
-                      <div className="flex justify-between text-txt-secondary">
-                        <span>Home Visit Surcharge</span>
-                        <span>{formatCurrency(service.homeVisitSurcharge)}</span>
-                      </div>
-                    )}
-                    {booking.travelSurchargeAmount && (
-                      <div className="flex justify-between text-txt-secondary">
-                        <span>Travel Surcharge</span>
-                        <span>{formatCurrency(booking.travelSurchargeAmount)}</span>
-                      </div>
-                    )}
-                    {booking.taxPercentage && (
-                      <div className="flex justify-between text-txt-secondary">
-                        <span>Tax ({booking.taxPercentage}%)</span>
-                        <span>—</span>
-                      </div>
-                    )}
-                    <div className="border-t border-gray-100 pt-2 flex justify-between font-bold text-base">
-                      <span className="text-txt-primary">Total Amount</span>
-                      <span className="text-primary">{formatCurrency(booking.totalAmount)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Payment Status */}
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm text-txt-primary flex items-center gap-2">
-                    <i className='bx bx-wallet text-success'></i>
-                    Status Pembayaran
-                  </h4>
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-txt-secondary text-sm">Total Tagihan:</span>
-                      <span className="font-bold text-txt-primary">{formatCurrency(booking.totalAmount)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-txt-secondary text-sm">Sudah Dibayar:</span>
-                      <span className="font-bold text-success">{formatCurrency(booking.paidAmount)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-warning mt-2 pt-2 border-t border-gray-100">
-                      <span className="text-txt-secondary text-sm">Sisa Tagihan:</span>
-                      <span className="font-bold">{formatCurrency(booking.remainingBalance)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {booking.notes && (
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm text-txt-primary flex items-center gap-2">
-                      <i className='bx bx-note text-secondary'></i>
-                      Catatan
-                    </h4>
-                    <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3 text-sm text-txt-primary">
-                      {booking.notes}
-                    </div>
-                  </div>
-                )}
-
-                {/* Customer Contact */}
-                {booking.customer && (
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm text-txt-primary flex items-center gap-2">
-                      <i className='bx bx-user-circle text-primary'></i>
-                      Informasi Pelanggan
-                    </h4>
-                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 space-y-2 text-sm">
-                      <p className="flex items-center gap-2 text-txt-primary">
-                        <i className='bx bx-phone text-txt-muted'></i>
-                        {booking.customer.phone}
-                      </p>
-                      {booking.customer.email && (
-                        <p className="flex items-center gap-2 text-txt-primary">
-                          <i className='bx bx-envelope text-txt-muted'></i>
-                          {booking.customer.email}
+              <div className="border-t border-gray-100 bg-gray-50/50 p-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Left Column - Address & Map */}
+                  <div className="space-y-4">
+                    {/* Address */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-100">
+                      <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-1">
+                        <i className='bx bx-map-pin text-primary'></i>
+                        Alamat Tujuan
+                      </h5>
+                      <p className="text-sm text-txt-primary font-medium">{booking.homeVisitAddress}</p>
+                      {booking.homeVisitCoordinates && (
+                        <p className="text-xs text-txt-muted mt-1">
+                          {booking.homeVisitCoordinates.lat.toFixed(5)}, {booking.homeVisitCoordinates.lng.toFixed(5)}
                         </p>
                       )}
                     </div>
+
+                    {/* Mini Map */}
+                    {(businessCoordinates || booking.homeVisitCoordinates) ? (
+                      <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: '200px' }}>
+                        <RouteMiniMap
+                          origin={businessCoordinates}
+                          destination={booking.homeVisitCoordinates}
+                          route={booking.travelRoute}
+                          height={200}
+                          className="w-full"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center">
+                        <i className='bx bx-map-alt text-3xl text-txt-muted'></i>
+                        <p className="text-xs text-txt-muted mt-2">Koordinat tidak tersedia</p>
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {/* Right Column - Details */}
+                  <div className="space-y-4">
+                    {/* Travel Stats */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-white rounded-lg p-3 border border-gray-100 text-center">
+                        <i className='bx bx-ruler text-lg text-primary'></i>
+                        <p className="text-sm font-bold text-txt-primary mt-1">
+                          {booking.travelDistance ? `${booking.travelDistance.toFixed(1)} km` : '-'}
+                        </p>
+                        <p className="text-xs text-txt-muted">Jarak</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-100 text-center">
+                        <i className='bx bx-time-five text-lg text-info'></i>
+                        <p className="text-sm font-bold text-txt-primary mt-1">
+                          {formatDuration(booking.travelDuration)}
+                        </p>
+                        <p className="text-xs text-txt-muted">Waktu</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-100 text-center">
+                        <i className='bx bx-car text-lg text-warning'></i>
+                        <p className="text-sm font-bold text-txt-primary mt-1">
+                          {formatCurrency(booking.travelSurchargeAmount)}
+                        </p>
+                        <p className="text-xs text-txt-muted">Surcharge</p>
+                      </div>
+                    </div>
+
+                    {/* Price Breakdown */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-100">
+                      <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-3 flex items-center gap-1">
+                        <i className='bx bx-receipt text-info'></i>
+                        Rincian Biaya
+                      </h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-txt-secondary">Layanan</span>
+                          <span className="text-txt-primary">{formatCurrency(service?.price)}</span>
+                        </div>
+                        {service?.homeVisitSurcharge && (
+                          <div className="flex justify-between">
+                            <span className="text-txt-secondary">Home Visit</span>
+                            <span className="text-txt-primary">{formatCurrency(service.homeVisitSurcharge)}</span>
+                          </div>
+                        )}
+                        {booking.travelSurchargeAmount && (
+                          <div className="flex justify-between">
+                            <span className="text-txt-secondary">Travel</span>
+                            <span className="text-txt-primary">{formatCurrency(booking.travelSurchargeAmount)}</span>
+                          </div>
+                        )}
+                        <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
+                          <span className="text-txt-primary">Total</span>
+                          <span className="text-primary">{formatCurrency(booking.totalAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment & Customer */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-white rounded-lg p-3 border border-gray-100">
+                        <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <i className='bx bx-wallet text-success'></i>
+                          Pembayaran
+                        </h5>
+                        <p className="text-sm font-bold text-success">{formatCurrency(booking.paidAmount)}</p>
+                        <p className="text-xs text-txt-muted">dari {formatCurrency(booking.totalAmount)}</p>
+                        {(booking.remainingBalance ?? 0) > 0 && (
+                          <p className="text-xs text-warning mt-1">Sisa: {formatCurrency(booking.remainingBalance)}</p>
+                        )}
+                      </div>
+                      {booking.customer && (
+                        <div className="bg-white rounded-lg p-3 border border-gray-100">
+                          <h5 className="text-xs font-semibold text-txt-muted uppercase tracking-wide mb-2 flex items-center gap-1">
+                            <i className='bx bx-user text-primary'></i>
+                            Kontak
+                          </h5>
+                          <p className="text-sm text-txt-primary truncate">{booking.customer.phone}</p>
+                          {booking.customer.email && (
+                            <p className="text-xs text-txt-muted truncate">{booking.customer.email}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Notes */}
+                    {booking.notes && (
+                      <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-100">
+                        <p className="text-xs font-semibold text-warning mb-1 flex items-center gap-1">
+                          <i className='bx bx-note'></i>
+                          Catatan
+                        </p>
+                        <p className="text-sm text-txt-primary">{booking.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1 border-gray-200 text-txt-secondary hover:text-primary hover:border-primary">
-                    <i className='bx bx-edit-alt mr-2'></i>
-                    Edit Booking
+                <div className="flex gap-2 pt-2 border-t border-gray-100">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-gray-200 text-txt-secondary hover:text-primary hover:border-primary"
+                  >
+                    <i className='bx bx-edit-alt mr-1'></i>
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-gray-200 text-txt-secondary hover:text-success hover:border-success"
+                  >
+                    <i className='bx bx-phone mr-1'></i>
+                    Hubungi
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-gray-200 text-txt-secondary hover:text-info hover:border-info"
+                  >
+                    <i className='bx bx-directions mr-1'></i>
+                    Navigasi
                   </Button>
                 </div>
               </div>
