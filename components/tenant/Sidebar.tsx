@@ -28,77 +28,88 @@ interface NavItem {
     iconType?: 'regular' | 'solid' | 'logos';
     feature: string;
     roles: UserRole[];
+    children?: {
+        title: string;
+        path: string;
+        icon: string;
+    }[];
 }
 
 // Navigation items with role-based access
 const NAV_ITEMS: NavItem[] = [
-    { 
-        title: 'Dashboard', 
-        path: '', 
+    {
+        title: 'Dashboard',
+        path: '',
         icon: 'home',
         feature: 'dashboard',
         roles: ['owner', 'admin', 'staff', 'superadmin']
     },
-    { 
-        title: 'Bookings', 
-        path: '/bookings', 
+    {
+        title: 'Bookings',
+        path: '/bookings',
         icon: 'calendar',
         feature: 'bookings',
-        roles: ['owner', 'admin', 'staff', 'superadmin']
+        roles: ['owner', 'admin', 'staff', 'superadmin'],
+        children: [
+            { title: 'Calendar', path: '/bookings?view=calendar', icon: 'calendar' },
+            { title: 'Booking', path: '/bookings?view=booking', icon: 'list-ul' },
+            { title: 'Sales', path: '/bookings?view=sales', icon: 'receipt' },
+            { title: 'Home Visit', path: '/bookings?view=home-visits', icon: 'home' },
+        ]
     },
-    { 
-        title: 'Customers', 
-        path: '/customers', 
+    {
+        title: 'Customers',
+        path: '/customers',
         icon: 'group',
         feature: 'customers',
         roles: ['owner', 'admin', 'staff', 'superadmin']
     },
-    { 
-        title: 'Services', 
-        path: '/services', 
+    {
+        title: 'Services',
+        path: '/services',
         icon: 'briefcase',
         feature: 'services',
         roles: ['owner', 'admin', 'superadmin']
     },
-    { 
-        title: 'Staff', 
-        path: '/staff', 
+    {
+        title: 'Staff',
+        path: '/staff',
         icon: 'user-id-card',
         feature: 'staff',
         roles: ['owner', 'admin', 'superadmin']
     },
-    { 
-        title: 'Sales', 
-        path: '/sales', 
+    {
+        title: 'Sales',
+        path: '/sales',
         icon: 'trending-up',
         feature: 'sales',
         roles: ['owner', 'admin', 'superadmin']
     },
-    { 
-        title: 'WhatsApp', 
-        path: '/whatsapp', 
+    {
+        title: 'WhatsApp',
+        path: '/whatsapp',
         icon: 'whatsapp',
         iconType: 'logos',
         feature: 'whatsapp',
         roles: ['owner', 'admin', 'superadmin']
     },
-    { 
-        title: 'Analytics', 
-        path: '/analytics', 
+    {
+        title: 'Analytics',
+        path: '/analytics',
         icon: 'bar-chart',
         feature: 'analytics',
         roles: ['owner', 'admin', 'superadmin']
     },
-    { 
-        title: 'Settings', 
-        path: '/settings', 
+    {
+        title: 'Settings',
+        path: '/settings',
         icon: 'cog',
         feature: 'settings',
         roles: ['owner', 'admin', 'superadmin']
     },
-    { 
-        title: 'Profile', 
-        path: '/profile', 
+    {
+        title: 'Profile',
+        path: '/profile',
         icon: 'user-circle',
         feature: 'profile',
         roles: ['owner', 'admin', 'staff', 'superadmin']
@@ -110,6 +121,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
     const [userRole, setUserRole] = useState<UserRole | null>(null);
     const [loading, setLoading] = useState(true);
     const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(['Bookings']); // Default expand Bookings
 
     const fetchPendingBookings = useCallback(async () => {
         if (!subdomain) return;
@@ -142,7 +154,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
         };
         fetchSession();
         fetchPendingBookings();
-        
+
         // Refresh pending bookings every 30 seconds
         const interval = setInterval(fetchPendingBookings, 30000);
         return () => clearInterval(interval);
@@ -153,6 +165,19 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
         if (!userRole) return false;
         return item.roles.includes(userRole);
     });
+
+    const toggleMenu = (title: string) => {
+        if (collapsed) {
+            setCollapsed(false);
+            setExpandedMenus([title]);
+        } else {
+            setExpandedMenus(prev =>
+                prev.includes(title)
+                    ? prev.filter(t => t !== title)
+                    : [...prev, title]
+            );
+        }
+    };
 
     return (
         <aside
@@ -220,6 +245,84 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                 : pathname?.startsWith(fullPath);
 
                             const showBadge = item.feature === 'bookings' && pendingBookingsCount > 0;
+                            const hasChildren = item.children && item.children.length > 0;
+                            const isExpanded = expandedMenus.includes(item.title);
+
+                            if (hasChildren) {
+                                return (
+                                    <div key={item.path} className="space-y-1">
+                                        <button
+                                            onClick={() => toggleMenu(item.title)}
+                                            className={cn(
+                                                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium relative",
+                                                isActive
+                                                    ? "bg-primary/10 text-primary shadow-none"
+                                                    : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
+                                                collapsed ? "justify-center px-2" : ""
+                                            )}
+                                            title={collapsed ? item.title : ''}
+                                        >
+                                            <div className="relative">
+                                                <BoxIcon
+                                                    name={item.icon}
+                                                    type={item.iconType || 'regular'}
+                                                    size={20}
+                                                    className={cn(
+                                                        isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
+                                                    )}
+                                                />
+                                                {showBadge && collapsed && (
+                                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full ring-2 ring-background animate-pulse"></span>
+                                                )}
+                                            </div>
+                                            {!collapsed && (
+                                                <div className="flex items-center justify-between flex-1">
+                                                    <span>{item.title}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        {showBadge && (
+                                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                                                                {pendingBookingsCount > 99 ? '99+' : pendingBookingsCount}
+                                                            </span>
+                                                        )}
+                                                        <BoxIcon
+                                                            name="chevron-down"
+                                                            size={16}
+                                                            className={cn("transition-transform duration-200", isExpanded ? "rotate-180" : "")}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </button>
+
+                                        {/* Submenu */}
+                                        {!collapsed && isExpanded && (
+                                            <div className="pl-11 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                                                {item.children!.map((child) => {
+                                                    const childFullPath = `/tenant/admin${child.path}`;
+                                                    // Check if active based on query param if present
+                                                    const isChildActive = pathname === fullPath && window.location.search.includes(child.path.split('?')[1]);
+
+                                                    return (
+                                                        <Link
+                                                            key={child.title}
+                                                            href={`${childFullPath}${childFullPath.includes('?') ? '&' : '?'}subdomain=${subdomain}`}
+                                                            className={cn(
+                                                                "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                                                                isChildActive
+                                                                    ? "text-primary font-medium bg-primary/5"
+                                                                    : "text-muted-foreground hover:text-foreground hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            <BoxIcon name={child.icon} size={16} className="opacity-70" />
+                                                            <span>{child.title}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }
 
                             return (
                                 <Link
@@ -235,10 +338,10 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                     title={collapsed ? item.title : ''}
                                 >
                                     <div className="relative">
-                                        <BoxIcon 
-                                            name={item.icon} 
+                                        <BoxIcon
+                                            name={item.icon}
                                             type={item.iconType || 'regular'}
-                                            size={20} 
+                                            size={20}
                                             className={cn(
                                                 isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
                                             )}

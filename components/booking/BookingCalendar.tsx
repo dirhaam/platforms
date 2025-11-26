@@ -18,6 +18,8 @@ interface BookingCalendarProps {
   selectedDate?: Date;
   className?: string;
   businessHours?: { openTime: number; closeTime: number };
+  statusFilter?: string;
+  onStatusChange?: (status: string) => void;
 }
 
 export function BookingCalendar({
@@ -26,7 +28,9 @@ export function BookingCalendar({
   onBookingClick,
   selectedDate,
   className = '',
-  businessHours = { openTime: 9, closeTime: 17 }
+  businessHours = { openTime: 9, closeTime: 17 },
+  statusFilter = 'all',
+  onStatusChange
 }: BookingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
@@ -126,6 +130,40 @@ export function BookingCalendar({
       .map(word => word.charAt(0).toUpperCase())
       .join('')
       .slice(0, 2);
+  };
+
+  /* Filter Panel (Left Side) */
+  const FilterPanel = () => {
+    const filters = [
+      { id: 'all', label: 'All Events', color: 'bg-gray-100 border-gray-200' },
+      { id: 'pending', label: 'Pending', color: 'bg-yellow-100 border-yellow-200' },
+      { id: 'confirmed', label: 'Confirmed', color: 'bg-primary-light border-primary-light' },
+      { id: 'completed', label: 'Completed', color: 'bg-green-100 border-green-200' },
+      { id: 'cancelled', label: 'Cancelled', color: 'bg-red-100 border-red-200' },
+    ];
+
+    return (
+      <div className="w-full lg:w-48 flex-shrink-0 space-y-4">
+        <h3 className="font-semibold text-sm text-txt-primary mb-2">Filters</h3>
+        <div className="space-y-2">
+          {filters.map(filter => (
+            <button
+              key={filter.id}
+              onClick={() => onStatusChange?.(filter.id)}
+              className={`
+                w-full text-left px-3 py-2 rounded-md text-sm transition-all flex items-center gap-2
+                ${statusFilter === filter.id
+                  ? 'bg-white shadow-sm ring-1 ring-primary text-primary font-medium'
+                  : 'text-txt-secondary hover:bg-gray-50'}
+              `}
+            >
+              <div className={`w-3 h-3 rounded-full border ${filter.color}`}></div>
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   /* Booking detail yang ditampilkan di kanan */
@@ -553,17 +591,20 @@ export function BookingCalendar({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* 2-column layout for all views */}
+      {/* 3-column layout: Filters - Calendar - Details */}
       <div className="flex flex-col lg:flex-row gap-6 w-full">
-        {/* Calendar views - fluid width on small screens, fixed on large */}
+        {/* Left: Filters */}
+        <FilterPanel />
+
+        {/* Center: Calendar views */}
         <div className="flex-1 min-w-[300px]">
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
         </div>
 
-        {/* Booking detail panel - side panel on large screens */}
-        <div className="w-full lg:w-96 flex-shrink-0 lg:h-auto flex flex-col">
+        {/* Right: Booking detail panel */}
+        <div className="w-full lg:w-80 flex-shrink-0 lg:h-auto flex flex-col">
           <BookingDetailPanel />
           <UpcomingHomeVisitsPanel />
         </div>

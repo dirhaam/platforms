@@ -16,6 +16,7 @@ import { InvoicePreview } from '@/components/invoice/InvoicePreview';
 import { normalizeInvoiceResponse } from '@/lib/invoice/invoice-utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookingViewsTabs } from './BookingViewsTabs';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface BookingDashboardProps {
   tenantId: string;
@@ -45,12 +46,30 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
   const [selectedSalesTransaction, setSelectedSalesTransaction] = useState<SalesTransaction | null>(null);
   const [showSalesDetailsDialog, setShowSalesDetailsDialog] = useState(false);
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const viewParam = searchParams?.get('view');
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'calendar' | 'booking' | 'sales' | 'home-visits'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Sync viewMode with URL
+  useEffect(() => {
+    if (viewParam && ['calendar', 'booking', 'sales', 'home-visits'].includes(viewParam)) {
+      setViewMode(viewParam as any);
+    }
+  }, [viewParam]);
+
+  const handleViewModeChange = (mode: 'calendar' | 'booking' | 'sales' | 'home-visits') => {
+    setViewMode(mode);
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set('view', mode);
+    router.push(`?${params.toString()}`);
+  };
 
   // Home Visits states
   const [services, setServices] = useState<any[]>([]);
@@ -439,28 +458,11 @@ export function BookingDashboard({ tenantId }: BookingDashboardProps) {
 
   return (
     <div className="w-full space-y-6">
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-3 px-6">
-        <Button onClick={() => setShowNewBookingDialog(true)} className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30">
-          <Plus className="h-4 w-4 mr-2" />
-          New Booking
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => setShowQuickSaleDialog(true)}
-          disabled={!resolvedTenantId || invoiceGenerating}
-          className="border-gray-300 text-txt-secondary hover:text-primary hover:border-primary hover:bg-gray-50 transition-all"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Quick Sale
-        </Button>
-      </div>
-
       {/* Booking Views */}
       <div className="mt-6">
         <BookingViewsTabs
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onViewModeChange={handleViewModeChange}
           filteredBookings={filteredBookings}
           selectedDate={selectedDate}
           onDateSelect={setSelectedDate}

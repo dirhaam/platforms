@@ -11,6 +11,7 @@ import { PWAProvider } from '@/components/pwa/PWAProvider';
 import { fetchTenantBySubdomain } from '@/lib/subdomain-fetcher';
 
 interface TenantData {
+  id?: string;
   logo?: string;
   businessName?: string;
   subscriptionStatus?: string;
@@ -41,11 +42,12 @@ function TenantAdminLayoutContent({
             // Check if subscription is expired
             const subscriptionStatus = data.subscriptionStatus || 'active';
             const subscriptionExpiresAt = data.subscriptionExpiresAt;
-            const isExpired = subscriptionStatus === 'suspended' || 
+            const isExpired = subscriptionStatus === 'suspended' ||
               subscriptionStatus === 'cancelled' ||
               (subscriptionExpiresAt && new Date(subscriptionExpiresAt) < new Date());
-            
+
             setTenantData({
+              id: data.id,
               logo: data.logo,
               businessName: data.businessName,
               subscriptionStatus,
@@ -77,7 +79,7 @@ function TenantAdminLayoutContent({
   // Show expired block if subscription is expired
   if (tenantData?.isExpired) {
     return (
-      <ExpiredAdminBlock 
+      <ExpiredAdminBlock
         businessName={tenantData.businessName || 'Business'}
         expiresAt={tenantData.subscriptionExpiresAt}
         onRenew={() => {
@@ -105,7 +107,7 @@ function TenantAdminLayoutContent({
             sidebarCollapsed ? "ml-20" : "ml-64"
           )}
         >
-          <Navbar />
+          <Navbar tenantId={tenantData?.id} />
 
           {/* Main Content */}
           <main className="flex-1 p-6 overflow-y-auto">
@@ -138,4 +140,3 @@ export default function TenantAdminLayout({
     </Suspense>
   );
 }
-
