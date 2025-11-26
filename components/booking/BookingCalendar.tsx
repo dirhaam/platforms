@@ -7,6 +7,7 @@ import { Booking, BookingStatus } from '@/types/booking';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -434,7 +435,7 @@ export function BookingCalendar({
             className="h-8 w-8 rounded-full border-gray-200"
             onClick={() => viewMode === 'month' ? navigateMonth('prev') : viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
           >
-            <i className='bx bx-chevron-left text-lg'></i>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-xl font-bold text-gray-900 min-w-[180px] text-center">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -445,7 +446,7 @@ export function BookingCalendar({
             className="h-8 w-8 rounded-full border-gray-200"
             onClick={() => viewMode === 'month' ? navigateMonth('next') : viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
           >
-            <i className='bx bx-chevron-right text-lg'></i>
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
