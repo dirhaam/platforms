@@ -41,11 +41,11 @@ const formatTime = (date: Date): string =>
 
 const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
-    case BookingStatus.PENDING: return 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]';
-    case BookingStatus.CONFIRMED: return 'bg-[#DBEAFE] text-[#1E40AF] border-[#BFDBFE]';
-    case BookingStatus.COMPLETED: return 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]';
-    case BookingStatus.CANCELLED: return 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]';
-    case BookingStatus.NO_SHOW: return 'bg-gray-100 text-gray-700 border-gray-200';
+    case BookingStatus.PENDING: return 'bg-[#FFE8CC] text-[#CC5500] border-[#FFD699]'; // Orange/Yellow like Family
+    case BookingStatus.CONFIRMED: return 'bg-[#E0E7FF] text-[#4C63D2] border-[#C7D2FE]'; // Purple/Blue like Business
+    case BookingStatus.COMPLETED: return 'bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0]'; // Green like Holiday
+    case BookingStatus.CANCELLED: return 'bg-[#FECACA] text-[#B91C1C] border-[#FCA5A5]'; // Red like Personal
+    case BookingStatus.NO_SHOW: return 'bg-[#E0F2F1] text-[#00695C] border-[#B2DFDB]'; // Cyan like ETC
     default: return 'bg-gray-100 text-gray-700 border-gray-200';
   }
 };
@@ -60,11 +60,12 @@ const FilterPanel = ({
   onToggleAll: () => void
 }) => {
   const filters = [
-    { id: 'pending', label: 'Pending', color: '#FEF3C7', textColor: '#92400E', borderColor: '#FDE68A' },
-    { id: 'confirmed', label: 'Confirmed', color: '#DBEAFE', textColor: '#1E40AF', borderColor: '#BFDBFE' },
-    { id: 'completed', label: 'Completed', color: '#D1FAE5', textColor: '#065F46', borderColor: '#A7F3D0' },
-    { id: 'cancelled', label: 'Cancelled', color: '#FEE2E2', textColor: '#991B1B', borderColor: '#FECACA' },
+    { id: 'pending', label: 'Pending', color: '#FACC15', textColor: '#FACC15', borderColor: '#FACC15' },      // kuning
+    { id: 'confirmed', label: 'Confirmed', color: '#6366F1', textColor: '#6366F1', borderColor: '#6366F1' },  // biru
+    { id: 'completed', label: 'Completed', color: '#22C55E', textColor: '#22C55E', borderColor: '#22C55E' },  // hijau
+    { id: 'cancelled', label: 'Cancelled', color: '#F43F5E', textColor: '#F43F5E', borderColor: '#F43F5E' },  // merah
   ];
+
 
   return (
     <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
