@@ -117,26 +117,27 @@ export async function POST(request: NextRequest) {
     // 6. Session will be set via cookie (no need for token)
 
     // 7. Set secure cookie with session using inline encoding
+    // Use same format as other auth endpoints for consistency
     const sessionData = {
-      staffId: staff.id,
-      staffName: staff.name,
-      staffRole: staff.role,
+      userId: staff.id,
       tenantId: tenant.id,
-      tenantSubdomain: tenant.subdomain,
-      tenantName: tenant.business_name,
-      loginTime: Date.now(),
+      role: staff.role || 'staff',
+      permissions: [] as string[],
+      email: staff.email,
+      name: staff.name,
     };
 
     const cookieStore = await cookies();
-    // Use inline encoding like superadmin
+    // Use inline encoding like other auth endpoints
     const inlineSession = 'inline.' + btoa(JSON.stringify(sessionData));
     cookieStore.set({
-      name: 'tenant_session',
+      name: 'tenant-auth',  // Same cookie name as other auth endpoints
       value: inlineSession,
       httpOnly: true,
-      secure: true, // Always use true in production
+      secure: true,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/',
     });
 
     console.info('[staff-login] Login successful:', { staffId: staff.id, tenantId: tenant.id });
