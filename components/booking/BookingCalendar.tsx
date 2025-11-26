@@ -441,12 +441,11 @@ export function BookingCalendar({
                 month: "space-y-4 w-full",
                 caption: "flex justify-center items-center pt-1 relative mb-2",
                 caption_label: "text-sm font-medium",
-                nav: "absolute inset-x-0 flex justify-between items-center",
-                nav_button: cn(
-                  "h-8 w-8 border border-gray-200 bg-white p-0 opacity-100 hover:bg-gray-50 rounded-md flex items-center justify-center"
-                ),
-                nav_button_previous: "",
-                nav_button_next: "",
+                nav: "space-x-1 flex items-center",
+                nav_button: 
+                  "h-7 w-7 !border !border-gray-200 !bg-white p-0 !opacity-100 hover:!bg-gray-100 !rounded-md flex items-center justify-center shadow-sm",
+                nav_button_previous: "absolute left-0",
+                nav_button_next: "absolute right-0",
                 head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex-1",
                 cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 flex-1 flex items-center justify-center",
                 day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
