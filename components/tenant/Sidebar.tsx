@@ -75,13 +75,6 @@ const NAV_ITEMS: NavItem[] = [
         roles: ['owner', 'admin', 'superadmin']
     },
     {
-        title: 'Sales',
-        path: '/sales',
-        icon: 'trending-up',
-        feature: 'sales',
-        roles: ['owner', 'admin', 'superadmin']
-    },
-    {
         title: 'WhatsApp',
         path: '/whatsapp',
         icon: 'whatsapp',

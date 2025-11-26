@@ -6,6 +6,7 @@ import {
   ServiceMetrics,
   TimeBasedMetrics,
   BusinessKPIs,
+  SalesMetrics,
   AnalyticsFilters,
   ConversionMetrics,
   PlatformAnalytics,
@@ -27,6 +28,9 @@ type BookingRow = {
   scheduledAt: Date;
   createdAt: Date;
   totalAmount: string | number | null;
+  paymentStatus: string | null;
+  paymentMethod: string | null;
+  paidAmount: string | number | null;
 };
 
 type CustomerRow = {
@@ -45,6 +49,19 @@ type ServiceRow = {
 
 const COMPLETED_STATUSES = ['completed', 'confirmed'] as const;
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function formatPaymentMethod(method: string): string {
+  const methodMap: Record<string, string> = {
+    'cash': 'Cash',
+    'card': 'Kartu Debit/Kredit',
+    'transfer': 'Transfer Bank',
+    'qris': 'QRIS',
+    'bank_transfer': 'Transfer Bank',
+    'credit_card': 'Kartu Kredit',
+    'debit_card': 'Kartu Debit',
+  };
+  return methodMap[method.toLowerCase()] || method;
+}
 
 function toNumber(value: unknown): number {
   const num = Number(value);
@@ -90,6 +107,9 @@ async function fetchTenantBookings(
     scheduledAt: row.scheduledAt ? new Date(row.scheduledAt) : new Date(),
     createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
     totalAmount: row.totalAmount,
+    paymentStatus: row.paymentStatus,
+    paymentMethod: row.paymentMethod,
+    paidAmount: row.paidAmount,
   }));
 }
 
@@ -147,13 +167,15 @@ export class AnalyticsService {
       customerMetrics,
       serviceMetrics,
       timeBasedMetrics,
-      businessKPIs
+      businessKPIs,
+      salesMetrics
     ] = await Promise.all([
       this.getBookingMetrics(tenantId, startDate, endDate, filters),
       this.getCustomerMetrics(tenantId, startDate, endDate),
       this.getServiceMetrics(tenantId, startDate, endDate),
       this.getTimeBasedMetrics(tenantId, startDate, endDate),
-      this.getBusinessKPIs(tenantId, startDate, endDate)
+      this.getBusinessKPIs(tenantId, startDate, endDate),
+      this.getSalesMetrics(tenantId, startDate, endDate)
     ]);
 
     let comparisonPeriod;
@@ -178,8 +200,84 @@ export class AnalyticsService {
       serviceMetrics,
       timeBasedMetrics,
       businessKPIs,
+      salesMetrics,
       dateRange: filters.dateRange,
       comparisonPeriod
+    };
+  }
+
+  private static async getSalesMetrics(
+    tenantId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<SalesMetrics> {
+    const bookingRows = await fetchTenantBookings(tenantId, startDate, endDate);
+
+    // Calculate paid and unpaid amounts
+    let totalPaidAmount = 0;
+    let totalUnpaidAmount = 0;
+    const paymentMethodMap = new Map<string, { count: number; amount: number }>();
+    const dailySalesMap = new Map<string, { amount: number; transactions: number }>();
+    let paidBookingsCount = 0;
+
+    bookingRows.forEach(booking => {
+      const amount = toNumber(booking.totalAmount);
+      const paidAmount = toNumber(booking.paidAmount);
+      const isPaid = booking.paymentStatus === 'paid' || paidAmount >= amount;
+      
+      if (isPaid) {
+        totalPaidAmount += amount;
+        paidBookingsCount++;
+      } else if (booking.status !== 'cancelled') {
+        totalUnpaidAmount += amount - paidAmount;
+      }
+
+      // Payment method breakdown
+      if (isPaid && booking.paymentMethod) {
+        const methodName = formatPaymentMethod(booking.paymentMethod);
+        const current = paymentMethodMap.get(methodName) || { count: 0, amount: 0 };
+        current.count += 1;
+        current.amount += amount;
+        paymentMethodMap.set(methodName, current);
+      }
+
+      // Daily sales
+      const dateKey = booking.createdAt.toISOString().split('T')[0];
+      const dailyCurrent = dailySalesMap.get(dateKey) || { amount: 0, transactions: 0 };
+      if (isPaid) {
+        dailyCurrent.amount += amount;
+        dailyCurrent.transactions += 1;
+      }
+      dailySalesMap.set(dateKey, dailyCurrent);
+    });
+
+    const paymentMethodBreakdown = Array.from(paymentMethodMap.entries())
+      .map(([method, data]) => ({
+        method,
+        count: data.count,
+        amount: data.amount
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const dailySales = Array.from(dailySalesMap.entries())
+      .map(([date, data]) => ({
+        date,
+        amount: data.amount,
+        transactions: data.transactions
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const totalValidBookings = bookingRows.filter(b => b.status !== 'cancelled').length;
+    const paymentSuccessRate = totalValidBookings > 0
+      ? (paidBookingsCount / totalValidBookings) * 100
+      : 0;
+
+    return {
+      totalPaidAmount,
+      totalUnpaidAmount,
+      paymentMethodBreakdown,
+      dailySales,
+      paymentSuccessRate
     };
   }
 

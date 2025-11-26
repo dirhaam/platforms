@@ -73,12 +73,29 @@ export interface BusinessKPIs {
   }[];
 }
 
+export interface SalesMetrics {
+  totalPaidAmount: number;
+  totalUnpaidAmount: number;
+  paymentMethodBreakdown: {
+    method: string;
+    count: number;
+    amount: number;
+  }[];
+  dailySales: {
+    date: string;
+    amount: number;
+    transactions: number;
+  }[];
+  paymentSuccessRate: number;
+}
+
 export interface AnalyticsDashboardData {
   bookingMetrics: BookingMetrics;
   customerMetrics: CustomerMetrics;
   serviceMetrics: ServiceMetrics;
   timeBasedMetrics: TimeBasedMetrics;
   businessKPIs: BusinessKPIs;
+  salesMetrics: SalesMetrics;
   dateRange: {
     startDate: Date;
     endDate: Date;

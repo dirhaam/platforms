@@ -1,15 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  User, Phone, Mail, MapPin, MessageSquare, FileText, 
-  Calendar, Clock, DollarSign, TrendingUp, History 
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BoxIcon } from '@/components/ui/box-icon';
 import { Customer, Booking, BookingStatus } from '@/types/booking';
 import { SalesTransaction } from '@/types/sales';
 
@@ -166,9 +160,10 @@ export function CustomerDetailsDialog({
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'IDR',
+      minimumFractionDigits: 0
     }).format(amount);
   };
 
@@ -190,344 +185,323 @@ export function CustomerDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
-            <span>{customer?.name || 'Customer Details'}</span>
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            Detailed information about the customer
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto p-0">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-primary to-primary/80 p-6 text-white">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-card bg-white/20 backdrop-blur flex items-center justify-center">
+              <span className="text-2xl font-bold">{customer.name.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <DialogHeader className="p-0">
+                <DialogTitle className="text-white text-xl font-bold">{customer?.name || 'Customer Details'}</DialogTitle>
+                <DialogDescription className="text-white/80 text-sm">
+                  Customer since {getCustomerSince()} ago
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
+        </div>
 
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="stats">Statistics</TabsTrigger>
-          </TabsList>
+        <div className="p-6">
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-md">
+              <TabsTrigger value="overview" className="text-sm data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded">Overview</TabsTrigger>
+              <TabsTrigger value="bookings" className="text-sm data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded">Bookings</TabsTrigger>
+              <TabsTrigger value="transactions" className="text-sm data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded">Transactions</TabsTrigger>
+              <TabsTrigger value="stats" className="text-sm data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded">Statistics</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            {/* Customer Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{customer.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <TabsContent value="overview" className="space-y-4">
+              {/* Customer Info */}
+              <div className="bg-gray-50 rounded-card p-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{customer.phone}</span>
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-md">
+                      <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center text-info">
+                        <BoxIcon name="phone" size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-txt-muted">Phone</p>
+                        <p className="text-sm font-medium text-txt-primary">{customer.phone}</p>
+                      </div>
                     </div>
                     
                     {customer.email && (
-                      <div className="flex items-center space-x-2">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">{customer.email}</span>
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-md">
+                        <div className="w-8 h-8 rounded bg-green-100 flex items-center justify-center text-success">
+                          <BoxIcon name="envelope" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-txt-muted">Email</p>
+                          <p className="text-sm font-medium text-txt-primary">{customer.email}</p>
+                        </div>
                       </div>
                     )}
                     
                     {customer.whatsappNumber && (
-                      <div className="flex items-center space-x-2">
-                        <MessageSquare className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">{customer.whatsappNumber}</span>
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-md">
+                        <div className="w-8 h-8 rounded bg-green-100 flex items-center justify-center text-green-600">
+                          <BoxIcon name="whatsapp" type="logos" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-txt-muted">WhatsApp</p>
+                          <p className="text-sm font-medium text-txt-primary">{customer.whatsappNumber}</p>
+                        </div>
                       </div>
                     )}
                     
                     {customer.address && (
-                      <div className="flex items-start space-x-2">
-                        <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                        <span className="text-sm">{customer.address}</span>
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-md">
+                        <div className="w-8 h-8 rounded bg-orange-100 flex items-center justify-center text-warning">
+                          <BoxIcon name="map" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-txt-muted">Address</p>
+                          <p className="text-sm font-medium text-txt-primary">{customer.address}</p>
+                        </div>
                       </div>
                     )}
                   </div>
                   
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">Customer since {getCustomerSince()} ago</span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <TrendingUp className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{customer.totalBookings} total bookings</span>
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-md">
+                      <div className="w-8 h-8 rounded bg-purple-100 flex items-center justify-center text-purple-600">
+                        <BoxIcon name="calendar" size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-txt-muted">Total Bookings</p>
+                        <p className="text-sm font-medium text-txt-primary">{customer.totalBookings} bookings</p>
+                      </div>
                     </div>
                     
                     {customer.lastBookingAt && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          Last booking: {formatDate(customer.lastBookingAt)}
-                        </span>
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-md">
+                        <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center text-info">
+                          <BoxIcon name="time" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-txt-muted">Last Booking</p>
+                          <p className="text-sm font-medium text-txt-primary">{formatDate(customer.lastBookingAt)}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {customer.notes && (
+                      <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-md border border-yellow-100">
+                        <div className="w-8 h-8 rounded bg-yellow-100 flex items-center justify-center text-warning flex-shrink-0">
+                          <BoxIcon name="note" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-txt-muted">Notes</p>
+                          <p className="text-sm text-txt-secondary">{customer.notes}</p>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-white shadow-card rounded-card p-4 text-center">
+                  <div className="w-10 h-10 rounded bg-green-100 flex items-center justify-center text-success mx-auto mb-2">
+                    <BoxIcon name="wallet" size={20} />
+                  </div>
+                  <div className="text-lg font-bold text-success">{formatCurrency(stats.totalSpent)}</div>
+                  <div className="text-xs text-txt-muted">Total Spent</div>
+                </div>
                 
-                {customer.notes && (
-                  <div className="pt-4 border-t">
-                    <div className="flex items-start space-x-2">
-                      <FileText className="h-4 w-4 text-gray-500 mt-0.5" />
-                      <div>
-                        <div className="text-sm font-medium mb-1">Notes</div>
-                        <div className="text-sm text-gray-600">{customer.notes}</div>
+                <div className="bg-white shadow-card rounded-card p-4 text-center">
+                  <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center text-info mx-auto mb-2">
+                    <BoxIcon name="check-circle" size={20} />
+                  </div>
+                  <div className="text-lg font-bold text-info">{stats.completedBookings}</div>
+                  <div className="text-xs text-txt-muted">Completed</div>
+                </div>
+                
+                <div className="bg-white shadow-card rounded-card p-4 text-center">
+                  <div className="w-10 h-10 rounded bg-orange-100 flex items-center justify-center text-warning mx-auto mb-2">
+                    <BoxIcon name="x-circle" size={20} />
+                  </div>
+                  <div className="text-lg font-bold text-warning">{stats.cancelledBookings}</div>
+                  <div className="text-xs text-txt-muted">Cancelled</div>
+                </div>
+                
+                <div className="bg-white shadow-card rounded-card p-4 text-center">
+                  <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center text-purple-600 mx-auto mb-2">
+                    <BoxIcon name="trending-up" size={20} />
+                  </div>
+                  <div className="text-lg font-bold text-purple-600">{formatCurrency(stats.averageBookingValue)}</div>
+                  <div className="text-xs text-txt-muted">Avg Value</div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="bookings" className="space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded bg-primary-light flex items-center justify-center text-primary">
+                  <BoxIcon name="history" size={20} />
+                </div>
+                <h5 className="text-lg font-semibold text-txt-primary">Booking History</h5>
+              </div>
+              
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <BoxIcon name="loader-alt" size={32} className="animate-spin text-primary" />
+                </div>
+              ) : sortedBookings.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-card">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <BoxIcon name="calendar" size={32} className="text-txt-muted" />
+                  </div>
+                  <p className="text-txt-muted">No bookings found</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {sortedBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm text-txt-primary">{booking.service?.name}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(booking.status)}`}>
+                            {booking.status}
+                          </span>
+                          {booking.isHomeVisit && (
+                            <span className="bg-primary-light text-primary px-2 py-0.5 rounded text-xs font-bold">
+                              Home Visit
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-txt-muted">
+                          <BoxIcon name="calendar" size={12} />
+                          <span>{formatDate(booking.scheduledAt)} at {formatTime(booking.scheduledAt)}</span>
+                          <span className="text-txt-muted">•</span>
+                          <span>{booking.duration} min</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-sm text-txt-primary">{formatCurrency(Number(booking.totalAmount))}</div>
+                        <span className={`text-xs font-bold uppercase ${
+                          booking.paymentStatus === 'paid' ? 'text-success' : booking.paymentStatus === 'pending' ? 'text-warning' : 'text-danger'
+                        }`}>{booking.paymentStatus}</span>
                       </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(stats.totalSpent)}
-                  </div>
-                  <div className="text-sm text-gray-600">Total Spent</div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {stats.completedBookings}
-                  </div>
-                  <div className="text-sm text-gray-600">Completed</div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {stats.cancelledBookings}
-                  </div>
-                  <div className="text-sm text-gray-600">Cancelled</div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {formatCurrency(stats.averageBookingValue)}
-                  </div>
-                  <div className="text-sm text-gray-600">Avg Value</div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+            <TabsContent value="transactions" className="space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded bg-green-100 flex items-center justify-center text-success">
+                  <BoxIcon name="receipt" size={20} />
+                </div>
+                <h5 className="text-lg font-semibold text-txt-primary">Sales Transactions</h5>
+              </div>
 
-          <TabsContent value="bookings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <History className="h-5 w-5" />
-                  <span>Booking History</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              {loadingTransactions ? (
+                <div className="flex items-center justify-center py-12">
+                  <BoxIcon name="loader-alt" size={32} className="animate-spin text-primary" />
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-card">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <BoxIcon name="receipt" size={32} className="text-txt-muted" />
                   </div>
-                ) : sortedBookings.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No bookings found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {sortedBookings.map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium">{booking.service?.name}</span>
-                            <Badge className={getStatusColor(booking.status)}>
-                              {booking.status}
-                            </Badge>
-                            {booking.isHomeVisit && (
-                              <Badge variant="outline" className="text-xs">
-                                Home Visit
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {formatDate(booking.scheduledAt)} at {formatTime(booking.scheduledAt)}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Duration: {booking.duration} minutes
-                          </div>
-                          {booking.notes && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              Note: {booking.notes}
-                            </div>
-                          )}
+                  <p className="text-txt-muted">No transactions found</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {transactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm text-txt-primary">{transaction.serviceName}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                            transaction.status === 'completed' ? 'bg-green-100 text-success' : transaction.status === 'pending' ? 'bg-yellow-100 text-warning' : 'bg-red-100 text-danger'
+                          }`}>{transaction.status}</span>
                         </div>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            {formatCurrency(Number(booking.totalAmount))}
-                          </div>
-                          <div className={`text-xs ${
-                            booking.paymentStatus === 'paid' 
-                              ? 'text-green-600' 
-                              : booking.paymentStatus === 'pending'
-                              ? 'text-yellow-600'
-                              : 'text-red-600'
-                          }`}>
-                            {booking.paymentStatus}
-                          </div>
+                        <div className="flex items-center gap-2 text-xs text-txt-muted">
+                          <BoxIcon name="calendar" size={12} />
+                          <span>{formatDate(transaction.transactionDate)}</span>
+                          <span className="text-txt-muted">•</span>
+                          <span>Ref: {transaction.transactionNumber}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="transactions" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <DollarSign className="h-5 w-5" />
-                  <span>Sales Transactions</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingTransactions ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : transactions.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No transactions found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium">{transaction.serviceName}</span>
-                            <Badge className={
-                              transaction.status === 'completed' 
-                                ? 'bg-green-100 text-green-800'
-                                : transaction.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                            }>
-                              {transaction.status}
-                            </Badge>
-                            {transaction.isHomeVisit && (
-                              <Badge variant="outline" className="text-xs">
-                                Home Visit
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {formatDate(transaction.transactionDate)} at {formatTime(transaction.transactionDate)}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Ref: {transaction.transactionNumber}
-                          </div>
-                          {transaction.notes && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              Note: {transaction.notes}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            {formatCurrency(transaction.totalAmount)}
-                          </div>
-                          <div className={`text-xs ${
-                            transaction.paymentStatus === 'paid' 
-                              ? 'text-green-600' 
-                              : transaction.paymentStatus === 'pending'
-                              ? 'text-yellow-600'
-                              : 'text-red-600'
-                          }`}>
-                            {transaction.paymentMethod}
-                          </div>
-                        </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-sm text-txt-primary">{formatCurrency(transaction.totalAmount)}</div>
+                        <span className="text-xs text-txt-muted capitalize">{transaction.paymentMethod}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
-          <TabsContent value="stats" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <DollarSign className="h-5 w-5" />
-                    <span>Financial Summary</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Total Spent:</span>
-                    <span className="font-medium">{formatCurrency(stats.totalSpent)}</span>
+            <TabsContent value="stats" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-card p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded bg-green-100 flex items-center justify-center text-success">
+                      <BoxIcon name="wallet" size={20} />
+                    </div>
+                    <h5 className="font-semibold text-txt-primary">Financial Summary</h5>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Average Booking Value:</span>
-                    <span className="font-medium">{formatCurrency(stats.averageBookingValue)}</span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between p-3 bg-white rounded-md">
+                      <span className="text-sm text-txt-muted">Total Spent</span>
+                      <span className="font-semibold text-sm text-success">{formatCurrency(stats.totalSpent)}</span>
+                    </div>
+                    <div className="flex justify-between p-3 bg-white rounded-md">
+                      <span className="text-sm text-txt-muted">Average Value</span>
+                      <span className="font-semibold text-sm text-txt-primary">{formatCurrency(stats.averageBookingValue)}</span>
+                    </div>
+                    <div className="flex justify-between p-3 bg-white rounded-md">
+                      <span className="text-sm text-txt-muted">Total Bookings</span>
+                      <span className="font-semibold text-sm text-txt-primary">{customer.totalBookings}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Total Bookings:</span>
-                    <span className="font-medium">{customer.totalBookings}</span>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="h-5 w-5" />
-                    <span>Booking Breakdown</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Completed:</span>
-                    <span className="font-medium text-green-600">{stats.completedBookings}</span>
+                <div className="bg-gray-50 rounded-card p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center text-purple-600">
+                      <BoxIcon name="bar-chart" size={20} />
+                    </div>
+                    <h5 className="font-semibold text-txt-primary">Booking Breakdown</h5>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Cancelled:</span>
-                    <span className="font-medium text-red-600">{stats.cancelledBookings}</span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between p-3 bg-white rounded-md">
+                      <span className="text-sm text-txt-muted">Completed</span>
+                      <span className="font-semibold text-sm text-success">{stats.completedBookings}</span>
+                    </div>
+                    <div className="flex justify-between p-3 bg-white rounded-md">
+                      <span className="text-sm text-txt-muted">Cancelled</span>
+                      <span className="font-semibold text-sm text-danger">{stats.cancelledBookings}</span>
+                    </div>
+                    <div className="flex justify-between p-3 bg-white rounded-md">
+                      <span className="text-sm text-txt-muted">No Shows</span>
+                      <span className="font-semibold text-sm text-txt-secondary">{stats.noShowBookings}</span>
+                    </div>
+                    <div className="flex justify-between p-3 bg-primary-light rounded-md">
+                      <span className="text-sm text-primary font-medium">Success Rate</span>
+                      <span className="font-bold text-sm text-primary">
+                        {customer.totalBookings > 0 ? Math.round((stats.completedBookings / customer.totalBookings) * 100) : 0}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>No Shows:</span>
-                    <span className="font-medium text-gray-600">{stats.noShowBookings}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Success Rate:</span>
-                    <span className="font-medium">
-                      {customer.totalBookings > 0 
-                        ? Math.round((stats.completedBookings / customer.totalBookings) * 100)
-                        : 0
-                      }%
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
