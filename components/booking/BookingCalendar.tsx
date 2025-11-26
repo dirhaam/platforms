@@ -68,7 +68,7 @@ const FilterPanel = ({
 
 
   return (
-    <div className="w-full lg:w-64 flex-shrink-0 space-y-6 border-r border-gray-100 pr-6">
+    <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
       <div>
         <h3 className="font-semibold text-sm text-gray-700 mb-4">Event Filters</h3>
         <div className="space-y-2.5">
@@ -245,8 +245,10 @@ export function BookingCalendar({
       {/* Baris nama hari */}
       <div className="grid grid-cols-7 mb-2 gap-x-2">
         {weekdaysMini.map(day => (
-          <div key={day} className="text-center text-xs font-medium text-gray-400 h-7 flex items-center justify-center">
-            {day}
+          <div key={day} className="flex items-center justify-center w-full">
+            <span className="text-center text-xs font-medium text-gray-400 w-8">
+              {day}
+            </span>
           </div>
         ))}
       </div>
@@ -338,7 +340,7 @@ export function BookingCalendar({
                   );
                 })}
                 {dayBookings.length > 3 && (
-                  <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-600 text-white text-[10px] font-semibold ml-1.5">
+                  <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] font-semibold ml-1.5">
                     +{dayBookings.length - 3} more
                   </div>
                 )}
@@ -502,7 +504,7 @@ export function BookingCalendar({
           />
         </div>
         {/* MAIN CALENDAR AREA */}
-        <div className="flex-1 min-w-0 min-h-[600px] lg:pl-8 lg:border-l border-gray-100">
+        <div className="flex-1 min-w-0 min-h-[600px]">
           {/* Header & view switcher hanya di main calendar */}
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
             <div className="flex items-center gap-4">
