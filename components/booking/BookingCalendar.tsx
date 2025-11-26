@@ -14,15 +14,20 @@ const monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const toDate = (scheduledAt) => typeof scheduledAt === 'string' ? new Date(scheduledAt) : scheduledAt;
+// ------------------------------
+// PERBAIKAN: tambahkan tipe parameter!
+const toDate = (scheduledAt: Date | string): Date =>
+  typeof scheduledAt === 'string' ? new Date(scheduledAt) : scheduledAt;
 
-const formatTime = (date) => date.toLocaleTimeString('en-US', {
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false
-});
+const formatTime = (date: Date): string =>
+  date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
 
-const getStatusColor = (status) => {
+// ------------------------------
+const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
     case BookingStatus.PENDING:
       return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -39,11 +44,26 @@ const getStatusColor = (status) => {
   }
 };
 
+interface BookingCalendarProps {
+  bookings: Booking[];
+  onDateSelect: (date: Date) => void;
+  onBookingClick?: (booking: Booking) => void;
+  selectedDate?: Date;
+  className?: string;
+  businessHours?: { openTime: number; closeTime: number };
+  statusFilter?: string;
+  onStatusChange?: (status: string) => void;
+}
+
 // Filter Panel
 const FilterPanel = ({
   selectedStatuses,
   onToggleStatus,
   onToggleAll
+}: {
+  selectedStatuses: string[],
+  onToggleStatus: (id: string) => void,
+  onToggleAll: () => void
 }) => {
   const filters = [
     { id: 'pending', label: 'Pending', color: '#facc15', borderColor: '#facc15' },
@@ -110,10 +130,10 @@ export function BookingCalendar({
   businessHours = { openTime: 9, closeTime: 17 },
   statusFilter = 'all',
   onStatusChange
-}) {
-  const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
-  const [viewMode, setViewMode] = useState('month');
-  const [selectedStatuses, setSelectedStatuses] = useState(['pending', 'confirmed', 'completed', 'cancelled']);
+}: BookingCalendarProps) {
+  const [currentDate, setCurrentDate] = useState<Date>(selectedDate || new Date());
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['pending', 'confirmed', 'completed', 'cancelled']);
 
   useEffect(() => {
     if (selectedDate) {
@@ -121,7 +141,7 @@ export function BookingCalendar({
     }
   }, [selectedDate]);
 
-  const getBookingsForDate = (date) => (
+  const getBookingsForDate = (date: Date): Booking[] => (
     bookings.filter(booking => {
       const bookingDate = toDate(booking.scheduledAt);
       return (
@@ -133,7 +153,7 @@ export function BookingCalendar({
     })
   );
 
-  const getCalendarDays = () => {
+  const getCalendarDays = (): Date[] => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -141,7 +161,7 @@ export function BookingCalendar({
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDayWeekday);
 
-    const days = [];
+    const days: Date[] = [];
     for (let i = 0; i < 42; i++) {
       days.push(new Date(startDate));
       startDate.setDate(startDate.getDate() + 1);
@@ -149,10 +169,10 @@ export function BookingCalendar({
     return days;
   };
 
-  const getWeekDays = () => {
+  const getWeekDays = (): Date[] => {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(currentDate.getDate() - ((currentDate.getDay() + 6) % 7));
-    const days = [];
+    const days: Date[] = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
@@ -161,25 +181,25 @@ export function BookingCalendar({
     return days;
   };
 
-  const navigateMonth = (direction) => {
+  const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
     setCurrentDate(newDate);
   };
 
-  const navigateWeek = (direction) => {
+  const navigateWeek = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
     setCurrentDate(newDate);
   };
 
-  const navigateDay = (direction) => {
+  const navigateDay = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
     setCurrentDate(newDate);
   };
 
-  const toggleStatus = (status) => {
+  const toggleStatus = (status: string) => {
     setSelectedStatuses(prev =>
       prev.includes(status)
         ? prev.filter(s => s !== status)
@@ -408,7 +428,7 @@ export function BookingCalendar({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* NAVIGASI Arrow di atas & Tengah */}
+      {/* Navigasi Arrow di atas dan di tengah */}
       <div className="flex items-center justify-center mt-4 mb-4 gap-2">
         <button
           className="p-1 rounded hover:bg-gray-100"
@@ -436,7 +456,7 @@ export function BookingCalendar({
           <ChevronRight size={20} />
         </button>
         <div className="flex bg-gray-100 p-1 rounded-lg ml-6">
-          {(['month', 'week', 'day']).map((mode) => (
+          {(['month', 'week', 'day'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
@@ -452,15 +472,13 @@ export function BookingCalendar({
           ))}
         </div>
       </div>
-      {/* Main Calendar (tanpa card!) */}
+      {/* Calendar Area (Tidak pakai Card) */}
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar untuk filter */}
         <FilterPanel
           selectedStatuses={selectedStatuses}
           onToggleStatus={toggleStatus}
           onToggleAll={toggleAllStatuses}
         />
-        {/* Calendar Area */}
         <div className="flex-1 min-w-0 min-h-[600px]">
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
