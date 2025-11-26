@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { X, Download, Share } from 'lucide-react';
 import { OfflineIndicator } from './OfflineIndicator';
@@ -15,6 +16,14 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const pathname = usePathname();
+
+  // Track visited pages for offline navigation
+  useEffect(() => {
+    if (pathname && typeof window !== 'undefined') {
+      sessionStorage.setItem('lastVisitedPage', pathname);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     // Register service worker
@@ -23,6 +32,18 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
         .register('/sw.js')
         .then((registration) => {
           console.log('[PWA] Service Worker registered:', registration.scope);
+          
+          // Check for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[PWA] New content available, refresh to update');
+                }
+              });
+            }
+          });
         })
         .catch((error) => {
           console.error('[PWA] Service Worker registration failed:', error);

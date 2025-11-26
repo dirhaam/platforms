@@ -56,6 +56,7 @@ export function UnifiedBookingPanel({
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
   const [whatsAppTemplate, setWhatsAppTemplate] = useState('confirmation');
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   // Form State
   const [paymentMethod, setPaymentMethod] = useState<string>(booking.paymentMethod || 'cash');
@@ -383,13 +384,12 @@ export function UnifiedBookingPanel({
     setShowRefundDialog(false);
   };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     if (!booking.customer?.phone) {
       toast.error('Customer phone number is missing');
       return;
     }
 
-    let message = '';
     const customerName = booking.customer.name;
     const bookingNumber = booking.bookingNumber;
     const serviceName = booking.service?.name || 'Service';
@@ -397,6 +397,7 @@ export function UnifiedBookingPanel({
     const time = new Date(booking.scheduledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const amount = booking.remainingBalance ? `Rp ${booking.remainingBalance.toLocaleString('id-ID')}` : `Rp ${booking.totalAmount.toLocaleString('id-ID')}`;
 
+    let message = '';
     switch (whatsAppTemplate) {
       case 'confirmation':
         message = `Halo ${customerName}, booking Anda dengan nomor ${bookingNumber} untuk ${serviceName} pada ${date} pukul ${time} telah terkonfirmasi. Mohon datang tepat waktu. Terima kasih!`;
@@ -417,9 +418,32 @@ export function UnifiedBookingPanel({
     const phone = booking.customer.phone.replace(/\D/g, '');
     const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
 
-    window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank');
-    setShowWhatsAppDialog(false);
-    toast.success('WhatsApp opened');
+    setSendingWhatsApp(true);
+    try {
+      const response = await fetch('/api/whatsapp/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId,
+          customerPhone: formattedPhone,
+          message,
+          type: 'text',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to send WhatsApp message');
+      }
+
+      setShowWhatsAppDialog(false);
+      toast.success('WhatsApp message sent successfully');
+    } catch (error) {
+      console.error('Error sending WhatsApp:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send WhatsApp message');
+    } finally {
+      setSendingWhatsApp(false);
+    }
   };
 
   // Helper styles
@@ -928,9 +952,17 @@ export function UnifiedBookingPanel({
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowWhatsAppDialog(false)}>Cancel</Button>
-            <Button onClick={handleSendWhatsApp} className="bg-green-600 hover:bg-green-700 text-white">
-              <i className='bx bxl-whatsapp text-lg mr-2'></i> Send WhatsApp
+            <Button variant="outline" onClick={() => setShowWhatsAppDialog(false)} disabled={sendingWhatsApp}>Cancel</Button>
+            <Button onClick={handleSendWhatsApp} disabled={sendingWhatsApp} className="bg-green-600 hover:bg-green-700 text-white">
+              {sendingWhatsApp ? (
+                <>
+                  <i className='bx bx-loader-alt bx-spin text-lg mr-2'></i> Sending...
+                </>
+              ) : (
+                <>
+                  <i className='bx bxl-whatsapp text-lg mr-2'></i> Send WhatsApp
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

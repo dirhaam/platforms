@@ -470,12 +470,19 @@ export class WhatsAppClient implements WhatsAppApiClient {
       return undefined;
     }
 
-    // If apiKey already has the prefix, return as-is
+    // If apiKey already has the prefix (Basic/Bearer), return as-is
     if (/^(basic|bearer)\s/i.test(apiKey)) {
       return apiKey;
     }
 
-    // Default to Bearer if no prefix provided
+    // Check if apiKey contains colon (username:password format for Basic Auth)
+    if (apiKey.includes(':')) {
+      // wadok API uses HTTP Basic Authentication
+      const base64Credentials = Buffer.from(apiKey).toString('base64');
+      return `Basic ${base64Credentials}`;
+    }
+
+    // Default to Bearer for API tokens without colon
     return `Bearer ${apiKey}`;
   }
 }
