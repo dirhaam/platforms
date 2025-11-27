@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { TimePicker } from '@/components/ui/time-picker';
 
 interface ScheduleItem {
   id: string;
@@ -189,12 +189,10 @@ export function StaffSchedule({ staffId, tenantId, staffName }: Props) {
                       <Label htmlFor={`start-${day.value}`} className="text-sm">
                         Start Time
                       </Label>
-                      <Input
-                        id={`start-${day.value}`}
-                        type="time"
+                      <TimePicker
                         value={item.startTime}
-                        onChange={(e) =>
-                          updateScheduleItem(day.value, 'startTime', e.target.value)
+                        onChange={(value) =>
+                          updateScheduleItem(day.value, 'startTime', value)
                         }
                       />
                     </div>
@@ -202,12 +200,10 @@ export function StaffSchedule({ staffId, tenantId, staffName }: Props) {
                       <Label htmlFor={`end-${day.value}`} className="text-sm">
                         End Time
                       </Label>
-                      <Input
-                        id={`end-${day.value}`}
-                        type="time"
+                      <TimePicker
                         value={item.endTime}
-                        onChange={(e) =>
-                          updateScheduleItem(day.value, 'endTime', e.target.value)
+                        onChange={(value) =>
+                          updateScheduleItem(day.value, 'endTime', value)
                         }
                       />
                     </div>

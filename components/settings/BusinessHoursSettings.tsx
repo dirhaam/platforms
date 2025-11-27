@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { TimePicker } from '@/components/ui/time-picker';
 import type { BusinessHours } from '@/types/database';
 
 interface BusinessHoursSettingsProps {
@@ -136,19 +136,17 @@ export default function BusinessHoursSettings({ tenantId, initialData }: Busines
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
                       <Label className="text-sm">Open:</Label>
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={schedule[day.key]?.openTime || '09:00'}
-                        onChange={(e) => handleTimeChange(day.key, 'openTime', e.target.value)}
+                        onChange={(value) => handleTimeChange(day.key, 'openTime', value)}
                         className="w-32"
                       />
                     </div>
                     <div className="flex items-center space-x-2">
                       <Label className="text-sm">Close:</Label>
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={schedule[day.key]?.closeTime || '17:00'}
-                        onChange={(e) => handleTimeChange(day.key, 'closeTime', e.target.value)}
+                        onChange={(value) => handleTimeChange(day.key, 'closeTime', value)}
                         className="w-32"
                       />
                     </div>

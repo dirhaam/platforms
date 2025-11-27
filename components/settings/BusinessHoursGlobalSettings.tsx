@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { TimePicker } from '@/components/ui/time-picker';
 
 interface BusinessHours {
   [day: string]: {
@@ -199,23 +200,21 @@ export default function BusinessHoursGlobalSettings({ tenantId }: BusinessHoursG
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-txt-muted dark:text-[#7e7f96]">Buka</span>
-                          <input
-                            type="time"
+                          <TimePicker
                             value={hours.openTime}
-                            onChange={(e) => handleDayChange(key, 'openTime', e.target.value)}
+                            onChange={(value) => handleDayChange(key, 'openTime', value)}
                             disabled={saving}
-                            className="px-3 py-1.5 text-sm bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-md text-txt-primary dark:text-[#d5d5e2] focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-150"
+                            className="w-28"
                           />
                         </div>
                         <span className="text-txt-muted dark:text-[#7e7f96]">-</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-txt-muted dark:text-[#7e7f96]">Tutup</span>
-                          <input
-                            type="time"
+                          <TimePicker
                             value={hours.closeTime}
-                            onChange={(e) => handleDayChange(key, 'closeTime', e.target.value)}
+                            onChange={(value) => handleDayChange(key, 'closeTime', value)}
                             disabled={saving}
-                            className="px-3 py-1.5 text-sm bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-md text-txt-primary dark:text-[#d5d5e2] focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-150"
+                            className="w-28"
                           />
                         </div>
                       </div>

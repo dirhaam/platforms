@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { TimePicker } from '@/components/ui/time-picker';
 
 interface HomeVisitConfig {
   enabled: boolean;
@@ -234,11 +235,11 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
               </div>
 
               <div className="flex gap-2">
-                <input
-                  type="time"
+                <TimePicker
                   value={newSlot}
-                  onChange={(e) => setNewSlot(e.target.value)}
-                  className="h-10 px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-md text-txt-primary dark:text-[#d5d5e2] focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                  onChange={setNewSlot}
+                  placeholder="Pilih waktu"
+                  className="w-36"
                 />
                 <button
                   type="button"

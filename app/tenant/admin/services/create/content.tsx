@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, AlertCircle, Check } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { TimePicker } from '@/components/ui/time-picker';
 
 interface NewService {
   name: string;
@@ -257,16 +258,14 @@ export function ServiceCreateContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="startTime">Start Time</Label>
-                  <Input
-                    id="startTime"
-                    type="time"
+                  <TimePicker
                     value={service.operatingHours?.startTime || '08:00'}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setService({
                         ...service,
                         operatingHours: {
                           ...service.operatingHours || { startTime: '08:00', endTime: '17:00' },
-                          startTime: e.target.value
+                          startTime: value
                         }
                       })
                     }
@@ -276,16 +275,14 @@ export function ServiceCreateContent() {
                 </div>
                 <div>
                   <Label htmlFor="endTime">End Time</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
+                  <TimePicker
                     value={service.operatingHours?.endTime || '17:00'}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setService({
                         ...service,
                         operatingHours: {
                           ...service.operatingHours || { startTime: '08:00', endTime: '17:00' },
-                          endTime: e.target.value
+                          endTime: value
                         }
                       })
                     }
