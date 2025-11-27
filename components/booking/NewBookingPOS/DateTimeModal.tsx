@@ -1,10 +1,4 @@
-import React, { useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BlockingDateCalendar } from '@/components/booking/BlockingDateCalendar';
 import { TimeSlot } from '@/types/booking';
@@ -63,17 +57,18 @@ export function DateTimeModal({
     onStepChange('main');
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      onOpenChange(isOpen);
-      if (!isOpen) {
-        onStepChange('main');
-      }
-    }}>
-      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 [&>button]:hidden rounded-card shadow-lg border-0">
-        <DialogTitle className="sr-only">{currentStep === 'date' ? 'Select Date' : 'Select Time'}</DialogTitle>
-        <DialogDescription className="sr-only">Choose your preferred appointment {currentStep === 'date' ? 'date' : 'time slot'}</DialogDescription>
-        
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50"
+        onClick={() => onStepChange('main')}
+      />
+      
+      {/* Modal Content */}
+      <div className="relative z-10 w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col bg-white rounded-card shadow-lg mx-4">
         <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
           <div>
             <h4 className="text-lg font-bold text-txt-primary">
@@ -219,13 +214,13 @@ export function DateTimeModal({
                   onClick={() => onStepChange('main')}
                   className="text-txt-muted"
                 >
-                  Cancel
+                  Batal
                 </Button>
               </div>
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
