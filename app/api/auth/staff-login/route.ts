@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { SecurityService } from '@/lib/security/security-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,6 +97,18 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', staff.id);
 
+      // Log failed login attempt
+      await SecurityService.logSecurityEvent(
+        tenant.id,
+        staff.id,
+        'login',
+        false,
+        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        request.headers.get('user-agent') || 'unknown',
+        'staff-login',
+        { email, reason: 'invalid_password', attempts: newAttempts }
+      );
+
       console.warn('[staff-login] Invalid password attempt:', { staffId: staff.id, attempts: newAttempts });
 
       return NextResponse.json(
@@ -139,6 +152,18 @@ export async function POST(request: NextRequest) {
       maxAge: 7 * 24 * 60 * 60, // 7 days
       path: '/',
     });
+
+    // Log successful login
+    await SecurityService.logSecurityEvent(
+      tenant.id,
+      staff.id,
+      'login',
+      true,
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      request.headers.get('user-agent') || 'unknown',
+      'staff-login',
+      { email, role: staff.role }
+    );
 
     console.info('[staff-login] Login successful:', { staffId: staff.id, tenantId: tenant.id });
 

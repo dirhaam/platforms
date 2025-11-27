@@ -96,11 +96,11 @@ const NAV_ITEMS: NavItem[] = [
         feature: 'settings',
         roles: ['owner', 'admin', 'superadmin'],
         children: [
-            { title: 'Appearance', path: '/settings?tab=appearance', icon: 'palette' },
-            { title: 'Contact', path: '/settings?tab=contact', icon: 'phone' },
-            { title: 'Invoice', path: '/settings?tab=invoice', icon: 'receipt' },
+            { title: 'Tampilan', path: '/settings?tab=appearance', icon: 'palette' },
             { title: 'Media', path: '/settings?tab=media', icon: 'image' },
-            { title: 'Calendar', path: '/settings?tab=calendar', icon: 'calendar' },
+            { title: 'Contact Link', path: '/settings?tab=contact', icon: 'link' },
+            { title: 'Kalender', path: '/settings?tab=calendar', icon: 'calendar' },
+            { title: 'Invoice', path: '/settings?tab=invoice', icon: 'receipt' },
         ]
     },
     {

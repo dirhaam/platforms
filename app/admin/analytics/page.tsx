@@ -3,10 +3,8 @@ export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth/auth-middleware';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { BarChart3, TrendingUp } from 'lucide-react';
-import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+import { AnalyticsClient } from './analytics-client';
 
 export default async function AnalyticsPage() {
   const session = await getServerSession();
@@ -15,85 +13,130 @@ export default async function AnalyticsPage() {
     redirect('/login?type=superadmin');
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-600">
-            Platform-wide analytics and insights
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin">
-            Back to Dashboard
-          </Link>
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                <p className="text-2xl font-bold text-gray-900">--</p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">--</p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-                <p className="text-2xl font-bold text-gray-900">--</p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Users</p>
-                <p className="text-2xl font-bold text-gray-900">--</p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking Trends</CardTitle>
-          <CardDescription>
-            Booking volume over time
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            Analytics dashboard will be displayed here
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+
+  // Fetch initial data
+  const now = new Date();
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [
+    tenantsResult,
+    securityLogsResult,
+    recentLoginsResult,
+    failedLoginsResult,
+  ] = await Promise.all([
+    // Tenant stats
+    supabase.from('tenants').select('id, subscription_status, created_at, last_active_at'),
+    // Security logs (last 7 days)
+    supabase
+      .from('security_audit_logs')
+      .select('*')
+      .gte('created_at', last7d.toISOString())
+      .order('created_at', { ascending: false }),
+    // Recent successful logins (24h)
+    supabase
+      .from('security_audit_logs')
+      .select('id')
+      .eq('action', 'login')
+      .eq('success', true)
+      .gte('created_at', last24h.toISOString()),
+    // Failed logins (24h)
+    supabase
+      .from('security_audit_logs')
+      .select('id, ip_address, details, created_at')
+      .eq('action', 'login')
+      .eq('success', false)
+      .gte('created_at', last24h.toISOString()),
+  ]);
+
+  const tenants = tenantsResult.data || [];
+  const securityLogs = securityLogsResult.data || [];
+  const recentLogins = recentLoginsResult.data || [];
+  const failedLogins = failedLoginsResult.data || [];
+
+  // Calculate metrics
+  const activeTenants = tenants.filter(t => 
+    t.last_active_at && new Date(t.last_active_at) > last7d
+  ).length;
+
+  const newTenantsThisMonth = tenants.filter(t => 
+    t.created_at && new Date(t.created_at) > last30d
+  ).length;
+
+  // Group logins by hour for chart
+  const loginsByHour: Record<string, { success: number; failed: number }> = {};
+  for (let i = 23; i >= 0; i--) {
+    const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
+    const key = hour.toISOString().slice(0, 13);
+    loginsByHour[key] = { success: 0, failed: 0 };
+  }
+
+  securityLogs.forEach(log => {
+    if (log.action === 'login') {
+      const key = log.created_at.slice(0, 13);
+      if (loginsByHour[key]) {
+        if (log.success) {
+          loginsByHour[key].success++;
+        } else {
+          loginsByHour[key].failed++;
+        }
+      }
+    }
+  });
+
+  // Group by action type
+  const actionCounts: Record<string, number> = {};
+  securityLogs.forEach(log => {
+    actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+  });
+
+  // Failed login IPs (potential threats)
+  const failedLoginIPs: Record<string, number> = {};
+  failedLogins.forEach(log => {
+    if (log.ip_address) {
+      failedLoginIPs[log.ip_address] = (failedLoginIPs[log.ip_address] || 0) + 1;
+    }
+  });
+
+  const suspiciousIPs = Object.entries(failedLoginIPs)
+    .filter(([_, count]) => count >= 3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  const initialData = {
+    overview: {
+      totalTenants: tenants.length,
+      activeTenants,
+      suspendedTenants: tenants.filter(t => t.subscription_status === 'suspended').length,
+      newTenantsThisMonth,
+    },
+    security: {
+      totalLogins24h: recentLogins.length,
+      failedLogins24h: failedLogins.length,
+      loginsByHour: Object.entries(loginsByHour).map(([hour, data]) => ({
+        hour: new Date(hour + ':00:00').toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        success: data.success,
+        failed: data.failed,
+      })),
+      actionCounts,
+      suspiciousIPs,
+    },
+    recentLogs: securityLogs.slice(0, 50).map(log => ({
+      id: log.id,
+      action: log.action,
+      success: log.success,
+      ipAddress: log.ip_address,
+      userAgent: log.user_agent,
+      tenantId: log.tenant_id,
+      details: log.details,
+      createdAt: log.created_at,
+    })),
+  };
+
+  return <AnalyticsClient initialData={initialData} />;
 }

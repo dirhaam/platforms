@@ -1,32 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Building2, 
-  Plus,
-  Activity,
-  Shield,
-  Users,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  RefreshCw,
-  LogIn,
-  LogOut,
-  Clock,
-  Globe,
-  Settings,
-  BarChart3,
-  Database,
-  Eye,
-  Loader2,
-  Crown,
-  Zap,
-  Building
-} from 'lucide-react';
+import { useState } from 'react';
 import Link from 'next/link';
 
 interface SecurityLog {
@@ -90,14 +64,14 @@ export function AdminDashboardClient({ session, initialData }: AdminDashboardCli
   };
 
   const getActionIcon = (action: string, success: boolean) => {
-    if (!success) return <XCircle className="w-4 h-4 text-red-500" />;
+    if (!success) return <i className='bx bx-x-circle text-danger'></i>;
     switch (action) {
       case 'login':
-        return <LogIn className="w-4 h-4 text-green-500" />;
+        return <i className='bx bx-log-in text-success'></i>;
       case 'logout':
-        return <LogOut className="w-4 h-4 text-blue-500" />;
+        return <i className='bx bx-log-out text-info'></i>;
       default:
-        return <Activity className="w-4 h-4 text-gray-500" />;
+        return <i className='bx bx-pulse text-txt-muted dark:text-[#7e7f96]'></i>;
     }
   };
 
@@ -119,10 +93,10 @@ export function AdminDashboardClient({ session, initialData }: AdminDashboardCli
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return `${diffMins} menit lalu`;
+    if (diffHours < 24) return `${diffHours} jam lalu`;
+    return `${diffDays} hari lalu`;
   };
 
   const failedLogins = data.securityLogs.filter(log => log.action === 'login' && !log.success);
@@ -130,277 +104,337 @@ export function AdminDashboardClient({ session, initialData }: AdminDashboardCli
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome, {session.name}
+          <h1 className="text-2xl font-bold text-txt-primary dark:text-[#d5d5e2]">
+            Selamat datang, {session.name}
           </h1>
-          <p className="text-gray-500">Platform Administration Dashboard</p>
+          <p className="text-sm text-txt-muted dark:text-[#7e7f96]">Platform Administration Dashboard</p>
         </div>
-        <Button onClick={refreshData} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+        <button
+          onClick={refreshData}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-[#4e4f6c] rounded-lg text-sm font-medium text-txt-secondary dark:text-[#b2b2c4] hover:bg-gray-50 dark:hover:bg-[#232333] transition-colors disabled:opacity-50"
+        >
+          <i className={`bx bx-refresh ${loading ? 'animate-spin' : ''}`}></i>
           Refresh
-        </Button>
+        </button>
       </div>
 
       {/* System Health Banner */}
-      <Card className={`border-l-4 ${
-        systemHealth === 'healthy' ? 'border-l-green-500 bg-green-50' :
-        systemHealth === 'degraded' ? 'border-l-yellow-500 bg-yellow-50' :
-        'border-l-red-500 bg-red-50'
+      <div className={`p-4 rounded-lg border-l-4 ${
+        systemHealth === 'healthy' 
+          ? 'bg-green-50 dark:bg-[#36483f] border-l-success' 
+          : systemHealth === 'degraded' 
+          ? 'bg-yellow-50 dark:bg-[#4d4036] border-l-warning' 
+          : 'bg-red-50 dark:bg-[#4d2f3a] border-l-danger'
       }`}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {systemHealth === 'healthy' ? (
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              ) : systemHealth === 'degraded' ? (
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
-              ) : (
-                <XCircle className="w-6 h-6 text-red-600" />
-              )}
-              <div>
-                <p className="font-semibold text-gray-900">
-                  System Status: {systemHealth.charAt(0).toUpperCase() + systemHealth.slice(1)}
-                </p>
-                <p className="text-sm text-gray-600">
-                  All services are running normally
-                </p>
-              </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+              systemHealth === 'healthy' 
+                ? 'bg-success/20' 
+                : systemHealth === 'degraded' 
+                ? 'bg-warning/20' 
+                : 'bg-danger/20'
+            }`}>
+              <i className={`bx text-xl ${
+                systemHealth === 'healthy' 
+                  ? 'bx-check-circle text-success' 
+                  : systemHealth === 'degraded' 
+                  ? 'bx-error text-warning' 
+                  : 'bx-x-circle text-danger'
+              }`}></i>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/monitoring">
-                <Activity className="w-4 h-4 mr-2" />
-                View Details
-              </Link>
-            </Button>
+            <div>
+              <p className="font-semibold text-txt-primary dark:text-[#d5d5e2]">
+                System Status: {systemHealth === 'healthy' ? 'Sehat' : systemHealth === 'degraded' ? 'Degraded' : 'Critical'}
+              </p>
+              <p className="text-sm text-txt-muted dark:text-[#7e7f96]">
+                Semua layanan berjalan normal
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <Link
+            href="/admin/monitoring"
+            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-[#4e4f6c] rounded-lg text-sm font-medium text-txt-secondary dark:text-[#b2b2c4] hover:bg-white/50 dark:hover:bg-[#232333] transition-colors"
+          >
+            <i className='bx bx-pulse'></i>
+            Lihat Detail
+          </Link>
+        </div>
+      </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Total Tenants */}
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/admin/tenants'}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Building2 className="w-5 h-5 text-blue-600" />
-              <Badge variant="outline" className="text-xs">All</Badge>
+        <Link href="/admin/tenants" className="bg-white dark:bg-[#2b2c40] rounded-lg p-4 border border-gray-100 dark:border-[#4e4f6c] shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+              <i className='bx bx-building-house text-xl text-primary dark:text-[#a5a7ff]'></i>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{data.tenants.total}</p>
-            <p className="text-xs text-gray-500">Total Tenants</p>
-          </CardContent>
-        </Card>
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-100 dark:bg-[#35365f] text-txt-muted dark:text-[#7e7f96]">
+              All
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-txt-primary dark:text-[#d5d5e2]">{data.tenants.total}</p>
+          <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Total Tenants</p>
+        </Link>
 
         {/* Active */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <Badge className="bg-green-100 text-green-700 text-xs">Active</Badge>
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-4 border border-gray-100 dark:border-[#4e4f6c] shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-success/10 dark:bg-success/20 flex items-center justify-center">
+              <i className='bx bx-check-circle text-xl text-success'></i>
             </div>
-            <p className="text-2xl font-bold text-green-600">{data.tenants.active}</p>
-            <p className="text-xs text-gray-500">Active Tenants</p>
-          </CardContent>
-        </Card>
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-success/10 text-success">
+              Active
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-success">{data.tenants.active}</p>
+          <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Active Tenants</p>
+        </div>
 
         {/* Suspended */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-              <Badge className="bg-red-100 text-red-700 text-xs">Suspended</Badge>
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-4 border border-gray-100 dark:border-[#4e4f6c] shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-danger/10 dark:bg-danger/20 flex items-center justify-center">
+              <i className='bx bx-block text-xl text-danger'></i>
             </div>
-            <p className="text-2xl font-bold text-red-600">{data.tenants.suspended}</p>
-            <p className="text-xs text-gray-500">Suspended</p>
-          </CardContent>
-        </Card>
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-danger/10 text-danger">
+              Suspended
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-danger">{data.tenants.suspended}</p>
+          <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Suspended</p>
+        </div>
 
         {/* Basic Plan */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Building className="w-5 h-5 text-gray-600" />
-              <Badge variant="outline" className="text-xs">Basic</Badge>
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-4 border border-gray-100 dark:border-[#4e4f6c] shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-[#35365f] flex items-center justify-center">
+              <i className='bx bx-package text-xl text-txt-muted dark:text-[#7e7f96]'></i>
             </div>
-            <p className="text-2xl font-bold text-gray-600">{data.tenants.byPlan.basic}</p>
-            <p className="text-xs text-gray-500">Basic Plan</p>
-          </CardContent>
-        </Card>
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-100 dark:bg-[#35365f] text-txt-muted dark:text-[#7e7f96]">
+              Basic
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-txt-primary dark:text-[#d5d5e2]">{data.tenants.byPlan.basic}</p>
+          <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Basic Plan</p>
+        </div>
 
         {/* Premium Plan */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Zap className="w-5 h-5 text-purple-600" />
-              <Badge className="bg-purple-100 text-purple-700 text-xs">Premium</Badge>
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-4 border border-gray-100 dark:border-[#4e4f6c] shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <i className='bx bx-star text-xl text-purple-600 dark:text-purple-400'></i>
             </div>
-            <p className="text-2xl font-bold text-purple-600">{data.tenants.byPlan.premium}</p>
-            <p className="text-xs text-gray-500">Premium Plan</p>
-          </CardContent>
-        </Card>
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+              Premium
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{data.tenants.byPlan.premium}</p>
+          <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Premium Plan</p>
+        </div>
 
         {/* Enterprise Plan */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Crown className="w-5 h-5 text-amber-600" />
-              <Badge className="bg-amber-100 text-amber-700 text-xs">Enterprise</Badge>
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-4 border border-gray-100 dark:border-[#4e4f6c] shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <i className='bx bx-crown text-xl text-amber-600 dark:text-amber-400'></i>
             </div>
-            <p className="text-2xl font-bold text-amber-600">{data.tenants.byPlan.enterprise}</p>
-            <p className="text-xs text-gray-500">Enterprise Plan</p>
-          </CardContent>
-        </Card>
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+              Enterprise
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{data.tenants.byPlan.enterprise}</p>
+          <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Enterprise</p>
+        </div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick Actions */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5" />
-              Quick Actions
-            </CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button asChild className="w-full justify-start" variant="default">
-              <Link href="/admin/tenants/create">
-                <Plus className="w-4 h-4 mr-2" />
-                Create New Tenant
-              </Link>
-            </Button>
-            <Button asChild className="w-full justify-start" variant="outline">
-              <Link href="/admin/tenants">
-                <Building2 className="w-4 h-4 mr-2" />
-                Manage Tenants
-              </Link>
-            </Button>
-            <Button asChild className="w-full justify-start" variant="outline">
-              <Link href="/admin/monitoring">
-                <Activity className="w-4 h-4 mr-2" />
-                System Monitoring
-              </Link>
-            </Button>
-            <Button asChild className="w-full justify-start" variant="outline">
-              <Link href="/admin/superadmins">
-                <Shield className="w-4 h-4 mr-2" />
-                Manage Admins
-              </Link>
-            </Button>
-            <Button asChild className="w-full justify-start" variant="outline">
-              <Link href="/admin/settings">
-                <Settings className="w-4 h-4 mr-2" />
-                Platform Settings
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg border border-gray-100 dark:border-[#4e4f6c] shadow-card">
+          <div className="p-5 border-b border-gray-100 dark:border-[#4e4f6c]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+                <i className='bx bx-zap text-xl text-primary dark:text-[#a5a7ff]'></i>
+              </div>
+              <div>
+                <h5 className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Quick Actions</h5>
+                <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Aksi administratif umum</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 space-y-2">
+            <Link
+              href="/admin/tenants/create"
+              className="flex items-center gap-3 p-3 rounded-lg bg-primary text-white hover:bg-[#5f61e6] transition-colors"
+            >
+              <i className='bx bx-plus-circle text-lg'></i>
+              <span className="text-sm font-medium">Buat Tenant Baru</span>
+            </Link>
+            <Link
+              href="/admin/tenants"
+              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-[#4e4f6c] text-txt-secondary dark:text-[#b2b2c4] hover:bg-gray-50 dark:hover:bg-[#232333] transition-colors"
+            >
+              <i className='bx bx-building-house text-lg'></i>
+              <span className="text-sm font-medium">Kelola Tenants</span>
+            </Link>
+            <Link
+              href="/admin/monitoring"
+              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-[#4e4f6c] text-txt-secondary dark:text-[#b2b2c4] hover:bg-gray-50 dark:hover:bg-[#232333] transition-colors"
+            >
+              <i className='bx bx-pulse text-lg'></i>
+              <span className="text-sm font-medium">System Monitoring</span>
+            </Link>
+            <Link
+              href="/admin/superadmins"
+              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-[#4e4f6c] text-txt-secondary dark:text-[#b2b2c4] hover:bg-gray-50 dark:hover:bg-[#232333] transition-colors"
+            >
+              <i className='bx bx-shield-quarter text-lg'></i>
+              <span className="text-sm font-medium">Kelola Admins</span>
+            </Link>
+            <Link
+              href="/admin/settings"
+              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-[#4e4f6c] text-txt-secondary dark:text-[#b2b2c4] hover:bg-gray-50 dark:hover:bg-[#232333] transition-colors"
+            >
+              <i className='bx bx-cog text-lg'></i>
+              <span className="text-sm font-medium">Platform Settings</span>
+            </Link>
+          </div>
+        </div>
 
         {/* Security & Login Activity */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
+        <div className="lg:col-span-2 bg-white dark:bg-[#2b2c40] rounded-lg border border-gray-100 dark:border-[#4e4f6c] shadow-card">
+          <div className="p-5 border-b border-gray-100 dark:border-[#4e4f6c]">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Security & Login Activity
-                </CardTitle>
-                <CardDescription>Recent authentication events</CardDescription>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-info/10 dark:bg-info/20 flex items-center justify-center">
+                  <i className='bx bx-shield text-xl text-info'></i>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Security & Login Activity</h5>
+                  <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Aktivitas autentikasi terbaru</p>
+                </div>
               </div>
               {failedLogins.length > 0 && (
-                <Badge variant="destructive" className="flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
+                <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-danger/10 text-danger">
+                  <i className='bx bx-error text-sm'></i>
                   {failedLogins.length} Failed
-                </Badge>
+                </span>
               )}
             </div>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-4">
             {data.securityLogs.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Shield className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>No security logs found</p>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-[#35365f] flex items-center justify-center mb-4">
+                  <i className='bx bx-shield text-3xl text-txt-muted dark:text-[#7e7f96]'></i>
+                </div>
+                <p className="text-txt-muted dark:text-[#7e7f96]">Tidak ada log keamanan</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {data.securityLogs.map((log) => (
                   <div
                     key={log.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border ${
-                      !log.success ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                      !log.success 
+                        ? 'bg-red-50 dark:bg-[#4d2f3a]/50 border-red-200 dark:border-red-800/30' 
+                        : 'bg-gray-50 dark:bg-[#232333] border-gray-200 dark:border-[#4e4f6c]'
                     }`}
                   >
-                    {getActionIcon(log.action, log.success)}
+                    <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${
+                      !log.success ? 'bg-danger/10' : 'bg-success/10'
+                    }`}>
+                      {getActionIcon(log.action, log.success)}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">
+                        <span className="text-sm font-medium text-txt-primary dark:text-[#d5d5e2]">
                           {getActionLabel(log.action)}
                         </span>
-                        <Badge variant={log.success ? 'default' : 'destructive'} className="text-xs">
+                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${
+                          log.success 
+                            ? 'bg-success/10 text-success' 
+                            : 'bg-danger/10 text-danger'
+                        }`}>
                           {log.success ? 'Success' : 'Failed'}
-                        </Badge>
+                        </span>
                         {log.resource && (
-                          <Badge variant="outline" className="text-xs">
+                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-[#35365f] text-txt-muted dark:text-[#7e7f96]">
                             {log.resource}
-                          </Badge>
+                          </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1 truncate">
+                      <p className="text-xs text-txt-muted dark:text-[#7e7f96] mt-1 truncate">
                         {log.tenantId !== 'platform' && log.tenantId !== 'unknown' 
                           ? `Tenant: ${log.tenantId.slice(0, 8)}...` 
                           : 'Platform'}
                         {log.ipAddress && ` • IP: ${log.ipAddress}`}
                       </p>
                       {log.details && typeof log.details === 'object' && log.details.email && (
-                        <p className="text-xs text-gray-600 mt-0.5">
+                        <p className="text-xs text-txt-secondary dark:text-[#b2b2c4] mt-0.5">
                           Email: {log.details.email}
                         </p>
                       )}
                       {!log.success && log.details?.reason && (
-                        <p className="text-xs text-red-600 mt-0.5">
+                        <p className="text-xs text-danger mt-0.5">
                           Reason: {log.details.reason}
                         </p>
                       )}
                     </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                    <span className="text-xs text-txt-muted dark:text-[#7e7f96] whitespace-nowrap">
                       {formatTimeAgo(log.createdAt)}
                     </span>
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Footer Links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link href="/admin/analytics">
-            <BarChart3 className="w-6 h-6 mb-2" />
-            <span className="text-sm">Analytics</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link href="/admin/logs">
-            <Database className="w-6 h-6 mb-2" />
-            <span className="text-sm">Logs</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link href="/admin/security">
-            <Shield className="w-6 h-6 mb-2" />
-            <span className="text-sm">Security</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link href="/admin/whatsapp">
-            <Globe className="w-6 h-6 mb-2" />
-            <span className="text-sm">WhatsApp</span>
-          </Link>
-        </Button>
+        <Link
+          href="/admin/analytics"
+          className="flex flex-col items-center justify-center p-6 bg-white dark:bg-[#2b2c40] rounded-lg border border-gray-100 dark:border-[#4e4f6c] shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+        >
+          <div className="w-12 h-12 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center mb-3">
+            <i className='bx bx-bar-chart-alt-2 text-2xl text-primary dark:text-[#a5a7ff]'></i>
+          </div>
+          <span className="text-sm font-medium text-txt-primary dark:text-[#d5d5e2]">Analytics</span>
+        </Link>
+        <Link
+          href="/admin/audit"
+          className="flex flex-col items-center justify-center p-6 bg-white dark:bg-[#2b2c40] rounded-lg border border-gray-100 dark:border-[#4e4f6c] shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+        >
+          <div className="w-12 h-12 rounded-lg bg-info/10 dark:bg-info/20 flex items-center justify-center mb-3">
+            <i className='bx bx-list-check text-2xl text-info'></i>
+          </div>
+          <span className="text-sm font-medium text-txt-primary dark:text-[#d5d5e2]">Audit Logs</span>
+        </Link>
+        <Link
+          href="/admin/security"
+          className="flex flex-col items-center justify-center p-6 bg-white dark:bg-[#2b2c40] rounded-lg border border-gray-100 dark:border-[#4e4f6c] shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+        >
+          <div className="w-12 h-12 rounded-lg bg-warning/10 dark:bg-warning/20 flex items-center justify-center mb-3">
+            <i className='bx bx-shield-quarter text-2xl text-warning'></i>
+          </div>
+          <span className="text-sm font-medium text-txt-primary dark:text-[#d5d5e2]">Security</span>
+        </Link>
+        <Link
+          href="/admin/whatsapp"
+          className="flex flex-col items-center justify-center p-6 bg-white dark:bg-[#2b2c40] rounded-lg border border-gray-100 dark:border-[#4e4f6c] shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+        >
+          <div className="w-12 h-12 rounded-lg bg-success/10 dark:bg-success/20 flex items-center justify-center mb-3">
+            <i className='bx bxl-whatsapp text-2xl text-success'></i>
+          </div>
+          <span className="text-sm font-medium text-txt-primary dark:text-[#d5d5e2]">WhatsApp</span>
+        </Link>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import { SecurityService } from '@/lib/security/security-service';
 
 interface LoginRequest {
   email: string;
@@ -91,6 +92,18 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', superadmin.id);
         
+        // Log failed login
+        await SecurityService.logSecurityEvent(
+          'platform',
+          superadmin.id,
+          'login',
+          false,
+          request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+          request.headers.get('user-agent') || 'unknown',
+          'superadmin-login',
+          { email, reason: 'invalid_password', attempts: newAttempts }
+        );
+        
         console.log('❌ Invalid password for:', email);
         return NextResponse.json(
           { success: false, error: 'Invalid credentials' },
@@ -140,6 +153,18 @@ export async function POST(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/',
       });
+      
+      // Log successful login
+      await SecurityService.logSecurityEvent(
+        'platform',
+        superadmin.id,
+        'login',
+        true,
+        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        request.headers.get('user-agent') || 'unknown',
+        'superadmin-login',
+        { email }
+      );
       
       console.log('✅ SuperAdmin login successful:', email);
       return response;
