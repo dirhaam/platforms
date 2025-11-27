@@ -47,6 +47,17 @@ type ServiceRow = {
   isActive: boolean | null;
 };
 
+type SalesTransactionRow = {
+  id: string;
+  tenantId: string;
+  customerId: string | null;
+  totalAmount: number;
+  paymentAmount: number;
+  status: string;
+  paymentMethod: string | null;
+  createdAt: Date;
+};
+
 const COMPLETED_STATUSES = ['completed', 'confirmed'] as const;
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -155,6 +166,37 @@ async function fetchTenantServices(tenantId: string): Promise<ServiceRow[]> {
   }));
 }
 
+async function fetchTenantSalesTransactions(
+  tenantId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<SalesTransactionRow[]> {
+  const supabase = getSupabaseClient();
+  
+  const { data, error } = await supabase
+    .from('sales_transactions')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .gte('created_at', startDate.toISOString())
+    .lte('created_at', endDate.toISOString());
+  
+  if (error) {
+    console.error('Error fetching sales transactions:', error);
+    return [];
+  }
+  
+  return (data || []).map<SalesTransactionRow>(row => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    customerId: row.customer_id,
+    totalAmount: toNumber(row.total_amount),
+    paymentAmount: toNumber(row.payment_amount),
+    status: row.status || '',
+    paymentMethod: row.payment_method,
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+  }));
+}
+
 export class AnalyticsService {
   static async getTenantAnalytics(
     tenantId: string, 
@@ -211,23 +253,31 @@ export class AnalyticsService {
     startDate: Date,
     endDate: Date
   ): Promise<SalesMetrics> {
-    const bookingRows = await fetchTenantBookings(tenantId, startDate, endDate);
+    // Fetch both bookings and sales transactions
+    const [bookingRows, salesRows] = await Promise.all([
+      fetchTenantBookings(tenantId, startDate, endDate),
+      fetchTenantSalesTransactions(tenantId, startDate, endDate)
+    ]);
 
     // Calculate paid and unpaid amounts
     let totalPaidAmount = 0;
     let totalUnpaidAmount = 0;
     const paymentMethodMap = new Map<string, { count: number; amount: number }>();
     const dailySalesMap = new Map<string, { amount: number; transactions: number }>();
-    let paidBookingsCount = 0;
+    let paidTransactionsCount = 0;
+    let totalTransactionsCount = 0;
 
+    // Process bookings
     bookingRows.forEach(booking => {
       const amount = toNumber(booking.totalAmount);
       const paidAmount = toNumber(booking.paidAmount);
-      const isPaid = booking.paymentStatus === 'paid' || paidAmount >= amount;
+      const isPaid = booking.paymentStatus === 'PAID' || booking.paymentStatus === 'paid' || paidAmount >= amount;
+      
+      totalTransactionsCount++;
       
       if (isPaid) {
         totalPaidAmount += amount;
-        paidBookingsCount++;
+        paidTransactionsCount++;
       } else if (booking.status !== 'cancelled') {
         totalUnpaidAmount += amount - paidAmount;
       }
@@ -251,6 +301,39 @@ export class AnalyticsService {
       dailySalesMap.set(dateKey, dailyCurrent);
     });
 
+    // Process sales transactions (Quick Sales/POS)
+    salesRows.forEach(sale => {
+      const amount = sale.totalAmount;
+      const isPaid = sale.status === 'COMPLETED' || sale.status === 'completed';
+      
+      totalTransactionsCount++;
+      
+      if (isPaid) {
+        totalPaidAmount += sale.paymentAmount;
+        paidTransactionsCount++;
+      } else if (sale.status !== 'CANCELLED' && sale.status !== 'cancelled') {
+        totalUnpaidAmount += amount - sale.paymentAmount;
+      }
+
+      // Payment method breakdown
+      if (isPaid && sale.paymentMethod) {
+        const methodName = formatPaymentMethod(sale.paymentMethod);
+        const current = paymentMethodMap.get(methodName) || { count: 0, amount: 0 };
+        current.count += 1;
+        current.amount += sale.paymentAmount;
+        paymentMethodMap.set(methodName, current);
+      }
+
+      // Daily sales
+      const dateKey = sale.createdAt.toISOString().split('T')[0];
+      const dailyCurrent = dailySalesMap.get(dateKey) || { amount: 0, transactions: 0 };
+      if (isPaid) {
+        dailyCurrent.amount += sale.paymentAmount;
+        dailyCurrent.transactions += 1;
+      }
+      dailySalesMap.set(dateKey, dailyCurrent);
+    });
+
     const paymentMethodBreakdown = Array.from(paymentMethodMap.entries())
       .map(([method, data]) => ({
         method,
@@ -267,9 +350,8 @@ export class AnalyticsService {
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    const totalValidBookings = bookingRows.filter(b => b.status !== 'cancelled').length;
-    const paymentSuccessRate = totalValidBookings > 0
-      ? (paidBookingsCount / totalValidBookings) * 100
+    const paymentSuccessRate = totalTransactionsCount > 0
+      ? (paidTransactionsCount / totalTransactionsCount) * 100
       : 0;
 
     return {
@@ -287,10 +369,14 @@ export class AnalyticsService {
     endDate: Date,
     filters: AnalyticsFilters
   ): Promise<BookingMetrics> {
-    const bookingRows = await fetchTenantBookings(tenantId, startDate, endDate, {
-      statuses: filters.bookingStatuses,
-      serviceIds: filters.services,
-    });
+    // Fetch both bookings and sales transactions
+    const [bookingRows, salesRows] = await Promise.all([
+      fetchTenantBookings(tenantId, startDate, endDate, {
+        statuses: filters.bookingStatuses,
+        serviceIds: filters.services,
+      }),
+      fetchTenantSalesTransactions(tenantId, startDate, endDate)
+    ]);
 
     const totalBookings = bookingRows.length;
     const confirmedBookings = bookingRows.filter(b => b.status === 'confirmed').length;
@@ -298,10 +384,20 @@ export class AnalyticsService {
     const cancelledBookings = bookingRows.filter(b => b.status === 'cancelled').length;
     const noShowBookings = bookingRows.filter(b => b.status === 'no_show').length;
 
+    // Calculate booking revenue
     const revenueBookings = bookingRows.filter(b => COMPLETED_STATUSES.includes(b.status as (typeof COMPLETED_STATUSES)[number]));
-    const totalRevenue = revenueBookings.reduce((sum, booking) => sum + toNumber(booking.totalAmount), 0);
+    const bookingRevenue = revenueBookings.reduce((sum, booking) => sum + toNumber(booking.totalAmount), 0);
+    
+    // Calculate sales revenue (from Quick Sales/POS)
+    const completedSales = salesRows.filter(s => s.status === 'COMPLETED' || s.status === 'completed');
+    const salesRevenue = completedSales.reduce((sum, sale) => sum + sale.paymentAmount, 0);
+    
+    // Total revenue = bookings + sales
+    const totalRevenue = bookingRevenue + salesRevenue;
+    
+    const totalTransactions = completedBookings + completedSales.length;
     const conversionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
-    const averageBookingValue = completedBookings > 0 ? totalRevenue / completedBookings : 0;
+    const averageBookingValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
     return {
       totalBookings,
@@ -430,9 +526,15 @@ export class AnalyticsService {
     startDate: Date, 
     endDate: Date
   ): Promise<TimeBasedMetrics> {
-    const bookingRows = await fetchTenantBookings(tenantId, startDate, endDate, {
-      statuses: Array.from(COMPLETED_STATUSES),
-    });
+    // Fetch both bookings and sales transactions
+    const [bookingRows, salesRows] = await Promise.all([
+      fetchTenantBookings(tenantId, startDate, endDate, {
+        statuses: Array.from(COMPLETED_STATUSES),
+      }),
+      fetchTenantSalesTransactions(tenantId, startDate, endDate)
+    ]);
+    
+    const completedSales = salesRows.filter(s => s.status === 'COMPLETED' || s.status === 'completed');
 
     // Hourly distribution
     const hourlyMap = new Map<number, number>();
@@ -444,13 +546,19 @@ export class AnalyticsService {
       const hour = booking.scheduledAt.getHours();
       hourlyMap.set(hour, (hourlyMap.get(hour) || 0) + 1);
     });
+    
+    // Add sales transactions to hourly distribution
+    completedSales.forEach(sale => {
+      const hour = sale.createdAt.getHours();
+      hourlyMap.set(hour, (hourlyMap.get(hour) || 0) + 1);
+    });
 
     const hourlyDistribution = Array.from(hourlyMap.entries()).map(([hour, bookings]) => ({
       hour,
       bookings
     }));
 
-    // Daily distribution (last 7 days)
+    // Daily distribution
     const dailyMap = new Map<string, { bookings: number; revenue: number }>();
     DAY_NAMES.forEach(day => {
       dailyMap.set(day, { bookings: 0, revenue: 0 });
@@ -464,6 +572,16 @@ export class AnalyticsService {
         revenue: current.revenue + toNumber(booking.totalAmount)
       });
     });
+    
+    // Add sales transactions to daily distribution
+    completedSales.forEach(sale => {
+      const dayName = DAY_NAMES[sale.createdAt.getDay()];
+      const current = dailyMap.get(dayName) || { bookings: 0, revenue: 0 };
+      dailyMap.set(dayName, {
+        bookings: current.bookings + 1,
+        revenue: current.revenue + sale.paymentAmount
+      });
+    });
 
     const dailyDistribution = Array.from(dailyMap.entries()).map(([day, data]) => ({
       day,
@@ -471,7 +589,7 @@ export class AnalyticsService {
       revenue: data.revenue
     }));
 
-    // Monthly trends (last 12 months)
+    // Monthly trends
     const monthlyMap = new Map<string, { bookings: number; revenue: number; customers: Set<string> }>();
     
     bookingRows.forEach(booking => {
@@ -480,6 +598,18 @@ export class AnalyticsService {
       current.bookings += 1;
       current.revenue += toNumber(booking.totalAmount);
       current.customers.add(booking.customerId);
+      monthlyMap.set(monthKey, current);
+    });
+    
+    // Add sales transactions to monthly trends
+    completedSales.forEach(sale => {
+      const monthKey = sale.createdAt.toISOString().substring(0, 7); // YYYY-MM
+      const current = monthlyMap.get(monthKey) || { bookings: 0, revenue: 0, customers: new Set() };
+      current.bookings += 1;
+      current.revenue += sale.paymentAmount;
+      if (sale.customerId) {
+        current.customers.add(sale.customerId);
+      }
       monthlyMap.set(monthKey, current);
     });
 

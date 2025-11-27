@@ -1,16 +1,57 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { AnalyticsService } from '@/lib/analytics/analytics-service';
 import { AnalyticsFilters } from '@/types/analytics';
+
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
+
+async function getTenantIdFromSubdomain(subdomain: string): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  
+  // Check if it's already a UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(subdomain)) {
+    return subdomain;
+  }
+  
+  // Look up tenant by subdomain
+  const { data: tenant, error } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('subdomain', subdomain.toLowerCase())
+    .single();
+  
+  if (error || !tenant) {
+    console.error('Error finding tenant by subdomain:', error);
+    return null;
+  }
+  
+  return tenant.id;
+}
 
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = await context.params;
+    const { tenantId: subdomainOrId } = await context.params;
     const filters: AnalyticsFilters = await request.json();
+
+    // Resolve subdomain to tenant ID
+    const tenantId = await getTenantIdFromSubdomain(subdomainOrId);
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'Tenant not found' },
+        { status: 404 }
+      );
+    }
 
     // Validate date range
     if (!filters.dateRange?.startDate || !filters.dateRange?.endDate) {
@@ -49,8 +90,17 @@ export async function GET(
   context: { params: Promise<{ tenantId: string }> }
 ) {
   try {
-    const { tenantId } = await context.params;
+    const { tenantId: subdomainOrId } = await context.params;
     const { searchParams } = new URL(request.url);
+    
+    // Resolve subdomain to tenant ID
+    const tenantId = await getTenantIdFromSubdomain(subdomainOrId);
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'Tenant not found' },
+        { status: 404 }
+      );
+    }
     
     // Default to last 30 days
     const endDate = new Date();

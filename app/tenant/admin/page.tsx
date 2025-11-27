@@ -43,7 +43,14 @@ export default async function TenantAdminDashboard({
     .eq('tenant_id', tenant.id)
     .order('created_at', { ascending: false });
 
-  // 2. Fetch Recent Payments (for Transactions List)
+  // 2. Fetch Sales Transactions (for Revenue & Stats)
+  const { data: salesTransactions } = await supabase
+    .from('sales_transactions')
+    .select('id, total_amount, payment_amount, status, created_at')
+    .eq('tenant_id', tenant.id)
+    .order('created_at', { ascending: false });
+
+  // 3. Fetch Recent Payments (for Transactions List)
   const { data: payments } = await supabase
     .from('payments')
     .select('id, payment_amount, payment_method, created_at, notes, booking_id')
@@ -53,11 +60,23 @@ export default async function TenantAdminDashboard({
 
   // --- CALCULATIONS ---
 
-  const totalRevenue = bookings?.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) || 0;
+  // Booking revenue
+  const bookingRevenue = bookings?.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) || 0;
+  
+  // Sales revenue (completed/paid sales)
+  const salesRevenue = salesTransactions?.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) || 0;
+  
+  // Total revenue = bookings + sales
+  const totalRevenue = bookingRevenue + salesRevenue;
+  
   const bookingCount = bookings?.length || 0;
+  const salesCount = salesTransactions?.length || 0;
 
   const paidBookings = bookings?.filter(b => b.payment_status === 'PAID') || [];
-  const totalPaymentsReceived = paidBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const paidSales = salesTransactions?.filter(s => s.status === 'COMPLETED') || [];
+  const totalPaymentsReceived = 
+    paidBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) +
+    paidSales.reduce((acc, curr) => acc + (Number(curr.payment_amount) || 0), 0);
 
   // Calculate growth percentages (current month vs previous month)
   const now = new Date();
@@ -69,6 +88,11 @@ export default async function TenantAdminDashboard({
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   }) || [];
   
+  const currentMonthSales = salesTransactions?.filter(s => {
+    const d = new Date(s.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }) || [];
+  
   const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
   const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
   
@@ -76,9 +100,19 @@ export default async function TenantAdminDashboard({
     const d = new Date(b.created_at);
     return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
   }) || [];
+  
+  const prevMonthSales = salesTransactions?.filter(s => {
+    const d = new Date(s.created_at);
+    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+  }) || [];
 
-  const currentMonthRevenue = currentMonthBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
-  const prevMonthRevenue = prevMonthBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const currentMonthBookingRevenue = currentMonthBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const currentMonthSalesRevenue = currentMonthSales.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const currentMonthRevenue = currentMonthBookingRevenue + currentMonthSalesRevenue;
+  
+  const prevMonthBookingRevenue = prevMonthBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const prevMonthSalesRevenue = prevMonthSales.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const prevMonthRevenue = prevMonthBookingRevenue + prevMonthSalesRevenue;
   
   const revenueGrowth = prevMonthRevenue > 0 
     ? ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue * 100).toFixed(1)
@@ -88,10 +122,17 @@ export default async function TenantAdminDashboard({
     ? ((currentMonthBookings.length - prevMonthBookings.length) / prevMonthBookings.length * 100).toFixed(1)
     : currentMonthBookings.length > 0 ? '100' : '0';
 
-  const currentMonthPaid = currentMonthBookings.filter(b => b.payment_status === 'PAID');
-  const prevMonthPaid = prevMonthBookings.filter(b => b.payment_status === 'PAID');
-  const currentMonthPayments = currentMonthPaid.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
-  const prevMonthPayments = prevMonthPaid.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const currentMonthPaidBookings = currentMonthBookings.filter(b => b.payment_status === 'PAID');
+  const currentMonthPaidSales = currentMonthSales.filter(s => s.status === 'COMPLETED');
+  const prevMonthPaidBookings = prevMonthBookings.filter(b => b.payment_status === 'PAID');
+  const prevMonthPaidSales = prevMonthSales.filter(s => s.status === 'COMPLETED');
+  
+  const currentMonthPayments = 
+    currentMonthPaidBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) +
+    currentMonthPaidSales.reduce((acc, curr) => acc + (Number(curr.payment_amount) || 0), 0);
+  const prevMonthPayments = 
+    prevMonthPaidBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) +
+    prevMonthPaidSales.reduce((acc, curr) => acc + (Number(curr.payment_amount) || 0), 0);
 
   const paymentGrowth = prevMonthPayments > 0
     ? ((currentMonthPayments - prevMonthPayments) / prevMonthPayments * 100).toFixed(1)
@@ -106,23 +147,46 @@ export default async function TenantAdminDashboard({
     const d = new Date(b.created_at);
     return d.getFullYear() === currentYear;
   }) || [];
+  
+  const lastYearSales = salesTransactions?.filter(s => {
+    const d = new Date(s.created_at);
+    return d.getFullYear() === currentYear - 1;
+  }) || [];
+  const thisYearSales = salesTransactions?.filter(s => {
+    const d = new Date(s.created_at);
+    return d.getFullYear() === currentYear;
+  }) || [];
 
-  const lastYearRevenue = lastYearBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
-  const thisYearRevenue = thisYearBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const lastYearBookingRevenue = lastYearBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const lastYearSalesRevenue = lastYearSales.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const lastYearRevenue = lastYearBookingRevenue + lastYearSalesRevenue;
+  
+  const thisYearBookingRevenue = thisYearBookings.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const thisYearSalesRevenue = thisYearSales.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0);
+  const thisYearRevenue = thisYearBookingRevenue + thisYearSalesRevenue;
 
   const yearlyGrowth = lastYearRevenue > 0
     ? ((thisYearRevenue - lastYearRevenue) / lastYearRevenue * 100).toFixed(1)
     : thisYearRevenue > 0 ? '100' : '0';
 
-  // Calculate Monthly Revenue for Chart
+  // Calculate Monthly Revenue for Chart (Bookings + Sales)
   const revenueByMonth: Record<string, number> = {};
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+  // Add booking revenue
   bookings?.forEach(b => {
     const date = new Date(b.created_at);
     const monthIndex = date.getMonth();
     const monthName = months[monthIndex];
     revenueByMonth[monthName] = (revenueByMonth[monthName] || 0) + (Number(b.total_amount) || 0);
+  });
+  
+  // Add sales revenue
+  salesTransactions?.forEach(s => {
+    const date = new Date(s.created_at);
+    const monthIndex = date.getMonth();
+    const monthName = months[monthIndex];
+    revenueByMonth[monthName] = (revenueByMonth[monthName] || 0) + (Number(s.total_amount) || 0);
   });
 
   const revenueData = months.map(m => ({
