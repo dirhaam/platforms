@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { BlockingDateCalendar } from '@/components/booking/BlockingDateCalendar';
 import { TimeSlot } from '@/types/booking';
@@ -58,9 +59,12 @@ export function DateTimeModal({
   };
 
   if (!open) return null;
+  
+  // Use portal to render above Radix Dialog
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50"
@@ -224,6 +228,7 @@ export function DateTimeModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
