@@ -154,6 +154,14 @@ export const staff = pgTable('staff', {
   passwordResetToken: text('password_reset_token'),
   passwordResetExpires: timestamp('password_reset_expires', { withTimezone: true }),
 
+  // Home visit configuration per staff
+  homeVisitConfig: jsonb('home_visit_config').$type<{
+    canDoHomeVisit: boolean;
+    maxDailyHomeVisits: number;
+    maxTravelDistanceKm: number;
+    preferredAreas: string[];
+  } | null>(),
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -230,6 +238,8 @@ export const staffSchedule = pgTable('staff_schedule', {
   startTime: text('start_time').notNull(), // "08:00"
   endTime: text('end_time').notNull(), // "18:00"
   isAvailable: boolean('is_available').notNull().default(true),
+  breakStart: text('break_start'), // "12:00"
+  breakEnd: text('break_end'), // "13:00"
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

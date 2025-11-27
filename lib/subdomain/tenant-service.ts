@@ -190,6 +190,11 @@ export class TenantService {
             const createdAt = service.created_at ? new Date(service.created_at) : new Date();
             const updatedAt = service.updated_at ? new Date(service.updated_at) : new Date();
 
+            // Determine home visit availability from both fields for backward compatibility
+            const serviceType = service.service_type || 'on_premise';
+            const homeVisitFromType = serviceType === 'home_visit' || serviceType === 'both';
+            const homeVisitAvailable = service.home_visit_available ?? homeVisitFromType;
+
             return {
               id: service.id,
               tenantId: service.tenant_id,
@@ -199,7 +204,7 @@ export class TenantService {
               price: Number(service.price ?? 0),
               category: service.category,
               isActive: service.is_active ?? true,
-              homeVisitAvailable: service.home_visit_available ?? false,
+              homeVisitAvailable,
               homeVisitSurcharge: service.home_visit_surcharge !== null && service.home_visit_surcharge !== undefined
                 ? Number(service.home_visit_surcharge)
                 : undefined,

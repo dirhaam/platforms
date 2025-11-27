@@ -67,11 +67,15 @@ export async function POST(
       );
     }
 
+    // Determine if home visit is available based on service type
+    const homeVisitAvailable = serviceType === 'home_visit' || serviceType === 'both';
+
     // Update service with home visit configuration
     const { data, error } = await supabase
       .from('services')
       .update({
         service_type: serviceType,
+        home_visit_available: homeVisitAvailable, // Sync with service_type
         home_visit_full_day_booking: homeVisitFullDayBooking,
         home_visit_min_buffer_minutes: homeVisitMinBufferMinutes,
         daily_quota_per_staff: dailyQuotaPerStaff || null,

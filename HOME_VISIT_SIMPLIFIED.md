@@ -63,6 +63,30 @@ ADD COLUMN IF NOT EXISTS home_visit_config JSONB DEFAULT '{
   "requireAddress": true,
   "calculateTravelSurcharge": true
 }'::jsonb;
+
+-- Tambah kolom home_visit_config ke staff (untuk setting per-staff)
+ALTER TABLE staff 
+ADD COLUMN IF NOT EXISTS home_visit_config JSONB DEFAULT NULL;
+
+-- Tambah kolom break_start dan break_end ke staff_schedule
+ALTER TABLE staff_schedule 
+ADD COLUMN IF NOT EXISTS break_start TEXT DEFAULT NULL;
+
+ALTER TABLE staff_schedule 
+ADD COLUMN IF NOT EXISTS break_end TEXT DEFAULT NULL;
+
+-- Tambah unique constraint untuk staff_schedule
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'staff_schedule_staff_id_day_of_week_key'
+  ) THEN
+    ALTER TABLE staff_schedule 
+    ADD CONSTRAINT staff_schedule_staff_id_day_of_week_key 
+    UNIQUE (staff_id, day_of_week);
+  END IF;
+END $$;
 ```
 
 ---
@@ -90,6 +114,21 @@ ADD COLUMN IF NOT EXISTS home_visit_config JSONB DEFAULT '{
 | `lib/booking/booking-service.ts` | Simplified validation |
 | `components/services/home-visit-config.tsx` | Disederhanakan, hanya service type |
 | `components/booking/NewBookingPOS/index.tsx` | Gunakan endpoint baru |
+| `lib/database/schema/index.ts` | Tambah `home_visit_config` di staff, `break_start/end` di staff_schedule |
+| `app/api/services/[id]/home-visit-config/route.ts` | Sync `home_visit_available` dengan `service_type` |
+| `lib/subdomain/tenant-service.ts` | Baca home visit dari `service_type` OR `home_visit_available` |
+| `components/staff/staff-schedule.tsx` | UI untuk setup jam kerja & home visit staff |
+
+---
+
+## Tampilan di Landing Page
+
+Service dengan home visit akan menampilkan badge "Home visit available" di landing page tenant jika:
+
+1. **Service Type** = `home_visit` atau `both` (di Service Edit > Service Location Type)
+2. ATAU **homeVisitAvailable** = true (checkbox di Service Edit)
+
+Sistem akan otomatis sync kedua field saat mengubah Service Type.
 
 ---
 
@@ -103,3 +142,6 @@ A: Saat ini quota berlaku global. Jika butuh per-service, bisa dikembangkan lagi
 
 **Q: Travel surcharge masih dihitung?**
 A: Ya, jika opsi "Calculate Travel Surcharge" diaktifkan di Settings.
+
+**Q: Kenapa home visit tidak muncul di landing page?**
+A: Pastikan Service Type diset ke `Home Visit Only` atau `Both` di menu Services > Edit Service > Service Location Type. Simpan perubahan untuk sync dengan landing page.

@@ -468,8 +468,16 @@ Content-Type: application/json
 ### Table: `staff`
 
 ```sql
--- Existing columns...
-home_visit_config JSONB DEFAULT '{"canDoHomeVisit": true, "maxDailyHomeVisits": 3, "maxTravelDistanceKm": 20}'
+-- Home visit config column
+home_visit_config JSONB DEFAULT NULL
+
+-- Example JSON structure:
+-- {
+--   "canDoHomeVisit": true,
+--   "maxDailyHomeVisits": 3,
+--   "maxTravelDistanceKm": 20,
+--   "preferredAreas": []
+-- }
 ```
 
 ### Table: `staff_schedule`
@@ -479,16 +487,44 @@ CREATE TABLE staff_schedule (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   staff_id UUID REFERENCES staff(id) ON DELETE CASCADE,
   day_of_week INTEGER NOT NULL, -- 0=Sunday, 1=Monday, ..., 6=Saturday
-  start_time TIME NOT NULL,
-  end_time TIME NOT NULL,
+  start_time TEXT NOT NULL,     -- "08:00"
+  end_time TEXT NOT NULL,       -- "17:00"
   is_available BOOLEAN DEFAULT true,
-  break_start TIME,
-  break_end TIME,
+  break_start TEXT,             -- "12:00" (optional)
+  break_end TEXT,               -- "13:00" (optional)
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(staff_id, day_of_week)
 );
+```
+
+### Migration SQL
+
+```sql
+-- Add home_visit_config to staff table
+ALTER TABLE staff 
+ADD COLUMN IF NOT EXISTS home_visit_config JSONB DEFAULT NULL;
+
+-- Add break columns to staff_schedule
+ALTER TABLE staff_schedule 
+ADD COLUMN IF NOT EXISTS break_start TEXT DEFAULT NULL;
+
+ALTER TABLE staff_schedule 
+ADD COLUMN IF NOT EXISTS break_end TEXT DEFAULT NULL;
+
+-- Add unique constraint
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'staff_schedule_staff_id_day_of_week_key'
+  ) THEN
+    ALTER TABLE staff_schedule 
+    ADD CONSTRAINT staff_schedule_staff_id_day_of_week_key 
+    UNIQUE (staff_id, day_of_week);
+  END IF;
+END $$;
 ```
 
 ### Table: `staff_leaves`
