@@ -68,7 +68,10 @@ export function DateTimeModal({
       />
       
       {/* Modal Content */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col bg-white rounded-card shadow-lg mx-4">
+      <div 
+        className="relative z-10 w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col bg-white rounded-card shadow-lg mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
           <div>
             <h4 className="text-lg font-bold text-txt-primary">
