@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Phone, Mail, MapPin, ArrowLeft, Facebook, Instagram, Youtube, Linkedin, Twitter, MessageCircle } from 'lucide-react';
 
 interface ContactLink {
   id: string;
@@ -19,11 +18,27 @@ interface ContactPageSettings {
   pageTitle?: string;
   pageDescription?: string;
   profileImage?: string;
+  // Profile layout
+  profileLayout?: 'classic' | 'hero';
+  titleStyle?: 'text' | 'logo';
+  titleSize?: 'small' | 'large';
+  titleColor?: string;
+  // Theme
+  theme?: string;
+  // Background
   backgroundType: string;
   backgroundValue: string;
-  buttonStyle: string;
-  buttonShadow: boolean;
+  backgroundColor?: string;
+  // Text
   fontFamily: string;
+  pageTextColor?: string;
+  // Button
+  buttonStyle: string;
+  buttonCorners?: 'square' | 'rounded' | 'pill';
+  buttonShadow: string | boolean;
+  buttonColor?: string;
+  buttonTextColor?: string;
+  // Legacy
   showSocialIcons: boolean;
   showLogo: boolean;
 }
@@ -59,16 +74,16 @@ interface ContactPageProps {
 }
 
 const SocialIcon = ({ platform }: { platform: string }) => {
-  const iconClass = "w-5 h-5";
+  const iconClass = "text-xl";
   switch (platform.toLowerCase()) {
-    case 'facebook': return <Facebook className={iconClass} />;
-    case 'instagram': return <Instagram className={iconClass} />;
-    case 'tiktok': return <span className={iconClass}>TT</span>;
-    case 'youtube': return <Youtube className={iconClass} />;
-    case 'linkedin': return <Linkedin className={iconClass} />;
-    case 'twitter': return <Twitter className={iconClass} />;
-    case 'whatsapp': return <MessageCircle className={iconClass} />;
-    default: return <ExternalLink className={iconClass} />;
+    case 'facebook': return <i className={`bx bxl-facebook ${iconClass}`}></i>;
+    case 'instagram': return <i className={`bx bxl-instagram ${iconClass}`}></i>;
+    case 'tiktok': return <i className={`bx bxl-tiktok ${iconClass}`}></i>;
+    case 'youtube': return <i className={`bx bxl-youtube ${iconClass}`}></i>;
+    case 'linkedin': return <i className={`bx bxl-linkedin ${iconClass}`}></i>;
+    case 'twitter': return <i className={`bx bxl-twitter ${iconClass}`}></i>;
+    case 'whatsapp': return <i className={`bx bxl-whatsapp ${iconClass}`}></i>;
+    default: return <i className={`bx bx-link-external ${iconClass}`}></i>;
   }
 };
 
@@ -80,48 +95,115 @@ export default function ContactPage({
 }: ContactPageProps) {
   const [clickedLink, setClickedLink] = useState<string | null>(null);
 
+  // Profile settings
   const pageTitle = settings?.pageTitle || tenant.businessName;
   const pageDescription = settings?.pageDescription || tenant.businessCategory;
   const profileImage = settings?.profileImage || tenant.logo;
+  const profileLayout = settings?.profileLayout || 'classic';
+  const titleSize = settings?.titleSize || 'large';
+  const titleColor = settings?.titleColor || '#ffffff';
+  const pageTextColor = settings?.pageTextColor || '#ffffff';
+  
+  // Display settings
   const showLogo = settings?.showLogo !== false;
   const showSocialIcons = settings?.showSocialIcons !== false;
-  const buttonStyle = settings?.buttonStyle || 'rounded';
-  const buttonShadow = settings?.buttonShadow !== false;
-  const primaryColor = tenant.brandColors?.primary || '#3b82f6';
+  
+  // Button settings
+  const buttonStyle = settings?.buttonStyle || 'solid';
+  const buttonCorners = settings?.buttonCorners || 'rounded';
+  const buttonShadow = settings?.buttonShadow || 'subtle';
+  const buttonColor = settings?.buttonColor || '#ffffff';
+  const buttonTextColor = settings?.buttonTextColor || '#000000';
+  
+  // Background
+  const backgroundColor = settings?.backgroundColor || settings?.backgroundValue || '#000000';
 
-  const getBackgroundStyle = () => {
+  const getBackgroundStyle = (): React.CSSProperties => {
     const bgType = settings?.backgroundType || 'solid';
     const bgValue = settings?.backgroundValue || '#000000';
 
-    if (bgType === 'solid') {
-      return { backgroundColor: bgValue };
-    } else if (bgType === 'gradient') {
-      return { background: bgValue };
-    } else if (bgType === 'image') {
-      return {
-        backgroundImage: `url(${bgValue})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-      };
+    switch (bgType) {
+      case 'solid':
+        return { backgroundColor: backgroundColor };
+      case 'gradient':
+        return { background: bgValue };
+      case 'blur':
+        return { 
+          backgroundColor: backgroundColor,
+          backdropFilter: 'blur(20px)',
+        };
+      case 'pattern':
+        return { 
+          backgroundColor: backgroundColor,
+          backgroundImage: getPatternStyle(bgValue),
+          backgroundSize: bgValue === 'dots' ? '20px 20px' : bgValue === 'grid' ? '40px 40px' : '10px 10px',
+        };
+      case 'image':
+        return {
+          backgroundImage: `url(${bgValue})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        };
+      case 'video':
+        return { backgroundColor: backgroundColor };
+      default:
+        return { backgroundColor: '#000000' };
     }
-    return { backgroundColor: '#000000' };
+  };
+
+  const getPatternStyle = (pattern: string) => {
+    switch (pattern) {
+      case 'dots':
+        return `radial-gradient(circle, ${pageTextColor}20 1px, transparent 1px)`;
+      case 'grid':
+        return `linear-gradient(${pageTextColor}10 1px, transparent 1px), linear-gradient(90deg, ${pageTextColor}10 1px, transparent 1px)`;
+      case 'diagonal':
+        return `repeating-linear-gradient(45deg, ${pageTextColor}10 0, ${pageTextColor}10 1px, transparent 0, transparent 50%)`;
+      default:
+        return 'none';
+    }
+  };
+
+  const getButtonCornerClass = () => {
+    switch (buttonCorners) {
+      case 'pill': return 'rounded-full';
+      case 'square': return 'rounded-none';
+      default: return 'rounded-xl';
+    }
+  };
+
+  const getButtonStyleClass = () => {
+    switch (buttonStyle) {
+      case 'glass': return 'bg-white/10 backdrop-blur-sm border border-white/20';
+      case 'outline': return 'bg-transparent border-2';
+      default: return ''; // solid
+    }
+  };
+
+  const getButtonShadowClass = () => {
+    if (typeof buttonShadow === 'boolean') {
+      return buttonShadow ? 'shadow-lg hover:shadow-xl' : '';
+    }
+    switch (buttonShadow) {
+      case 'subtle': return 'shadow-md hover:shadow-lg';
+      case 'strong': return 'shadow-xl hover:shadow-2xl';
+      case 'hard': return 'shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]';
+      default: return '';
+    }
   };
 
   const getButtonClass = () => {
-    let base = 'w-full p-4 backdrop-blur-sm border border-white/20 text-white flex items-center gap-3 transition-all duration-300 hover:scale-[1.02] hover:bg-white/20';
-    
-    switch (buttonStyle) {
-      case 'pill': base += ' rounded-full'; break;
-      case 'square': base += ' rounded-none'; break;
-      default: base += ' rounded-xl'; break;
+    return `w-full p-4 flex items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${getButtonCornerClass()} ${getButtonStyleClass()} ${getButtonShadowClass()}`;
+  };
+
+  const getButtonInlineStyle = () => {
+    if (buttonStyle === 'solid') {
+      return { backgroundColor: buttonColor, color: buttonTextColor };
+    } else if (buttonStyle === 'outline') {
+      return { borderColor: buttonColor, color: buttonColor };
     }
-    
-    if (buttonShadow) {
-      base += ' shadow-lg hover:shadow-xl';
-    }
-    
-    return base;
+    return { color: pageTextColor };
   };
 
   const handleLinkClick = async (link: ContactLink) => {
@@ -155,10 +237,11 @@ export default function ContactPage({
       <div className="relative z-10 p-4">
         <Link
           href={`/s/${tenant.subdomain}`}
-          className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+          className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center transition-all hover:bg-white/20 hover:scale-110"
+          style={{ color: pageTextColor }}
+          title="Kembali ke halaman utama"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to main page
+          <i className='bx bx-home text-xl'></i>
         </Link>
       </div>
 
@@ -167,12 +250,16 @@ export default function ContactPage({
         <div className="w-full max-w-md space-y-8">
           {/* Profile Section */}
           {showLogo && (
-            <div className="text-center space-y-4 pt-4">
+            <div className={`text-center space-y-4 pt-4 ${profileLayout === 'hero' ? 'pb-4' : ''}`}>
               {profileImage ? (
                 <img
                   src={profileImage}
                   alt={pageTitle}
-                  className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-white/20 shadow-xl"
+                  className={`object-cover mx-auto border-4 border-white/20 shadow-xl ${
+                    profileLayout === 'hero' 
+                      ? 'w-full h-40 rounded-2xl' 
+                      : 'w-24 h-24 rounded-full'
+                  }`}
                 />
               ) : tenant.emoji ? (
                 <div className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm border-4 border-white/20 flex items-center justify-center mx-auto text-5xl shadow-xl">
@@ -181,11 +268,14 @@ export default function ContactPage({
               ) : null}
 
               <div>
-                <h1 className="text-2xl font-bold text-white drop-shadow-lg">
+                <h1 
+                  className={`font-bold drop-shadow-lg ${titleSize === 'large' ? 'text-2xl' : 'text-lg'}`}
+                  style={{ color: titleColor }}
+                >
                   {pageTitle}
                 </h1>
                 {pageDescription && (
-                  <p className="text-white/80 mt-1 text-sm">
+                  <p className="mt-1 text-sm opacity-80" style={{ color: pageTextColor }}>
                     {pageDescription}
                   </p>
                 )}
@@ -199,15 +289,15 @@ export default function ContactPage({
               <button
                 key={link.id}
                 onClick={() => handleLinkClick(link)}
-                className={`${getButtonClass()} ${clickedLink === link.id ? 'scale-95 bg-white/30' : 'bg-white/10'}`}
-                style={{
-                  backgroundColor: link.background_color || undefined,
-                  color: link.text_color || undefined,
-                }}
+                className={`${getButtonClass()} ${clickedLink === link.id ? 'scale-95 opacity-80' : ''}`}
+                style={link.background_color ? {
+                  backgroundColor: link.background_color,
+                  color: link.text_color || buttonTextColor,
+                } : getButtonInlineStyle()}
               >
                 <span className="text-2xl flex-shrink-0">{link.icon || '🔗'}</span>
                 <span className="flex-1 font-medium text-left">{link.title}</span>
-                <ExternalLink className="w-4 h-4 opacity-60" />
+                <i className='bx bx-link-external opacity-60'></i>
               </button>
             ))}
 
@@ -217,18 +307,20 @@ export default function ContactPage({
                 {tenant.phone && (
                   <a
                     href={`tel:${tenant.phone}`}
-                    className={`${getButtonClass()} bg-white/10`}
+                    className={getButtonClass()}
+                    style={getButtonInlineStyle()}
                   >
-                    <Phone className="w-6 h-6" />
+                    <i className='bx bx-phone text-2xl'></i>
                     <span className="flex-1 font-medium">{tenant.phone}</span>
                   </a>
                 )}
                 {tenant.email && (
                   <a
                     href={`mailto:${tenant.email}`}
-                    className={`${getButtonClass()} bg-white/10`}
+                    className={getButtonClass()}
+                    style={getButtonInlineStyle()}
                   >
-                    <Mail className="w-6 h-6" />
+                    <i className='bx bx-envelope text-2xl'></i>
                     <span className="flex-1 font-medium">{tenant.email}</span>
                   </a>
                 )}
@@ -237,9 +329,10 @@ export default function ContactPage({
                     href={`https://maps.google.com/?q=${encodeURIComponent(tenant.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${getButtonClass()} bg-white/10`}
+                    className={getButtonClass()}
+                    style={getButtonInlineStyle()}
                   >
-                    <MapPin className="w-6 h-6" />
+                    <i className='bx bx-map text-2xl'></i>
                     <span className="flex-1 font-medium text-sm">{tenant.address}</span>
                   </a>
                 )}
@@ -275,7 +368,7 @@ export default function ContactPage({
                   className="w-12 h-12 rounded-full bg-green-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-green-500 hover:scale-110 transition-all duration-300 shadow-lg"
                   title="WhatsApp"
                 >
-                  <MessageCircle className="w-5 h-5" />
+                  <i className='bx bxl-whatsapp text-xl'></i>
                 </a>
               )}
               {tenant.phone && (
@@ -284,7 +377,7 @@ export default function ContactPage({
                   className="w-12 h-12 rounded-full bg-blue-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-blue-500 hover:scale-110 transition-all duration-300 shadow-lg"
                   title="Call"
                 >
-                  <Phone className="w-5 h-5" />
+                  <i className='bx bx-phone text-xl'></i>
                 </a>
               )}
               {tenant.email && (
@@ -293,7 +386,7 @@ export default function ContactPage({
                   className="w-12 h-12 rounded-full bg-purple-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-purple-500 hover:scale-110 transition-all duration-300 shadow-lg"
                   title="Email"
                 >
-                  <Mail className="w-5 h-5" />
+                  <i className='bx bx-envelope text-xl'></i>
                 </a>
               )}
             </div>
@@ -303,10 +396,13 @@ export default function ContactPage({
 
       {/* Footer */}
       <div className="relative z-10 text-center py-6">
-        <p className="text-white/40 text-xs">
+        <p className="text-xs opacity-40" style={{ color: pageTextColor }}>
           Powered by{' '}
-          <a href="/" className="hover:text-white/60 transition-colors">
-            Platforms
+          <a 
+            href={`/s/${tenant.subdomain}`} 
+            className="hover:opacity-70 transition-opacity"
+          >
+            Booqing Platform
           </a>
         </p>
       </div>

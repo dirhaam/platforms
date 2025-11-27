@@ -131,7 +131,11 @@ export function TravelEstimateCard({
             <span>{error}</span>
           </div>
           <Button
-            onClick={handleCalculate}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCalculate();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
             variant="outline"
             size="sm"
             className="mt-4"
@@ -163,7 +167,11 @@ export function TravelEstimateCard({
       <Card>
         <CardContent className="pt-6">
           <Button
-            onClick={handleCalculate}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCalculate();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
             className="w-full"
             disabled={!destination || !origin}
           >
@@ -237,7 +245,11 @@ export function TravelEstimateCard({
 
         {/* Recalculate Button Only */}
         <Button
-          onClick={handleCalculate}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCalculate();
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
           variant="outline"
           className="w-full"
           disabled={calculating || confirming || isLoading}

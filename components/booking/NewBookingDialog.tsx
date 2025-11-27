@@ -313,7 +313,11 @@ export function NewBookingDialog({
     <>
       {/* Main Booking Dialog */}
       <Dialog open={open && !showCustomerDialog} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6">
+        <DialogContent 
+          className="w-[95vw] max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader className="mb-6">
             <DialogTitle>Create New Booking</DialogTitle>
             <DialogDescription>
@@ -677,7 +681,11 @@ export function NewBookingDialog({
 
       {/* Add New Customer Dialog */}
       <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
-        <DialogContent className="w-[95vw] max-w-md p-4 sm:p-6">
+        <DialogContent 
+          className="w-[95vw] max-w-md p-4 sm:p-6"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader className="mb-6">
             <DialogTitle>Add New Customer</DialogTitle>
             <DialogDescription>

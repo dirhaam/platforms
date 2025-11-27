@@ -49,13 +49,29 @@ export async function GET(req: NextRequest) {
           pageTitle: settings.page_title,
           pageDescription: settings.page_description,
           profileImage: settings.profile_image,
-          backgroundType: settings.background_type,
-          backgroundValue: settings.background_value,
-          buttonStyle: settings.button_style,
-          buttonShadow: settings.button_shadow,
-          fontFamily: settings.font_family,
-          showSocialIcons: settings.show_social_icons,
-          showLogo: settings.show_logo,
+          // Profile layout
+          profileLayout: settings.profile_layout || 'classic',
+          titleStyle: settings.title_style || 'text',
+          titleSize: settings.title_size || 'large',
+          titleColor: settings.title_color || '#ffffff',
+          // Theme
+          theme: settings.theme || 'custom',
+          // Background
+          backgroundType: settings.background_type || 'solid',
+          backgroundValue: settings.background_value || '#000000',
+          backgroundColor: settings.background_color || '#000000',
+          // Text
+          fontFamily: settings.font_family || 'default',
+          pageTextColor: settings.page_text_color || '#ffffff',
+          // Button
+          buttonStyle: settings.button_style || 'solid',
+          buttonCorners: settings.button_corners || 'rounded',
+          buttonShadow: settings.button_shadow ?? 'subtle',
+          buttonColor: settings.button_color || '#ffffff',
+          buttonTextColor: settings.button_text_color || '#000000',
+          // Legacy
+          showSocialIcons: settings.show_social_icons ?? true,
+          showLogo: settings.show_logo ?? true,
           customCss: settings.custom_css,
         } : null,
       }
@@ -138,11 +154,27 @@ export async function PUT(req: NextRequest) {
         page_title: settings.pageTitle || null,
         page_description: settings.pageDescription || null,
         profile_image: settings.profileImage || null,
+        // Profile layout
+        profile_layout: settings.profileLayout || 'classic',
+        title_style: settings.titleStyle || 'text',
+        title_size: settings.titleSize || 'large',
+        title_color: settings.titleColor || '#ffffff',
+        // Theme
+        theme: settings.theme || 'custom',
+        // Background
         background_type: settings.backgroundType || 'solid',
         background_value: settings.backgroundValue || '#000000',
-        button_style: settings.buttonStyle || 'rounded',
-        button_shadow: settings.buttonShadow !== false,
+        background_color: settings.backgroundColor || '#000000',
+        // Text
         font_family: settings.fontFamily || 'default',
+        page_text_color: settings.pageTextColor || '#ffffff',
+        // Button
+        button_style: settings.buttonStyle || 'solid',
+        button_corners: settings.buttonCorners || 'rounded',
+        button_shadow: settings.buttonShadow || 'subtle',
+        button_color: settings.buttonColor || '#ffffff',
+        button_text_color: settings.buttonTextColor || '#000000',
+        // Legacy
         show_social_icons: settings.showSocialIcons !== false,
         show_logo: settings.showLogo !== false,
         custom_css: settings.customCss || null,

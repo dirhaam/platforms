@@ -68,13 +68,29 @@ async function getContactPageData(subdomain: string) {
       pageTitle: settings.page_title,
       pageDescription: settings.page_description,
       profileImage: settings.profile_image,
-      backgroundType: settings.background_type,
-      backgroundValue: settings.background_value,
-      buttonStyle: settings.button_style,
-      buttonShadow: settings.button_shadow,
-      fontFamily: settings.font_family,
-      showSocialIcons: settings.show_social_icons,
-      showLogo: settings.show_logo,
+      // Profile layout
+      profileLayout: settings.profile_layout || 'classic',
+      titleStyle: settings.title_style || 'text',
+      titleSize: settings.title_size || 'large',
+      titleColor: settings.title_color || '#ffffff',
+      // Theme
+      theme: settings.theme || 'custom',
+      // Background
+      backgroundType: settings.background_type || 'solid',
+      backgroundValue: settings.background_value || '#000000',
+      backgroundColor: settings.background_color || settings.background_value || '#000000',
+      // Text
+      fontFamily: settings.font_family || 'default',
+      pageTextColor: settings.page_text_color || '#ffffff',
+      // Button
+      buttonStyle: settings.button_style || 'solid',
+      buttonCorners: settings.button_corners || 'rounded',
+      buttonShadow: settings.button_shadow ?? 'subtle',
+      buttonColor: settings.button_color || '#ffffff',
+      buttonTextColor: settings.button_text_color || '#000000',
+      // Legacy
+      showSocialIcons: settings.show_social_icons ?? true,
+      showLogo: settings.show_logo ?? true,
     } : null,
     socialMedia: socialMedia || [],
   };

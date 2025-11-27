@@ -137,13 +137,17 @@ export function HomeVisitAddressSelector({
           <div className="absolute right-2 top-9 text-xs text-gray-500">Searching…</div>
         )}
         {addrSuggestions.length > 0 && (
-          <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow">
+          <div className="absolute z-[100] mt-1 w-full bg-white border rounded shadow-lg">
             {addrSuggestions.map((s, idx) => (
               <button
                 type="button"
                 key={`${s.label}-${idx}`}
                 className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
-                onClick={() => handleSuggestionSelect(s)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSuggestionSelect(s);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 {s.label}
                 <span className="block text-xs text-gray-500">{s.lat.toFixed(6)}, {s.lng.toFixed(6)}</span>

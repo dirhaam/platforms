@@ -119,7 +119,11 @@ export function TimeSlotPicker({
                 variant={isSelected ? 'default' : slot.available ? 'outline' : 'ghost'}
                 size="sm"
                 disabled={!slot.available}
-                onClick={() => slot.available && onSlotSelect(slot)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  slot.available && onSlotSelect(slot);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
                 className={`
                   text-xs h-8 px-2
                   ${!slot.available ? 'opacity-50 cursor-not-allowed' : ''}
