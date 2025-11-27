@@ -61,8 +61,9 @@ export async function GET(
 
     // Get available staff using StaffAvailabilityService
     const scheduledAt = new Date(booking.scheduled_at);
-    const duration = booking.services?.duration || booking.duration || 60;
-    const bufferMinutes = booking.services?.home_visit_min_buffer_minutes || 30;
+    const service = booking.services as { id: string; duration: number; home_visit_min_buffer_minutes?: number } | null;
+    const duration = service?.duration || booking.duration || 60;
+    const bufferMinutes = service?.home_visit_min_buffer_minutes || 30;
 
     const staffAvailability = await StaffAvailabilityService.getAllAvailableStaffForHomeVisit(
       tenant.id,
