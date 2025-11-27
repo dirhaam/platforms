@@ -119,14 +119,15 @@ export function HomeVisitAddressSelector({
     <div className="space-y-3">
       {/* Error Display */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+        <div className="p-3 bg-danger-light dark:bg-[#3a2a36] border border-danger/30 rounded text-danger text-sm flex items-center gap-2">
+          <i className='bx bx-error-circle'></i>
           {error}
         </div>
       )}
 
       {/* Address Search */}
       <div className="space-y-2 relative">
-        <Label htmlFor="homeAddress">Home Address (with search) *</Label>
+        <Label htmlFor="homeAddress" className="text-txt-primary dark:text-[#d5d5e2]">Alamat Home Visit *</Label>
         <Input
           id="homeAddress"
           placeholder="Cari alamat (jalan/kecamatan/kota)"
@@ -134,23 +135,29 @@ export function HomeVisitAddressSelector({
           onChange={(e) => handleAddressInput(e.target.value)}
         />
         {addrLoading && (
-          <div className="absolute right-2 top-9 text-xs text-gray-500">Searching…</div>
+          <div className="absolute right-2 top-9 text-xs text-txt-muted flex items-center gap-1">
+            <i className='bx bx-loader-alt animate-spin'></i>
+            Mencari...
+          </div>
         )}
         {addrSuggestions.length > 0 && (
-          <div className="absolute z-[100] mt-1 w-full bg-white border rounded shadow-lg">
+          <div className="absolute z-[100] mt-1 w-full bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-lg shadow-lg overflow-hidden">
             {addrSuggestions.map((s, idx) => (
               <button
                 type="button"
                 key={`${s.label}-${idx}`}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#35365f] text-sm text-txt-primary dark:text-[#d5d5e2] transition-colors"
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   handleSuggestionSelect(s);
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
               >
+                <i className='bx bx-map-pin text-primary mr-2'></i>
                 {s.label}
-                <span className="block text-xs text-gray-500">{s.lat.toFixed(6)}, {s.lng.toFixed(6)}</span>
+                <span className="block text-xs text-txt-muted ml-5">{s.lat.toFixed(6)}, {s.lng.toFixed(6)}</span>
               </button>
             ))}
           </div>
@@ -160,7 +167,7 @@ export function HomeVisitAddressSelector({
       {/* Coordinates Input */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1">
-          <Label htmlFor="lat">Latitude</Label>
+          <Label htmlFor="lat" className="text-txt-secondary dark:text-[#b2b2c4]">Latitude</Label>
           <Input
             id="lat"
             type="number"
@@ -176,7 +183,7 @@ export function HomeVisitAddressSelector({
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="lng">Longitude</Label>
+          <Label htmlFor="lng" className="text-txt-secondary dark:text-[#b2b2c4]">Longitude</Label>
           <Input
             id="lng"
             type="number"
@@ -196,16 +203,24 @@ export function HomeVisitAddressSelector({
             type="button"
             variant="outline"
             className="w-full"
-            onClick={handleGpsClick}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleGpsClick();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            Use GPS
+            <i className='bx bx-current-location mr-2'></i>
+            Gunakan GPS
           </Button>
         </div>
       </div>
 
       {/* Helper Text */}
-      <p className="text-xs text-gray-600">
-        💡 Tips: ketik alamat lalu pilih dari daftar. Koordinat akan terisi otomatis, dan biaya travel akan dihitung.
+      <p className="text-xs text-txt-muted flex items-start gap-2">
+        <i className='bx bx-bulb text-warning'></i>
+        <span>Tips: ketik alamat lalu pilih dari daftar. Koordinat akan terisi otomatis, dan biaya travel akan dihitung.</span>
       </p>
     </div>
   );

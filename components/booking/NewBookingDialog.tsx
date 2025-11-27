@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, MapPin, Calendar as CalendarIcon } from 'lucide-react';
+
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
 import { TimeSlotPicker } from '@/components/booking/TimeSlotPicker';
@@ -339,24 +339,30 @@ export function NewBookingDialog({
               {/* Customer Selection */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="customer">Customer *</Label>
+                  <Label htmlFor="customer" className="text-txt-primary dark:text-[#d5d5e2]">Pelanggan *</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowCustomerDialog(true)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowCustomerDialog(true);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
                   >
-                    <Plus className="w-4 h-4 mr-1" />
-                    New Customer
+                    <i className='bx bx-plus mr-1'></i>
+                    Pelanggan Baru
                   </Button>
                 </div>
                 <Select value={booking.customerId} onValueChange={(value) => setBooking({ ...booking, customerId: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a customer" />
+                    <SelectValue placeholder="Pilih pelanggan" />
                   </SelectTrigger>
                   <SelectContent>
                     {customers.length === 0 ? (
-                      <div className="p-2 text-sm text-gray-600">No customers available. Create one first.</div>
+                      <div className="p-2 text-sm text-txt-muted">Belum ada pelanggan. Buat dulu.</div>
                     ) : (
                       customers.map(customer => (
                         <SelectItem key={customer.id} value={customer.id}>
@@ -391,12 +397,12 @@ export function NewBookingDialog({
 
               {/* Date Picker */}
               <div className="space-y-2">
-                <Label>Date *</Label>
+                <Label className="text-txt-primary dark:text-[#d5d5e2]">Tanggal *</Label>
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00').toLocaleDateString() : 'Pick a date'}
+                    <Button type="button" variant="outline" className="w-full justify-start text-left">
+                      <i className='bx bx-calendar mr-2'></i>
+                      {booking.scheduledAt ? new Date(booking.scheduledAt + 'T00:00').toLocaleDateString('id-ID') : 'Pilih tanggal'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 z-50" align="start">
@@ -435,16 +441,16 @@ export function NewBookingDialog({
               )}
 
               {/* Home Visit */}
-              <div className="space-y-3 border rounded-lg p-4 bg-blue-50">
+              <div className="space-y-3 border border-primary/30 rounded-lg p-4 bg-primary-light dark:bg-[#35365f]">
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id="homeVisit"
                     checked={booking.isHomeVisit}
                     onCheckedChange={(checked) => setBooking({ ...booking, isHomeVisit: checked as boolean })}
                   />
-                  <Label htmlFor="homeVisit" className="cursor-pointer">
-                    <MapPin className="inline w-4 h-4 mr-2" />
-                    Home Visit Service
+                  <Label htmlFor="homeVisit" className="cursor-pointer text-txt-primary dark:text-[#d5d5e2] flex items-center">
+                    <i className='bx bx-home-heart text-primary mr-2'></i>
+                    Layanan Home Visit
                   </Label>
                 </div>
                 {booking.isHomeVisit && (
@@ -460,8 +466,9 @@ export function NewBookingDialog({
 
                     {/* Travel Estimate Placeholder or Card */}
                     {!booking.homeVisitAddress || booking.homeVisitLat === undefined || booking.homeVisitLat === null || booking.homeVisitLng === undefined || booking.homeVisitLng === null ? (
-                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center text-sm text-blue-700">
-                        📍 Masukkan alamat dan koordinat home visit untuk melihat estimasi biaya travel
+                      <div className="mt-4 p-4 bg-info-light dark:bg-[#2a3a3a] border border-info/30 rounded-lg text-center text-sm text-info flex items-center justify-center gap-2">
+                        <i className='bx bx-map-pin'></i>
+                        Masukkan alamat dan koordinat home visit untuk melihat estimasi biaya travel
                       </div>
                     ) : null}
 
