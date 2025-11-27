@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Calendar, FileText, Palette, Image, Clock, Link as LinkIcon } from 'lucide-react';
-import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 import LandingPageStyleSettings from '@/components/tenant/LandingPageStyleSettings';
 import { BlockedDatesManager } from '@/components/booking/BlockedDatesManager';
 import BusinessHoursGlobalSettings from '@/components/settings/BusinessHoursGlobalSettings';
@@ -20,6 +17,16 @@ interface TenantData {
   subdomain: string;
 }
 
+type TabType = 'appearance' | 'contact' | 'invoice' | 'media' | 'calendar';
+
+const TABS: { id: TabType; title: string; icon: string; description: string }[] = [
+  { id: 'appearance', title: 'Appearance', icon: 'palette', description: 'Tampilan dan tema landing page' },
+  { id: 'contact', title: 'Contact', icon: 'phone', description: 'Informasi kontak dan sosial media' },
+  { id: 'invoice', title: 'Invoice', icon: 'receipt', description: 'Pengaturan faktur dan pembayaran' },
+  { id: 'media', title: 'Media', icon: 'image', description: 'Video, galeri, dan media sosial' },
+  { id: 'calendar', title: 'Calendar', icon: 'calendar', description: 'Jam operasional dan tanggal libur' },
+];
+
 export default function SettingsPageContent() {
   return (
     <PermissionGate feature="settings">
@@ -32,14 +39,29 @@ function SettingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain');
+  const tabParam = searchParams?.get('tab') as TabType | null;
+  
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('appearance');
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam || 'appearance');
   const [landingPageMedia, setLandingPageMedia] = useState({
     videos: [],
     socialMedia: [],
     galleries: [],
   });
+
+  // Sync activeTab with URL param
+  useEffect(() => {
+    if (tabParam && TABS.some(t => t.id === tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    router.push(`/tenant/admin/settings?subdomain=${subdomain}&tab=${tab}`, { scroll: false });
+  };
 
   useEffect(() => {
     if (!subdomain) {
@@ -47,7 +69,6 @@ function SettingsPageInner() {
       return;
     }
 
-    // Fetch tenant ID from subdomain
     const fetchTenantId = async () => {
       try {
         const response = await fetch(`/api/tenants/${subdomain}`);
@@ -65,26 +86,19 @@ function SettingsPageInner() {
     fetchTenantId();
   }, [subdomain, router]);
 
-  // Fetch landing page media
   useEffect(() => {
     if (!tenantId) return;
 
     const fetchMedia = async () => {
       try {
         const response = await fetch('/api/settings/landing-page-media', {
-          headers: {
-            'x-tenant-id': tenantId,
-          },
+          headers: { 'x-tenant-id': tenantId },
           cache: 'no-store',
           credentials: 'same-origin',
         });
         if (response.ok) {
           const result = await response.json();
-          setLandingPageMedia(result.data || {
-            videos: [],
-            socialMedia: [],
-            galleries: [],
-          });
+          setLandingPageMedia(result.data || { videos: [], socialMedia: [], galleries: [] });
         }
       } catch (error) {
         console.error('Error fetching landing page media:', error);
@@ -94,70 +108,107 @@ function SettingsPageInner() {
     fetchMedia();
   }, [tenantId]);
 
-  if (!subdomain || loading) {
+  const currentTab = TABS.find(t => t.id === activeTab);
+
+  if (!subdomain) {
     return null;
   }
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-12 h-12 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center mb-4">
+          <i className='bx bx-loader-alt text-2xl text-primary dark:text-[#a5a7ff] animate-spin'></i>
+        </div>
+        <p className="text-txt-secondary dark:text-[#b2b2c4]">Memuat pengaturan...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 p-4">
-      <AdminPageHeader
-        title="Settings"
-        description="Manage business configuration and preferences"
-      />
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h4 className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2]">Settings</h4>
+          <p className="text-sm text-txt-secondary dark:text-[#b2b2c4]">Kelola konfigurasi dan preferensi bisnis</p>
+        </div>
+      </div>
 
-      {/* Tabs Navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-5 mb-4">
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Palette className="w-4 h-4" />
-            <span className="hidden sm:inline">Appearance</span>
-          </TabsTrigger>
-          <TabsTrigger value="contact" className="flex items-center gap-2">
-            <LinkIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">Contact</span>
-          </TabsTrigger>
-          <TabsTrigger value="invoice" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Invoice</span>
-          </TabsTrigger>
-          <TabsTrigger value="media" className="flex items-center gap-2">
-            <Image className="w-4 h-4" />
-            <span className="hidden sm:inline">Media</span>
-          </TabsTrigger>
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span className="hidden sm:inline">Calendar</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* Tab Navigation Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => handleTabChange(tab.id)}
+            className={`p-4 rounded-card text-left transition-all duration-200 ease-in-out ${
+              activeTab === tab.id
+                ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-[1.02]'
+                : 'bg-white dark:bg-[#2b2c40] shadow-card hover:shadow-lg hover:-translate-y-0.5 text-txt-primary dark:text-[#d5d5e2]'
+            }`}
+          >
+            <div className={`w-10 h-10 rounded flex items-center justify-center mb-3 ${
+              activeTab === tab.id
+                ? 'bg-white/20'
+                : 'bg-primary-light dark:bg-[#35365f]'
+            }`}>
+              <i className={`bx bx-${tab.icon} text-xl ${
+                activeTab === tab.id ? 'text-white' : 'text-primary dark:text-[#a5a7ff]'
+              }`}></i>
+            </div>
+            <p className="font-semibold text-sm">{tab.title}</p>
+            <p className={`text-xs mt-1 line-clamp-2 ${
+              activeTab === tab.id ? 'text-white/80' : 'text-txt-muted dark:text-[#7e7f96]'
+            }`}>
+              {tab.description}
+            </p>
+          </button>
+        ))}
+      </div>
 
-        {/* Tab Contents */}
-        <div className="flex-1 overflow-auto">
+      {/* Content Card */}
+      <div className="bg-white dark:bg-[#2b2c40] rounded-card shadow-card overflow-hidden">
+        {/* Card Header */}
+        <div className="p-6 border-b border-gray-100 dark:border-[#4e4f6c]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+              <i className={`bx bx-${currentTab?.icon} text-xl text-primary dark:text-[#a5a7ff]`}></i>
+            </div>
+            <div>
+              <h5 className="text-lg font-semibold text-txt-primary dark:text-[#d5d5e2]">{currentTab?.title}</h5>
+              <p className="text-xs text-txt-muted dark:text-[#7e7f96]">{currentTab?.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-6">
           {/* Appearance Tab */}
-          <TabsContent value="appearance" className="mt-0">
-            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+          {activeTab === 'appearance' && (
+            <div className="space-y-6">
               <LandingPageStyleSettings subdomain={subdomain} currentTemplate="modern" />
             </div>
-          </TabsContent>
+          )}
 
-          {/* Contact Page Tab */}
-          <TabsContent value="contact" className="mt-0">
-            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+          {/* Contact Tab */}
+          {activeTab === 'contact' && (
+            <div className="space-y-6">
               {tenantId && subdomain && (
                 <ContactPageSettings tenantId={tenantId} subdomain={subdomain} />
               )}
             </div>
-          </TabsContent>
+          )}
 
           {/* Invoice Tab */}
-          <TabsContent value="invoice" className="mt-0">
-            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+          {activeTab === 'invoice' && (
+            <div className="space-y-6">
               {tenantId && <InvoiceSettings tenantId={tenantId} />}
             </div>
-          </TabsContent>
+          )}
 
           {/* Media Tab */}
-          <TabsContent value="media" className="mt-0">
-            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+          {activeTab === 'media' && (
+            <div className="space-y-6">
               {tenantId && (
                 <LandingPageMediaSettings
                   tenantId={tenantId}
@@ -165,13 +216,19 @@ function SettingsPageInner() {
                 />
               )}
             </div>
-          </TabsContent>
+          )}
 
           {/* Calendar Tab */}
-          <TabsContent value="calendar" className="mt-0">
-            <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-2 space-y-4">
+          {activeTab === 'calendar' && (
+            <div className="space-y-6">
               {tenantId && (
                 <>
+                  <div className="bg-gray-50 dark:bg-[#232333] rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-txt-secondary dark:text-[#b2b2c4]">
+                      <i className='bx bx-info-circle text-info'></i>
+                      <span>Pengaturan kalender akan mempengaruhi ketersediaan booking di landing page Anda.</span>
+                    </div>
+                  </div>
                   <BusinessHoursGlobalSettings tenantId={tenantId} />
                   <OperatingHoursSettings tenantId={tenantId} />
                   <HomeVisitSettings tenantId={tenantId} />
@@ -179,9 +236,9 @@ function SettingsPageInner() {
                 </>
               )}
             </div>
-          </TabsContent>
+          )}
         </div>
-      </Tabs>
+      </div>
     </div>
   );
 }

@@ -94,7 +94,14 @@ const NAV_ITEMS: NavItem[] = [
         path: '/settings',
         icon: 'cog',
         feature: 'settings',
-        roles: ['owner', 'admin', 'superadmin']
+        roles: ['owner', 'admin', 'superadmin'],
+        children: [
+            { title: 'Appearance', path: '/settings?tab=appearance', icon: 'palette' },
+            { title: 'Contact', path: '/settings?tab=contact', icon: 'phone' },
+            { title: 'Invoice', path: '/settings?tab=invoice', icon: 'receipt' },
+            { title: 'Media', path: '/settings?tab=media', icon: 'image' },
+            { title: 'Calendar', path: '/settings?tab=calendar', icon: 'calendar' },
+        ]
     },
     {
         title: 'Profile',
@@ -110,7 +117,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
     const searchParams = useSearchParams();
     const { user, userLoading, pendingBookingsCount } = useTenantContext();
     const userRole = user.role;
-    const [expandedMenus, setExpandedMenus] = useState<string[]>(['Bookings']);
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(['Bookings', 'Settings']);
 
     // Filter nav items based on user role
     const visibleNavItems = NAV_ITEMS.filter(item => {
@@ -256,8 +263,11 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                     {item.children!.map((child) => {
                                                         const childFullPath = `/tenant/admin${child.path}`;
                                                         const currentView = searchParams.get('view');
-                                                        const childView = new URLSearchParams(child.path.split('?')[1]).get('view');
-                                                        const isChildActive = pathname === fullPath && currentView === childView;
+                                                        const currentTab = searchParams.get('tab');
+                                                        const childParams = new URLSearchParams(child.path.split('?')[1]);
+                                                        const childView = childParams.get('view');
+                                                        const childTab = childParams.get('tab');
+                                                        const isChildActive = pathname === fullPath && (currentView === childView || currentTab === childTab);
 
                                                         return (
                                                             <Link
