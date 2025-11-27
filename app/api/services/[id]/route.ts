@@ -88,16 +88,40 @@ export async function PUT(
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
     }
 
+    // Map camelCase to snake_case for database
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString()
+    };
+
+    // Map known fields from camelCase to snake_case
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.duration !== undefined) updateData.duration = body.duration;
+    if (body.price !== undefined) updateData.price = body.price;
+    if (body.category !== undefined) updateData.category = body.category;
+    if (body.isActive !== undefined) updateData.is_active = body.isActive;
+    if (body.homeVisitAvailable !== undefined) updateData.home_visit_available = body.homeVisitAvailable;
+    if (body.homeVisitSurcharge !== undefined) updateData.home_visit_surcharge = body.homeVisitSurcharge;
+    if (body.images !== undefined) updateData.images = body.images;
+    if (body.requirements !== undefined) updateData.requirements = body.requirements;
+    
+    // Also accept snake_case directly (for backward compatibility)
+    if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.home_visit_available !== undefined) updateData.home_visit_available = body.home_visit_available;
+    if (body.home_visit_surcharge !== undefined) updateData.home_visit_surcharge = body.home_visit_surcharge;
+    if (body.service_type !== undefined) updateData.service_type = body.service_type;
+
     const { data: service, error } = await supabase
       .from('services')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .eq('tenant_id', resolvedTenantId)
       .select()
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to update service' }, { status: 500 });
+      console.error('Error updating service:', error);
+      return NextResponse.json({ error: 'Failed to update service', details: error.message }, { status: 500 });
     }
 
     return NextResponse.json(service);
