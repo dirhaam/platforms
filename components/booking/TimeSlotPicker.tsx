@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, AlertCircle } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -116,18 +116,27 @@ export function TimeSlotPicker({
             return (
               <Button
                 key={index}
+                type="button"
                 variant={isSelected ? 'default' : slot.available ? 'outline' : 'ghost'}
                 size="sm"
                 disabled={!slot.available}
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
-                  slot.available && onSlotSelect(slot);
+                  if (slot.available) {
+                    onSlotSelect(slot);
+                  }
                 }}
-                onPointerDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
                 className={`
                   text-xs h-8 px-2
                   ${!slot.available ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${isSelected ? 'ring-2 ring-blue-500' : ''}
+                  ${isSelected ? 'ring-2 ring-primary' : ''}
                 `}
               >
                 {formatTime(slot.start)}
@@ -143,14 +152,14 @@ export function TimeSlotPicker({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
-            <span>Available Times</span>
+          <CardTitle className="flex items-center gap-2">
+            <i className='bx bx-time-five text-xl text-primary'></i>
+            <span>Waktu Tersedia</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <i className='bx bx-loader-alt text-3xl text-primary animate-spin'></i>
           </div>
         </CardContent>
       </Card>
@@ -161,23 +170,28 @@ export function TimeSlotPicker({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
-            <span>Available Times</span>
+          <CardTitle className="flex items-center gap-2">
+            <i className='bx bx-time-five text-xl text-primary'></i>
+            <span>Waktu Tersedia</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <i className='bx bx-error-circle'></i>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <Button 
+            type="button"
             variant="outline" 
             size="sm" 
-            onClick={fetchAvailability}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              fetchAvailability();
+            }}
             className="mt-4"
           >
-            Try Again
+            Coba Lagi
           </Button>
         </CardContent>
       </Card>
@@ -188,14 +202,14 @@ export function TimeSlotPicker({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
-            <span>Available Times</span>
+          <CardTitle className="flex items-center gap-2">
+            <i className='bx bx-time-five text-xl text-primary'></i>
+            <span>Waktu Tersedia</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            Select a date to view available times
+          <div className="text-center py-8 text-txt-muted">
+            Pilih tanggal untuk melihat waktu tersedia
           </div>
         </CardContent>
       </Card>
@@ -206,16 +220,16 @@ export function TimeSlotPicker({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
-            <span>Available Times</span>
+          <CardTitle className="flex items-center gap-2">
+            <i className='bx bx-time-five text-xl text-primary'></i>
+            <span>Waktu Tersedia</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert>
-            <Calendar className="h-4 w-4" />
+            <i className='bx bx-calendar-x'></i>
             <AlertDescription>
-              Business is closed on {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
+              Tutup pada hari {selectedDate.toLocaleDateString('id-ID', { weekday: 'long' })}
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -231,18 +245,16 @@ export function TimeSlotPicker({
     <Card className={className}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
-            <span>Available Times</span>
+          <CardTitle className="flex items-center gap-2">
+            <i className='bx bx-time-five text-xl text-primary'></i>
+            <span>Waktu Tersedia</span>
           </CardTitle>
-          <div className="flex items-center space-x-2">
-            <Badge variant="outline">
-              {availableSlots.length} of {totalSlots} available
-            </Badge>
-          </div>
+          <Badge variant="outline" className="text-xs">
+            {availableSlots.length} dari {totalSlots} tersedia
+          </Badge>
         </div>
-        <div className="text-sm text-gray-600">
-          {selectedDate.toLocaleDateString('en-US', { 
+        <div className="text-sm text-txt-secondary">
+          {selectedDate.toLocaleDateString('id-ID', { 
             weekday: 'long', 
             year: 'numeric', 
             month: 'long', 
@@ -250,33 +262,33 @@ export function TimeSlotPicker({
           })}
         </div>
         {availability.businessHours.openTime && availability.businessHours.closeTime && (
-          <div className="text-sm text-gray-500">
-            Business hours: {availability.businessHours.openTime} - {availability.businessHours.closeTime}
+          <div className="text-sm text-txt-muted">
+            Jam operasional: {availability.businessHours.openTime} - {availability.businessHours.closeTime}
           </div>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
         {availableSlots.length === 0 ? (
           <Alert>
-            <AlertCircle className="h-4 w-4" />
+            <i className='bx bx-info-circle'></i>
             <AlertDescription>
-              No available time slots for this date. Please select a different date.
+              Tidak ada slot waktu tersedia untuk tanggal ini. Silakan pilih tanggal lain.
             </AlertDescription>
           </Alert>
         ) : (
           <>
-            {renderTimePeriod('Morning', morning)}
-            {renderTimePeriod('Afternoon', afternoon)}
-            {renderTimePeriod('Evening', evening)}
+            {renderTimePeriod('Pagi', morning)}
+            {renderTimePeriod('Siang', afternoon)}
+            {renderTimePeriod('Malam', evening)}
           </>
         )}
 
         {selectedSlot && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-900">
-                Selected Time: {formatTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
+          <div className="mt-6 p-4 bg-primary-light dark:bg-[#35365f] border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <i className='bx bx-check-circle text-primary'></i>
+              <span className="text-sm font-medium text-primary">
+                Waktu Dipilih: {formatTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
               </span>
             </div>
           </div>
@@ -286,19 +298,25 @@ export function TimeSlotPicker({
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 border border-gray-300 rounded"></div>
-              <span>Available</span>
+              <span>Tersedia</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-gray-300 rounded"></div>
-              <span>Booked</span>
+              <span>Terisi</span>
             </div>
           </div>
           <Button
+            type="button"
             variant="ghost"
             size="sm"
-            onClick={fetchAvailability}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              fetchAvailability();
+            }}
             className="text-xs"
           >
+            <i className='bx bx-refresh mr-1'></i>
             Refresh
           </Button>
         </div>
