@@ -317,11 +317,12 @@ export function NewBookingDialog({
           className="w-[95vw] max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
         >
           <DialogHeader className="mb-6">
-            <DialogTitle>Create New Booking</DialogTitle>
+            <DialogTitle>Buat Booking Baru</DialogTitle>
             <DialogDescription>
-              Fill in the booking details below
+              Isi detail booking di bawah
             </DialogDescription>
           </DialogHeader>
 
@@ -429,11 +430,18 @@ export function NewBookingDialog({
 
               {/* Time Slot Picker */}
               {booking.scheduledAt && booking.serviceId && (
-                <div className="space-y-2">
+                <div 
+                  className="space-y-2"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <TimeSlotPicker
                     serviceId={booking.serviceId}
                     selectedDate={new Date(booking.scheduledAt + 'T00:00')}
-                    onSlotSelect={(slot) => setBooking({ ...booking, selectedTimeSlot: slot })}
+                    onSlotSelect={(slot) => {
+                      setBooking({ ...booking, selectedTimeSlot: slot });
+                    }}
                     selectedSlot={booking.selectedTimeSlot}
                     tenantId={subdomain}
                   />
@@ -441,7 +449,12 @@ export function NewBookingDialog({
               )}
 
               {/* Home Visit */}
-              <div className="space-y-3 border border-primary/30 rounded-lg p-4 bg-primary-light dark:bg-[#35365f]">
+              <div 
+                className="space-y-3 border border-primary/30 rounded-lg p-4 bg-primary-light dark:bg-[#35365f]"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id="homeVisit"
@@ -474,12 +487,16 @@ export function NewBookingDialog({
 
                     {/* Travel Estimate */}
                     {booking.homeVisitAddress && typeof booking.homeVisitLat === 'number' && typeof booking.homeVisitLng === 'number' && businessCoordinates && (
-                      <div className="mt-4">
+                      <div 
+                        className="mt-4"
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
                         <TravelEstimateCard
                           tenantId={subdomain}
                           origin={businessCoordinates}
                           destination={booking.homeVisitAddress}
-                          // Also pass coordinates for calculation if address geocoding fails
                           destinationCoordinates={{
                             lat: booking.homeVisitLat,
                             lng: booking.homeVisitLng
