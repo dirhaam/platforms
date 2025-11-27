@@ -1,13 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 
 interface HomeVisitConfig {
   enabled: boolean;
@@ -38,7 +31,6 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
   const [success, setSuccess] = useState<string | null>(null);
   const [newSlot, setNewSlot] = useState('');
 
-  // Fetch current settings
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -64,11 +56,11 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
 
   const handleAddSlot = () => {
     if (!newSlot || !/^\d{2}:\d{2}$/.test(newSlot)) {
-      setError('Please enter a valid time (HH:MM format)');
+      setError('Masukkan waktu yang valid (format HH:MM)');
       return;
     }
     if (config.timeSlots.includes(newSlot)) {
-      setError('This time slot already exists');
+      setError('Slot waktu ini sudah ada');
       return;
     }
     setConfig(prev => ({
@@ -93,12 +85,12 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
       setSuccess(null);
 
       if (config.dailyQuota < 1) {
-        setError('Daily quota must be at least 1');
+        setError('Kuota harian minimal 1');
         return;
       }
 
       if (config.timeSlots.length === 0) {
-        setError('At least one time slot is required');
+        setError('Minimal satu slot waktu diperlukan');
         return;
       }
 
@@ -114,13 +106,13 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to save settings');
+        throw new Error(result.error || 'Gagal menyimpan pengaturan');
       }
 
-      setSuccess('Home visit settings saved successfully');
+      setSuccess('Pengaturan home visit berhasil disimpan');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings');
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan pengaturan');
     } finally {
       setSaving(false);
     }
@@ -128,190 +120,198 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
 
   if (loading) {
     return (
-      <Card className="shadow-card border-none rounded-card bg-white">
-        <CardContent className="flex items-center justify-center py-8">
-          <i className='bx bx-loader-alt animate-spin text-2xl text-primary'></i>
-        </CardContent>
-      </Card>
+      <div className="bg-white dark:bg-[#2b2c40] rounded-card shadow-card p-6">
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="w-10 h-10 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center mb-3">
+            <i className='bx bx-loader-alt text-xl text-primary dark:text-[#a5a7ff] animate-spin'></i>
+          </div>
+          <p className="text-sm text-txt-muted dark:text-[#7e7f96]">Memuat pengaturan home visit...</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="shadow-card border-none rounded-card bg-white">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center">
-            <i className='bx bx-home-heart text-primary text-xl'></i>
+    <div className="bg-white dark:bg-[#2b2c40] rounded-card shadow-card overflow-hidden">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-100 dark:border-[#4e4f6c]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+              <i className='bx bx-home-heart text-xl text-primary dark:text-[#a5a7ff]'></i>
+            </div>
+            <div>
+              <h5 className="text-lg font-semibold text-txt-primary dark:text-[#d5d5e2]">Home Visit</h5>
+              <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Atur opsi booking kunjungan rumah</p>
+            </div>
           </div>
-          <div>
-            <CardTitle className="text-lg font-semibold text-txt-primary">
-              Home Visit Settings
-            </CardTitle>
-            <CardDescription className="text-txt-secondary">
-              Configure global home visit booking options
-            </CardDescription>
-          </div>
+          <span className={`px-3 py-1 text-xs font-bold rounded ${config.enabled ? 'bg-success/20 text-success' : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'}`}>
+            {config.enabled ? 'Aktif' : 'Nonaktif'}
+          </span>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
+      </div>
+
+      {/* Content */}
+      <div className="p-6 space-y-4">
+        {/* Alerts */}
         {error && (
-          <Alert variant="destructive" className="bg-red-50 border-red-200">
-            <i className='bx bx-error-circle text-danger mr-2'></i>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-[#4d2f3a] border border-red-200 dark:border-red-800/50 rounded-lg">
+            <i className='bx bx-error-circle text-xl text-danger'></i>
+            <p className="text-sm text-danger flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="p-1 hover:bg-red-200 dark:hover:bg-red-900/30 rounded transition-colors">
+              <i className='bx bx-x text-lg text-danger'></i>
+            </button>
+          </div>
         )}
 
         {success && (
-          <Alert className="bg-green-50 border-green-200 text-success">
-            <i className='bx bx-check-circle mr-2'></i>
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
+          <div className="flex items-center gap-3 p-4 bg-green-100 dark:bg-[#36483f] border border-green-200 dark:border-green-800/50 rounded-lg">
+            <i className='bx bx-check-circle text-xl text-success'></i>
+            <p className="text-sm text-success flex-1">{success}</p>
+          </div>
         )}
 
-        {/* Enable Home Visit */}
-        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
-          <div className="space-y-1">
-            <Label className="text-base font-medium text-txt-primary flex items-center gap-2">
-              <i className='bx bx-power-off text-primary'></i> Enable Home Visit
-            </Label>
-            <p className="text-xs text-txt-secondary">
-              Allow customers to book home visit services
-            </p>
+        {/* Enable Home Visit Toggle */}
+        <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-[#4e4f6c]">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded flex items-center justify-center ${config.enabled ? 'bg-success/20 text-success' : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'}`}>
+              <i className={`bx ${config.enabled ? 'bx-check' : 'bx-power-off'} text-lg`}></i>
+            </div>
+            <div>
+              <p className="font-medium text-txt-primary dark:text-[#d5d5e2]">Aktifkan Home Visit</p>
+              <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Izinkan pelanggan booking layanan kunjungan rumah</p>
+            </div>
           </div>
-          <Switch
-            checked={config.enabled}
-            onCheckedChange={(checked) => setConfig(prev => ({ ...prev, enabled: checked }))}
-            className="data-[state=checked]:bg-primary"
-          />
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={config.enabled}
+              onChange={(e) => setConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success"></div>
+          </label>
         </div>
 
         {config.enabled && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
+          <div className="space-y-4">
             {/* Daily Quota */}
-            <div className="space-y-2">
-              <Label htmlFor="daily-quota" className="text-txt-primary font-semibold flex items-center gap-2">
-                <i className='bx bx-calendar-check text-primary'></i> Daily Home Visit Quota
-              </Label>
-              <Input
-                id="daily-quota"
+            <div className="p-4 rounded-lg bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-[#4e4f6c]">
+              <div className="flex items-center gap-2 mb-3">
+                <i className='bx bx-calendar-check text-primary dark:text-[#a5a7ff]'></i>
+                <label className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Kuota Harian</label>
+              </div>
+              <input
                 type="number"
                 min="1"
                 max="20"
                 value={config.dailyQuota}
-                onChange={(e) => setConfig(prev => ({
-                  ...prev,
-                  dailyQuota: parseInt(e.target.value) || 1
-                }))}
-                className="bg-gray-50 border-transparent focus:bg-white focus:border-primary max-w-[200px]"
+                onChange={(e) => setConfig(prev => ({ ...prev, dailyQuota: parseInt(e.target.value) || 1 }))}
+                className="w-32 h-10 px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-md text-txt-primary dark:text-[#d5d5e2] focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
               />
-              <p className="text-xs text-txt-muted">
-                Maximum home visit bookings allowed per day
-              </p>
+              <p className="text-xs text-txt-muted dark:text-[#7e7f96] mt-2">Maksimal booking home visit per hari</p>
             </div>
 
             {/* Time Slots */}
-            <div className="space-y-3">
-              <Label className="text-txt-primary font-semibold flex items-center gap-2">
-                <i className='bx bx-time text-primary'></i> Available Time Slots
-              </Label>
+            <div className="p-4 rounded-lg bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-[#4e4f6c]">
+              <div className="flex items-center gap-2 mb-3">
+                <i className='bx bx-time text-primary dark:text-[#a5a7ff]'></i>
+                <label className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Slot Waktu Tersedia</label>
+              </div>
               
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-3">
                 {config.timeSlots.map((slot) => (
-                  <Badge
-                    key={slot}
-                    variant="secondary"
-                    className="bg-primary-light text-primary px-3 py-1.5 text-sm font-medium"
-                  >
+                  <span key={slot} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff] text-sm font-medium rounded">
                     {slot}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSlot(slot)}
-                      className="ml-2 hover:text-danger transition-colors"
-                    >
+                    <button type="button" onClick={() => handleRemoveSlot(slot)} className="ml-1 hover:text-danger transition-colors">
                       <i className='bx bx-x'></i>
                     </button>
-                  </Badge>
+                  </span>
                 ))}
+                {config.timeSlots.length === 0 && (
+                  <span className="text-sm text-txt-muted dark:text-[#7e7f96] italic">Belum ada slot waktu</span>
+                )}
               </div>
 
               <div className="flex gap-2">
-                <Input
+                <input
                   type="time"
                   value={newSlot}
                   onChange={(e) => setNewSlot(e.target.value)}
-                  className="bg-gray-50 border-transparent focus:bg-white focus:border-primary max-w-[150px]"
-                  placeholder="HH:MM"
+                  className="h-10 px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-md text-txt-primary dark:text-[#d5d5e2] focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                 />
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={handleAddSlot}
-                  className="border-primary text-primary hover:bg-primary-light"
+                  className="inline-flex items-center gap-1 px-4 py-2 border border-primary text-primary hover:bg-primary-light dark:hover:bg-[#35365f] rounded-md transition-colors"
                 >
-                  <i className='bx bx-plus mr-1'></i> Add Slot
-                </Button>
+                  <i className='bx bx-plus'></i>
+                  Tambah
+                </button>
               </div>
-              <p className="text-xs text-txt-muted">
-                Fixed time slots when home visit bookings can be made
-              </p>
+              <p className="text-xs text-txt-muted dark:text-[#7e7f96] mt-2">Slot waktu tetap untuk booking home visit</p>
             </div>
 
             {/* Options */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium text-txt-primary">
-                    Require Address
-                  </Label>
-                  <p className="text-xs text-txt-muted">
-                    Customer must provide address for home visit
-                  </p>
+              {/* Require Address */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-[#4e4f6c]">
+                <div>
+                  <p className="font-medium text-txt-primary dark:text-[#d5d5e2]">Wajib Alamat</p>
+                  <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Pelanggan harus memberikan alamat</p>
                 </div>
-                <Switch
-                  checked={config.requireAddress}
-                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, requireAddress: checked }))}
-                  className="data-[state=checked]:bg-primary"
-                />
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.requireAddress}
+                    onChange={(e) => setConfig(prev => ({ ...prev, requireAddress: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success"></div>
+                </label>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium text-txt-primary">
-                    Calculate Travel Surcharge
-                  </Label>
-                  <p className="text-xs text-txt-muted">
-                    Auto-calculate travel surcharge based on distance
-                  </p>
+              {/* Calculate Travel Surcharge */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-[#4e4f6c]">
+                <div>
+                  <p className="font-medium text-txt-primary dark:text-[#d5d5e2]">Hitung Travel Surcharge</p>
+                  <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Otomatis hitung biaya perjalanan berdasarkan jarak</p>
                 </div>
-                <Switch
-                  checked={config.calculateTravelSurcharge}
-                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, calculateTravelSurcharge: checked }))}
-                  className="data-[state=checked]:bg-primary"
-                />
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.calculateTravelSurcharge}
+                    onChange={(e) => setConfig(prev => ({ ...prev, calculateTravelSurcharge: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success"></div>
+                </label>
               </div>
             </div>
           </div>
         )}
 
         {/* Save Button */}
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full bg-primary hover:bg-primary-dark text-white"
-          size="lg"
-        >
-          {saving ? (
-            <>
-              <i className='bx bx-loader-alt animate-spin mr-2'></i> Saving...
-            </>
-          ) : (
-            <>
-              <i className='bx bx-save mr-2'></i> Save Home Visit Settings
-            </>
-          )}
-        </Button>
-      </CardContent>
-    </Card>
+        <div className="pt-4 border-t border-gray-100 dark:border-[#4e4f6c]">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white rounded-md shadow-md shadow-primary/20 transition-all duration-200 ease-in-out hover:bg-[#5f61e6] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? (
+              <>
+                <i className='bx bx-loader-alt animate-spin'></i>
+                Menyimpan...
+              </>
+            ) : (
+              <>
+                <i className='bx bx-save'></i>
+                Simpan Pengaturan Home Visit
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

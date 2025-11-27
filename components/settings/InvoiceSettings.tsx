@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ImageIcon, RefreshCw, Upload, X, Plus, Trash2 } from 'lucide-react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddressInput } from '@/components/location/AddressInput';
 import { TravelSurchargeSettings } from '@/types/location';
@@ -366,7 +366,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                             disabled={loading || saving || uploading}
                           >
                             <span>
-                              <Upload className="w-4 h-4 mr-2" />
+                              <i className='bx bx-upload mr-2'></i>
                               {uploading ? 'Uploading...' : 'Upload Logo'}
                             </span>
                           </Button>
@@ -380,7 +380,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                           onClick={handleRemoveLogo}
                           disabled={loading || saving || uploading}
                         >
-                          <X className="w-4 h-4" />
+                          <i className='bx bx-x'></i>
                         </Button>
                       )}
                     </div>
@@ -517,7 +517,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                       />
                     ) : (
                       <div className="h-16 w-16 border rounded bg-white flex items-center justify-center text-gray-400">
-                        <ImageIcon className="h-6 w-6" />
+                        <i className='bx bx-image text-2xl'></i>
                       </div>
                     )}
                     <div className="flex-1">
@@ -752,7 +752,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                       onClick={handleAddFee}
                       disabled={loading || saving}
                     >
-                      <Plus className="w-4 h-4 mr-1" />
+                      <i className='bx bx-plus mr-1'></i>
                       Tambah
                     </Button>
                   </div>
@@ -804,7 +804,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
                           onClick={() => handleRemoveFee(fee.id)}
                           disabled={loading || saving}
                         >
-                          <Trash2 className="w-4 h-4 text-red-600" />
+                          <i className='bx bx-trash text-red-600'></i>
                         </Button>
                       </div>
                     ))}
@@ -921,7 +921,7 @@ export function InvoiceSettings({ tenantId }: InvoiceSettingsProps) {
             onClick={handleReset}
             disabled={loading || saving || !hasChanges}
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <i className='bx bx-refresh mr-2'></i>
             Batalkan Perubahan
           </Button>
           <p className="text-xs text-gray-500">

@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Eye, ExternalLink } from 'lucide-react';
+
 
 interface ContactLink {
   id: string;
@@ -285,7 +285,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
   if (isFetching) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="w-6 h-6 animate-spin" />
+        <i className='bx bx-loader-alt text-2xl animate-spin text-primary'></i>
       </div>
     );
   }
@@ -308,7 +308,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
           variant="outline"
           onClick={() => window.open(`/s/${subdomain}/contact`, '_blank')}
         >
-          <Eye className="w-4 h-4 mr-2" />
+          <i className='bx bx-show mr-2'></i>
           Preview
         </Button>
       </div>
@@ -365,7 +365,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                 </div>
               </div>
               <Button type="button" onClick={addLink} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
+                <i className='bx bx-plus mr-2'></i>
                 Add Link
               </Button>
             </CardContent>
@@ -402,7 +402,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                         onClick={() => moveLink(link.id, 'up')}
                         disabled={index === 0}
                       >
-                        <ArrowUp className="h-4 w-4" />
+                        <i className='bx bx-chevron-up'></i>
                       </Button>
                       <Button
                         type="button"
@@ -411,7 +411,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                         onClick={() => moveLink(link.id, 'down')}
                         disabled={index === links.length - 1}
                       >
-                        <ArrowDown className="h-4 w-4" />
+                        <i className='bx bx-chevron-down'></i>
                       </Button>
                       <Button
                         type="button"
@@ -420,7 +420,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                         onClick={() => removeLink(link.id)}
                         className="text-red-500 hover:text-red-700"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <i className='bx bx-trash'></i>
                       </Button>
                     </div>
                   </div>
@@ -463,7 +463,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                         onClick={() => profileInputRef.current?.click()}
                         disabled={uploadingProfile}
                       >
-                        {uploadingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                        {uploadingProfile ? <i className='bx bx-loader-alt animate-spin'></i> : <i className='bx bx-upload mr-2'></i>}
                         Upload
                       </Button>
                     </div>
@@ -568,7 +568,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                         disabled={uploadingBg}
                         className="w-full"
                       >
-                        {uploadingBg ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                        {uploadingBg ? <i className='bx bx-loader-alt animate-spin mr-2'></i> : <i className='bx bx-upload mr-2'></i>}
                         Upload Background Image
                       </Button>
                       {settings.backgroundValue && settings.backgroundType === 'image' && (
@@ -675,7 +675,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                           >
                             <span className="text-xl">{link.icon || '🔗'}</span>
                             <span className="flex-1 font-medium">{link.title}</span>
-                            <ExternalLink className="w-4 h-4 opacity-50" />
+                            <i className='bx bx-link-external opacity-50'></i>
                           </div>
                         ))}
                         {links.filter(l => l.isActive).length === 0 && (
@@ -695,7 +695,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
         <Button type="submit" disabled={isLoading}>
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <i className='bx bx-loader-alt mr-2 animate-spin'></i>
               Saving...
             </>
           ) : (

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { VideoItem, SocialMediaLink, PhotoGallery, PhotoGalleryItem } from '@/types/booking';
-import { Loader2, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+
 
 interface LandingPageMediaSettingsProps {
   tenantId: string;
@@ -313,7 +313,7 @@ export default function LandingPageMediaSettings({
               </div>
 
               <Button type="button" onClick={addVideo} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
+                <i className='bx bx-plus mr-2'></i>
                 Add Video
               </Button>
             </CardContent>
@@ -339,7 +339,7 @@ export default function LandingPageMediaSettings({
                         onClick={() => moveVideo(video.id, 'up')}
                         disabled={index === 0}
                       >
-                        <ArrowUp className="h-4 w-4" />
+                        <i className='bx bx-chevron-up'></i>
                       </Button>
                       <Button
                         type="button"
@@ -348,7 +348,7 @@ export default function LandingPageMediaSettings({
                         onClick={() => moveVideo(video.id, 'down')}
                         disabled={index === videos.length - 1}
                       >
-                        <ArrowDown className="h-4 w-4" />
+                        <i className='bx bx-chevron-down'></i>
                       </Button>
                       <Button
                         type="button"
@@ -356,7 +356,7 @@ export default function LandingPageMediaSettings({
                         size="sm"
                         onClick={() => removeVideo(video.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <i className='bx bx-trash'></i>
                       </Button>
                     </div>
                   </div>
@@ -403,7 +403,7 @@ export default function LandingPageMediaSettings({
               </div>
 
               <Button type="button" onClick={addSocial} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
+                <i className='bx bx-plus mr-2'></i>
                 Add Social Media
               </Button>
             </CardContent>
@@ -429,7 +429,7 @@ export default function LandingPageMediaSettings({
                         onClick={() => moveSocial(social.id, 'up')}
                         disabled={index === 0}
                       >
-                        <ArrowUp className="h-4 w-4" />
+                        <i className='bx bx-chevron-up'></i>
                       </Button>
                       <Button
                         type="button"
@@ -438,7 +438,7 @@ export default function LandingPageMediaSettings({
                         onClick={() => moveSocial(social.id, 'down')}
                         disabled={index === socialMedia.length - 1}
                       >
-                        <ArrowDown className="h-4 w-4" />
+                        <i className='bx bx-chevron-down'></i>
                       </Button>
                       <Button
                         type="button"
@@ -446,7 +446,7 @@ export default function LandingPageMediaSettings({
                         size="sm"
                         onClick={() => removeSocial(social.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <i className='bx bx-trash'></i>
                       </Button>
                     </div>
                   </div>
@@ -476,7 +476,7 @@ export default function LandingPageMediaSettings({
         <Button type="submit" disabled={isLoading}>
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <i className='bx bx-loader-alt mr-2 animate-spin'></i>
               Saving...
             </>
           ) : (
