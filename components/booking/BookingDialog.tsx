@@ -15,8 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, Calendar as CalendarIcon, Clock, MapPin, User, Phone, Mail, MessageSquare } from 'lucide-react';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { PricingCalculator } from '@/components/booking/PricingCalculator';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
@@ -120,6 +118,14 @@ const getThemeConfig = (template?: string) => {
       buttonClass: 'bg-gray-700 hover:bg-gray-800 text-white',
       inputClass: 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-gray-700',
       badgeClass: 'bg-gray-200 text-gray-800 border border-gray-400',
+    },
+    sneat: {
+      dialogClass: 'bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] shadow-card rounded-card',
+      headerClass: 'text-txt-primary dark:text-[#d5d5e2] border-b border-gray-200 dark:border-[#4e4f6c] pb-4',
+      cardClass: 'bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-[#4e4f6c] rounded-card hover:shadow-md transition-all duration-200',
+      buttonClass: 'bg-primary text-white shadow-md shadow-primary/20 hover:bg-[#5f61e6] hover:shadow-lg transition-all duration-200 ease-in-out rounded-md',
+      inputClass: 'bg-gray-50 dark:bg-[#2b2c40] border-transparent text-txt-primary dark:text-[#d5d5e2] placeholder:text-txt-muted dark:placeholder:text-[#7e7f96] focus:bg-white dark:focus:bg-[#232333] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-150 rounded-md',
+      badgeClass: 'bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff] px-3 py-1 rounded text-xs font-semibold',
     },
   };
 
@@ -534,16 +540,16 @@ export default function BookingDialog({
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <span>{selectedService.duration} minutes</span>
+                      <i className='bx bx-time-five text-txt-muted'></i>
+                      <span>{selectedService.duration} menit</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-lg">IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
+                      <span className="font-bold text-lg text-primary">IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
                     </div>
                     {selectedService.homeVisitAvailable && (
-                      <div className="col-span-2 flex items-center space-x-2 text-green-600">
-                        <MapPin className="h-4 w-4" />
-                        <span>Home visit available (+IDR {selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID') : '0'})</span>
+                      <div className="col-span-2 flex items-center space-x-2 text-success">
+                        <i className='bx bx-home-heart'></i>
+                        <span>Home visit tersedia (+IDR {selectedService.homeVisitSurcharge ? Number(selectedService.homeVisitSurcharge).toLocaleString('id-ID') : '0'})</span>
                       </div>
                     )}
                   </div>
@@ -590,17 +596,20 @@ export default function BookingDialog({
 
             {/* Error Display */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-                <p className="text-sm">{error}</p>
+              <div className="flex items-center gap-3 p-4 bg-[#ffe0db] dark:bg-[#4d2f3a] border border-red-200 dark:border-red-800/50 rounded-lg">
+                <i className='bx bx-error-circle text-xl text-danger flex-shrink-0'></i>
+                <p className="text-sm text-danger">{error}</p>
               </div>
             )}
 
             {/* Customer Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <User className="h-5 w-5 mr-2" />
-                Your Information
-              </h3>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+                  <i className='bx bx-user text-primary dark:text-[#a5a7ff]'></i>
+                </div>
+                <h3 className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Informasi Anda</h3>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -652,20 +661,22 @@ export default function BookingDialog({
             </div>
 
             {/* Appointment Preferences */}
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <CalendarIcon className="h-5 w-5 mr-2" />
-                Appointment Preferences
-              </h3>
+            <div className="space-y-4 border-t border-gray-200 dark:border-[#4e4f6c] pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+                  <i className='bx bx-calendar text-primary dark:text-[#a5a7ff]'></i>
+                </div>
+                <h3 className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Jadwal Appointment</h3>
+              </div>
               
               {/* Date Picker */}
               <div className="space-y-2">
-                <Label>Preferred Date *</Label>
+                <Label className="text-txt-primary dark:text-[#d5d5e2]">Tanggal *</Label>
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button className={`w-full justify-start text-left ${themeConfig.buttonClass}`}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.preferredDate ? new Date(formData.preferredDate + 'T00:00').toLocaleDateString() : 'Pick a date'}
+                      <i className='bx bx-calendar mr-2'></i>
+                      {formData.preferredDate ? new Date(formData.preferredDate + 'T00:00').toLocaleDateString('id-ID') : 'Pilih tanggal'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 z-50" align="start">
@@ -713,17 +724,26 @@ export default function BookingDialog({
 
             {/* Home Visit Option */}
             {selectedService.homeVisitAvailable && (
-              <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="homeVisit"
-                    checked={formData.isHomeVisit}
-                    onCheckedChange={(checked: boolean) => handleInputChange('isHomeVisit', checked)}
-                  />
-                  <Label htmlFor="homeVisit" className="cursor-pointer">
-                    <MapPin className="inline w-4 h-4 mr-2" />
-                    Request home visit
-                  </Label>
+              <div className="space-y-4 border border-gray-200 dark:border-[#4e4f6c] rounded-card p-4 bg-primary-light dark:bg-[#35365f]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-[#2b2c40] flex items-center justify-center">
+                      <i className='bx bx-home-heart text-xl text-primary dark:text-[#a5a7ff]'></i>
+                    </div>
+                    <div>
+                      <p className="font-medium text-txt-primary dark:text-[#d5d5e2]">Home Visit</p>
+                      <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Layanan di lokasi Anda</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isHomeVisit}
+                      onChange={(e) => handleInputChange('isHomeVisit', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:bg-primary transition-colors duration-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:duration-200 peer-checked:after:translate-x-5"></div>
+                  </label>
                 </div>
                 
                 {formData.isHomeVisit && (
@@ -792,43 +812,51 @@ export default function BookingDialog({
 
             {/* Additional Notes */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <MessageSquare className="h-5 w-5 mr-2" />
-                Additional Notes
-              </h3>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+                  <i className='bx bx-message-detail text-primary dark:text-[#a5a7ff]'></i>
+                </div>
+                <h3 className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Catatan Tambahan</h3>
+              </div>
               
               <Textarea
                 value={formData.notes}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
-                placeholder="Any special requests or additional information..."
+                placeholder="Permintaan khusus atau informasi tambahan..."
                 rows={3}
+                className="bg-gray-50 dark:bg-[#2b2c40] border-transparent text-txt-primary dark:text-[#d5d5e2] placeholder:text-txt-muted dark:placeholder:text-[#7e7f96] focus:bg-white dark:focus:bg-[#232333] focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             {/* Amount Breakdown */}
             {selectedService && (
-              <div className="p-4 bg-gray-50 rounded-lg border space-y-2">
-                <h3 className="font-semibold text-sm mb-3">Amount Breakdown</h3>
+              <div className="p-5 bg-gray-50 dark:bg-[#232333] rounded-card border border-gray-200 dark:border-[#4e4f6c] space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+                    <i className='bx bx-receipt text-primary dark:text-[#a5a7ff]'></i>
+                  </div>
+                  <h3 className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Rincian Biaya</h3>
+                </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Base Service Amount</span>
-                  <span>IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
+                  <span className="text-txt-secondary dark:text-[#b2b2c4]">Biaya Layanan</span>
+                  <span className="text-txt-primary dark:text-[#d5d5e2]">IDR {Number(selectedService.price).toLocaleString('id-ID')}</span>
                 </div>
                 {formData.isHomeVisit && travelSurcharge > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Travel Surcharge</span>
-                    <span>IDR {Number(travelSurcharge).toLocaleString('id-ID')}</span>
+                    <span className="text-txt-secondary dark:text-[#b2b2c4]">Biaya Transport</span>
+                    <span className="text-txt-primary dark:text-[#d5d5e2]">IDR {Number(travelSurcharge).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {invoiceSettings?.taxServiceCharge?.taxPercentage ? (
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Tax {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(2)}%</span>
-                    <span>IDR {((Number(selectedService.price) + (formData.isHomeVisit ? travelSurcharge : 0)) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString('id-ID')}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-txt-muted dark:text-[#7e7f96]">Pajak {Number(invoiceSettings.taxServiceCharge.taxPercentage).toFixed(0)}%</span>
+                    <span className="text-txt-secondary dark:text-[#b2b2c4]">IDR {((Number(selectedService.price) + (formData.isHomeVisit ? travelSurcharge : 0)) * (invoiceSettings.taxServiceCharge.taxPercentage / 100)).toLocaleString('id-ID')}</span>
                   </div>
                 ) : null}
                 {invoiceSettings?.taxServiceCharge?.serviceChargeRequired && invoiceSettings?.taxServiceCharge?.serviceChargeValue ? (
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Service Charge</span>
-                    <span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-txt-muted dark:text-[#7e7f96]">Service Charge</span>
+                    <span className="text-txt-secondary dark:text-[#b2b2c4]">
                       {invoiceSettings.taxServiceCharge.serviceChargeType === 'fixed'
                         ? `IDR ${(invoiceSettings.taxServiceCharge.serviceChargeValue || 0).toLocaleString('id-ID')}`
                         : `IDR ${((Number(selectedService.price) + (formData.isHomeVisit ? travelSurcharge : 0)) * ((invoiceSettings.taxServiceCharge.serviceChargeValue || 0) / 100)).toLocaleString('id-ID')}`}
@@ -838,9 +866,9 @@ export default function BookingDialog({
                 {invoiceSettings?.additionalFees && invoiceSettings.additionalFees.length > 0 && (
                   <>
                     {invoiceSettings.additionalFees.map(fee => (
-                      <div key={fee.id} className="flex justify-between text-sm text-gray-600">
-                        <span>{fee.name}</span>
-                        <span>
+                      <div key={fee.id} className="flex justify-between text-sm">
+                        <span className="text-txt-muted dark:text-[#7e7f96]">{fee.name}</span>
+                        <span className="text-txt-secondary dark:text-[#b2b2c4]">
                           {fee.type === 'fixed'
                             ? `IDR ${fee.value.toLocaleString('id-ID')}`
                             : `IDR ${((Number(selectedService.price) + (formData.isHomeVisit ? travelSurcharge : 0)) * (fee.value / 100)).toLocaleString('id-ID')}`}
@@ -849,36 +877,41 @@ export default function BookingDialog({
                     ))}
                   </>
                 )}
-                <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span>Total Amount</span>
-                  <span>IDR {Number(calculateTotal()).toLocaleString('id-ID')}</span>
+                <div className="border-t border-gray-200 dark:border-[#4e4f6c] pt-3 flex justify-between">
+                  <span className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Total</span>
+                  <span className="font-bold text-lg text-primary dark:text-[#a5a7ff]">IDR {Number(calculateTotal()).toLocaleString('id-ID')}</span>
                 </div>
               </div>
             )}
 
             {/* Payment Information */}
-            <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold">Payment Information</h3>
+            <div className="space-y-4 bg-[#d7f5fc] dark:bg-[#25445c] p-5 rounded-card border border-info/30">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-white dark:bg-[#2b2c40] flex items-center justify-center">
+                  <i className='bx bx-credit-card text-info'></i>
+                </div>
+                <h3 className="font-semibold text-txt-primary dark:text-[#d5d5e2]">Informasi Pembayaran</h3>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="paymentMethod">Payment Method *</Label>
+                  <Label htmlFor="paymentMethod" className="text-txt-primary dark:text-[#d5d5e2]">Metode Pembayaran *</Label>
                   <select
                     id="paymentMethod"
                     value={formData.paymentMethod || 'cash'}
                     onChange={(e) => handleInputChange('paymentMethod', e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-md text-txt-primary dark:text-[#d5d5e2] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-150"
                   >
-                    <option value="cash">💵 Cash</option>
-                    <option value="card">💳 Credit/Debit Card</option>
-                    <option value="transfer">🏦 Bank Transfer</option>
+                    <option value="cash">💵 Tunai</option>
+                    <option value="card">💳 Kartu Kredit/Debit</option>
+                    <option value="transfer">🏦 Transfer Bank</option>
                     <option value="qris">📱 QRIS</option>
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">How would you like to pay?</p>
+                  <p className="text-xs text-txt-muted dark:text-[#7e7f96] mt-1">Pilih metode pembayaran</p>
                 </div>
 
                 <div>
-                  <Label htmlFor="dpAmount">Down Payment (DP) - Optional</Label>
+                  <Label htmlFor="dpAmount" className="text-txt-primary dark:text-[#d5d5e2]">Uang Muka (DP) - Opsional</Label>
                   <div className="flex gap-2">
                     <Input
                       id="dpAmount"
@@ -887,30 +920,30 @@ export default function BookingDialog({
                       max={Number(calculateTotal())}
                       value={formData.dpAmount || 0}
                       onChange={(e) => handleInputChange('dpAmount', parseInt(e.target.value) || 0)}
-                      placeholder="Enter DP amount (IDR)"
+                      placeholder="Masukkan jumlah DP"
                       className={themeConfig.inputClass}
                     />
-                    <div className="flex items-center justify-center px-3 py-2 bg-gray-100 rounded-md border border-gray-300 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                    <div className="flex items-center justify-center px-3 py-2 bg-white dark:bg-[#2b2c40] rounded-md border border-gray-200 dark:border-[#4e4f6c] text-sm font-semibold text-txt-secondary dark:text-[#b2b2c4] whitespace-nowrap">
                       / {Number(calculateTotal()).toLocaleString('id-ID')}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Leave empty or 0 for no down payment</p>
+                  <p className="text-xs text-txt-muted dark:text-[#7e7f96] mt-1">Kosongkan atau 0 jika tanpa DP</p>
                 </div>
               </div>
 
               {formData.dpAmount && formData.dpAmount > 0 && (
-                <div className="bg-white p-3 rounded border border-blue-300">
+                <div className="bg-white dark:bg-[#2b2c40] p-4 rounded-lg border border-gray-200 dark:border-[#4e4f6c]">
                   <div className="flex justify-between text-sm">
-                    <span>Total Service Amount:</span>
-                    <span className="font-semibold">IDR {Number(calculateTotal()).toLocaleString('id-ID')}</span>
+                    <span className="text-txt-secondary dark:text-[#b2b2c4]">Total Layanan:</span>
+                    <span className="font-semibold text-txt-primary dark:text-[#d5d5e2]">IDR {Number(calculateTotal()).toLocaleString('id-ID')}</span>
                   </div>
-                  <div className="flex justify-between text-sm mt-1">
-                    <span>Down Payment:</span>
-                    <span className="font-semibold text-blue-600">IDR {Number(formData.dpAmount).toLocaleString('id-ID')}</span>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-txt-secondary dark:text-[#b2b2c4]">Uang Muka:</span>
+                    <span className="font-semibold text-primary dark:text-[#a5a7ff]">IDR {Number(formData.dpAmount).toLocaleString('id-ID')}</span>
                   </div>
-                  <div className="flex justify-between text-sm mt-1 pt-1 border-t border-gray-200">
-                    <span>Remaining Balance:</span>
-                    <span className="font-semibold text-orange-600">IDR {Number(calculateTotal() - (formData.dpAmount || 0)).toLocaleString('id-ID')}</span>
+                  <div className="flex justify-between text-sm mt-2 pt-2 border-t border-gray-200 dark:border-[#4e4f6c]">
+                    <span className="text-txt-secondary dark:text-[#b2b2c4]">Sisa Pembayaran:</span>
+                    <span className="font-semibold text-warning">IDR {Number(calculateTotal() - (formData.dpAmount || 0)).toLocaleString('id-ID')}</span>
                   </div>
                 </div>
               )}
@@ -937,15 +970,15 @@ export default function BookingDialog({
 
         {step === 'confirmation' && (
           <div className="text-center space-y-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <Calendar className="h-8 w-8 text-green-600" />
+            <div className="w-16 h-16 bg-[#e8fadf] dark:bg-[#36483f] rounded-full flex items-center justify-center mx-auto">
+              <i className='bx bx-check-circle text-4xl text-success'></i>
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold text-green-600 mb-2">
+              <h3 className="text-xl font-semibold text-success mb-2">
                 Booking Request Submitted!
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-txt-secondary dark:text-[#b2b2c4] mb-4">
                 Thank you for your booking request. We'll contact you shortly to confirm your appointment.
               </p>
             </div>
@@ -993,18 +1026,18 @@ export default function BookingDialog({
             </Card>
 
             {/* Contact Information */}
-            <div className={`${themeConfig.cardClass} p-4`}>
-              <p className="text-sm mb-2">
-                <strong>We'll contact you at:</strong>
+            <div className="bg-gray-50 dark:bg-[#232333] p-4 rounded-card border border-gray-200 dark:border-[#4e4f6c]">
+              <p className="text-sm text-txt-secondary dark:text-[#b2b2c4] mb-2">
+                <strong>Kami akan menghubungi Anda di:</strong>
               </p>
-              <div className="space-y-1 text-sm">
-                <div className="flex items-center justify-center space-x-2">
-                  <Phone className="h-4 w-4" />
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-center gap-2 text-txt-primary dark:text-[#d5d5e2]">
+                  <i className='bx bx-phone'></i>
                   <span>{formData.customerPhone}</span>
                 </div>
                 {formData.customerEmail && (
-                  <div className="flex items-center justify-center space-x-2">
-                    <Mail className="h-4 w-4" />
+                  <div className="flex items-center justify-center gap-2 text-txt-primary dark:text-[#d5d5e2]">
+                    <i className='bx bx-envelope'></i>
                     <span>{formData.customerEmail}</span>
                   </div>
                 )}
