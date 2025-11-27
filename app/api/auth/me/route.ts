@@ -48,6 +48,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get tenant info if tenantId exists
+    let tenant = null;
+    if (session.tenantId) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('id, subdomain, business_name, logo')
+          .eq('id', session.tenantId)
+          .single();
+        
+        if (tenantData) {
+          tenant = {
+            id: tenantData.id,
+            subdomain: tenantData.subdomain,
+            businessName: tenantData.business_name,
+            logo: tenantData.logo,
+          };
+        }
+      } catch (e) {
+        console.error('Error fetching tenant:', e);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -58,7 +87,8 @@ export async function GET(request: NextRequest) {
         tenantId: session.tenantId,
         isSuperAdmin: session.isSuperAdmin || false,
         permissions: session.permissions,
-      }
+      },
+      tenant,
     });
 
   } catch (error) {

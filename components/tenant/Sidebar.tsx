@@ -50,7 +50,7 @@ const NAV_ITEMS: NavItem[] = [
             { title: 'Calendar', path: '/bookings?view=calendar', icon: 'calendar' },
             { title: 'Booking', path: '/bookings?view=booking', icon: 'list-ul' },
             { title: 'Sales', path: '/bookings?view=sales', icon: 'receipt' },
-            { title: 'Home Visit', path: '/bookings?view=home-visits', icon: 'home' },
+            { title: 'Home Visit', path: '/bookings/home-visits', icon: 'home-heart' },
         ]
     },
     {

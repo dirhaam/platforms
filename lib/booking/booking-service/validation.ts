@@ -73,13 +73,24 @@ export async function validateBookingDateTime(
   return { valid: true };
 }
 
+export interface HomeVisitValidationResult extends ValidationResult {
+  travelTimeMinutes?: number;
+  autoAssignedStaffId?: string;
+  autoAssignedStaffName?: string;
+}
+
 export async function validateHomeVisit(
   tenantId: string,
   service: Service,
   scheduledAt: Date,
-  staffId?: string | null
-): Promise<ValidationResult & { travelTimeMinutes?: number }> {
+  staffId?: string | null,
+  options?: {
+    autoAssignStaff?: boolean;
+    maxDailyHomeVisitsPerStaff?: number;
+  }
+): Promise<HomeVisitValidationResult> {
   const supabase = getSupabaseClient();
+  const { autoAssignStaff = true, maxDailyHomeVisitsPerStaff = 5 } = options || {};
   
   // Validate service supports home visits
   if ((service as any).service_type === 'on_premise' || (service as any).serviceType === 'on_premise') {
@@ -122,6 +133,52 @@ export async function validateHomeVisit(
 
   // Get travel time buffer
   const travelTimeMinutes = (service as any).home_visit_min_buffer_minutes || (service as any).homeVisitMinBufferMinutes || 30;
+
+  // Check if service requires staff assignment
+  const requiresStaff = (service as any).requires_staff_assignment || (service as any).requiresStaffAssignment;
+  
+  // If staff already provided, validate and return
+  if (staffId) {
+    return { valid: true, travelTimeMinutes };
+  }
+
+  // If requires staff and no staffId provided, try auto-assign
+  if (requiresStaff && autoAssignStaff) {
+    const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
+    
+    const availableStaff = await StaffAvailabilityService.findAvailableStaffForHomeVisit(
+      tenantId,
+      service.id,
+      scheduledAt,
+      service.duration,
+      travelTimeMinutes,
+      maxDailyHomeVisitsPerStaff
+    );
+
+    if (!availableStaff) {
+      return { 
+        valid: false, 
+        error: 'Tidak ada staff yang tersedia untuk home visit pada waktu ini. Silakan pilih waktu lain.' 
+      };
+    }
+
+    console.log(`[validateHomeVisit] Auto-assigned staff: ${availableStaff.staff.name} (${availableStaff.staff.id})`);
+    
+    return { 
+      valid: true, 
+      travelTimeMinutes,
+      autoAssignedStaffId: availableStaff.staff.id,
+      autoAssignedStaffName: availableStaff.staff.name
+    };
+  }
+
+  // If requires staff but auto-assign disabled and no staffId
+  if (requiresStaff && !autoAssignStaff) {
+    return { 
+      valid: false, 
+      error: 'Layanan ini memerlukan penugasan staff. Silakan pilih staff.' 
+    };
+  }
 
   return { valid: true, travelTimeMinutes };
 }

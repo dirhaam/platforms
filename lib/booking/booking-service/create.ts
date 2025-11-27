@@ -80,17 +80,32 @@ export async function createBooking(
     let travelTimeAfterMinutes = 0;
 
     if (data.isHomeVisit) {
-      const homeVisitValidation = await validateHomeVisit(tenantId, service, scheduledAt, staffIdToAssign);
+      // Enable auto-assign by default for home visits
+      const autoAssignStaff = (data as any).autoAssignStaff !== false;
+      
+      const homeVisitValidation = await validateHomeVisit(
+        tenantId, 
+        service, 
+        scheduledAt, 
+        staffIdToAssign,
+        { autoAssignStaff }
+      );
+      
       if (!homeVisitValidation.valid) {
         return { error: homeVisitValidation.error };
       }
 
-      const requiresStaff = service.requires_staff_assignment || service.requiresStaffAssignment;
-      
-      if (requiresStaff && staffIdToAssign) {
-        travelTimeBeforeMinutes = homeVisitValidation.travelTimeMinutes || 30;
-        travelTimeAfterMinutes = homeVisitValidation.travelTimeMinutes || 30;
+      // Use auto-assigned staff if available
+      if (homeVisitValidation.autoAssignedStaffId && !staffIdToAssign) {
+        staffIdToAssign = homeVisitValidation.autoAssignedStaffId;
+        console.log(`[createBooking] Using auto-assigned staff: ${homeVisitValidation.autoAssignedStaffName} (${staffIdToAssign})`);
+      }
 
+      travelTimeBeforeMinutes = homeVisitValidation.travelTimeMinutes || 30;
+      travelTimeAfterMinutes = homeVisitValidation.travelTimeMinutes || 30;
+
+      // Validate staff assignment if staff is assigned (either manual or auto)
+      if (staffIdToAssign) {
         const staffValidation = await validateStaffAssignment(
           tenantId,
           staffIdToAssign,
@@ -104,8 +119,6 @@ export async function createBooking(
         if (!staffValidation.valid) {
           return { error: staffValidation.error };
         }
-      } else if (requiresStaff && !staffIdToAssign) {
-        return { error: 'This service requires staff assignment. Please assign a staff member.' };
       }
     }
 

@@ -52,6 +52,13 @@ export async function GET(
       );
     }
 
+    // Get staff home visit config
+    const { data: staffData } = await supabase
+      .from('staff')
+      .select('home_visit_config')
+      .eq('id', staffId)
+      .single();
+
     // Format response
     const schedule = (data || []).map(record => ({
       id: record.id,
@@ -60,12 +67,23 @@ export async function GET(
       startTime: record.start_time,
       endTime: record.end_time,
       isAvailable: record.is_available,
+      breakStart: record.break_start,
+      breakEnd: record.break_end,
       notes: record.notes
     }));
 
+    // Parse home visit config
+    const homeVisitConfig = staffData?.home_visit_config || {
+      canDoHomeVisit: true,
+      maxDailyHomeVisits: 3,
+      maxTravelDistanceKm: 20,
+      preferredAreas: []
+    };
+
     return NextResponse.json({
       staffId,
-      schedule
+      schedule,
+      homeVisitConfig
     });
   } catch (error) {
     console.error('Error in staff schedule GET endpoint:', error);
@@ -162,6 +180,85 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error in staff schedule POST endpoint:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PUT /api/staff/[id]/schedule - Bulk update all schedule and home visit config
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = getSupabaseClient();
+    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    }
+
+    const { id: staffId } = await params;
+    const body = await request.json();
+    const { schedule, homeVisitConfig } = body;
+
+    // Verify staff exists
+    const { data: staff, error: staffError } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('id', staffId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (staffError || !staff) {
+      return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
+    }
+
+    // Update all schedule items
+    if (schedule && Array.isArray(schedule)) {
+      for (const item of schedule) {
+        const { dayOfWeek, startTime, endTime, isAvailable, breakStart, breakEnd } = item;
+        
+        if (dayOfWeek === undefined) continue;
+
+        await supabase
+          .from('staff_schedule')
+          .upsert({
+            staff_id: staffId,
+            day_of_week: dayOfWeek,
+            start_time: startTime || '08:00',
+            end_time: endTime || '17:00',
+            is_available: isAvailable !== false,
+            break_start: breakStart || null,
+            break_end: breakEnd || null,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'staff_id,day_of_week'
+          });
+      }
+    }
+
+    // Update home visit config in staff table
+    if (homeVisitConfig) {
+      const { error: updateError } = await supabase
+        .from('staff')
+        .update({
+          home_visit_config: homeVisitConfig,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', staffId)
+        .eq('tenant_id', tenantId);
+
+      if (updateError) {
+        console.error('Error updating home visit config:', updateError);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Schedule and configuration updated successfully'
+    });
+  } catch (error) {
+    console.error('Error in staff schedule PUT endpoint:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
