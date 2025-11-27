@@ -26,14 +26,35 @@ interface ContactLink {
 }
 
 interface ContactPageSettingsData {
+  // Header/Profile
   pageTitle?: string;
   pageDescription?: string;
   profileImage?: string;
-  backgroundType: 'solid' | 'gradient' | 'image';
+  profileLayout: 'classic' | 'hero';
+  titleStyle: 'text' | 'logo';
+  titleSize: 'small' | 'large';
+  titleColor: string;
+  
+  // Theme
+  theme: string;
+  
+  // Wallpaper/Background
+  backgroundType: 'solid' | 'gradient' | 'blur' | 'pattern' | 'image' | 'video';
   backgroundValue: string;
-  buttonStyle: 'rounded' | 'pill' | 'square';
-  buttonShadow: boolean;
+  backgroundColor: string;
+  
+  // Text Styling
   fontFamily: string;
+  pageTextColor: string;
+  
+  // Button Styling
+  buttonStyle: 'solid' | 'glass' | 'outline';
+  buttonCorners: 'square' | 'rounded' | 'pill';
+  buttonShadow: 'none' | 'subtle' | 'strong' | 'hard';
+  buttonColor: string;
+  buttonTextColor: string;
+  
+  // Legacy
   showSocialIcons: boolean;
   showLogo: boolean;
   customCss?: string;
@@ -44,18 +65,51 @@ interface ContactPageSettingsProps {
   subdomain: string;
 }
 
+// Profile Layout Options
+const PROFILE_LAYOUTS = [
+  { value: 'classic', label: 'Classic', icon: 'bx-user-circle' },
+  { value: 'hero', label: 'Hero', icon: 'bx-image' },
+];
+
+// Title Style Options
+const TITLE_STYLES = [
+  { value: 'text', label: 'Text' },
+  { value: 'logo', label: 'Logo' },
+];
+
+// Button Style Options
 const BUTTON_STYLES = [
+  { value: 'solid', label: 'Solid' },
+  { value: 'glass', label: 'Glass' },
+  { value: 'outline', label: 'Outline' },
+];
+
+// Button Corner Options
+const BUTTON_CORNERS = [
+  { value: 'square', label: 'Square' },
   { value: 'rounded', label: 'Rounded' },
   { value: 'pill', label: 'Pill' },
-  { value: 'square', label: 'Square' },
 ];
 
+// Button Shadow Options
+const BUTTON_SHADOWS = [
+  { value: 'none', label: 'None' },
+  { value: 'subtle', label: 'Subtle' },
+  { value: 'strong', label: 'Strong' },
+  { value: 'hard', label: 'Hard' },
+];
+
+// Background/Wallpaper Types
 const BACKGROUND_TYPES = [
-  { value: 'solid', label: 'Solid Color' },
-  { value: 'gradient', label: 'Gradient' },
-  { value: 'image', label: 'Image' },
+  { value: 'solid', label: 'Fill', icon: 'bx-square' },
+  { value: 'gradient', label: 'Gradient', icon: 'bx-palette' },
+  { value: 'blur', label: 'Blur', icon: 'bx-blur' },
+  { value: 'pattern', label: 'Pattern', icon: 'bx-grid-alt' },
+  { value: 'image', label: 'Image', icon: 'bx-image' },
+  { value: 'video', label: 'Video', icon: 'bx-video' },
 ];
 
+// Gradient Presets
 const GRADIENT_PRESETS = [
   { value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', label: 'Purple Dream' },
   { value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', label: 'Pink Sunset' },
@@ -64,6 +118,45 @@ const GRADIENT_PRESETS = [
   { value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', label: 'Warm Glow' },
   { value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', label: 'Soft Pink' },
   { value: 'linear-gradient(135deg, #000000 0%, #434343 100%)', label: 'Dark Mode' },
+  { value: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', label: 'Night Sky' },
+];
+
+// Theme Presets
+const THEME_PRESETS = [
+  { value: 'custom', label: 'Custom', colors: { bg: '#000000', text: '#ffffff', button: '#ffffff' } },
+  { value: 'agate', label: 'Agate', colors: { bg: '#2d3436', text: '#dfe6e9', button: '#00b894' } },
+  { value: 'air', label: 'Air', colors: { bg: '#f8f9fa', text: '#212529', button: '#6c757d' } },
+  { value: 'astrid', label: 'Astrid', colors: { bg: '#1e272e', text: '#f5f6fa', button: '#ffc048' } },
+  { value: 'aura', label: 'Aura', colors: { bg: '#2c2c54', text: '#aaacb0', button: '#706fd3' } },
+  { value: 'bliss', label: 'Bliss', colors: { bg: '#ffeaa7', text: '#2d3436', button: '#fdcb6e' } },
+  { value: 'bloom', label: 'Bloom', colors: { bg: '#ffcccc', text: '#2d3436', button: '#ff6b81' } },
+  { value: 'breeze', label: 'Breeze', colors: { bg: '#c7ecee', text: '#130f40', button: '#22a6b3' } },
+  { value: 'encore', label: 'Encore', colors: { bg: '#2f3640', text: '#f5f6fa', button: '#e84118' } },
+  { value: 'grove', label: 'Grove', colors: { bg: '#d4edda', text: '#155724', button: '#28a745' } },
+  { value: 'haven', label: 'Haven', colors: { bg: '#e8daef', text: '#4a235a', button: '#8e44ad' } },
+  { value: 'lake', label: 'Lake', colors: { bg: '#d6eaf8', text: '#1b4f72', button: '#3498db' } },
+  { value: 'mineral', label: 'Mineral', colors: { bg: '#eaecee', text: '#2c3e50', button: '#7f8c8d' } },
+  { value: 'twilight', label: 'Twilight', colors: { bg: '#1a1a2e', text: '#eaeaea', button: '#e94560' } },
+];
+
+// Font Options
+const FONT_OPTIONS = [
+  { value: 'default', label: 'Default' },
+  { value: 'inter', label: 'Inter' },
+  { value: 'epilogue', label: 'Epilogue' },
+  { value: 'poppins', label: 'Poppins' },
+  { value: 'roboto', label: 'Roboto' },
+  { value: 'montserrat', label: 'Montserrat' },
+  { value: 'playfair', label: 'Playfair Display' },
+  { value: 'lora', label: 'Lora' },
+];
+
+// Pattern Presets
+const PATTERN_PRESETS = [
+  { value: 'dots', label: 'Dots' },
+  { value: 'grid', label: 'Grid' },
+  { value: 'diagonal', label: 'Diagonal' },
+  { value: 'waves', label: 'Waves' },
 ];
 
 const POPULAR_ICONS = ['🔗', '📱', '💬', '📧', '🛒', '📍', '🎵', '📸', '🎬', '💼', '🌐', '📝'];
@@ -71,11 +164,32 @@ const POPULAR_ICONS = ['🔗', '📱', '💬', '📧', '🛒', '📍', '🎵', '
 export default function ContactPageSettings({ tenantId, subdomain }: ContactPageSettingsProps) {
   const [links, setLinks] = useState<ContactLink[]>([]);
   const [settings, setSettings] = useState<ContactPageSettingsData>({
+    // Header/Profile
+    profileLayout: 'classic',
+    titleStyle: 'text',
+    titleSize: 'large',
+    titleColor: '#ffffff',
+    
+    // Theme
+    theme: 'custom',
+    
+    // Wallpaper/Background
     backgroundType: 'solid',
     backgroundValue: '#000000',
-    buttonStyle: 'rounded',
-    buttonShadow: true,
+    backgroundColor: '#000000',
+    
+    // Text Styling
     fontFamily: 'default',
+    pageTextColor: '#ffffff',
+    
+    // Button Styling
+    buttonStyle: 'solid',
+    buttonCorners: 'rounded',
+    buttonShadow: 'subtle',
+    buttonColor: '#ffffff',
+    buttonTextColor: '#000000',
+    
+    // Legacy
     showSocialIcons: true,
     showLogo: true,
   });
@@ -260,25 +374,91 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
   };
 
   const getBackgroundStyle = () => {
-    if (settings.backgroundType === 'solid') {
-      return { backgroundColor: settings.backgroundValue };
-    } else if (settings.backgroundType === 'gradient') {
-      return { background: settings.backgroundValue };
-    } else if (settings.backgroundType === 'image') {
-      return {
-        backgroundImage: `url(${settings.backgroundValue})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      };
+    const base: React.CSSProperties = {};
+    
+    switch (settings.backgroundType) {
+      case 'solid':
+        return { backgroundColor: settings.backgroundColor || settings.backgroundValue };
+      case 'gradient':
+        return { background: settings.backgroundValue };
+      case 'blur':
+        return { 
+          backgroundColor: settings.backgroundColor,
+          backdropFilter: 'blur(20px)',
+        };
+      case 'pattern':
+        return { 
+          backgroundColor: settings.backgroundColor,
+          backgroundImage: getPatternStyle(settings.backgroundValue),
+        };
+      case 'image':
+        return {
+          backgroundImage: `url(${settings.backgroundValue})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        };
+      case 'video':
+        return { backgroundColor: settings.backgroundColor };
+      default:
+        return { backgroundColor: '#000000' };
     }
-    return {};
   };
 
-  const getButtonStyle = () => {
-    switch (settings.buttonStyle) {
+  const getPatternStyle = (pattern: string) => {
+    switch (pattern) {
+      case 'dots':
+        return `radial-gradient(circle, ${settings.pageTextColor}20 1px, transparent 1px)`;
+      case 'grid':
+        return `linear-gradient(${settings.pageTextColor}10 1px, transparent 1px), linear-gradient(90deg, ${settings.pageTextColor}10 1px, transparent 1px)`;
+      case 'diagonal':
+        return `repeating-linear-gradient(45deg, ${settings.pageTextColor}10 0, ${settings.pageTextColor}10 1px, transparent 0, transparent 50%)`;
+      case 'waves':
+        return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='0.1' d='M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E")`;
+      default:
+        return 'none';
+    }
+  };
+
+  const getButtonCornerClass = () => {
+    switch (settings.buttonCorners) {
       case 'pill': return 'rounded-full';
       case 'square': return 'rounded-none';
       default: return 'rounded-lg';
+    }
+  };
+
+  const getButtonStyleClass = () => {
+    switch (settings.buttonStyle) {
+      case 'glass': return 'bg-white/10 backdrop-blur-sm border border-white/20';
+      case 'outline': return 'bg-transparent border-2';
+      default: return ''; // solid - uses buttonColor directly
+    }
+  };
+
+  const getButtonShadowClass = () => {
+    switch (settings.buttonShadow) {
+      case 'subtle': return 'shadow-md';
+      case 'strong': return 'shadow-xl';
+      case 'hard': return 'shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]';
+      default: return '';
+    }
+  };
+
+  const applyTheme = (themeValue: string) => {
+    const theme = THEME_PRESETS.find(t => t.value === themeValue);
+    if (theme && theme.value !== 'custom') {
+      setSettings(prev => ({
+        ...prev,
+        theme: themeValue,
+        backgroundColor: theme.colors.bg,
+        backgroundValue: theme.colors.bg,
+        pageTextColor: theme.colors.text,
+        titleColor: theme.colors.text,
+        buttonColor: theme.colors.button,
+        buttonTextColor: theme.colors.bg,
+      }));
+    } else {
+      setSettings(prev => ({ ...prev, theme: 'custom' }));
     }
   };
 
@@ -394,6 +574,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                       <Switch
                         checked={link.isActive}
                         onCheckedChange={() => toggleLinkActive(link.id)}
+                        className="data-[state=checked]:bg-primary"
                       />
                       <Button
                         type="button"
@@ -518,13 +699,70 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                       <div className="flex gap-2">
                         <Input
                           type="color"
-                          value={settings.backgroundValue}
-                          onChange={(e) => setSettings(prev => ({ ...prev, backgroundValue: e.target.value }))}
+                          value={settings.backgroundColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, backgroundColor: e.target.value, backgroundValue: e.target.value, theme: 'custom' }))}
                           className="w-16 h-10 p-1"
                         />
                         <Input
-                          value={settings.backgroundValue}
-                          onChange={(e) => setSettings(prev => ({ ...prev, backgroundValue: e.target.value }))}
+                          value={settings.backgroundColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, backgroundColor: e.target.value, backgroundValue: e.target.value, theme: 'custom' }))}
+                          placeholder="#000000"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {settings.backgroundType === 'pattern' && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label>Pattern Style</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {PATTERN_PRESETS.map(p => (
+                            <button
+                              key={p.value}
+                              type="button"
+                              onClick={() => setSettings(prev => ({ ...prev, backgroundValue: p.value }))}
+                              className={`h-12 rounded-lg border-2 flex items-center justify-center ${
+                                settings.backgroundValue === p.value ? 'border-blue-500' : 'border-gray-200'
+                              }`}
+                            >
+                              <span className="text-xs">{p.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Base Color</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="color"
+                            value={settings.backgroundColor}
+                            onChange={(e) => setSettings(prev => ({ ...prev, backgroundColor: e.target.value, theme: 'custom' }))}
+                            className="w-16 h-10 p-1"
+                          />
+                          <Input
+                            value={settings.backgroundColor}
+                            onChange={(e) => setSettings(prev => ({ ...prev, backgroundColor: e.target.value, theme: 'custom' }))}
+                            placeholder="#000000"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {settings.backgroundType === 'blur' && (
+                    <div className="space-y-2">
+                      <Label>Base Color (with blur effect)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={settings.backgroundColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, backgroundColor: e.target.value, theme: 'custom' }))}
+                          className="w-16 h-10 p-1"
+                        />
+                        <Input
+                          value={settings.backgroundColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, backgroundColor: e.target.value, theme: 'custom' }))}
                           placeholder="#000000"
                         />
                       </div>
@@ -583,39 +821,204 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                 </CardContent>
               </Card>
 
+              {/* Theme Picker */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Theme</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-4 gap-2">
+                    {THEME_PRESETS.map(theme => (
+                      <button
+                        key={theme.value}
+                        type="button"
+                        onClick={() => applyTheme(theme.value)}
+                        className={`p-3 rounded-lg border-2 transition-all text-xs font-medium ${
+                          settings.theme === theme.value ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        style={{ 
+                          backgroundColor: theme.colors.bg, 
+                          color: theme.colors.text 
+                        }}
+                        title={theme.label}
+                      >
+                        {theme.label}
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Profile Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Layout</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Layout Style</Label>
+                    <div className="flex gap-2">
+                      {PROFILE_LAYOUTS.map(layout => (
+                        <button
+                          key={layout.value}
+                          type="button"
+                          onClick={() => setSettings(prev => ({ ...prev, profileLayout: layout.value as any }))}
+                          className={`flex-1 p-3 rounded-lg border-2 flex flex-col items-center gap-1 ${
+                            settings.profileLayout === layout.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                          }`}
+                        >
+                          <i className={`bx ${layout.icon} text-xl`}></i>
+                          <span className="text-xs">{layout.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Title Size</Label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSettings(prev => ({ ...prev, titleSize: 'small' }))}
+                        className={`flex-1 p-2 rounded border-2 text-sm ${settings.titleSize === 'small' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                      >
+                        Small
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettings(prev => ({ ...prev, titleSize: 'large' }))}
+                        className={`flex-1 p-2 rounded border-2 text-sm ${settings.titleSize === 'large' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                      >
+                        Large
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Title Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={settings.titleColor}
+                        onChange={(e) => setSettings(prev => ({ ...prev, titleColor: e.target.value, theme: 'custom' }))}
+                        className="w-16 h-10 p-1"
+                      />
+                      <Input
+                        value={settings.titleColor}
+                        onChange={(e) => setSettings(prev => ({ ...prev, titleColor: e.target.value, theme: 'custom' }))}
+                        placeholder="#ffffff"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Font</Label>
+                    <Select
+                      value={settings.fontFamily}
+                      onValueChange={(v) => setSettings(prev => ({ ...prev, fontFamily: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FONT_OPTIONS.map(f => (
+                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Button Style */}
               <Card>
                 <CardHeader>
                   <CardTitle>Button Style</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Button Shape</Label>
-                    <Select
-                      value={settings.buttonStyle}
-                      onValueChange={(v) => setSettings(prev => ({ ...prev, buttonStyle: v as any }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BUTTON_STYLES.map(s => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Style</Label>
+                    <div className="flex gap-2">
+                      {BUTTON_STYLES.map(s => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => setSettings(prev => ({ ...prev, buttonStyle: s.value as any }))}
+                          className={`flex-1 p-2 rounded border-2 text-sm ${settings.buttonStyle === s.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label>Button Shadow</Label>
-                    <Switch
-                      checked={settings.buttonShadow}
-                      onCheckedChange={(v) => setSettings(prev => ({ ...prev, buttonShadow: v }))}
-                    />
+                  <div className="space-y-2">
+                    <Label>Corners</Label>
+                    <div className="flex gap-2">
+                      {BUTTON_CORNERS.map(c => (
+                        <button
+                          key={c.value}
+                          type="button"
+                          onClick={() => setSettings(prev => ({ ...prev, buttonCorners: c.value as any }))}
+                          className={`flex-1 p-2 rounded border-2 text-sm ${settings.buttonCorners === c.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Shadow</Label>
+                    <div className="flex gap-2">
+                      {BUTTON_SHADOWS.map(s => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => setSettings(prev => ({ ...prev, buttonShadow: s.value as any }))}
+                          className={`flex-1 p-2 rounded border-2 text-xs ${settings.buttonShadow === s.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Button Color</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={settings.buttonColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, buttonColor: e.target.value, theme: 'custom' }))}
+                          className="w-12 h-10 p-1"
+                        />
+                        <Input
+                          value={settings.buttonColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, buttonColor: e.target.value, theme: 'custom' }))}
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Text Color</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={settings.buttonTextColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, buttonTextColor: e.target.value, theme: 'custom' }))}
+                          className="w-12 h-10 p-1"
+                        />
+                        <Input
+                          value={settings.buttonTextColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, buttonTextColor: e.target.value, theme: 'custom' }))}
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Show Social Icons</Label>
                     <Switch
                       checked={settings.showSocialIcons}
                       onCheckedChange={(v) => setSettings(prev => ({ ...prev, showSocialIcons: v }))}
+                      className="data-[state=checked]:bg-primary"
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -623,6 +1026,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                     <Switch
                       checked={settings.showLogo}
                       onCheckedChange={(v) => setSettings(prev => ({ ...prev, showLogo: v }))}
+                      className="data-[state=checked]:bg-primary"
                     />
                   </div>
                 </CardContent>
@@ -643,12 +1047,16 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                     <div className="max-w-md mx-auto text-center space-y-6">
                       {/* Profile */}
                       {(settings.showLogo || settings.profileImage) && (
-                        <div className="flex flex-col items-center gap-3">
+                        <div className={`flex flex-col items-center gap-3 ${settings.profileLayout === 'hero' ? 'pb-6' : ''}`}>
                           {settings.profileImage ? (
                             <img
                               src={settings.profileImage}
                               alt="Profile"
-                              className="w-24 h-24 rounded-full object-cover border-4 border-white/20"
+                              className={`object-cover border-4 border-white/20 ${
+                                settings.profileLayout === 'hero' 
+                                  ? 'w-full h-32 rounded-xl' 
+                                  : 'w-24 h-24 rounded-full'
+                              }`}
                             />
                           ) : (
                             <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl">
@@ -656,10 +1064,17 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                             </div>
                           )}
                           {settings.pageTitle && (
-                            <h1 className="text-2xl font-bold text-white">{settings.pageTitle}</h1>
+                            <h1 
+                              className={`font-bold ${settings.titleSize === 'large' ? 'text-2xl' : 'text-lg'}`}
+                              style={{ color: settings.titleColor }}
+                            >
+                              {settings.pageTitle}
+                            </h1>
                           )}
                           {settings.pageDescription && (
-                            <p className="text-white/80 text-sm">{settings.pageDescription}</p>
+                            <p style={{ color: settings.pageTextColor }} className="opacity-80 text-sm">
+                              {settings.pageDescription}
+                            </p>
                           )}
                         </div>
                       )}
@@ -669,9 +1084,12 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                         {links.filter(l => l.isActive).slice(0, 5).map(link => (
                           <div
                             key={link.id}
-                            className={`w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white flex items-center gap-3 ${getButtonStyle()} ${
-                              settings.buttonShadow ? 'shadow-lg' : ''
-                            }`}
+                            className={`w-full p-4 flex items-center gap-3 transition-all ${getButtonCornerClass()} ${getButtonStyleClass()} ${getButtonShadowClass()}`}
+                            style={{
+                              backgroundColor: settings.buttonStyle === 'solid' ? settings.buttonColor : undefined,
+                              borderColor: settings.buttonStyle === 'outline' ? settings.buttonColor : undefined,
+                              color: settings.buttonTextColor,
+                            }}
                           >
                             <span className="text-xl">{link.icon || '🔗'}</span>
                             <span className="flex-1 font-medium">{link.title}</span>
@@ -679,7 +1097,7 @@ export default function ContactPageSettings({ tenantId, subdomain }: ContactPage
                           </div>
                         ))}
                         {links.filter(l => l.isActive).length === 0 && (
-                          <p className="text-white/60 text-sm">No active links yet</p>
+                          <p style={{ color: settings.pageTextColor }} className="opacity-60 text-sm">No active links yet</p>
                         )}
                       </div>
                     </div>

@@ -186,7 +186,7 @@ export default function BusinessHoursGlobalSettings({ tenantId }: BusinessHoursG
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded flex items-center justify-center ${
                       hours.isOpen 
-                        ? 'bg-success/20 text-success' 
+                        ? 'bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff]' 
                         : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'
                     }`}>
                       <i className={`bx ${hours.isOpen ? 'bx-store' : 'bx-moon'} text-lg`}></i>
@@ -229,7 +229,7 @@ export default function BusinessHoursGlobalSettings({ tenantId }: BusinessHoursG
                         disabled={saving}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success"></div>
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
                 </div>

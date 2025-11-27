@@ -145,7 +145,7 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
               <p className="text-xs text-txt-muted dark:text-[#7e7f96]">Atur opsi booking kunjungan rumah</p>
             </div>
           </div>
-          <span className={`px-3 py-1 text-xs font-bold rounded ${config.enabled ? 'bg-success/20 text-success' : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'}`}>
+          <span className={`px-3 py-1 text-xs font-bold rounded ${config.enabled ? 'bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff]' : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'}`}>
             {config.enabled ? 'Aktif' : 'Nonaktif'}
           </span>
         </div>
@@ -174,7 +174,7 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
         {/* Enable Home Visit Toggle */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-[#4e4f6c]">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded flex items-center justify-center ${config.enabled ? 'bg-success/20 text-success' : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'}`}>
+            <div className={`w-8 h-8 rounded flex items-center justify-center ${config.enabled ? 'bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff]' : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'}`}>
               <i className={`bx ${config.enabled ? 'bx-check' : 'bx-power-off'} text-lg`}></i>
             </div>
             <div>
@@ -189,7 +189,7 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
               onChange={(e) => setConfig(prev => ({ ...prev, enabled: e.target.checked }))}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success"></div>
+            <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
           </label>
         </div>
 
@@ -267,7 +267,7 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
                     onChange={(e) => setConfig(prev => ({ ...prev, requireAddress: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
 
@@ -284,7 +284,7 @@ export default function HomeVisitSettings({ tenantId }: HomeVisitSettingsProps) 
                     onChange={(e) => setConfig(prev => ({ ...prev, calculateTravelSurcharge: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
             </div>
