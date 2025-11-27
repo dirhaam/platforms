@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useState, useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
+
 import { Button } from '@/components/ui/button';
 import { Booking, BookingStatus, PaymentStatus } from '@/types/booking';
 import { SalesTransaction, SalesPaymentMethod, SalesTransactionStatus } from '@/types/sales';
@@ -287,9 +287,9 @@ export function UnifiedTransactionTable({
 
                   {/* Status Column */}
                   <td className="py-3 px-4">
-                    <Badge className={getStatusColor(item.status, type)}>
+                    <div className={`px-3 py-1 rounded text-xs font-bold uppercase text-center inline-block ${getStatusColor(item.status, type)}`}>
                       {String(item.status).charAt(0).toUpperCase() + String(item.status).slice(1)}
-                    </Badge>
+                    </div>
                   </td>
 
                   {/* Action Column */}

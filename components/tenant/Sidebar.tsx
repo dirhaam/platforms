@@ -134,7 +134,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
     return (
         <aside
             className={cn(
-                "fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-lg z-50 transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700 flex flex-col",
+                "fixed left-0 top-0 h-full bg-white dark:bg-[#2b2c40] shadow-lg z-50 transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-[#4e4f6c] flex flex-col",
                 collapsed ? "w-20" : "w-64"
             )}
         >
@@ -149,7 +149,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                         </div>
                     )}
                     {!collapsed && (
-                        <span className="text-xl font-bold text-txt-primary dark:text-white tracking-tight truncate max-w-[150px]">
+                        <span className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2] tracking-tight truncate max-w-[150px]">
                             {businessName || 'NamaWebsite'}
                         </span>
                     )}
@@ -159,7 +159,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                 <button
                     onClick={() => setCollapsed(!collapsed)}
                     className={cn(
-                        "absolute -right-3 top-8 w-6 h-6 bg-primary rounded-full text-white flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors z-50",
+                        "absolute -right-3 top-8 w-6 h-6 bg-primary rounded-full text-white flex items-center justify-center shadow-md transition-all duration-200 ease-in-out hover:bg-[#5f61e6] hover:shadow-lg z-50",
                         collapsed && "rotate-180"
                     )}
                 >
@@ -171,11 +171,11 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
             {!collapsed && userRole && (
                 <div className="px-6 pb-2 flex-shrink-0">
                     <span className={cn(
-                        "text-xs px-2 py-1 rounded-full font-medium",
-                        userRole === 'owner' && "bg-purple-100 text-purple-700",
-                        userRole === 'admin' && "bg-blue-100 text-blue-700",
-                        userRole === 'staff' && "bg-green-100 text-green-700",
-                        userRole === 'superadmin' && "bg-red-100 text-red-700",
+                        "text-xs px-2 py-1 rounded font-medium",
+                        userRole === 'owner' && "bg-purple-100 dark:bg-[#35365f] text-purple-700 dark:text-[#a5a7ff]",
+                        userRole === 'admin' && "bg-blue-100 dark:bg-[#25445c] text-blue-700 dark:text-[#68dbf4]",
+                        userRole === 'staff' && "bg-green-100 dark:bg-[#36483f] text-green-700 dark:text-[#aaeb87]",
+                        userRole === 'superadmin' && "bg-red-100 dark:bg-[#4d2f3a] text-red-700 dark:text-[#ff8b77]",
                     )}>
                         {userRole === 'superadmin' ? 'Super Admin' : userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                     </span>
@@ -206,10 +206,10 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                         <button
                                             onClick={() => toggleMenu(item.title)}
                                             className={cn(
-                                                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium relative",
+                                                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-150 ease-in-out group font-medium relative",
                                                 isActive
-                                                    ? "bg-primary/10 text-primary shadow-none"
-                                                    : "text-txt-secondary dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-txt-primary dark:hover:text-white",
+                                                    ? "bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff]"
+                                                    : "text-txt-secondary dark:text-[#b2b2c4] hover:bg-gray-100 dark:hover:bg-[#4e4f6c] hover:text-txt-primary dark:hover:text-[#d5d5e2]",
                                                 collapsed ? "justify-center px-2" : ""
                                             )}
                                             title={collapsed ? item.title : ''}
@@ -239,7 +239,7 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                         <BoxIcon
                                                             name="chevron-down"
                                                             size={16}
-                                                            className={cn("transition-transform duration-200", isExpanded ? "rotate-180" : "")}
+                                                            className={cn("transition-transform duration-200 ease-in-out", isExpanded ? "rotate-180" : "")}
                                                         />
                                                     </div>
                                                 </div>
@@ -247,31 +247,35 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                         </button>
 
                                         {/* Submenu */}
-                                        {!collapsed && isExpanded && (
-                                            <div className="pl-11 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                                                {item.children!.map((child) => {
-                                                    const childFullPath = `/tenant/admin${child.path}`;
-                                                    // Check if active based on query param if present
-                                                    const currentView = searchParams.get('view');
-                                                    const childView = new URLSearchParams(child.path.split('?')[1]).get('view');
-                                                    const isChildActive = pathname === fullPath && currentView === childView;
+                                        {!collapsed && (
+                                            <div className={cn(
+                                                "overflow-hidden transition-all duration-300 ease-in-out",
+                                                isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                                            )}>
+                                                <div className="pl-11 space-y-1 pt-1">
+                                                    {item.children!.map((child) => {
+                                                        const childFullPath = `/tenant/admin${child.path}`;
+                                                        const currentView = searchParams.get('view');
+                                                        const childView = new URLSearchParams(child.path.split('?')[1]).get('view');
+                                                        const isChildActive = pathname === fullPath && currentView === childView;
 
-                                                    return (
-                                                        <Link
-                                                            key={child.title}
-                                                            href={`${childFullPath}${childFullPath.includes('?') ? '&' : '?'}subdomain=${subdomain}`}
-                                                            className={cn(
-                                                                "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                                                                isChildActive
-                                                                    ? "text-primary font-medium bg-primary/5"
-                                                                    : "text-muted-foreground hover:text-foreground hover:bg-gray-50"
-                                                            )}
-                                                        >
-                                                            <BoxIcon name={child.icon} size={26} className="opacity-70" />
-                                                            <span>{child.title}</span>
-                                                        </Link>
-                                                    );
-                                                })}
+                                                        return (
+                                                            <Link
+                                                                key={child.title}
+                                                                href={`${childFullPath}${childFullPath.includes('?') ? '&' : '?'}subdomain=${subdomain}`}
+                                                                className={cn(
+                                                                    "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors duration-150 ease-in-out",
+                                                                    isChildActive
+                                                                        ? "text-primary dark:text-[#a5a7ff] font-medium bg-primary/5 dark:bg-[#35365f]/50"
+                                                                        : "text-txt-secondary dark:text-[#b2b2c4] hover:text-txt-primary dark:hover:text-[#d5d5e2] hover:bg-gray-50 dark:hover:bg-[#4e4f6c]"
+                                                                )}
+                                                            >
+                                                                <BoxIcon name={child.icon} size={26} className="opacity-70" />
+                                                                <span>{child.title}</span>
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -283,10 +287,10 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                     key={item.path}
                                     href={`${fullPath}?subdomain=${subdomain}`}
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-medium relative",
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-150 ease-in-out group font-medium relative",
                                         isActive
-                                            ? "bg-primary/10 text-primary shadow-none"
-                                            : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
+                                            ? "bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff]"
+                                            : "text-txt-secondary dark:text-[#b2b2c4] hover:bg-gray-100 dark:hover:bg-[#4e4f6c] hover:text-txt-primary dark:hover:text-[#d5d5e2]",
                                         collapsed ? "justify-center px-2" : ""
                                     )}
                                     title={collapsed ? item.title : ''}
@@ -323,8 +327,8 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
 
             {/* Footer with restricted access note for staff */}
             {!collapsed && userRole === 'staff' && (
-                <div className="p-4 border-t flex-shrink-0">
-                    <p className="text-xs text-gray-400 text-center">
+                <div className="p-4 border-t border-gray-200 dark:border-[#4e4f6c] flex-shrink-0">
+                    <p className="text-xs text-txt-muted dark:text-[#7e7f96] text-center">
                         Akses terbatas untuk staff
                     </p>
                 </div>

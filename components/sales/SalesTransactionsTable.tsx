@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+
 import { SalesTransaction, SalesTransactionSource, SalesTransactionStatus, SalesPaymentMethod } from '@/types/sales';
 
 interface SalesTransactionsTableProps {
@@ -80,20 +80,20 @@ export function SalesTransactionsTable({
               </TableCell>
               <TableCell>{transaction.serviceName || 'Multiple Services'}</TableCell>
               <TableCell>
-                <Badge className={SOURCE_VARIANTS[transaction.source].className}>
+                <span className={`px-3 py-1 rounded text-xs font-bold uppercase ${SOURCE_VARIANTS[transaction.source].className}`}>
                   {SOURCE_VARIANTS[transaction.source].label}
-                </Badge>
+                </span>
               </TableCell>
               <TableCell className="font-medium">{formatCurrency(transaction.totalAmount)}</TableCell>
               <TableCell>
-                <Badge className={PAYMENT_VARIANTS[transaction.paymentMethod]}>
+                <span className={`px-3 py-1 rounded text-xs font-bold uppercase ${PAYMENT_VARIANTS[transaction.paymentMethod]}`}>
                   {transaction.paymentMethod.toUpperCase()}
-                </Badge>
+                </span>
               </TableCell>
               <TableCell>
-                <Badge className={STATUS_VARIANTS[transaction.status]}>
+                <span className={`px-3 py-1 rounded text-xs font-bold uppercase ${STATUS_VARIANTS[transaction.status]}`}>
                   {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                </Badge>
+                </span>
               </TableCell>
               {renderActions && (
                 <TableCell className="text-right">

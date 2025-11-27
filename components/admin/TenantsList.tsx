@@ -374,10 +374,10 @@ function TenantCard({ tenant, onDelete, onStatusChange, isDeleting, isUpdatingSt
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[tenant.subscriptionStatus]}`}>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[tenant.subscriptionStatus]}`}>
                 {tenant.subscriptionStatus}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${planColors[tenant.subscriptionPlan]}`}>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${planColors[tenant.subscriptionPlan]}`}>
                 {tenant.subscriptionPlan}
               </span>
             </div>
@@ -524,10 +524,10 @@ function TenantRow({ tenant, onDelete, onStatusChange, isDeleting, isUpdatingSta
 
           {/* Status & Plan */}
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[tenant.subscriptionStatus]}`}>
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[tenant.subscriptionStatus]}`}>
               {tenant.subscriptionStatus}
             </span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${planColors[tenant.subscriptionPlan]}`}>
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${planColors[tenant.subscriptionPlan]}`}>
               {tenant.subscriptionPlan}
             </span>
           </div>
