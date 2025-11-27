@@ -101,46 +101,39 @@ export function TimeSlotPicker({
     return { morning, afternoon, evening };
   };
 
-  // Render time period section
+  // Render time period section - using native button to avoid Dialog focus trap issues
   const renderTimePeriod = (title: string, slots: TimeSlot[]) => {
     if (slots.length === 0) return null;
 
     return (
       <div className="space-y-3">
-        <h4 className="text-sm font-medium text-gray-700">{title}</h4>
+        <h4 className="text-sm font-medium text-txt-secondary dark:text-[#b2b2c4]">{title}</h4>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
           {slots.map((slot, index) => {
             const isSelected = selectedSlot && 
               slot.start.getTime() === selectedSlot.start.getTime();
             
             return (
-              <Button
+              <button
                 key={index}
                 type="button"
-                variant={isSelected ? 'default' : slot.available ? 'outline' : 'ghost'}
-                size="sm"
                 disabled={!slot.available}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                onClick={() => {
                   if (slot.available) {
                     onSlotSelect(slot);
                   }
                 }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                }}
                 className={`
-                  text-xs h-8 px-2
-                  ${!slot.available ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${isSelected ? 'ring-2 ring-primary' : ''}
+                  py-2 px-2 rounded-md text-xs font-medium border transition-all
+                  ${!slot.available 
+                    ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-[#3a3b4f] text-txt-muted border-gray-200 dark:border-[#4e4f6c]' 
+                    : isSelected 
+                      ? 'bg-primary text-white border-primary shadow-md' 
+                      : 'bg-white dark:bg-[#2b2c40] text-txt-primary dark:text-[#d5d5e2] border-gray-200 dark:border-[#4e4f6c] hover:border-primary hover:text-primary'}
                 `}
               >
                 {formatTime(slot.start)}
-              </Button>
+              </button>
             );
           })}
         </div>

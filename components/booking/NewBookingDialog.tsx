@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -100,14 +100,6 @@ export function NewBookingDialog({
   const [businessCoordinates, setBusinessCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [blockedDates, setBlockedDates] = useState<Map<string, string>>(new Map());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  
-  // Ref to track intentional close (via cancel button or successful submit)
-  const intentionalCloseRef = useRef(false);
-  
-  const handleClose = () => {
-    intentionalCloseRef.current = true;
-    onOpenChange(false);
-  };
 
   useEffect(() => {
     if (open) {
@@ -308,7 +300,7 @@ export function NewBookingDialog({
         dpAmount: 0,
         notes: ''
       });
-      handleClose();
+      onOpenChange(false);
       onBookingCreated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -322,23 +314,10 @@ export function NewBookingDialog({
       {/* Main Booking Dialog */}
       <Dialog 
         open={open && !showCustomerDialog} 
-        onOpenChange={(isOpen) => {
-          // Only allow closing via explicit cancel button or successful submit
-          if (!isOpen && !intentionalCloseRef.current) {
-            // Ignore automatic close triggers (focus loss, outside click, etc.)
-            return;
-          }
-          intentionalCloseRef.current = false;
-          onOpenChange(isOpen);
-        }}
-        modal={true}
+        onOpenChange={onOpenChange}
       >
         <DialogContent 
           className="w-[95vw] max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-          onFocusOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <DialogHeader className="mb-6">
             <DialogTitle>Buat Booking Baru</DialogTitle>
@@ -706,7 +685,7 @@ export function NewBookingDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={handleClose}
+                  onClick={() => onOpenChange(false)}
                   disabled={submitting}
                 >
                   Batal
