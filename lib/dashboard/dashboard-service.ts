@@ -96,6 +96,39 @@ async function sumBookings(tenantId: string, filters: any = {}): Promise<number>
   return (data || []).reduce((sum, booking) => sum + toNumber(booking.totalAmount), 0);
 }
 
+async function sumSalesTransactions(tenantId: string, filters: any = {}): Promise<number> {
+  const supabase = getSupabaseClient();
+  let query = supabase
+    .from('sales_transactions')
+    .select('total_amount')
+    .eq('tenant_id', tenantId);
+  
+  if (filters.status) {
+    if (Array.isArray(filters.status)) {
+      query = query.in('status', filters.status);
+    } else {
+      query = query.eq('status', filters.status);
+    }
+  }
+  
+  if (filters.startDate) {
+    query = query.gte('created_at', filters.startDate.toISOString());
+  }
+  
+  if (filters.endDate) {
+    query = query.lt('created_at', filters.endDate.toISOString());
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error summing sales transactions:', error);
+    return 0;
+  }
+  
+  return (data || []).reduce((sum, txn) => sum + toNumber(txn.total_amount), 0);
+}
+
 async function countCustomers(tenantId: string, filters: any = {}): Promise<number> {
   const supabase = getSupabaseClient();
   let query = supabase
@@ -202,17 +235,33 @@ export class DashboardService {
         createdAfter: weekAgo
       });
       
-      const todayRevenue = await sumBookings(tenantId, {
+      const todayBookingsRevenue = await sumBookings(tenantId, {
         startDate: today,
         endDate: tomorrow,
         status: COMPLETED_STATUSES
       });
       
-      const yesterdayRevenue = await sumBookings(tenantId, {
+      const todaySalesRevenue = await sumSalesTransactions(tenantId, {
+        startDate: today,
+        endDate: tomorrow,
+        status: 'completed'
+      });
+      
+      const todayRevenue = todayBookingsRevenue + todaySalesRevenue;
+      
+      const yesterdayBookingsRevenue = await sumBookings(tenantId, {
         startDate: yesterday,
         endDate: today,
         status: COMPLETED_STATUSES
       });
+      
+      const yesterdaySalesRevenue = await sumSalesTransactions(tenantId, {
+        startDate: yesterday,
+        endDate: today,
+        status: 'completed'
+      });
+      
+      const yesterdayRevenue = yesterdayBookingsRevenue + yesterdaySalesRevenue;
       
       const thisWeekBookings = await countBookings(tenantId, {
         startDate: weekAgo
@@ -495,6 +544,7 @@ export class DashboardService {
       const [
         { count: bookingsCount },
         { data: bookingsData },
+        { data: salesData },
         { count: customersCount },
         { count: completedCount },
       ] = await Promise.all([
@@ -512,6 +562,13 @@ export class DashboardService {
           .gte('scheduledAt', startDateStr)
           .lte('scheduledAt', endDateStr),
         supabase
+          .from('sales_transactions')
+          .select('total_amount')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'completed')
+          .gte('created_at', startDateStr)
+          .lte('created_at', endDateStr),
+        supabase
           .from('customers')
           .select('*', { count: 'exact', head: true })
           .eq('tenantId', tenantId)
@@ -526,7 +583,9 @@ export class DashboardService {
           .lte('scheduledAt', endDateStr),
       ]);
 
-      const totalRevenue = (bookingsData || []).reduce((sum, b) => sum + toNumber(b.totalAmount), 0);
+      const bookingsRevenue = (bookingsData || []).reduce((sum, b) => sum + toNumber(b.totalAmount), 0);
+      const salesRevenue = (salesData || []).reduce((sum, s) => sum + toNumber(s.total_amount), 0);
+      const totalRevenue = bookingsRevenue + salesRevenue;
       const bookingsCount_val = bookingsCount || 0;
       const completedCount_val = completedCount || 0;
 
