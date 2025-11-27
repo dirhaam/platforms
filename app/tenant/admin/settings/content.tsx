@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PermissionGate } from '@/components/tenant/permission-gate';
 
@@ -47,8 +48,18 @@ const MENU_GROUPS: MenuGroup[] = [
 export default function SettingsPageContent() {
   return (
     <PermissionGate feature="settings">
-      <SettingsPageInner />
+      <Suspense fallback={<SettingsLoader />}>
+        <SettingsPageInner />
+      </Suspense>
     </PermissionGate>
+  );
+}
+
+function SettingsLoader() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <i className='bx bx-loader-alt text-2xl text-primary dark:text-[#a5a7ff] animate-spin'></i>
+    </div>
   );
 }
 
