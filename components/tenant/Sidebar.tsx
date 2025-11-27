@@ -267,7 +267,12 @@ export function Sidebar({ collapsed, setCollapsed, subdomain, logo, businessName
                                                         const childParams = new URLSearchParams(child.path.split('?')[1]);
                                                         const childView = childParams.get('view');
                                                         const childTab = childParams.get('tab');
-                                                        const isChildActive = pathname === fullPath && (currentView === childView || currentTab === childTab);
+                                                        
+                                                        // Check if child is active - must match the specific parameter
+                                                        const isChildActive = pathname === fullPath && (
+                                                            (childView && currentView === childView) || 
+                                                            (childTab && currentTab === childTab)
+                                                        );
 
                                                         return (
                                                             <Link
