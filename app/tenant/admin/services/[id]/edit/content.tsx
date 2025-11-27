@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, AlertCircle, Check } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Service } from '@/types/booking';
 import { HomeVisitConfig } from '@/components/services/home-visit-config';
 import { StaffAssignment } from '@/components/services/staff-assignment';
@@ -277,48 +276,62 @@ export function ServiceEditContent({ serviceId }: ServiceEditContentProps) {
               </div>
             </div>
 
-            {/* Status */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isActive"
-                checked={service.isActive || false}
-                onCheckedChange={(checked) =>
-                  setService({
-                    ...service,
-                    isActive: checked as boolean
-                  })
-                }
-                disabled={submitting}
-              />
-              <Label htmlFor="isActive" className="font-normal cursor-pointer">
-                Service is Active
-              </Label>
+            {/* Status Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#232333] rounded-lg border border-gray-200 dark:border-[#4e4f6c]">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  service.isActive 
+                    ? 'bg-[#e8fadf] dark:bg-[#36483f] text-success' 
+                    : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'
+                }`}>
+                  <i className={`bx ${service.isActive ? 'bx-check-circle' : 'bx-x-circle'} text-xl`}></i>
+                </div>
+                <div>
+                  <p className="font-medium text-txt-primary dark:text-[#d5d5e2]">Status Layanan</p>
+                  <p className="text-xs text-txt-muted dark:text-[#7e7f96]">
+                    {service.isActive ? 'Layanan aktif dan dapat dipesan' : 'Layanan nonaktif'}
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={service.isActive || false}
+                  onChange={(e) => setService({ ...service, isActive: e.target.checked })}
+                  disabled={submitting}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:bg-success transition-colors duration-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:duration-200 peer-checked:after:translate-x-5"></div>
+              </label>
             </div>
 
-            {/* Home Visit Option */}
-            <div className="space-y-2 border-t pt-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="homeVisitAvailable"
-                  checked={service.homeVisitAvailable || false}
-                  onCheckedChange={(checked) =>
-                    setService({
-                      ...service,
-                      homeVisitAvailable: checked as boolean
-                    })
-                  }
-                  disabled={submitting}
-                />
-                <Label
-                  htmlFor="homeVisitAvailable"
-                  className="font-normal cursor-pointer"
-                >
-                  Available for home visits
-                </Label>
+            {/* Home Visit Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#232333] rounded-lg border border-gray-200 dark:border-[#4e4f6c]">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  service.homeVisitAvailable 
+                    ? 'bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff]' 
+                    : 'bg-gray-200 dark:bg-[#4e4f6c] text-txt-muted dark:text-[#7e7f96]'
+                }`}>
+                  <i className={`bx bx-home-heart text-xl`}></i>
+                </div>
+                <div>
+                  <p className="font-medium text-txt-primary dark:text-[#d5d5e2]">Home Visit</p>
+                  <p className="text-xs text-txt-muted dark:text-[#7e7f96]">
+                    Layanan dapat dilakukan di lokasi pelanggan
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-gray-500">
-                Surcharge untuk home visit diatur di Settings → Invoice Settings → Travel Surcharge
-              </p>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={service.homeVisitAvailable || false}
+                  onChange={(e) => setService({ ...service, homeVisitAvailable: e.target.checked })}
+                  disabled={submitting}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 dark:bg-[#4e4f6c] peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:bg-primary transition-colors duration-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:duration-200 peer-checked:after:translate-x-5"></div>
+              </label>
             </div>
 
             {/* Actions */}

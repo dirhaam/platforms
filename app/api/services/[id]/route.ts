@@ -56,7 +56,26 @@ export async function GET(
       return NextResponse.json({ error: 'Service not found' }, { status: 404 });
     }
 
-    return NextResponse.json(service);
+    // Map snake_case to camelCase for frontend
+    const formattedService = {
+      id: service.id,
+      tenantId: service.tenant_id,
+      name: service.name,
+      description: service.description,
+      duration: service.duration,
+      price: service.price,
+      category: service.category,
+      isActive: service.is_active,
+      homeVisitAvailable: service.home_visit_available,
+      homeVisitSurcharge: service.home_visit_surcharge,
+      serviceType: service.service_type,
+      images: service.images,
+      requirements: service.requirements,
+      createdAt: service.created_at,
+      updatedAt: service.updated_at,
+    };
+
+    return NextResponse.json(formattedService);
   } catch (error) {
     console.error('Error fetching service:', error);
     return NextResponse.json({ error: 'Failed to fetch service' }, { status: 500 });
@@ -124,7 +143,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to update service', details: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(service);
+    // Map snake_case to camelCase for frontend
+    const formattedService = {
+      id: service.id,
+      tenantId: service.tenant_id,
+      name: service.name,
+      description: service.description,
+      duration: service.duration,
+      price: service.price,
+      category: service.category,
+      isActive: service.is_active,
+      homeVisitAvailable: service.home_visit_available,
+      homeVisitSurcharge: service.home_visit_surcharge,
+      serviceType: service.service_type,
+      images: service.images,
+      requirements: service.requirements,
+      createdAt: service.created_at,
+      updatedAt: service.updated_at,
+    };
+
+    return NextResponse.json(formattedService);
   } catch (error) {
     console.error('Error updating service:', error);
     return NextResponse.json({ error: 'Failed to update service' }, { status: 500 });
