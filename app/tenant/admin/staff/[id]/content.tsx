@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Staff } from '@/types/booking';
-import { StaffSchedule } from '@/components/staff/staff-schedule';
-import { StaffLeave } from '@/components/staff/staff-leave';
 
 interface StaffDetailContentProps {
   staffId: string;
@@ -143,22 +141,7 @@ export function StaffDetailContent({ staffId }: StaffDetailContentProps) {
         </Card>
       </div>
 
-      {/* Working Schedule and Leave Management */}
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        {/* Working Schedule */}
-        <StaffSchedule
-          staffId={staffId}
-          tenantId={subdomain || ''}
-          staffName={staff.name}
-        />
 
-        {/* Leave Management */}
-        <StaffLeave
-          staffId={staffId}
-          tenantId={subdomain || ''}
-          staffName={staff.name}
-        />
-      </div>
     </div>
   );
 }

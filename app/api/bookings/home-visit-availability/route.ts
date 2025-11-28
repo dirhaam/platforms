@@ -2,16 +2,14 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { StaffAvailabilityService } from '@/lib/booking/staff-availability-service';
 
 /**
- * HOME VISIT AVAILABILITY WITH STAFF SUPPORT
+ * HOME VISIT AVAILABILITY - SIMPLIFIED
  * 
  * Logic:
  * 1. Get service config (daily_home_visit_quota, home_visit_time_slots)
  * 2. Count existing home visit bookings for that date
- * 3. Check staff availability for each slot
- * 4. Return available slots with staff info
+ * 3. Return available slots (no staff availability check)
  */
 
 const getSupabaseClient = () => {
@@ -158,61 +156,26 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // 6. Check if service requires staff assignment
-    const requiresStaff = service.requires_staff_assignment || false;
-    const travelBufferMinutes = service.home_visit_min_buffer_minutes || 30;
-    
-    // 7. Generate available slots with staff availability check
+    // 6. Generate available slots - SIMPLIFIED (no staff availability check)
     const [year, month, day] = date.split('-').map(Number);
-    const slotsPromises = timeSlots.map(async (timeStr) => {
+    const slots = timeSlots.map((timeStr) => {
       const [hours, minutes] = timeStr.split(':').map(Number);
       const slotStart = new Date(year, month - 1, day, hours, minutes, 0, 0);
       const slotEnd = new Date(slotStart.getTime() + serviceDuration * 60000);
       
       const isBooked = bookedTimes.has(timeStr);
-      let isAvailable = !isBooked && remainingQuota > 0;
-      let availableStaffCount = 0;
-      let availableStaffNames: string[] = [];
-
-      // Check staff availability if required
-      if (isAvailable && requiresStaff) {
-        try {
-          const staffAvailability = await StaffAvailabilityService.getAllAvailableStaffForHomeVisit(
-            resolvedTenantId,
-            serviceId,
-            slotStart,
-            serviceDuration,
-            travelBufferMinutes
-          );
-
-          const availableStaff = staffAvailability.filter(s => s.isAvailable);
-          availableStaffCount = availableStaff.length;
-          availableStaffNames = availableStaff.map(s => s.staff.name);
-          
-          // If requires staff but no staff available, mark as unavailable
-          if (availableStaffCount === 0) {
-            isAvailable = false;
-          }
-        } catch (err) {
-          console.error('[home-visit-availability] Error checking staff availability:', err);
-          // Don't block booking if staff check fails, just log
-        }
-      }
+      const isAvailable = !isBooked && remainingQuota > 0;
 
       return {
         time: timeStr,
         start: slotStart.toISOString(),
         end: slotEnd.toISOString(),
         available: isAvailable,
-        isBooked,
-        staffAvailable: availableStaffCount,
-        staffNames: availableStaffNames
+        isBooked
       };
     });
 
-    const slots = await Promise.all(slotsPromises);
-
-    // 8. Check if all slots are booked
+    // 7. Check if all slots are booked
     const availableSlots = slots.filter(s => s.available);
 
     return NextResponse.json({
@@ -221,7 +184,6 @@ export async function GET(request: NextRequest) {
       serviceName: service.name,
       serviceDuration,
       isHomeVisitSupported: true,
-      requiresStaff,
       dailyQuota,
       bookedCount,
       remainingQuota,
@@ -229,8 +191,6 @@ export async function GET(request: NextRequest) {
       availableSlots: availableSlots.length,
       message: remainingQuota === 0 
         ? 'All home visit slots are fully booked for this date' 
-        : availableSlots.length === 0 && requiresStaff
-        ? 'No staff available for home visit on this date'
         : `${availableSlots.length} slot(s) available`
     });
 

@@ -186,58 +186,29 @@ export async function validateHomeVisit(
 export async function validateStaffAssignment(
   tenantId: string,
   staffId: string,
-  serviceId: string,
-  scheduledAt: Date,
-  serviceDuration: number,
-  travelTimeBeforeMinutes: number,
-  travelTimeAfterMinutes: number,
-  options?: { skipServiceCheck?: boolean }
+  _serviceId: string,
+  _scheduledAt: Date,
+  _serviceDuration: number,
+  _travelTimeBeforeMinutes: number,
+  _travelTimeAfterMinutes: number
 ): Promise<ValidationResult> {
   const supabase = getSupabaseClient();
   
-  // Check staff exists and is active
+  // SIMPLIFIED: Only check if staff exists and is active
+  // No schedule checking, no service restrictions
   const { data: staffMember } = await supabase
     .from('staff')
-    .select('id, is_active')
+    .select('id, is_active, name')
     .eq('id', staffId)
     .eq('tenant_id', tenantId)
     .single();
 
-  if (!staffMember || !staffMember.is_active) {
-    return { valid: false, error: 'Assigned staff member not found or inactive' };
+  if (!staffMember) {
+    return { valid: false, error: 'Staff tidak ditemukan' };
   }
 
-  // Check staff can perform this service (skip if optional assignment)
-  if (!options?.skipServiceCheck) {
-    const { data: staffService } = await supabase
-      .from('staff_services')
-      .select('id, can_perform')
-      .eq('staff_id', staffId)
-      .eq('service_id', serviceId)
-      .single();
-
-    if (!staffService || !staffService.can_perform) {
-      // Just log warning instead of failing for optional assignments
-      console.warn(`[validateStaffAssignment] Staff ${staffId} not configured for service ${serviceId}, but allowing assignment`);
-    }
-  }
-
-  // Check staff availability with travel time buffer
-  const { StaffAvailabilityService } = await import('@/lib/booking/staff-availability-service');
-  const bookingStartWithBuffer = new Date(scheduledAt.getTime() - travelTimeBeforeMinutes * 60000);
-  const bookingEndWithBuffer = new Date(scheduledAt.getTime() + (serviceDuration + travelTimeAfterMinutes) * 60000);
-
-  const isAvailable = await StaffAvailabilityService.isStaffAvailableForSlot(
-    tenantId,
-    staffId,
-    scheduledAt,
-    bookingStartWithBuffer,
-    bookingEndWithBuffer,
-    0
-  );
-
-  if (!isAvailable) {
-    return { valid: false, error: 'Selected staff member is not available for this time slot (including travel time)' };
+  if (!staffMember.is_active) {
+    return { valid: false, error: `Staff ${staffMember.name} tidak aktif` };
   }
 
   return { valid: true };

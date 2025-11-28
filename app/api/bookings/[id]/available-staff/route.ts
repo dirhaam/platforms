@@ -2,7 +2,6 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { StaffAvailabilityService } from '@/lib/booking/staff-availability-service';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -11,7 +10,8 @@ const getSupabaseClient = () => {
   );
 };
 
-// GET /api/bookings/[id]/available-staff - Get available staff for a booking
+// GET /api/bookings/[id]/available-staff - Get all active staff for assignment
+// SIMPLIFIED: No schedule checking, just return all active staff
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -36,17 +36,10 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
     }
 
-    // Get booking details
+    // Verify booking exists
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select(`
-        id,
-        service_id,
-        scheduled_at,
-        duration,
-        is_home_visit,
-        services!bookings_service_id_fkey(id, duration, home_visit_min_buffer_minutes)
-      `)
+      .select('id, is_home_visit')
       .eq('id', bookingId)
       .eq('tenant_id', tenant.id)
       .single();
@@ -55,40 +48,27 @@ export async function GET(
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    if (!booking.is_home_visit) {
-      return NextResponse.json({ error: 'Not a home visit booking' }, { status: 400 });
+    // Get all active staff - SIMPLIFIED, no schedule/availability check
+    const { data: staffList, error: staffError } = await supabase
+      .from('staff')
+      .select('id, name, email, role')
+      .eq('tenant_id', tenant.id)
+      .eq('is_active', true)
+      .order('name');
+
+    if (staffError) {
+      console.error('Error fetching staff:', staffError);
+      return NextResponse.json({ error: 'Failed to fetch staff' }, { status: 500 });
     }
 
-    // Get available staff using StaffAvailabilityService
-    const scheduledAt = new Date(booking.scheduled_at);
-    const service = (booking.services as unknown) as { id: string; duration: number; home_visit_min_buffer_minutes?: number } | null;
-    const duration = service?.duration || booking.duration || 60;
-    const bufferMinutes = service?.home_visit_min_buffer_minutes || 30;
-
-    const staffAvailability = await StaffAvailabilityService.getAllAvailableStaffForHomeVisit(
-      tenant.id,
-      booking.service_id,
-      scheduledAt,
-      duration,
-      bufferMinutes
-    );
-
-    // Transform response
-    const staff = staffAvailability.map((s) => ({
-      id: s.staff.id,
-      name: s.staff.name,
-      email: s.staff.email,
-      homeVisitCount: s.homeVisitCount,
-      maxHomeVisits: s.maxHomeVisits,
-      isAvailable: s.isAvailable,
-      unavailableReason: s.unavailableReason,
+    // Transform response - all staff are available
+    const staff = (staffList || []).map((s) => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      role: s.role,
+      isAvailable: true,
     }));
-
-    // Sort: available first, then by home visit count (ascending)
-    staff.sort((a, b) => {
-      if (a.isAvailable !== b.isAvailable) return a.isAvailable ? -1 : 1;
-      return a.homeVisitCount - b.homeVisitCount;
-    });
 
     return NextResponse.json({ staff });
   } catch (error) {
