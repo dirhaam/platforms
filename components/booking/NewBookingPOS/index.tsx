@@ -433,7 +433,7 @@ export function NewBookingPOS({
                       <CustomerSelector
                         customers={customers}
                         selectedCustomerId={booking.customerId}
-                        onCustomerSelect={(id) => setBooking({ ...booking, customerId: id })}
+                        onCustomerSelect={(id) => setBooking(prev => ({ ...prev, customerId: id }))}
                         subdomain={subdomain}
                         onCustomerCreated={(customer) => setCustomers([...customers, customer])}
                       />
@@ -441,7 +441,7 @@ export function NewBookingPOS({
                       <ServiceSelector
                         services={services}
                         selectedServiceId={booking.serviceId}
-                        onServiceSelect={(id) => setBooking({ ...booking, serviceId: id })}
+                        onServiceSelect={(id) => setBooking(prev => ({ ...prev, serviceId: id }))}
                       />
 
                       <ScheduleSection
@@ -453,7 +453,7 @@ export function NewBookingPOS({
                       <HomeVisitSection
                         isHomeVisit={booking.isHomeVisit}
                         onHomeVisitChange={(checked) => {
-                          setBooking({ ...booking, isHomeVisit: checked });
+                          setBooking(prev => ({ ...prev, isHomeVisit: checked }));
                           if (checked) {
                             setHomeVisitSnapshot({
                               address: booking.homeVisitAddress,
@@ -494,13 +494,13 @@ export function NewBookingPOS({
                   <PaymentMethodSection
                     paymentMethod={booking.paymentMethod}
                     dpAmount={booking.dpAmount}
-                    onPaymentMethodChange={(method) => setBooking({ ...booking, paymentMethod: method })}
-                    onDpAmountChange={(amount) => setBooking({ ...booking, dpAmount: amount })}
+                    onPaymentMethodChange={(method) => setBooking(prev => ({ ...prev, paymentMethod: method }))}
+                    onDpAmountChange={(amount) => setBooking(prev => ({ ...prev, dpAmount: amount }))}
                   />
 
                   <NotesSection
                     notes={booking.notes}
-                    onNotesChange={(notes) => setBooking({ ...booking, notes })}
+                    onNotesChange={(notes) => setBooking(prev => ({ ...prev, notes }))}
                     error={error}
                   />
                 </div>
@@ -547,9 +547,9 @@ export function NewBookingPOS({
         currentStep={currentStep as 'date' | 'time'}
         onStepChange={setCurrentStep}
         selectedDate={booking.scheduledAt}
-        onDateSelect={(date) => setBooking({ ...booking, scheduledAt: date, selectedTimeSlot: undefined })}
+        onDateSelect={(date) => setBooking(prev => ({ ...prev, scheduledAt: date, selectedTimeSlot: undefined }))}
         selectedTimeSlot={booking.selectedTimeSlot}
-        onTimeSlotSelect={(slot) => setBooking({ ...booking, selectedTimeSlot: slot })}
+        onTimeSlotSelect={(slot) => setBooking(prev => ({ ...prev, selectedTimeSlot: slot }))}
         availableSlots={availableSlots}
         blockedDates={blockedDates}
         serviceId={booking.serviceId}
@@ -564,24 +564,24 @@ export function NewBookingPOS({
           }
         }}
         address={booking.homeVisitAddress}
-        onAddressChange={(addr) => setBooking({ ...booking, homeVisitAddress: addr })}
+        onAddressChange={(addr) => setBooking(prev => ({ ...prev, homeVisitAddress: addr }))}
         latitude={booking.homeVisitLat}
         longitude={booking.homeVisitLng}
-        onCoordinatesChange={(lat, lng) => setBooking({ ...booking, homeVisitLat: lat, homeVisitLng: lng })}
+        onCoordinatesChange={(lat, lng) => setBooking(prev => ({ ...prev, homeVisitLat: lat, homeVisitLng: lng }))}
         isHomeVisit={booking.isHomeVisit}
         businessCoordinates={businessCoordinates}
         serviceId={booking.serviceId}
         subdomain={subdomain}
-        onTravelCalculationChange={(calc) => setBooking({ ...booking, travelCalculation: calc })}
+        onTravelCalculationChange={(calc) => setBooking(prev => ({ ...prev, travelCalculation: calc }))}
         onCancel={() => {
           if (homeVisitSnapshot) {
-            setBooking({
-              ...booking,
+            setBooking(prev => ({
+              ...prev,
               homeVisitAddress: homeVisitSnapshot.address,
               homeVisitLat: homeVisitSnapshot.lat,
               homeVisitLng: homeVisitSnapshot.lng,
               travelCalculation: homeVisitSnapshot.travelCalculation
-            });
+            }));
           }
           setHomeVisitSnapshot(null);
         }}
