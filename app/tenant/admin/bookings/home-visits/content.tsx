@@ -7,10 +7,8 @@ interface Staff {
   id: string;
   name: string;
   email: string;
-  homeVisitCount: number;
-  maxHomeVisits: number;
+  role: string;
   isAvailable: boolean;
-  unavailableReason?: string;
 }
 
 interface HomeVisitBooking {
@@ -437,40 +435,23 @@ export default function HomeVisitAssignmentContent() {
                     {availableStaff.map((staff) => (
                       <button
                         key={staff.id}
-                        onClick={() => staff.isAvailable && handleReassign(staff.id)}
-                        disabled={!staff.isAvailable || reassigning}
-                        className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                          staff.isAvailable
-                            ? 'border-gray-200 dark:border-[#4e4f6c] hover:border-primary dark:hover:border-[#a5a7ff] hover:bg-primary/5 dark:hover:bg-[#35365f]'
-                            : 'border-gray-100 dark:border-[#4e4f6c]/50 opacity-50 cursor-not-allowed'
-                        }`}
+                        onClick={() => handleReassign(staff.id)}
+                        disabled={reassigning}
+                        className="w-full p-3 rounded-lg border text-left transition-colors border-gray-200 dark:border-[#4e4f6c] hover:border-primary dark:hover:border-[#a5a7ff] hover:bg-primary/5 dark:hover:bg-[#35365f]"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              staff.isAvailable
-                                ? 'bg-success/10 dark:bg-success/20'
-                                : 'bg-gray-100 dark:bg-[#35365f]'
-                            }`}>
-                              <span className={`text-sm font-medium ${
-                                staff.isAvailable ? 'text-success' : 'text-txt-muted dark:text-[#7e7f96]'
-                              }`}>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-success/10 dark:bg-success/20">
+                              <span className="text-sm font-medium text-success">
                                 {staff.name.charAt(0)}
                               </span>
                             </div>
                             <div>
                               <p className="font-medium text-txt-primary dark:text-[#d5d5e2]">{staff.name}</p>
-                              <p className="text-xs text-txt-muted dark:text-[#7e7f96]">
-                                {staff.isAvailable
-                                  ? `${staff.homeVisitCount}/${staff.maxHomeVisits} home visit hari ini`
-                                  : staff.unavailableReason || 'Tidak tersedia'
-                                }
-                              </p>
+                              <p className="text-xs text-txt-muted dark:text-[#7e7f96] capitalize">{staff.role}</p>
                             </div>
                           </div>
-                          {staff.isAvailable && (
-                            <i className='bx bx-chevron-right text-txt-muted dark:text-[#7e7f96]'></i>
-                          )}
+                          <i className='bx bx-chevron-right text-txt-muted dark:text-[#7e7f96]'></i>
                         </div>
                       </button>
                     ))}
