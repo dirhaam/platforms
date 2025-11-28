@@ -84,8 +84,12 @@ export async function GET(request: NextRequest) {
       query = query.or(`staff_id.eq.${staffId},staff_id.is.null`);
     }
 
-    // Apply date filter
+    // Apply date filter - single date or date range
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    
     if (date) {
+      // Single date filter
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
@@ -94,6 +98,16 @@ export async function GET(request: NextRequest) {
       query = query
         .gte('scheduled_at', startOfDay.toISOString())
         .lte('scheduled_at', endOfDay.toISOString());
+    } else if (startDate && endDate) {
+      // Date range filter
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      query = query
+        .gte('scheduled_at', start.toISOString())
+        .lte('scheduled_at', end.toISOString());
     }
 
     // Apply status filter
