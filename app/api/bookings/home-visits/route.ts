@@ -2,7 +2,6 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 // GET /api/bookings/home-visits - Get all home visit bookings for a tenant
 export async function GET(request: NextRequest) {
@@ -16,12 +15,22 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date');
     const status = searchParams.get('status');
     const assignment = searchParams.get('assignment');
+    const tenantHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
 
-    // Get tenant using helper
-    const tenant = await getTenantFromRequest(request);
+    if (!tenantHeader) {
+      return NextResponse.json({ error: 'Tenant ID required', bookings: [], stats: { total: 0, assigned: 0, unassigned: 0, completed: 0 } }, { status: 200 });
+    }
 
-    if (!tenant) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    // Resolve tenant from subdomain
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('subdomain', tenantHeader.toLowerCase())
+      .single();
+
+    if (tenantError || !tenant) {
+      console.error('Tenant not found:', tenantHeader, tenantError);
+      return NextResponse.json({ error: 'Tenant not found', bookings: [], stats: { total: 0, assigned: 0, unassigned: 0, completed: 0 } }, { status: 200 });
     }
 
     // Build query - simplified without explicit foreign key hints
