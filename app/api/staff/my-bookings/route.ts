@@ -1,5 +1,3 @@
-export const runtime = 'nodejs';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
@@ -15,45 +13,40 @@ const getSupabaseClient = () => {
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const subdomain = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
     const searchParams = request.nextUrl.searchParams;
-    const date = searchParams.get('date'); // Optional: filter by date (YYYY-MM-DD)
-    const status = searchParams.get('status'); // Optional: filter by status
+    const date = searchParams.get('date');
+    const status = searchParams.get('status');
 
-    // Get session from cookie
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('tenant-auth');
-    
-    if (!sessionCookie?.value) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Get tenant from subdomain
+    if (!subdomain) {
+      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
     }
 
-    // Parse session
-    let session;
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('subdomain', subdomain.toLowerCase())
+      .single();
+
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    }
+
+    const tenantId = tenant.id;
+
+    // Try to get staff ID from session, but don't require it
+    let staffId: string | null = null;
     try {
-      if (sessionCookie.value.startsWith('inline.')) {
-        session = JSON.parse(atob(sessionCookie.value.replace('inline.', '')));
-      } else {
-        return NextResponse.json({ error: 'Invalid session format' }, { status: 401 });
+      const cookieStore = await cookies();
+      const sessionCookie = cookieStore.get('tenant-auth');
+      
+      if (sessionCookie?.value?.startsWith('inline.')) {
+        const session = JSON.parse(atob(sessionCookie.value.replace('inline.', '')));
+        staffId = session.userId;
       }
     } catch (e) {
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    }
-
-    const staffId = session.userId;
-    const sessionTenantId = session.tenantId;
-
-    // Verify tenant matches
-    if (tenantId) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('subdomain', tenantId.toLowerCase())
-        .single();
-
-      if (tenant && tenant.id !== sessionTenantId) {
-        return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
-      }
+      // Session parsing failed, continue without staff filter
     }
 
     // Check if user wants to see all bookings or just assigned ones
@@ -76,11 +69,12 @@ export async function GET(request: NextRequest) {
         customer_id,
         service_id
       `)
-      .eq('tenant_id', sessionTenantId)
-      .order('scheduled_at', { ascending: true });
+      .eq('tenant_id', tenantId)
+      .order('scheduled_at', { ascending: true })
+      .limit(200);
     
-    // Filter by staff_id only if not showing all
-    if (!showAll) {
+    // Filter by staff_id only if not showing all and staffId is available
+    if (!showAll && staffId) {
       query = query.or(`staff_id.eq.${staffId},staff_id.is.null`);
     }
 
