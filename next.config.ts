@@ -5,7 +5,7 @@ process.env.TAILWIND_DISABLE_LIGHTNING =
   process.env.TAILWIND_DISABLE_LIGHTNING ?? "1";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // output: 'standalone', // Commented out for Vercel deployment - only needed for Docker/self-hosting
 
   // Exclude folder Windows yang sering bikin EPERM error
   outputFileTracingExcludes: {
