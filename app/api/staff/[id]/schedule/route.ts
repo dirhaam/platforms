@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 const getSupabaseClient = () => {
   return createClient(
@@ -17,12 +18,13 @@ export async function GET(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const tenant = await getTenantFromRequest(request);
     
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 400 });
     }
 
+    const tenantId = tenant.id;
     const { id: staffId } = await params;
 
     // Verify staff exists
@@ -98,12 +100,13 @@ export async function POST(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const tenant = await getTenantFromRequest(request);
     
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 400 });
     }
 
+    const tenantId = tenant.id;
     const { id: staffId } = await params;
     const body = await request.json();
     const {
@@ -191,12 +194,13 @@ export async function PUT(
 ) {
   try {
     const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
+    const tenant = await getTenantFromRequest(request);
     
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 400 });
     }
 
+    const tenantId = tenant.id;
     const { id: staffId } = await params;
     const body = await request.json();
     const { schedule, homeVisitConfig } = body;
