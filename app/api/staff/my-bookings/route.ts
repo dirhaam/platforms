@@ -84,30 +84,20 @@ export async function GET(request: NextRequest) {
       query = query.or(`staff_id.eq.${staffId},staff_id.is.null`);
     }
 
-    // Apply date filter - single date or date range
+    // Apply date filter - single date or date range (using string comparison)
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     
     if (date) {
       // Single date filter
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-
       query = query
-        .gte('scheduled_at', startOfDay.toISOString())
-        .lte('scheduled_at', endOfDay.toISOString());
+        .gte('scheduled_at', `${date}T00:00:00`)
+        .lte('scheduled_at', `${date}T23:59:59`);
     } else if (startDate && endDate) {
       // Date range filter
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-
       query = query
-        .gte('scheduled_at', start.toISOString())
-        .lte('scheduled_at', end.toISOString());
+        .gte('scheduled_at', `${startDate}T00:00:00`)
+        .lte('scheduled_at', `${endDate}T23:59:59`);
     }
 
     // Apply status filter
@@ -129,35 +119,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch related data separately
-    const customerIds = [...new Set((data || []).map((b: any) => b.customer_id).filter(Boolean))];
-    const serviceIds = [...new Set((data || []).map((b: any) => b.service_id).filter(Boolean))];
+    // Fetch related data in parallel
+    const bookingsData = data || [];
+    const customerIds = [...new Set(bookingsData.map((b: any) => b.customer_id).filter(Boolean))];
+    const serviceIds = [...new Set(bookingsData.map((b: any) => b.service_id).filter(Boolean))];
     
     let customerMap: Record<string, any> = {};
     let serviceMap: Record<string, any> = {};
     
-    if (customerIds.length > 0) {
-      const { data: customerData } = await supabase
-        .from('customers')
-        .select('id, name, phone, email')
-        .in('id', customerIds);
-      if (customerData) {
-        customerMap = Object.fromEntries(customerData.map((c: any) => [c.id, c]));
+    try {
+      const [customersResult, servicesResult] = await Promise.all([
+        customerIds.length > 0 
+          ? supabase.from('customers').select('id, name, phone, email').in('id', customerIds)
+          : Promise.resolve({ data: [] }),
+        serviceIds.length > 0 
+          ? supabase.from('services').select('id, name').in('id', serviceIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      if (customersResult.data) {
+        customerMap = Object.fromEntries(customersResult.data.map((c: any) => [c.id, c]));
       }
-    }
-    
-    if (serviceIds.length > 0) {
-      const { data: serviceData } = await supabase
-        .from('services')
-        .select('id, name')
-        .in('id', serviceIds);
-      if (serviceData) {
-        serviceMap = Object.fromEntries(serviceData.map((s: any) => [s.id, s]));
+      if (servicesResult.data) {
+        serviceMap = Object.fromEntries(servicesResult.data.map((s: any) => [s.id, s]));
       }
+    } catch (relatedError) {
+      console.error('Error fetching related data:', relatedError);
     }
 
     // Transform data
-    const bookings = (data || []).map((booking: any) => {
+    const bookings = bookingsData.map((booking: any) => {
       const customer = customerMap[booking.customer_id];
       const service = serviceMap[booking.service_id];
       
