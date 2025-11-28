@@ -70,14 +70,18 @@ export default function HomeVisitAssignmentContent() {
     
     setLoading(true);
     try {
-      let url = `/api/bookings/home-visits?date=${dateFilter}`;
-      if (statusFilter !== 'all') url += `&status=${statusFilter}`;
-      if (assignmentFilter !== 'all') url += `&assignment=${assignmentFilter}`;
+      // Use regular bookings API and filter on frontend
+      let url = `/api/bookings?startDate=${dateFilter}&endDate=${dateFilter}`;
+      if (statusFilter === 'active') {
+        url += `&status=pending`;
+      } else if (statusFilter !== 'all') {
+        url += `&status=${statusFilter}`;
+      }
 
       console.log('[HomeVisit] Fetching:', url, 'subdomain:', subdomain);
       
       const response = await fetch(url, {
-        headers: { 'X-Tenant-ID': subdomain },
+        headers: { 'x-tenant-id': subdomain },
       });
 
       console.log('[HomeVisit] Response status:', response.status);
@@ -86,8 +90,40 @@ export default function HomeVisitAssignmentContent() {
       console.log('[HomeVisit] Response data:', data);
       
       if (response.ok) {
-        setBookings(data.bookings || []);
-        setStats(data.stats || { total: 0, assigned: 0, unassigned: 0, completed: 0 });
+        // Filter home visit bookings on frontend
+        let homeVisitBookings = (data.bookings || [])
+          .filter((b: any) => b.isHomeVisit)
+          .map((b: any) => ({
+            id: b.id,
+            customerName: b.customer?.name || b.customerName || 'Unknown',
+            customerPhone: b.customer?.phone || b.customerPhone || '',
+            serviceName: b.service?.name || b.serviceName || 'Service',
+            serviceDuration: b.service?.duration || b.duration || 60,
+            scheduledAt: b.scheduledAt,
+            status: b.status,
+            staffId: b.staffId || null,
+            staffName: b.staff?.name || b.staffName || null,
+            homeVisitAddress: b.homeVisitAddress || '',
+            homeVisitLatitude: b.homeVisitLatitude,
+            homeVisitLongitude: b.homeVisitLongitude,
+            notes: b.notes,
+            createdAt: b.createdAt,
+          }));
+
+        // Filter by assignment
+        if (assignmentFilter === 'assigned') {
+          homeVisitBookings = homeVisitBookings.filter((b: any) => b.staffId);
+        } else if (assignmentFilter === 'unassigned') {
+          homeVisitBookings = homeVisitBookings.filter((b: any) => !b.staffId);
+        }
+
+        setBookings(homeVisitBookings);
+        setStats({
+          total: homeVisitBookings.length,
+          assigned: homeVisitBookings.filter((b: any) => b.staffId).length,
+          unassigned: homeVisitBookings.filter((b: any) => !b.staffId).length,
+          completed: homeVisitBookings.filter((b: any) => b.status === 'completed').length,
+        });
       } else {
         console.error('[HomeVisit] Failed to fetch bookings:', response.status, data);
       }
