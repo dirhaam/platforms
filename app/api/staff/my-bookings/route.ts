@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     // Check if user wants to see all bookings or just assigned ones
     const showAll = searchParams.get('all') === 'true';
     
-    // Build query
+    // Build query - simplified without foreign key joins
     let query = supabase
       .from('bookings')
       .select(`
@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
         home_visit_latitude,
         home_visit_longitude,
         staff_id,
-        customers!bookings_customer_id_fkey(id, name, phone, email),
-        services!bookings_service_id_fkey(id, name)
+        customer_id,
+        service_id
       `)
       .eq('tenant_id', sessionTenantId)
       .order('scheduled_at', { ascending: true });
@@ -129,24 +129,57 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Fetch related data separately
+    const customerIds = [...new Set((data || []).map((b: any) => b.customer_id).filter(Boolean))];
+    const serviceIds = [...new Set((data || []).map((b: any) => b.service_id).filter(Boolean))];
+    
+    let customerMap: Record<string, any> = {};
+    let serviceMap: Record<string, any> = {};
+    
+    if (customerIds.length > 0) {
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('id, name, phone, email')
+        .in('id', customerIds);
+      if (customerData) {
+        customerMap = Object.fromEntries(customerData.map((c: any) => [c.id, c]));
+      }
+    }
+    
+    if (serviceIds.length > 0) {
+      const { data: serviceData } = await supabase
+        .from('services')
+        .select('id, name')
+        .in('id', serviceIds);
+      if (serviceData) {
+        serviceMap = Object.fromEntries(serviceData.map((s: any) => [s.id, s]));
+      }
+    }
+
     // Transform data
-    const bookings = (data || []).map((booking: any) => ({
-      id: booking.id,
-      scheduledAt: booking.scheduled_at,
-      duration: booking.duration,
-      status: booking.status,
-      notes: booking.notes,
-      isHomeVisit: booking.is_home_visit,
-      homeVisitAddress: booking.home_visit_address,
-      homeVisitLatitude: booking.home_visit_latitude,
-      homeVisitLongitude: booking.home_visit_longitude,
-      customerId: booking.customers?.id,
-      customerName: booking.customers?.name || 'Unknown',
-      customerPhone: booking.customers?.phone || '',
-      customerEmail: booking.customers?.email || '',
-      serviceId: booking.services?.id,
-      serviceName: booking.services?.name || 'Unknown Service',
-    }));
+    const bookings = (data || []).map((booking: any) => {
+      const customer = customerMap[booking.customer_id];
+      const service = serviceMap[booking.service_id];
+      
+      return {
+        id: booking.id,
+        scheduledAt: booking.scheduled_at,
+        duration: booking.duration,
+        status: booking.status,
+        notes: booking.notes,
+        isHomeVisit: booking.is_home_visit,
+        homeVisitAddress: booking.home_visit_address,
+        homeVisitLatitude: booking.home_visit_latitude,
+        homeVisitLongitude: booking.home_visit_longitude,
+        staffId: booking.staff_id,
+        customerId: booking.customer_id,
+        customerName: customer?.name || 'Unknown',
+        customerPhone: customer?.phone || '',
+        customerEmail: customer?.email || '',
+        serviceId: booking.service_id,
+        serviceName: service?.name || 'Unknown Service',
+      };
+    });
 
     return NextResponse.json({
       bookings,
