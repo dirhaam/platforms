@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Check if user wants to see all bookings or just assigned ones
+    const showAll = searchParams.get('all') === 'true';
+    
     // Build query
     let query = supabase
       .from('bookings')
@@ -69,12 +72,17 @@ export async function GET(request: NextRequest) {
         home_visit_address,
         home_visit_latitude,
         home_visit_longitude,
+        staff_id,
         customers!bookings_customer_id_fkey(id, name, phone, email),
         services!bookings_service_id_fkey(id, name)
       `)
       .eq('tenant_id', sessionTenantId)
-      .eq('staff_id', staffId)
       .order('scheduled_at', { ascending: true });
+    
+    // Filter by staff_id only if not showing all
+    if (!showAll) {
+      query = query.or(`staff_id.eq.${staffId},staff_id.is.null`);
+    }
 
     // Apply date filter
     if (date) {
