@@ -189,6 +189,8 @@ export function StaffSchedule({ staffId, tenantId, staffName }: Props) {
         breakEnd: item.breakEnd,
       }));
 
+      console.log('[StaffSchedule] Saving:', { staffId, tenantId, scheduleArray, homeVisitConfig });
+
       const response = await fetch(`/api/staff/${staffId}/schedule`, {
         method: 'PUT',
         headers: {
@@ -201,11 +203,16 @@ export function StaffSchedule({ staffId, tenantId, staffName }: Props) {
         }),
       });
 
-      if (!response.ok) throw new Error('Gagal menyimpan jadwal');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[StaffSchedule] PUT error:', response.status, errorData);
+        throw new Error(errorData.error || `Gagal menyimpan jadwal (${response.status})`);
+      }
 
       setSuccess('Semua jadwal berhasil disimpan');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
+      console.error('[StaffSchedule] Save error:', err);
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
     } finally {
       setSavingAll(false);

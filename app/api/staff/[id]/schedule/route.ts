@@ -215,12 +215,14 @@ export async function PUT(
 
     // Update all schedule items
     if (schedule && Array.isArray(schedule)) {
+      const upsertErrors: string[] = [];
+      
       for (const item of schedule) {
         const { dayOfWeek, startTime, endTime, isAvailable, breakStart, breakEnd } = item;
         
         if (dayOfWeek === undefined) continue;
 
-        await supabase
+        const { error: upsertError } = await supabase
           .from('staff_schedule')
           .upsert({
             staff_id: staffId,
@@ -234,6 +236,15 @@ export async function PUT(
           }, {
             onConflict: 'staff_id,day_of_week'
           });
+        
+        if (upsertError) {
+          console.error(`Error upserting schedule for day ${dayOfWeek}:`, upsertError);
+          upsertErrors.push(`Day ${dayOfWeek}: ${upsertError.message}`);
+        }
+      }
+      
+      if (upsertErrors.length > 0) {
+        console.error('Schedule upsert errors:', upsertErrors);
       }
     }
 
