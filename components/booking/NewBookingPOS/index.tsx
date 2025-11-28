@@ -287,6 +287,9 @@ export function NewBookingPOS({
             body: JSON.stringify(requestBody)
           });
 
+          const data = await response.json();
+          console.log('[NewBookingPOS] Response:', response.status, data);
+          
           if (response.ok) {
             resetBookingForm();
             toast.success('Booking created successfully');
@@ -295,7 +298,10 @@ export function NewBookingPOS({
             return;
           }
           
-          const data = await response.json();
+          // Log validation errors
+          if (data.details) {
+            console.error('[NewBookingPOS] Validation errors:', data.details);
+          }
           throw new Error(data.error || 'Failed to create booking');
         } catch (err) {
           // If network error, fall through to offline mode

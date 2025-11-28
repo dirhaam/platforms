@@ -47,6 +47,9 @@ export async function GET(request: NextRequest) {
       .order('scheduled_at', { ascending: true })
       .limit(100);
 
+    // Log for debugging
+    console.log('[home-visits] Query params:', { tenantId: tenant.id, date, status });
+
     if (date) {
       query = query.gte('scheduled_at', `${date}T00:00:00`).lte('scheduled_at', `${date}T23:59:59`);
     }
@@ -58,6 +61,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: bookingsData, error } = await query;
+    
+    // Log results
+    console.log('[home-visits] Query result:', { count: bookingsData?.length || 0, error: error?.message });
 
     if (error) {
       console.error('[home-visits] Query error:', error);
