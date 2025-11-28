@@ -38,6 +38,9 @@ interface Stats {
 export default function HomeVisitAssignmentContent() {
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain') || '';
+  
+  // Debug log
+  console.log('[HomeVisit] subdomain:', subdomain);
 
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<HomeVisitBooking[]>([]);
@@ -53,27 +56,43 @@ export default function HomeVisitAssignmentContent() {
   const [reassigning, setReassigning] = useState(false);
 
   useEffect(() => {
-    fetchBookings();
+    if (subdomain) {
+      fetchBookings();
+    }
   }, [subdomain, dateFilter, statusFilter, assignmentFilter]);
 
   const fetchBookings = async () => {
+    if (!subdomain) {
+      console.log('[HomeVisit] No subdomain, skipping fetch');
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
       let url = `/api/bookings/home-visits?date=${dateFilter}`;
       if (statusFilter !== 'all') url += `&status=${statusFilter}`;
       if (assignmentFilter !== 'all') url += `&assignment=${assignmentFilter}`;
 
+      console.log('[HomeVisit] Fetching:', url, 'subdomain:', subdomain);
+      
       const response = await fetch(url, {
         headers: { 'X-Tenant-ID': subdomain },
       });
 
+      console.log('[HomeVisit] Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('[HomeVisit] Response data:', data);
+      
       if (response.ok) {
-        const data = await response.json();
         setBookings(data.bookings || []);
         setStats(data.stats || { total: 0, assigned: 0, unassigned: 0, completed: 0 });
+      } else {
+        console.error('[HomeVisit] Failed to fetch bookings:', response.status, data);
       }
     } catch (error) {
-      console.error('Error fetching home visit bookings:', error);
+      console.error('[HomeVisit] Error fetching home visit bookings:', error);
     } finally {
       setLoading(false);
     }
