@@ -1,6 +1,6 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { BlockingDateCalendar } from '@/components/booking/BlockingDateCalendar';
 import { TimeSlot } from '@/types/booking';
 import { formatTime, groupSlotsByPeriod } from './helpers';
@@ -58,24 +58,16 @@ export function DateTimeModal({
     onStepChange('main');
   };
 
-  if (!open) return null;
-  
-  // Use portal to render above Radix Dialog
-  if (typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50"
-        onClick={() => onStepChange('main')}
-      />
-      
-      {/* Modal Content */}
-      <div 
-        className="relative z-10 w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col bg-white rounded-card shadow-lg mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onStepChange('main')}>
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogTitle className="sr-only">
+          {currentStep === 'date' ? 'Select Date' : 'Select Time'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {currentStep === 'date' ? 'Choose your preferred appointment date' : 'Available slots for the selected date'}
+        </DialogDescription>
+        
         <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
           <div>
             <h4 className="text-lg font-bold text-txt-primary">
@@ -227,8 +219,7 @@ export function DateTimeModal({
             </div>
           )}
         </div>
-      </div>
-    </div>,
-    document.body
+      </DialogContent>
+    </Dialog>
   );
 }

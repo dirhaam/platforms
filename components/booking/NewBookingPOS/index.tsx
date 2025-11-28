@@ -395,7 +395,7 @@ export function NewBookingPOS({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange} modal={currentStep === 'main'}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden [&>button]:hidden w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[95vw] bg-body rounded-lg shadow-lg border-0">
           <DialogTitle className="sr-only">New Booking</DialogTitle>
           <DialogDescription className="sr-only">Schedule service for customer</DialogDescription>

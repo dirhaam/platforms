@@ -1,6 +1,6 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { HomeVisitAddressSelector } from '@/components/location/HomeVisitAddressSelector';
 import { TravelEstimateCard } from '@/components/location/TravelEstimateCard';
 import { TravelCalculation } from '@/types/location';
@@ -38,24 +38,12 @@ export function HomeVisitModal({
   onConfirm,
   onCancel,
 }: HomeVisitModalProps) {
-  if (!open) return null;
-  
-  // Use portal to render above Radix Dialog
-  if (typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50"
-        onClick={() => onOpenChange(false)}
-      />
-      
-      {/* Modal Content */}
-      <div 
-        className="relative z-10 w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col bg-white rounded-card shadow-lg mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogTitle className="sr-only">Alamat Home Visit</DialogTitle>
+        <DialogDescription className="sr-only">Masukkan lokasi pelanggan untuk perhitungan biaya travel</DialogDescription>
+        
         <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
           <div>
             <h4 className="text-lg font-bold text-txt-primary">Alamat Home Visit</h4>
@@ -125,8 +113,7 @@ export function HomeVisitModal({
             Konfirmasi Lokasi
           </Button>
         </div>
-      </div>
-    </div>,
-    document.body
+      </DialogContent>
+    </Dialog>
   );
 }
