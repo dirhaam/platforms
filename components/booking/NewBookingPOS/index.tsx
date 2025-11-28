@@ -78,6 +78,12 @@ export function NewBookingPOS({
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [tenantId, setTenantId] = useState<string>('');
+  const [homeVisitSnapshot, setHomeVisitSnapshot] = useState<{
+    address: string;
+    lat?: number;
+    lng?: number;
+    travelCalculation?: TravelCalculation;
+  } | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -449,13 +455,27 @@ export function NewBookingPOS({
                         onHomeVisitChange={(checked) => {
                           setBooking({ ...booking, isHomeVisit: checked });
                           if (checked) {
+                            setHomeVisitSnapshot({
+                              address: booking.homeVisitAddress,
+                              lat: booking.homeVisitLat,
+                              lng: booking.homeVisitLng,
+                              travelCalculation: booking.travelCalculation
+                            });
                             setCurrentStep('homevisit');
                           }
                         }}
                         homeVisitAddress={booking.homeVisitAddress}
                         homeVisitLat={booking.homeVisitLat}
                         homeVisitLng={booking.homeVisitLng}
-                        onOpenHomeVisitModal={() => setCurrentStep('homevisit')}
+                        onOpenHomeVisitModal={() => {
+                          setHomeVisitSnapshot({
+                            address: booking.homeVisitAddress,
+                            lat: booking.homeVisitLat,
+                            lng: booking.homeVisitLng,
+                            travelCalculation: booking.travelCalculation
+                          });
+                          setCurrentStep('homevisit');
+                        }}
                       />
                     </>
                   )}
@@ -518,7 +538,7 @@ export function NewBookingPOS({
 
       {/* Modals */}
       <DateTimeModal
-        open={currentStep !== 'main'}
+        open={currentStep === 'date' || currentStep === 'time'}
         onOpenChange={(open) => {
           if (!open) {
             setCurrentStep('main');
@@ -553,6 +573,21 @@ export function NewBookingPOS({
         serviceId={booking.serviceId}
         subdomain={subdomain}
         onTravelCalculationChange={(calc) => setBooking({ ...booking, travelCalculation: calc })}
+        onCancel={() => {
+          if (homeVisitSnapshot) {
+            setBooking({
+              ...booking,
+              homeVisitAddress: homeVisitSnapshot.address,
+              homeVisitLat: homeVisitSnapshot.lat,
+              homeVisitLng: homeVisitSnapshot.lng,
+              travelCalculation: homeVisitSnapshot.travelCalculation
+            });
+          }
+          setHomeVisitSnapshot(null);
+        }}
+        onConfirm={() => {
+          setHomeVisitSnapshot(null);
+        }}
       />
     </>
   );

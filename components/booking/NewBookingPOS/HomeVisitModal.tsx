@@ -18,6 +18,8 @@ interface HomeVisitModalProps {
   serviceId: string;
   subdomain: string;
   onTravelCalculationChange: (calc: TravelCalculation) => void;
+  onConfirm?: () => void;
+  onCancel?: () => void;
 }
 
 export function HomeVisitModal({
@@ -33,6 +35,8 @@ export function HomeVisitModal({
   serviceId,
   subdomain,
   onTravelCalculationChange,
+  onConfirm,
+  onCancel,
 }: HomeVisitModalProps) {
   if (!open) return null;
   
@@ -102,13 +106,19 @@ export function HomeVisitModal({
         <div className="border-t border-gray-100 p-4 flex gap-3 justify-end bg-gray-50">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              onCancel?.();
+              onOpenChange(false);
+            }}
             className="text-txt-secondary bg-white border-gray-300"
           >
             Batal
           </Button>
           <Button
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              onConfirm?.();
+              onOpenChange(false);
+            }}
             disabled={isHomeVisit && !address}
             className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30"
           >
