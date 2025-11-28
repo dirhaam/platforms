@@ -190,7 +190,8 @@ export async function validateStaffAssignment(
   scheduledAt: Date,
   serviceDuration: number,
   travelTimeBeforeMinutes: number,
-  travelTimeAfterMinutes: number
+  travelTimeAfterMinutes: number,
+  options?: { skipServiceCheck?: boolean }
 ): Promise<ValidationResult> {
   const supabase = getSupabaseClient();
   
@@ -206,16 +207,19 @@ export async function validateStaffAssignment(
     return { valid: false, error: 'Assigned staff member not found or inactive' };
   }
 
-  // Check staff can perform this service
-  const { data: staffService } = await supabase
-    .from('staff_services')
-    .select('id, can_perform')
-    .eq('staff_id', staffId)
-    .eq('service_id', serviceId)
-    .single();
+  // Check staff can perform this service (skip if optional assignment)
+  if (!options?.skipServiceCheck) {
+    const { data: staffService } = await supabase
+      .from('staff_services')
+      .select('id, can_perform')
+      .eq('staff_id', staffId)
+      .eq('service_id', serviceId)
+      .single();
 
-  if (!staffService || !staffService.can_perform) {
-    return { valid: false, error: 'Selected staff member cannot perform this service' };
+    if (!staffService || !staffService.can_perform) {
+      // Just log warning instead of failing for optional assignments
+      console.warn(`[validateStaffAssignment] Staff ${staffId} not configured for service ${serviceId}, but allowing assignment`);
+    }
   }
 
   // Check staff availability with travel time buffer

@@ -106,6 +106,9 @@ export async function createBooking(
 
       // Validate staff assignment if staff is assigned (either manual or auto)
       if (staffIdToAssign) {
+        // Skip service check for manual assignments (staff dropdown in NewBookingPOS)
+        const isManualAssignment = data.staffId === staffIdToAssign;
+        
         const staffValidation = await validateStaffAssignment(
           tenantId,
           staffIdToAssign,
@@ -113,7 +116,8 @@ export async function createBooking(
           scheduledAt,
           service.duration,
           travelTimeBeforeMinutes,
-          travelTimeAfterMinutes
+          travelTimeAfterMinutes,
+          { skipServiceCheck: isManualAssignment }
         );
 
         if (!staffValidation.valid) {

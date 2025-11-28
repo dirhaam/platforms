@@ -134,14 +134,15 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       const issues = validation.error.issues;
       console.error('[bookings POST] Validation failed:', {
-        issues,
-        body,
+        issues: JSON.stringify(issues),
+        staffId: body.staffId,
+        staffIdType: typeof body.staffId,
         receivedFields: Object.keys(body)
       });
       return NextResponse.json({ 
         error: 'Validation failed', 
-        details: issues,
-        receivedBody: body
+        details: issues.map((i: any) => ({ path: i.path, message: i.message, code: i.code })),
+        debugInfo: { staffId: body.staffId, staffIdType: typeof body.staffId }
       }, { status: 400 });
     }
     
