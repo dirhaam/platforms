@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { DatePickerString } from '@/components/ui/date-picker';
 import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, Calendar } from 'lucide-react';
 
 interface LeaveRecord {
@@ -249,26 +250,25 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
 
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date-start">Start Date *</Label>
-                  <Input
-                    id="date-start"
-                    type="date"
+                  <Label>Tanggal Mulai *</Label>
+                  <DatePickerString
                     value={formData.dateStart}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dateStart: e.target.value })
+                    onChange={(date) =>
+                      setFormData({ ...formData, dateStart: date })
                     }
+                    placeholder="Pilih tanggal mulai"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="date-end">End Date *</Label>
-                  <Input
-                    id="date-end"
-                    type="date"
+                  <Label>Tanggal Selesai *</Label>
+                  <DatePickerString
                     value={formData.dateEnd}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dateEnd: e.target.value })
+                    onChange={(date) =>
+                      setFormData({ ...formData, dateEnd: date })
                     }
+                    placeholder="Pilih tanggal selesai"
+                    minDate={formData.dateStart ? new Date(formData.dateStart) : undefined}
                   />
                 </div>
 
