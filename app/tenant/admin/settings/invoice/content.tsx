@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import InvoiceSettings from '@/components/settings/InvoiceSettings';
 import { PermissionGate } from '@/components/tenant/permission-gate';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 
 interface TenantData {
   id: string;
@@ -65,24 +66,10 @@ function InvoiceSettingsInner() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push(`/tenant/admin/settings?subdomain=${subdomain}`)}
-          className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-[#35365f] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-[#4e4f6c] transition-colors"
-        >
-          <i className='bx bx-arrow-back text-xl text-txt-secondary dark:text-[#b2b2c4]'></i>
-        </button>
-        <div className="w-10 h-10 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
-          <i className='bx bx-receipt text-xl text-primary dark:text-[#a5a7ff]'></i>
-        </div>
-        <div>
-          <h4 className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2]">Invoice</h4>
-          <p className="text-sm text-txt-muted dark:text-[#7e7f96]">Pengaturan faktur</p>
-        </div>
-      </div>
-
-      {/* Content */}
+      <AdminPageHeader
+        title="Invoice"
+        description="Pengaturan faktur"
+      />
       {tenantId && <InvoiceSettings tenantId={tenantId} />}
     </div>
   );

@@ -7,6 +7,7 @@ import BusinessHoursGlobalSettings from '@/components/settings/BusinessHoursGlob
 import OperatingHoursSettings from '@/components/settings/OperatingHoursSettings';
 import HomeVisitSettings from '@/components/settings/HomeVisitSettings';
 import { PermissionGate } from '@/components/tenant/permission-gate';
+import { AdminPageHeader } from '@/components/tenant/AdminPageHeader';
 
 interface TenantData {
   id: string;
@@ -68,22 +69,10 @@ function CalendarSettingsInner() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push(`/tenant/admin/settings?subdomain=${subdomain}`)}
-          className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-[#35365f] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-[#4e4f6c] transition-colors"
-        >
-          <i className='bx bx-arrow-back text-xl text-txt-secondary dark:text-[#b2b2c4]'></i>
-        </button>
-        <div className="w-10 h-10 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
-          <i className='bx bx-calendar text-xl text-primary dark:text-[#a5a7ff]'></i>
-        </div>
-        <div>
-          <h4 className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2]">Kalender</h4>
-          <p className="text-sm text-txt-muted dark:text-[#7e7f96]">Jam operasional & libur</p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Kalender"
+        description="Jam operasional & libur"
+      />
 
       {/* Info Alert */}
       <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-[#25445c]/30 rounded-lg border border-blue-100 dark:border-blue-800/30">
@@ -93,7 +82,6 @@ function CalendarSettingsInner() {
         </p>
       </div>
 
-      {/* Content */}
       {tenantId && (
         <>
           <BusinessHoursGlobalSettings tenantId={tenantId} />
