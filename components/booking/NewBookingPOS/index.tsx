@@ -402,10 +402,10 @@ export function NewBookingPOS({
           
           <div className="flex flex-col h-full bg-white overflow-hidden rounded-lg">
             {/* Header */}
-            <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <div className="bg-white px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
               <div className="min-w-0">
-                <h4 className="text-xl font-bold text-txt-primary">New Booking</h4>
-                <p className="text-txt-secondary text-sm hidden sm:block">Create a new appointment</p>
+                <h4 className="text-lg sm:text-xl font-bold text-txt-primary">New Booking</h4>
+                <p className="text-txt-secondary text-xs sm:text-sm hidden sm:block">Create a new appointment</p>
               </div>
               <Button
                 variant="ghost"
@@ -417,11 +417,94 @@ export function NewBookingPOS({
               </Button>
             </div>
 
-            {/* Main Content */}
-            <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden gap-0">
+            {/* Main Content - Single scroll on mobile, split on desktop */}
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col lg:flex-row">
               
-              {/* Left Panel - Selection Inputs */}
-              <div className="flex-1 lg:flex-none lg:w-5/12 flex flex-col overflow-hidden border-r border-gray-100 bg-white">
+              {/* Mobile: Single scrollable area */}
+              <div className="flex-1 overflow-y-auto lg:hidden">
+                <div className="p-4 space-y-4">
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-txt-muted">
+                      <i className='bx bx-loader-lines bx-spin text-3xl mb-2'></i>
+                      <span className="text-sm">Loading resources...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <CustomerSelector
+                        customers={customers}
+                        selectedCustomerId={booking.customerId}
+                        onCustomerSelect={(id) => setBooking(prev => ({ ...prev, customerId: id }))}
+                        subdomain={subdomain}
+                        onCustomerCreated={(customer) => setCustomers([...customers, customer])}
+                      />
+
+                      <ServiceSelector
+                        services={services}
+                        selectedServiceId={booking.serviceId}
+                        onServiceSelect={(id) => setBooking(prev => ({ ...prev, serviceId: id }))}
+                      />
+
+                      <ScheduleSection
+                        scheduledAt={booking.scheduledAt}
+                        selectedTimeSlot={booking.selectedTimeSlot}
+                        onOpenDateTimePicker={() => setCurrentStep('date')}
+                      />
+
+                      <HomeVisitSection
+                        isHomeVisit={booking.isHomeVisit}
+                        onHomeVisitChange={(checked) => {
+                          setBooking(prev => ({ ...prev, isHomeVisit: checked }));
+                          if (checked) {
+                            setHomeVisitSnapshot({
+                              address: booking.homeVisitAddress,
+                              lat: booking.homeVisitLat,
+                              lng: booking.homeVisitLng,
+                              travelCalculation: booking.travelCalculation
+                            });
+                            setCurrentStep('homevisit');
+                          }
+                        }}
+                        homeVisitAddress={booking.homeVisitAddress}
+                        homeVisitLat={booking.homeVisitLat}
+                        homeVisitLng={booking.homeVisitLng}
+                        onOpenHomeVisitModal={() => {
+                          setHomeVisitSnapshot({
+                            address: booking.homeVisitAddress,
+                            lat: booking.homeVisitLat,
+                            lng: booking.homeVisitLng,
+                            travelCalculation: booking.travelCalculation
+                          });
+                          setCurrentStep('homevisit');
+                        }}
+                      />
+
+                      <div className="border-t border-gray-100 pt-4 mt-4">
+                        <OrderSummary
+                          selectedService={selectedService}
+                          booking={booking}
+                          invoiceSettings={invoiceSettings}
+                        />
+                      </div>
+
+                      <PaymentMethodSection
+                        paymentMethod={booking.paymentMethod}
+                        dpAmount={booking.dpAmount}
+                        onPaymentMethodChange={(method) => setBooking(prev => ({ ...prev, paymentMethod: method }))}
+                        onDpAmountChange={(amount) => setBooking(prev => ({ ...prev, dpAmount: amount }))}
+                      />
+
+                      <NotesSection
+                        notes={booking.notes}
+                        onNotesChange={(notes) => setBooking(prev => ({ ...prev, notes }))}
+                        error={error}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Desktop: Left Panel - Selection Inputs */}
+              <div className="hidden lg:flex lg:w-5/12 flex-col overflow-hidden border-r border-gray-100 bg-white">
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center h-full text-txt-muted">
@@ -482,8 +565,8 @@ export function NewBookingPOS({
                 </div>
               </div>
 
-              {/* Right Panel - Summary & Actions */}
-              <div className="flex-1 lg:flex-none lg:w-7/12 flex flex-col overflow-hidden bg-body">
+              {/* Desktop: Right Panel - Summary & Actions */}
+              <div className="hidden lg:flex lg:w-7/12 flex-col overflow-hidden bg-body">
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                   <OrderSummary
                     selectedService={selectedService}
@@ -504,33 +587,33 @@ export function NewBookingPOS({
                     error={error}
                   />
                 </div>
-
-                {/* Footer Actions */}
-                <div className="bg-white border-t border-gray-100 p-4 flex gap-3 justify-end shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] z-10">
-                  <Button
-                    variant="outline"
-                    onClick={() => onOpenChange(false)}
-                    disabled={submitting}
-                    className="text-txt-secondary border-gray-300 hover:bg-gray-50 hover:text-txt-primary"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSubmit(e as any);
-                    }}
-                    disabled={submitting || !booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.selectedTimeSlot}
-                    className="bg-primary hover:bg-primary-dark text-white font-semibold shadow-lg shadow-primary/30 min-w-[150px]"
-                  >
-                    {submitting ? (
-                      <><i className='bx bx-loader-lines bx-spin mr-2'></i> Processing</>
-                    ) : (
-                      <><i className='bx bx-check mr-2'></i> Create Booking</>
-                    )}
-                  </Button>
-                </div>
               </div>
+            </div>
+
+            {/* Footer Actions - Always visible at bottom */}
+            <div className="bg-white border-t border-gray-100 p-3 sm:p-4 flex gap-2 sm:gap-3 justify-end shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] z-10 flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={submitting}
+                className="text-txt-secondary border-gray-300 hover:bg-gray-50 hover:text-txt-primary text-sm sm:text-base"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }}
+                disabled={submitting || !booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.selectedTimeSlot}
+                className="bg-primary hover:bg-primary-dark text-white font-semibold shadow-lg shadow-primary/30 min-w-[120px] sm:min-w-[150px] text-sm sm:text-base"
+              >
+                {submitting ? (
+                  <><i className='bx bx-loader-lines bx-spin mr-2'></i> Processing</>
+                ) : (
+                  <><i className='bx bx-check mr-2'></i> Create Booking</>
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>
