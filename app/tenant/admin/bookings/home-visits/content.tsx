@@ -71,12 +71,9 @@ export default function HomeVisitAssignmentContent() {
     setLoading(true);
     try {
       // Use regular bookings API and filter on frontend
-      let url = `/api/bookings?startDate=${dateFilter}&endDate=${dateFilter}`;
-      if (statusFilter === 'active') {
-        url += `&status=pending`;
-      } else if (statusFilter !== 'all') {
-        url += `&status=${statusFilter}`;
-      }
+      // Don't filter by date initially to see all data
+      let url = `/api/bookings?limit=100`;
+      // Skip status filter for now to debug
 
       console.log('[HomeVisit] Fetching:', url, 'subdomain:', subdomain);
       
@@ -90,8 +87,13 @@ export default function HomeVisitAssignmentContent() {
       console.log('[HomeVisit] Response data:', data);
       
       if (response.ok) {
+        const allBookings = data.bookings || [];
+        console.log('[HomeVisit] Total bookings:', allBookings.length);
+        console.log('[HomeVisit] Sample booking:', allBookings[0]);
+        console.log('[HomeVisit] Home visit bookings:', allBookings.filter((b: any) => b.isHomeVisit).length);
+        
         // Filter home visit bookings on frontend
-        let homeVisitBookings = (data.bookings || [])
+        let homeVisitBookings = allBookings
           .filter((b: any) => b.isHomeVisit)
           .map((b: any) => ({
             id: b.id,
