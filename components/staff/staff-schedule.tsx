@@ -53,44 +53,88 @@ export function StaffSchedule({ staffId, tenantId, staffName }: Props) {
   });
   const [activeTab, setActiveTab] = useState<'schedule' | 'homevisit'>('schedule');
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
+
   useEffect(() => {
-    fetchSchedule();
-  }, [staffId, tenantId]);
+    if (!staffId || !tenantId) return;
+    
+    let isMounted = true;
+    const controller = new AbortController();
+    
+    const fetchSchedule = async () => {
+      try {
+        setFetchError(null);
+        const response = await fetch(`/api/staff/${staffId}/schedule`, {
+          headers: { 'X-Tenant-ID': tenantId },
+          signal: controller.signal,
+        });
+        
+        if (!response.ok) {
+          if (response.status === 503 && retryCount < MAX_RETRIES) {
+            // Retry after delay for 503 errors
+            setTimeout(() => {
+              if (isMounted) setRetryCount(prev => prev + 1);
+            }, 1000 * (retryCount + 1));
+            return;
+          }
+          throw new Error(`Failed to fetch schedule (${response.status})`);
+        }
+        
+        const data = await response.json();
 
-  const fetchSchedule = async () => {
-    try {
-      const response = await fetch(`/api/staff/${staffId}/schedule`, {
-        headers: { 'X-Tenant-ID': tenantId },
-      });
-      if (!response.ok) throw new Error('Failed to fetch schedule');
-      const data = await response.json();
+        if (!isMounted) return;
 
-      // Initialize all days
-      const scheduleMap: Record<number, ScheduleItem> = {};
-      DAYS.forEach((day) => {
-        const existing = data.schedule?.find(
-          (s: ScheduleItem) => s.dayOfWeek === day.value
-        );
-        scheduleMap[day.value] = existing || {
-          dayOfWeek: day.value,
-          dayName: day.label,
-          startTime: '08:00',
-          endTime: '17:00',
-          isAvailable: day.value !== 0, // Default: Sunday off
-        };
-      });
-      setSchedule(scheduleMap);
+        // Initialize all days
+        const scheduleMap: Record<number, ScheduleItem> = {};
+        DAYS.forEach((day) => {
+          const existing = data.schedule?.find(
+            (s: ScheduleItem) => s.dayOfWeek === day.value
+          );
+          scheduleMap[day.value] = existing || {
+            dayOfWeek: day.value,
+            dayName: day.label,
+            startTime: '08:00',
+            endTime: '17:00',
+            isAvailable: day.value !== 0, // Default: Sunday off
+          };
+        });
+        setSchedule(scheduleMap);
 
-      // Load home visit config if exists
-      if (data.homeVisitConfig) {
-        setHomeVisitConfig(data.homeVisitConfig);
+        // Load home visit config if exists
+        if (data.homeVisitConfig) {
+          setHomeVisitConfig(data.homeVisitConfig);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        if (err instanceof Error && err.name === 'AbortError') return;
+        console.error('Error fetching schedule:', err);
+        setFetchError(err instanceof Error ? err.message : 'Gagal memuat jadwal');
+        // Initialize default schedule on error
+        const defaultSchedule: Record<number, ScheduleItem> = {};
+        DAYS.forEach((day) => {
+          defaultSchedule[day.value] = {
+            dayOfWeek: day.value,
+            dayName: day.label,
+            startTime: '08:00',
+            endTime: '17:00',
+            isAvailable: day.value !== 0,
+          };
+        });
+        setSchedule(defaultSchedule);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (err) {
-      console.error('Error fetching schedule:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchSchedule();
+    
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [staffId, tenantId, retryCount]);
 
   const handleSaveDay = async (dayOfWeek: number) => {
     const item = schedule[dayOfWeek];

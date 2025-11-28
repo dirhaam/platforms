@@ -51,12 +51,61 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
     notes: '',
   });
 
-  useEffect(() => {
-    fetchLeaves();
-  }, [staffId, tenantId]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
 
-  const fetchLeaves = async () => {
+  useEffect(() => {
+    if (!staffId || !tenantId) return;
+    
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchLeaves = async () => {
+      try {
+        setFetchError(null);
+        const response = await fetch(`/api/staff/${staffId}/leave`, {
+          headers: { 'X-Tenant-ID': tenantId },
+          signal: controller.signal,
+        });
+        
+        if (!response.ok) {
+          if (response.status === 503 && retryCount < MAX_RETRIES) {
+            // Retry after delay for 503 errors
+            setTimeout(() => {
+              if (isMounted) setRetryCount(prev => prev + 1);
+            }, 1000 * (retryCount + 1));
+            return;
+          }
+          throw new Error(`Failed to fetch leaves (${response.status})`);
+        }
+        
+        const data = await response.json();
+        if (isMounted) {
+          setLeaves(data.leave || []);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        if (err instanceof Error && err.name === 'AbortError') return;
+        console.error('Error fetching leaves:', err);
+        setFetchError(err instanceof Error ? err.message : 'Gagal memuat data cuti');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchLeaves();
+    
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [staffId, tenantId, retryCount]);
+
+  const refetchLeaves = async () => {
     try {
+      setLoading(true);
+      setFetchError(null);
       const response = await fetch(`/api/staff/${staffId}/leave`, {
         headers: { 'X-Tenant-ID': tenantId },
       });
@@ -65,6 +114,7 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
       setLeaves(data.leave || []);
     } catch (err) {
       console.error('Error fetching leaves:', err);
+      setFetchError(err instanceof Error ? err.message : 'Gagal memuat data cuti');
     } finally {
       setLoading(false);
     }
@@ -81,16 +131,30 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
     setSuccess(false);
 
     try {
+      const requestBody = {
+        dateStart: formData.dateStart,
+        dateEnd: formData.dateEnd,
+        reason: formData.reason,
+        isPaid: formData.isPaid,
+        notes: formData.notes || undefined,
+      };
+      
+      console.log('[StaffLeave] Creating leave:', { staffId, tenantId, requestBody });
+      
       const response = await fetch(`/api/staff/${staffId}/leave`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': tenantId,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) throw new Error('Failed to create leave record');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[StaffLeave] POST error:', response.status, errorData);
+        throw new Error(errorData.error || `Failed to create leave record (${response.status})`);
+      }
 
       setSuccess(true);
       setOpenDialog(false);
@@ -101,7 +165,7 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
         isPaid: true,
         notes: '',
       });
-      fetchLeaves();
+      refetchLeaves();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -127,7 +191,7 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
 
       if (!response.ok) throw new Error('Failed to delete leave record');
 
-      fetchLeaves();
+      refetchLeaves();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -269,6 +333,18 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {fetchError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>{fetchError}</span>
+              <Button variant="ghost" size="sm" onClick={refetchLeaves}>
+                Coba lagi
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {success && (
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -278,7 +354,7 @@ export function StaffLeave({ staffId, tenantId, staffName }: Props) {
           </Alert>
         )}
 
-        {leaves.length === 0 ? (
+        {leaves.length === 0 && !fetchError ? (
           <p className="text-sm text-gray-500 py-4">
             No leave records. Click "Add Leave" to create one.
           </p>
