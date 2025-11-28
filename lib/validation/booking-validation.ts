@@ -5,6 +5,7 @@ import { BookingStatus, PaymentStatus } from '@/types/booking';
 export const createBookingSchema = z.object({
   customerId: z.string().min(1, 'Customer ID is required'),
   serviceId: z.string().min(1, 'Service ID is required'),
+  staffId: z.string().uuid().optional(),
   scheduledAt: z.string().datetime('Invalid date format'),
   isHomeVisit: z.boolean().optional().default(false),
   homeVisitAddress: z.string().optional(),

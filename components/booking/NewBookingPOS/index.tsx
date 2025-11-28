@@ -23,6 +23,7 @@ import { PaymentMethodSection } from './PaymentMethodSection';
 import { NotesSection } from './NotesSection';
 import { DateTimeModal } from './DateTimeModal';
 import { HomeVisitModal } from './HomeVisitModal';
+import { StaffSelector } from './StaffSelector';
 
 interface NewBookingDialogProps {
   open: boolean;
@@ -31,9 +32,18 @@ interface NewBookingDialogProps {
   onBookingCreated?: () => void;
 }
 
+interface Staff {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+}
+
 interface NewBooking {
   customerId: string;
   serviceId: string;
+  staffId: string;
   scheduledAt: string;
   scheduledTime: string;
   selectedTimeSlot?: TimeSlot;
@@ -56,6 +66,7 @@ export function NewBookingPOS({
   const [booking, setBooking] = useState<NewBooking>({
     customerId: '',
     serviceId: '',
+    staffId: '',
     scheduledAt: '',
     scheduledTime: '',
     selectedTimeSlot: undefined,
@@ -68,6 +79,7 @@ export function NewBookingPOS({
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettingsData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,12 +146,13 @@ export function NewBookingPOS({
     }
 
     try {
-      const [customersRes, servicesRes, settingsRes, blockedDatesRes, tenantRes] = await Promise.all([
+      const [customersRes, servicesRes, settingsRes, blockedDatesRes, tenantRes, staffRes] = await Promise.all([
         fetch('/api/customers?limit=50', { headers: { 'x-tenant-id': subdomain } }),
         fetch('/api/services?limit=50', { headers: { 'x-tenant-id': subdomain } }),
         fetch(`/api/settings/invoice-config?tenantId=${subdomain}`, { headers: { 'x-tenant-id': subdomain } }),
         fetch(`/api/bookings/blocked-dates?tenantId=${subdomain}`),
-        fetch(`/api/tenants/${subdomain}`)
+        fetch(`/api/tenants/${subdomain}`),
+        fetch('/api/admin/staff', { headers: { 'x-tenant-id': subdomain } })
       ]);
 
       if (customersRes.ok) {
@@ -196,6 +209,11 @@ export function NewBookingPOS({
         const data = await tenantRes.json();
         setTenantId(data.id || subdomain);
       }
+
+      if (staffRes.ok) {
+        const data = await staffRes.json();
+        setStaff(data.staff || []);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
       // Try to load from cache on network error
@@ -246,6 +264,10 @@ export function NewBookingPOS({
       };
 
       // Only add optional fields if they have values
+      if (booking.staffId) {
+        requestBody.staffId = booking.staffId;
+      }
+
       if (booking.notes) {
         requestBody.notes = booking.notes;
       }
@@ -335,6 +357,7 @@ export function NewBookingPOS({
     setBooking({
       customerId: '',
       serviceId: '',
+      staffId: '',
       scheduledAt: '',
       scheduledTime: '',
       selectedTimeSlot: undefined,
@@ -478,6 +501,13 @@ export function NewBookingPOS({
                         }}
                       />
 
+                      <StaffSelector
+                        staff={staff}
+                        selectedStaffId={booking.staffId}
+                        onSelect={(staffId) => setBooking(prev => ({ ...prev, staffId }))}
+                        loading={loading}
+                      />
+
                       <div className="border-t border-gray-100 pt-4 mt-4">
                         <OrderSummary
                           selectedService={selectedService}
@@ -559,6 +589,13 @@ export function NewBookingPOS({
                           });
                           setCurrentStep('homevisit');
                         }}
+                      />
+
+                      <StaffSelector
+                        staff={staff}
+                        selectedStaffId={booking.staffId}
+                        onSelect={(staffId) => setBooking(prev => ({ ...prev, staffId }))}
+                        loading={loading}
                       />
                     </>
                   )}
