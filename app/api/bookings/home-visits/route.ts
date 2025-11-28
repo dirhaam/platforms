@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
     }
 
-    // Build query
+    // Build query - use left join for staff since it may be null
     let query = supabase
       .from('bookings')
       .select(`
@@ -52,8 +52,7 @@ export async function GET(request: NextRequest) {
         staff_id,
         created_at,
         customers!bookings_customer_id_fkey(id, name, phone, email),
-        services!bookings_service_id_fkey(id, name, duration),
-        staff(id, name, email)
+        services!bookings_service_id_fkey(id, name, duration)
       `)
       .eq('tenant_id', tenant.id)
       .eq('is_home_visit', true)
@@ -87,6 +86,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
     }
 
+    // Get staff names for bookings that have staff_id
+    const staffIds = [...new Set((data || []).filter((b: any) => b.staff_id).map((b: any) => b.staff_id))];
+    let staffMap: Record<string, string> = {};
+    
+    if (staffIds.length > 0) {
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id, name')
+        .in('id', staffIds);
+      
+      if (staffData) {
+        staffMap = Object.fromEntries(staffData.map((s: any) => [s.id, s.name]));
+      }
+    }
+
     // Transform and filter by assignment
     let bookings = (data || []).map((booking: any) => ({
       id: booking.id,
@@ -97,7 +111,7 @@ export async function GET(request: NextRequest) {
       homeVisitLatitude: booking.home_visit_latitude,
       homeVisitLongitude: booking.home_visit_longitude,
       staffId: booking.staff_id,
-      staffName: booking.staff?.name || null,
+      staffName: booking.staff_id ? (staffMap[booking.staff_id] || null) : null,
       createdAt: booking.created_at,
       customerId: booking.customers?.id,
       customerName: booking.customers?.name || 'Unknown',
