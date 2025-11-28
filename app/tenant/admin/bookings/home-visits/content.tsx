@@ -38,9 +38,6 @@ interface Stats {
 export default function HomeVisitAssignmentContent() {
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain') || '';
-  
-  // Debug log
-  console.log('[HomeVisit] subdomain:', subdomain);
 
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<HomeVisitBooking[]>([]);
@@ -70,29 +67,19 @@ export default function HomeVisitAssignmentContent() {
     
     setLoading(true);
     try {
-      // Use regular bookings API and filter on frontend
-      // Don't filter by date initially to see all data
-      let url = `/api/bookings?limit=100`;
-      // Skip status filter for now to debug
-
-      console.log('[HomeVisit] Fetching:', url, 'subdomain:', subdomain);
+      // Fetch all bookings and filter on frontend
+      const url = `/api/bookings?limit=200`;
       
       const response = await fetch(url, {
         headers: { 'x-tenant-id': subdomain },
       });
-
-      console.log('[HomeVisit] Response status:', response.status);
       
       const data = await response.json();
-      console.log('[HomeVisit] Response data:', data);
       
       if (response.ok) {
         const allBookings = data.bookings || [];
-        console.log('[HomeVisit] Total bookings:', allBookings.length);
-        console.log('[HomeVisit] Sample booking:', allBookings[0]);
-        console.log('[HomeVisit] Home visit bookings:', allBookings.filter((b: any) => b.isHomeVisit).length);
         
-        // Filter home visit bookings on frontend
+        // Filter home visit bookings
         let homeVisitBookings = allBookings
           .filter((b: any) => b.isHomeVisit)
           .map((b: any) => ({
@@ -112,6 +99,23 @@ export default function HomeVisitAssignmentContent() {
             createdAt: b.createdAt,
           }));
 
+        // Filter by date on frontend
+        if (dateFilter) {
+          homeVisitBookings = homeVisitBookings.filter((b: any) => {
+            const bookingDate = b.scheduledAt.split('T')[0];
+            return bookingDate === dateFilter;
+          });
+        }
+
+        // Filter by status on frontend
+        if (statusFilter === 'active') {
+          homeVisitBookings = homeVisitBookings.filter((b: any) => 
+            b.status === 'pending' || b.status === 'confirmed'
+          );
+        } else if (statusFilter !== 'all') {
+          homeVisitBookings = homeVisitBookings.filter((b: any) => b.status === statusFilter);
+        }
+
         // Filter by assignment
         if (assignmentFilter === 'assigned') {
           homeVisitBookings = homeVisitBookings.filter((b: any) => b.staffId);
@@ -126,8 +130,6 @@ export default function HomeVisitAssignmentContent() {
           unassigned: homeVisitBookings.filter((b: any) => !b.staffId).length,
           completed: homeVisitBookings.filter((b: any) => b.status === 'completed').length,
         });
-      } else {
-        console.error('[HomeVisit] Failed to fetch bookings:', response.status, data);
       }
     } catch (error) {
       console.error('[HomeVisit] Error fetching home visit bookings:', error);
