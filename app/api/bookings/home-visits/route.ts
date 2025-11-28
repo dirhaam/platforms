@@ -2,35 +2,23 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
-const getSupabaseClient = () => {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-};
+import { getTenantFromRequest } from '@/lib/auth/tenant-auth';
 
 // GET /api/bookings/home-visits - Get all home visit bookings for a tenant
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    const tenantId = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-ID');
-    const searchParams = request.nextUrl.searchParams;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
     
+    const searchParams = request.nextUrl.searchParams;
     const date = searchParams.get('date');
     const status = searchParams.get('status');
     const assignment = searchParams.get('assignment');
 
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 });
-    }
-
-    // Get tenant ID from subdomain
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('id')
-      .eq('subdomain', tenantId.toLowerCase())
-      .single();
+    // Get tenant using helper
+    const tenant = await getTenantFromRequest(request);
 
     if (!tenant) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
