@@ -6,7 +6,7 @@ export const createBookingSchema = z.object({
   customerId: z.string().min(1, 'Customer ID is required'),
   serviceId: z.string().min(1, 'Service ID is required'),
   staffId: z.string().uuid().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
-  scheduledAt: z.string().datetime('Invalid date format'),
+  scheduledAt: z.string().min(1, 'Scheduled time is required'),
   isHomeVisit: z.boolean().optional().default(false),
   homeVisitAddress: z.string().optional(),
   homeVisitCoordinates: z.object({
