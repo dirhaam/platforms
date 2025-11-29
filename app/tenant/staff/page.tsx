@@ -72,21 +72,17 @@ export default function StaffDashboard() {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      let url = '/api/staff/my-bookings?';
+      let url = '/api/staff/my-bookings?all=true&';
       
       if (viewMode === 'today') {
         const today = new Date().toISOString().split('T')[0];
         url += `date=${today}`;
       } else {
-        // Last 7 days for admin
+        // Last 7 days
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 7);
         url += `startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`;
-      }
-
-      if (isAdmin) {
-        url += '&all=true';
       }
 
       const response = await fetch(url, {
