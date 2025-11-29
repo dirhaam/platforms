@@ -55,11 +55,14 @@ export function DateTimeModal({
 
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     onTimeSlotSelect(slot);
-    onStepChange('main');
+    // Don't auto close/navigate back to main. Let user click confirm or see selection.
+    // onStepChange('main'); 
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onStepChange('main')}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+       if (!isOpen) onStepChange('main');
+    }}>
       <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
         <DialogTitle className="sr-only">
           {currentStep === 'date' ? 'Select Date' : 'Select Time'}
@@ -200,7 +203,7 @@ export function DateTimeModal({
                 </div>
               )}
 
-              <div className="flex gap-3 justify-between pt-6 border-t border-gray-100 mt-4">
+              <div className="flex gap-3 justify-between pt-6 border-t border-gray-100 mt-4 sticky bottom-0 bg-white">
                 <Button
                   variant="outline"
                   onClick={() => onStepChange('date')}
@@ -209,11 +212,11 @@ export function DateTimeModal({
                   <i className='bx bx-arrow-left mr-1'></i> Back to Date
                 </Button>
                 <Button
-                  variant="ghost"
                   onClick={() => onStepChange('main')}
-                  className="text-txt-muted"
+                  disabled={!selectedTimeSlot}
+                  className="bg-primary text-white hover:bg-primary-dark"
                 >
-                  Batal
+                  Confirm Time
                 </Button>
               </div>
             </div>

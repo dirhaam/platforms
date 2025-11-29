@@ -39,7 +39,13 @@ export function HomeVisitModal({
   onCancel,
 }: HomeVisitModalProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      // Prevent closing if not intended (e.g., clicking outside is fine, but we handle logic manually)
+      if (!isOpen) {
+        onCancel?.();
+        onOpenChange(false);
+      }
+    }}>
       <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
         <DialogTitle className="sr-only">Alamat Home Visit</DialogTitle>
         <DialogDescription className="sr-only">Masukkan lokasi pelanggan untuk perhitungan biaya travel</DialogDescription>

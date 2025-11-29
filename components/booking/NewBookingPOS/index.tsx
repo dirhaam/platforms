@@ -423,12 +423,12 @@ export function NewBookingPOS({
               </Button>
             </div>
 
-            {/* Main Content - Single scroll on mobile, split on desktop */}
+            {/* Main Content - Single scroll on mobile/tablet, split on desktop */}
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col lg:flex-row">
               
-              {/* Mobile: Single scrollable area */}
+              {/* Mobile/Tablet: Single scrollable area - Visible up to lg breakpoint */}
               <div className="flex-1 overflow-y-auto lg:hidden">
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-4 pb-24"> {/* Added extra padding bottom for safe scrolling above footer */}
                   {loading ? (
                     <div className="flex flex-col items-center justify-center py-12 text-txt-muted">
                       <i className='bx bx-loader-lines bx-spin text-3xl mb-2'></i>
@@ -596,13 +596,13 @@ export function NewBookingPOS({
               </div>
             </div>
 
-            {/* Footer Actions - Always visible at bottom */}
-            <div className="bg-white border-t border-gray-100 p-3 sm:p-4 flex gap-2 sm:gap-3 justify-end shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] z-10 flex-shrink-0">
+            {/* Footer Actions - Sticky bottom on mobile/tablet, normal flex on desktop */}
+            <div className="bg-white border-t border-gray-100 p-3 sm:p-4 flex gap-2 sm:gap-3 justify-end shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] z-10 flex-shrink-0 fixed bottom-0 left-0 right-0 lg:static w-full lg:w-auto">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={submitting}
-                className="text-txt-secondary border-gray-300 hover:bg-gray-50 hover:text-txt-primary text-sm sm:text-base"
+                className="text-txt-secondary border-gray-300 hover:bg-gray-50 hover:text-txt-primary text-sm sm:text-base flex-1 sm:flex-none"
               >
                 Cancel
               </Button>
@@ -612,7 +612,7 @@ export function NewBookingPOS({
                   handleSubmit(e as any);
                 }}
                 disabled={submitting || !booking.customerId || !booking.serviceId || !booking.scheduledAt || !booking.selectedTimeSlot}
-                className="bg-primary hover:bg-primary-dark text-white font-semibold shadow-lg shadow-primary/30 min-w-[120px] sm:min-w-[150px] text-sm sm:text-base"
+                className="bg-primary hover:bg-primary-dark text-white font-semibold shadow-lg shadow-primary/30 min-w-[120px] sm:min-w-[150px] text-sm sm:text-base flex-1 sm:flex-none"
               >
                 {submitting ? (
                   <><i className='bx bx-loader-lines bx-spin mr-2'></i> Processing</>
