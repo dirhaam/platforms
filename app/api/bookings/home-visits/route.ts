@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Build and execute query
     let query = supabase
       .from('bookings')
-      .select('id, scheduled_at, duration, status, notes, is_home_visit, home_visit_address, home_visit_latitude, home_visit_longitude, staff_id, created_at, customer_id, service_id')
+      .select('id, scheduled_at, duration, status, notes, is_home_visit, home_visit_address, home_visit_coordinates, staff_id, created_at, customer_id, service_id')
       .eq('tenant_id', tenant.id)
       .eq('is_home_visit', true)
       .order('scheduled_at', { ascending: true })
@@ -79,8 +79,8 @@ export async function GET(request: NextRequest) {
       status: b.status,
       notes: b.notes,
       homeVisitAddress: b.home_visit_address,
-      homeVisitLatitude: b.home_visit_latitude,
-      homeVisitLongitude: b.home_visit_longitude,
+      homeVisitLatitude: b.home_visit_coordinates?.lat,
+      homeVisitLongitude: b.home_visit_coordinates?.lng,
       staffId: b.staff_id,
       staffName: null,
       createdAt: b.created_at,
