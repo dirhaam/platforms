@@ -109,9 +109,14 @@ export function HomeVisitModal({
             Batal
           </Button>
           <Button
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               onConfirm?.();
-              onOpenChange(false);
+              // Defer state update to prevent click propagation to parent dialog
+              requestAnimationFrame(() => {
+                onOpenChange(false);
+              });
             }}
             disabled={isHomeVisit && !address}
             className="bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/30"

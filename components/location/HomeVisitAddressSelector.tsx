@@ -152,8 +152,19 @@ export function HomeVisitAddressSelector({
                   e.stopPropagation();
                   handleSuggestionSelect(s);
                 }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSuggestionSelect(s);
+                }}
               >
                 <i className='bx bx-map-pin text-primary mr-2'></i>
                 {s.label}

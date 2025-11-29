@@ -212,7 +212,14 @@ export function DateTimeModal({
                   <i className='bx bx-arrow-left mr-1'></i> Back to Date
                 </Button>
                 <Button
-                  onClick={() => onStepChange('main')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Defer state update to prevent click propagation to parent dialog
+                    requestAnimationFrame(() => {
+                        onStepChange('main');
+                    });
+                  }}
                   disabled={!selectedTimeSlot}
                   className="bg-primary text-white hover:bg-primary-dark"
                 >
