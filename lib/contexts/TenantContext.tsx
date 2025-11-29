@@ -98,6 +98,18 @@ export function TenantProvider({ children, subdomain }: TenantProviderProps) {
     // Load from IndexedDB cache
     const loadFromCache = useCallback(async () => {
         try {
+            // Load session from storage first to ensure sidebar works offline
+            const storedSession = localStorage.getItem('last_user_session');
+            if (storedSession) {
+                try {
+                    const parsedSession = JSON.parse(storedSession);
+                    setUser(parsedSession);
+                    // Don't set userLoading to false yet, wait for potential API update if online
+                } catch (e) {
+                    console.error('[TenantContext] Failed to parse stored session', e);
+                }
+            }
+
             const [cachedServices, cachedCustomers, cachedStaff] = await Promise.all([
                 getByIndex<CachedData>('cachedData', 'type', 'services'),
                 getByIndex<CachedData>('cachedData', 'type', 'customers'),
@@ -286,15 +298,25 @@ export function TenantProvider({ children, subdomain }: TenantProviderProps) {
                 if (response.ok) {
                     const data = await response.json();
                     const session = data.session || data;
-                    setUser({
+                    const userSession = {
                         name: session.name || 'User',
                         email: session.email || '',
                         role: session.role || null,
                         userId: session.userId,
-                    });
+                    };
+                    setUser(userSession);
+                    // Persist session for offline use
+                    localStorage.setItem('last_user_session', JSON.stringify(userSession));
                 }
             } catch (error) {
                 console.error('Failed to fetch session:', error);
+                // If offline and we haven't loaded from storage yet (redundant check but safe)
+                if (!navigator.onLine) {
+                    const storedSession = localStorage.getItem('last_user_session');
+                    if (storedSession) {
+                        setUser(JSON.parse(storedSession));
+                    }
+                }
             } finally {
                 setUserLoading(false);
             }
