@@ -324,8 +324,8 @@ export function BookingViewsTabs({
                         className="p-4 hover:bg-gray-50 dark:hover:bg-[#232333] transition-colors cursor-pointer"
                         onClick={() => onBookingClick(booking)}
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 w-full sm:w-auto">
                             {/* Time */}
                             <div className="flex-shrink-0 w-16 text-center">
                               <p className="text-lg font-bold text-primary dark:text-[#a5a7ff]">
@@ -375,7 +375,7 @@ export function BookingViewsTabs({
                           </div>
 
                           {/* Status & Actions */}
-                          <div className="flex flex-col items-end gap-2">
+                          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto gap-2 mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 dark:border-[#4e4f6c]">
                             {getStatusBadge(booking.status)}
                             {booking.isHomeVisit && (
                               <button
