@@ -228,33 +228,33 @@ export function BookingViewsTabs({
           {/* Controls & New Booking Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#2b2c40] p-4 rounded-lg border border-gray-100 dark:border-[#4e4f6c]">
             <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
-              <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-[#4e4f6c] w-full sm:w-auto">
+              <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-full sm:w-auto">
                 <button
                   onClick={() => setListViewMode('today')}
-                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium rounded-md transition-all ${
                     listViewMode === 'today'
-                      ? 'bg-primary text-white'
-                      : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4]'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700/50'
                   }`}
                 >
                   Hari Ini
                 </button>
                 <button
                   onClick={() => setListViewMode('week')}
-                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium rounded-md transition-all ${
                     listViewMode === 'week'
-                      ? 'bg-primary text-white'
-                      : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4]'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700/50'
                   }`}
                 >
                   7 Hari
                 </button>
                 <button
                   onClick={() => setListViewMode('all')}
-                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium rounded-md transition-all ${
                     listViewMode === 'all'
-                      ? 'bg-primary text-white'
-                      : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4]'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700/50'
                   }`}
                 >
                   Semua
