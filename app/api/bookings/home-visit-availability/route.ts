@@ -4,12 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * HOME VISIT AVAILABILITY - SIMPLIFIED
+ * HOME VISIT AVAILABILITY - Uses Business Hours from Calendar Settings
  * 
  * Logic:
- * 1. Get service config (daily_home_visit_quota, home_visit_time_slots)
- * 2. Count existing home visit bookings for that date
- * 3. Return available slots (no staff availability check)
+ * 1. Get business hours from calendar settings
+ * 2. Get service duration and home visit config
+ * 3. Generate time slots based on business hours
+ * 4. Check existing bookings and return available slots
  */
 
 const getSupabaseClient = () => {
@@ -30,6 +31,37 @@ async function resolveTenantId(tenantIdentifier: string, supabase: any): Promise
     .single();
   
   return tenant?.id || null;
+}
+
+// Get day key from date
+function getDayKey(date: Date): string {
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return days[date.getDay()];
+}
+
+// Generate time slots based on business hours
+function generateTimeSlots(
+  openTime: string, 
+  closeTime: string, 
+  serviceDuration: number,
+  slotInterval: number = 30 // Default 30 min intervals
+): string[] {
+  const slots: string[] = [];
+  
+  const [openHour, openMin] = openTime.split(':').map(Number);
+  const [closeHour, closeMin] = closeTime.split(':').map(Number);
+  
+  let currentMinutes = openHour * 60 + openMin;
+  const endMinutes = closeHour * 60 + closeMin - serviceDuration; // Leave room for service duration
+  
+  while (currentMinutes <= endMinutes) {
+    const hours = Math.floor(currentMinutes / 60);
+    const mins = currentMinutes % 60;
+    slots.push(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`);
+    currentMinutes += slotInterval;
+  }
+  
+  return slots;
 }
 
 // GET /api/bookings/home-visit-availability
@@ -92,7 +124,6 @@ export async function GET(request: NextRequest) {
     const globalConfig = tenant?.home_visit_config || {
       enabled: true,
       dailyQuota: 3,
-      timeSlots: ['09:00', '13:00', '16:00'],
     };
 
     // Check if home visit is enabled globally
@@ -104,12 +135,44 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Use global settings (priority) or fallback to service settings
-    const dailyQuota = globalConfig.dailyQuota || service.daily_home_visit_quota || 3;
-    const timeSlots: string[] = globalConfig.timeSlots || service.home_visit_time_slots || ['09:00', '13:00', '16:00'];
-    const serviceDuration = service.duration || 60;
+    // 3. Get business hours from calendar settings
+    const { data: businessHoursRecord } = await supabase
+      .from('businessHours')
+      .select('schedule, timezone')
+      .eq('tenantId', resolvedTenantId)
+      .single();
 
-    // 3. Check blocked dates
+    // Parse the date to get day of week
+    const [year, month, day] = date.split('-').map(Number);
+    const requestDate = new Date(year, month - 1, day);
+    const dayKey = getDayKey(requestDate);
+
+    // Get business hours for this day
+    const schedule = businessHoursRecord?.schedule || {};
+    const dayHours = schedule[dayKey] || schedule[dayKey.charAt(0).toUpperCase() + dayKey.slice(1)] || {
+      isOpen: true,
+      openTime: '08:00',
+      closeTime: '17:00'
+    };
+
+    // Check if business is open on this day
+    if (!dayHours.isOpen) {
+      return NextResponse.json({
+        date,
+        slots: [],
+        isClosed: true,
+        message: `Tidak beroperasi pada hari ${dayKey}`
+      });
+    }
+
+    const dailyQuota = globalConfig.dailyQuota || service.daily_home_visit_quota || 3;
+    const serviceDuration = service.duration || 60;
+    const slotInterval = service.slot_duration_minutes || 30;
+    
+    // Generate time slots based on business hours
+    const timeSlots = generateTimeSlots(dayHours.openTime, dayHours.closeTime, serviceDuration, slotInterval);
+
+    // 4. Check blocked dates
     const { data: blockedDate } = await supabase
       .from('blocked_dates')
       .select('id')
@@ -127,7 +190,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 4. Count existing home visit bookings for ALL services on this date (global quota)
+    // 5. Count existing home visit bookings for ALL services on this date (global quota)
     const startOfDay = `${date}T00:00:00`;
     const endOfDay = `${date}T23:59:59`;
 
@@ -148,7 +211,7 @@ export async function GET(request: NextRequest) {
     const bookedCount = existingBookings?.length || 0;
     const remainingQuota = Math.max(0, dailyQuota - bookedCount);
 
-    // 5. Get booked time slots
+    // 6. Get booked time slots
     const bookedTimes = new Set(
       (existingBookings || []).map(b => {
         const bookingDate = new Date(b.scheduled_at);
@@ -156,8 +219,7 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // 6. Generate available slots - SIMPLIFIED (no staff availability check)
-    const [year, month, day] = date.split('-').map(Number);
+    // 7. Generate available slots based on business hours
     const slots = timeSlots.map((timeStr) => {
       const [hours, minutes] = timeStr.split(':').map(Number);
       const slotStart = new Date(year, month - 1, day, hours, minutes, 0, 0);
@@ -175,7 +237,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // 7. Check if all slots are booked
+    // 8. Check if all slots are booked
     const availableSlots = slots.filter(s => s.available);
 
     return NextResponse.json({
@@ -189,6 +251,12 @@ export async function GET(request: NextRequest) {
       remainingQuota,
       slots,
       availableSlots: availableSlots.length,
+      businessHours: {
+        dayOfWeek: dayKey,
+        openTime: dayHours.openTime,
+        closeTime: dayHours.closeTime,
+        isOpen: dayHours.isOpen
+      },
       message: remainingQuota === 0 
         ? 'All home visit slots are fully booked for this date' 
         : `${availableSlots.length} slot(s) available`

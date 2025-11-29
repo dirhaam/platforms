@@ -8,7 +8,12 @@ export async function getBookings(tenantId: string, options: BookingQueryOptions
 
     let query = supabase
       .from('bookings')
-      .select('*')
+      .select(`
+        *,
+        customer:customers(id, name, phone, email),
+        service:services(id, name, duration, price),
+        staff:staff(id, name, email, role)
+      `)
       .eq('tenant_id', tenantId);
 
     if (options.status) {

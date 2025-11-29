@@ -53,6 +53,8 @@ export const mapToBooking = (dbData: any): Booking => {
     isHomeVisit: dbData.is_home_visit,
     homeVisitAddress: dbData.home_visit_address,
     homeVisitCoordinates: dbData.home_visit_coordinates,
+    homeVisitLatitude: dbData.home_visit_latitude,
+    homeVisitLongitude: dbData.home_visit_longitude,
     notes: dbData.notes,
     totalAmount,
     taxPercentage: dbData.tax_percentage,
@@ -71,7 +73,16 @@ export const mapToBooking = (dbData: any): Booking => {
     paidAmount,
     paymentReference: dbData.payment_reference,
     paymentMethod: dbData.payment_method,
-    remainingBalance
+    remainingBalance,
+    // Include related data
+    customer: dbData.customer || null,
+    service: dbData.service || null,
+    staff: dbData.staff || null,
+    // Also map flat names for backward compatibility
+    customerName: dbData.customer?.name || null,
+    customerPhone: dbData.customer?.phone || null,
+    serviceName: dbData.service?.name || null,
+    staffName: dbData.staff?.name || null,
   };
 };
 

@@ -35,7 +35,7 @@ export default function StaffBookingsPage() {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      let url = '/api/staff/my-bookings?';
+      let url = '/api/staff/my-bookings?all=true&';
       if (dateFilter) url += `date=${dateFilter}&`;
       if (statusFilter !== 'all') url += `status=${statusFilter}&`;
 

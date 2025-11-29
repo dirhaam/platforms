@@ -73,10 +73,21 @@ export interface Booking {
   paymentHistory?: BookingPayment[]; // List of all payments
   remainingBalance?: number; // totalAmount - paidAmount
   
+  // Flat coordinate fields (from database)
+  homeVisitLatitude?: number;
+  homeVisitLongitude?: number;
+  
   // Relations
   customer?: Customer;
   service?: Service;
+  staff?: Staff;
   staffMember?: Staff;
+  
+  // Flat fields for backward compatibility
+  customerName?: string;
+  customerPhone?: string;
+  serviceName?: string;
+  staffName?: string;
 }
 
 // Service interface
