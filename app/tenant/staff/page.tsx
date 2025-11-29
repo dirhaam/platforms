@@ -26,7 +26,7 @@ interface StaffStats {
   homeVisit: number;
 }
 
-type ViewMode = 'today' | 'week';
+type ViewMode = 'today' | 'week' | 'all';
 
 export default function StaffDashboard() {
   const searchParams = useSearchParams();
@@ -72,18 +72,19 @@ export default function StaffDashboard() {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      let url = '/api/staff/my-bookings?all=true&';
+      let url = '/api/staff/my-bookings?all=true';
       
       if (viewMode === 'today') {
         const today = new Date().toISOString().split('T')[0];
-        url += `date=${today}`;
-      } else {
+        url += `&date=${today}`;
+      } else if (viewMode === 'week') {
         // Last 7 days
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 7);
-        url += `startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`;
+        url += `&startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`;
       }
+      // viewMode === 'all' -> no date filter, fetch all bookings
 
       const response = await fetch(url, {
         headers: { 'X-Tenant-ID': subdomain },
@@ -168,14 +169,13 @@ export default function StaffDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-txt-primary dark:text-[#d5d5e2]">
-            {viewMode === 'today' ? 'Jadwal Hari Ini' : 'Jadwal 7 Hari Terakhir'}
+            {viewMode === 'today' ? 'Jadwal Hari Ini' : viewMode === 'week' ? 'Jadwal 7 Hari Terakhir' : 'Semua Jadwal'}
           </h1>
           <p className="text-xs sm:text-sm text-txt-muted dark:text-[#7e7f96]">{today}</p>
         </div>
         
-        {/* Admin Controls */}
-        {isAdmin && (
-          <div className="flex flex-wrap gap-2">
+        {/* View Controls */}
+        <div className="flex flex-wrap gap-2">
             <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-[#4e4f6c]">
               <button
                 onClick={() => setViewMode('today')}
@@ -197,6 +197,16 @@ export default function StaffDashboard() {
               >
                 7 Hari
               </button>
+              <button
+                onClick={() => setViewMode('all')}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === 'all'
+                    ? 'bg-primary text-white'
+                    : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4]'
+                }`}
+              >
+                Semua
+              </button>
             </div>
             <button
               onClick={() => setHomeVisitOnly(!homeVisitOnly)}
@@ -209,8 +219,7 @@ export default function StaffDashboard() {
               <i className='bx bx-home-heart mr-1'></i>
               Home Visit
             </button>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Stats - Horizontal scroll on mobile */}
@@ -286,7 +295,7 @@ export default function StaffDashboard() {
               <i className='bx bx-calendar-x text-3xl text-txt-muted dark:text-[#7e7f96]'></i>
             </div>
             <p className="text-txt-muted dark:text-[#7e7f96]">
-              {viewMode === 'today' ? 'Tidak ada booking hari ini' : 'Tidak ada booking dalam 7 hari terakhir'}
+              {viewMode === 'today' ? 'Tidak ada booking hari ini' : viewMode === 'week' ? 'Tidak ada booking dalam 7 hari terakhir' : 'Tidak ada booking'}
             </p>
           </div>
         ) : (
