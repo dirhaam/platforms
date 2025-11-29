@@ -105,22 +105,22 @@ export default function StaffBookingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-txt-primary dark:text-[#d5d5e2]">Semua Booking</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-txt-primary dark:text-[#d5d5e2]">Semua Booking</h1>
           <p className="text-sm text-txt-muted dark:text-[#7e7f96]">Daftar booking yang ditugaskan kepada Anda</p>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full sm:w-auto">
           <input
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-lg text-sm text-txt-primary dark:text-[#d5d5e2] focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-lg text-sm text-txt-primary dark:text-[#d5d5e2] focus:outline-none focus:ring-2 focus:ring-primary/20 w-full sm:w-auto"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-lg text-sm text-txt-primary dark:text-[#d5d5e2] focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="px-3 py-2 bg-white dark:bg-[#2b2c40] border border-gray-200 dark:border-[#4e4f6c] rounded-lg text-sm text-txt-primary dark:text-[#d5d5e2] focus:outline-none focus:ring-2 focus:ring-primary/20 w-full sm:w-auto"
           >
             <option value="all">Semua Status</option>
             <option value="active">Aktif</option>
@@ -135,7 +135,7 @@ export default function StaffBookingsPage() {
                 setDateFilter('');
                 setStatusFilter('all');
               }}
-              className="px-3 py-2 text-sm text-txt-muted dark:text-[#7e7f96] hover:text-txt-primary dark:hover:text-[#d5d5e2] transition-colors"
+              className="px-3 py-2 text-sm text-txt-muted dark:text-[#7e7f96] hover:text-txt-primary dark:hover:text-[#d5d5e2] transition-colors w-full sm:w-auto flex items-center justify-center sm:justify-start"
             >
               <i className='bx bx-x mr-1'></i>
               Reset

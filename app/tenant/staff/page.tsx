@@ -175,11 +175,11 @@ export default function StaffDashboard() {
         </div>
         
         {/* View Controls */}
-        <div className="flex flex-wrap gap-2">
-            <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-[#4e4f6c]">
+        <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
+            <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-[#4e4f6c] w-full sm:w-auto">
               <button
                 onClick={() => setViewMode('today')}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors ${
                   viewMode === 'today'
                     ? 'bg-primary text-white'
                     : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4]'
@@ -189,7 +189,7 @@ export default function StaffDashboard() {
               </button>
               <button
                 onClick={() => setViewMode('week')}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors ${
                   viewMode === 'week'
                     ? 'bg-primary text-white'
                     : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4]'
@@ -199,7 +199,7 @@ export default function StaffDashboard() {
               </button>
               <button
                 onClick={() => setViewMode('all')}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors ${
                   viewMode === 'all'
                     ? 'bg-primary text-white'
                     : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4]'
@@ -210,7 +210,7 @@ export default function StaffDashboard() {
             </div>
             <button
               onClick={() => setHomeVisitOnly(!homeVisitOnly)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              className={`w-full sm:w-auto px-3 py-2 sm:py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center justify-center ${
                 homeVisitOnly
                   ? 'bg-info text-white border-info'
                   : 'bg-white dark:bg-[#2b2c40] text-txt-secondary dark:text-[#b2b2c4] border-gray-200 dark:border-[#4e4f6c]'
@@ -222,52 +222,52 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      {/* Stats - Horizontal scroll on mobile */}
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4">
-        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
+      {/* Stats - Grid 2x2 on mobile, 4x1 on desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary-light dark:bg-[#35365f] flex items-center justify-center flex-shrink-0">
               <i className='bx bx-calendar text-lg text-primary dark:text-[#a5a7ff]'></i>
             </div>
-            <div>
-              <p className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2]">{stats.total}</p>
-              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96]">Total</p>
+            <div className="min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-txt-primary dark:text-[#d5d5e2] truncate">{stats.total}</p>
+              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96] truncate">Total</p>
             </div>
           </div>
         </div>
 
-        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-warning/10 dark:bg-warning/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-warning/10 dark:bg-warning/20 flex items-center justify-center flex-shrink-0">
               <i className='bx bx-time-five text-lg text-warning'></i>
             </div>
-            <div>
-              <p className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2]">{stats.pending}</p>
-              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96]">Menunggu</p>
+            <div className="min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-txt-primary dark:text-[#d5d5e2] truncate">{stats.pending}</p>
+              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96] truncate">Menunggu</p>
             </div>
           </div>
         </div>
 
-        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-success/10 dark:bg-success/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-success/10 dark:bg-success/20 flex items-center justify-center flex-shrink-0">
               <i className='bx bx-check-circle text-lg text-success'></i>
             </div>
-            <div>
-              <p className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2]">{stats.completed}</p>
-              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96]">Selesai</p>
+            <div className="min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-txt-primary dark:text-[#d5d5e2] truncate">{stats.completed}</p>
+              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96] truncate">Selesai</p>
             </div>
           </div>
         </div>
 
-        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
+        <div className="bg-white dark:bg-[#2b2c40] rounded-lg p-3 border border-gray-100 dark:border-[#4e4f6c]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-info/10 dark:bg-info/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-info/10 dark:bg-info/20 flex items-center justify-center flex-shrink-0">
               <i className='bx bx-home-heart text-lg text-info'></i>
             </div>
-            <div>
-              <p className="text-xl font-bold text-txt-primary dark:text-[#d5d5e2]">{stats.homeVisit}</p>
-              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96]">Home Visit</p>
+            <div className="min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-txt-primary dark:text-[#d5d5e2] truncate">{stats.homeVisit}</p>
+              <p className="text-[10px] text-txt-muted dark:text-[#7e7f96] truncate">Home Visit</p>
             </div>
           </div>
         </div>
@@ -348,7 +348,7 @@ export default function StaffDashboard() {
                   </div>
 
                   {/* Status & Actions */}
-                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     {getStatusBadge(booking.status)}
                     {booking.isHomeVisit && (
                       <button
@@ -356,7 +356,7 @@ export default function StaffDashboard() {
                           e.stopPropagation();
                           openGoogleMaps(booking.homeVisitLatitude, booking.homeVisitLongitude, booking.homeVisitAddress);
                         }}
-                        className="p-1.5 sm:p-2 rounded-lg bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff] hover:bg-primary hover:text-white transition-colors"
+                        className="p-2 rounded-lg bg-primary-light dark:bg-[#35365f] text-primary dark:text-[#a5a7ff] hover:bg-primary hover:text-white transition-colors"
                         title="Buka di Google Maps"
                       >
                         <i className='bx bx-navigation text-lg'></i>
